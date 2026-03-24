@@ -1,0 +1,2718 @@
+{
+  "scenarioId": "0_test_all_features",
+  "scenarioName": {
+    "ko": "[TEST] 전체 기능 테스트 시나리오",
+    "en": "",
+    "vi": ""
+  },
+  "version": "0.1-dev",
+  "map": {
+    "objects": [
+      {
+        "prefabId": "HandSanitizer",
+        "position": {
+          "x": 1.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "testNote",
+            "ko": "맵 오브젝트 배치 테스트용",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "Stethoscope",
+        "position": {
+          "x": 1.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 90,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Sphygmomanometer",
+        "position": {
+          "x": 2.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.2,
+          "y": 1.2,
+          "z": 1.2
+        },
+        "properties": [
+          {
+            "key": "testNote",
+            "ko": "스케일 변형 테스트",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "TympanicThermometer",
+        "position": {
+          "x": 2.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "SterileSyringe",
+        "position": {
+          "x": 3.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "needleGauge",
+            "ko": "23G",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "AlcoholSwab",
+        "position": {
+          "x": 3.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "BSTMachine",
+        "position": {
+          "x": 4.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "PulseOximeter",
+        "position": {
+          "x": 4.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "MedicationCard",
+        "position": {
+          "x": 5.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "drugName",
+            "ko": "TestDrug",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dose",
+            "ko": "1t",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "route",
+            "ko": "PO",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "PatientBed",
+        "position": {
+          "x": 6.0,
+          "y": 0.0,
+          "z": 3.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Patient_Test",
+        "position": {
+          "x": 6.0,
+          "y": 0.5,
+          "z": 3.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "patientName",
+            "ko": "테스트환자",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "age",
+            "ko": "50",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gender",
+            "ko": "M",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "weight",
+            "ko": "70",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "height",
+            "ko": "170",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chiefComplaint",
+            "ko": "테스트용 환자입니다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "mentalStatus",
+            "ko": "Alert",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "SecondHandWatch",
+        "position": {
+          "x": 6.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "ThermometerCap",
+        "position": {
+          "x": 6.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Lancet",
+        "position": {
+          "x": 7.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "LancetDevice",
+        "position": {
+          "x": 7.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "TestStrip",
+        "position": {
+          "x": 8.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Medication_Ketocin",
+        "position": {
+          "x": 8.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "DistilledWater",
+        "position": {
+          "x": 9.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "MedicationTray",
+        "position": {
+          "x": 9.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "IVFluid_10DW",
+        "position": {
+          "x": 10.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "fluidName",
+            "ko": "10% D/W",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rate",
+            "ko": "200cc/hr(50gtt)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "EKGMonitor",
+        "position": {
+          "x": 10.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Electrode",
+        "position": {
+          "x": 11.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Medication_Nitroglycerin",
+        "position": {
+          "x": 11.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "WaterCup",
+        "position": {
+          "x": 12.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Medication_Bearse",
+        "position": {
+          "x": 12.5,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Patient_Female_Elderly",
+        "position": {
+          "x": 4.0,
+          "y": 0.5,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "patientName",
+            "ko": "김ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "age",
+            "ko": "81",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gender",
+            "ko": "F",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "weight",
+            "ko": "58",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "height",
+            "ko": "156",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "hearingAid",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "denture",
+            "ko": "아래 부분틀니",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chiefComplaint",
+            "ko": "추워, 추워 죽겠어",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "mentalStatus",
+            "ko": "Alert",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "nrs",
+            "ko": "3",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "facialFlushing",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chilling",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "flankPain",
+            "ko": "Rt.flank pain",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "extremitySkinCold",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "deliriumHistory",
+            "ko": "내원 당일 섬망 소견 있었으나 현재 소견(-)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "Patient_Male_Elderly",
+        "position": {
+          "x": 3.0,
+          "y": 0.5,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "patientName",
+            "ko": "조ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "age",
+            "ko": "71",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gender",
+            "ko": "M",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "weight",
+            "ko": "68",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "height",
+            "ko": "172",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chiefComplaint",
+            "ko": "열이 나고 머리가 아파요, 약간 춥기도 해요",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "mentalStatus",
+            "ko": "Alert",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "nrs",
+            "ko": "4",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "facialFlushing",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chilling",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "headache",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "extremitySkinCold",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "Patient_Male_Adult",
+        "position": {
+          "x": 4.0,
+          "y": 0.5,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "patientName",
+            "ko": "장ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "age",
+            "ko": "49",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gender",
+            "ko": "M",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "weight",
+            "ko": "80",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "height",
+            "ko": "175",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chiefComplaint",
+            "ko": "발목을 겹질렀어요",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "mentalStatus",
+            "ko": "Alert",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "vas",
+            "ko": "5",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ankleSwelling",
+            "ko": "rt.ankle swelling(+)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "redness",
+            "ko": "rt.ankle redness(+)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gait",
+            "ko": "왼쪽 발에 의지하며 오른발에 힘을 못 주고 절뚝거림",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "Patient_Male_Young",
+        "position": {
+          "x": 4.0,
+          "y": 0.5,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "patientName",
+            "ko": "고ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "age",
+            "ko": "25",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gender",
+            "ko": "M",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "weight",
+            "ko": "70",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "height",
+            "ko": "178",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chiefComplaint",
+            "ko": "아침 먹은 후로 속이 더부룩하고 소화가 안 되요. 약 좀 주세요.",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "mentalStatus",
+            "ko": "Alert",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "currentCondition",
+            "ko": "lt.Achilles tendon rupture OP후 POD#3, 수액 및 항생제 투여중, lt.short leg cast state",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": {
+    "tasks": [
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PatientIdentification",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "PatientIdentification_NonVerbal",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "ExplainProcedure_BT",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "MeasureBodyTemperature",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "TympanicThermometer",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientEar"
+          },
+          {
+            "prefabId": "ThermometerCap",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "ExplainProcedure_Pulse",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "MeasurePulse",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SecondHandWatch",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientRadialArtery"
+          }
+        ]
+      },
+      {
+        "moduleId": "MeasureRespiration",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SecondHandWatch",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientChest"
+          }
+        ]
+      },
+      {
+        "moduleId": "MeasureBloodPressure",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Sphygmomanometer",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientUpperArm"
+          },
+          {
+            "prefabId": "Stethoscope",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "MeasureBSTSequence",
+        "timeout": 240,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "BSTMachine",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          },
+          {
+            "prefabId": "LancetDevice",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "Lancet",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "TestStrip",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "AlcoholSwab",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "AssessHypoglycemia",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "MeasureSpO2",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "PulseOximeter",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientFinger"
+          }
+        ]
+      },
+      {
+        "moduleId": "CheckVitalSigns",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "RecordVitalSigns",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "PrepareEKG",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "AttachEKGElectrodes_LeadII",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Electrode",
+            "spawnPointId": "SP_Tray",
+            "guideId": "PatientChest"
+          }
+        ]
+      },
+      {
+        "moduleId": "ConfirmEKGReading",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "VerifyMedicationOrder",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "MedicationCard",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PrepareMedication",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "MedicationCard",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          },
+          {
+            "prefabId": "Medication_Bearse",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "WaterCup",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PrepareMedication_IM",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SterileSyringe",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "Medication_Ketocin",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "DistilledWater",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "ExplainMedication",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "MedicationCard",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "AdministerSublingual",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Medication_Nitroglycerin",
+            "spawnPointId": "SP_Tray",
+            "guideId": "PatientMouth"
+          }
+        ]
+      },
+      {
+        "moduleId": "AdministerOralSequence",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Medication_Bearse",
+            "spawnPointId": "SP_Tray",
+            "guideId": "PatientMouth"
+          },
+          {
+            "prefabId": "WaterCup",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "SelectInjectionSite",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "DisinfectSite",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "AlcoholSwab",
+            "spawnPointId": "SP_Tray",
+            "guideId": "Zone_InjectionSite"
+          }
+        ]
+      },
+      {
+        "moduleId": "AdministerIM",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SterileSyringe",
+            "spawnPointId": "SP_Tray",
+            "guideId": "Zone_InjectionSite"
+          }
+        ]
+      },
+      {
+        "moduleId": "PostInjectionCare",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "StopDMMedication",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Start10DW_IV",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "IVFluid_10DW",
+            "spawnPointId": "SP_IVStand",
+            "guideId": "Zone_IVPort"
+          }
+        ]
+      },
+      {
+        "moduleId": "RecheckBST_30min",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "BSTMachine",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientFinger"
+          },
+          {
+            "prefabId": "LancetDevice",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "TestStrip",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "AlcoholSwab",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "AdjustIVRate",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "CloseObservation",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "ObservePatient",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "RecordMedication",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "RecordResults",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "HandHygiene",
+      "config": {
+        "requiredItems": [
+          "HandSanitizer"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "손위생을 실시한다",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PatientIdentification",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "개방형질문으로 환자를 확인하고 이름과 등록번호를 확인한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion1",
+            "ko": "성함이 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer1",
+            "ko": "김ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion2",
+            "ko": "나이는 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer2",
+            "ko": "여든하나여",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion3",
+            "ko": "여기가 어디입니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer3",
+            "ko": "병원이요",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion4",
+            "ko": "어디가 불편 하세요?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer4",
+            "ko": "추워, 추워 죽겠어",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "note",
+            "ko": "보청기 착용 환자 - 천천히 크게 말하기",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PatientIdentification_NonVerbal",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "의사소통 불가 환자 - 손목밴드 및 보호자에게 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion1",
+            "ko": "성함이 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer1",
+            "ko": "(대답없음 - 손목밴드 확인)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion2",
+            "ko": "나이는 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer2",
+            "ko": "(대답없음 - 보호자 확인)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "note",
+            "ko": "뇌졸중 후 와상상태, 언어 반응 없음",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ExplainProcedure_BT",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "환자에게 체온측정의 목적과 방법을 설명한다",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasureBodyTemperature",
+      "config": {
+        "requiredItems": [
+          "TympanicThermometer",
+          "ThermometerCap"
+        ],
+        "targetZoneId": "PatientEar",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "고막 체온 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "새로운 렌즈캡으로 교환",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "버튼 누르고 삐 소리와 함께 준비기호 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "귓바퀴를 후상방으로 당긴 후 외이도에 삽입하고 시작버튼",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "삐 소리 울리면 체온계를 빼고 온도 읽기",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step5",
+            "ko": "렌즈캡 분리",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "38.5",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "℃",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMin",
+            "ko": "36.0",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMax",
+            "ko": "37.0",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "note",
+            "ko": "보청기 확인 후 측정",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ExplainProcedure_Pulse",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "환자에게 맥박측정의 목적과 방법을 설명한다",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasurePulse",
+      "config": {
+        "requiredItems": [
+          "SecondHandWatch"
+        ],
+        "targetZoneId": "PatientRadialArtery",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "요골동맥 맥박 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "편안한 자세로 앉거나 눕게 한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "요골동맥위에 2,3,4번째 손가락끝을 대고 살며시 누른다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "1분 동안 측정한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "110",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMin",
+            "ko": "60",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMax",
+            "ko": "100",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasureRespiration",
+      "config": {
+        "requiredItems": [
+          "SecondHandWatch"
+        ],
+        "targetZoneId": "PatientChest",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "호흡 측정 (환자 모르게)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "맥박 측정 후 손목에서 손을 떼지 않은 상태에서 호흡 관찰",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "호흡의 깊이와 리듬 관찰",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "1분간 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "30",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMin",
+            "ko": "12",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMax",
+            "ko": "20",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasureBloodPressure",
+      "config": {
+        "requiredItems": [
+          "Sphygmomanometer",
+          "Stethoscope"
+        ],
+        "targetZoneId": "PatientUpperArm",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "혈압 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "5~10분간 안정 상태 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "상박을 심장위치와 같은 높이로 맞춘다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "커프 하단을 상완동맥 촉지부에서 약 2cm 위에 위치",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "상완동맥위에 청진기를 댄다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step5",
+            "ko": "밸브 잠그고 커프 팽창 후 서서히 공기를 빼면서 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step6",
+            "ko": "커프를 풀고 정리",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "100/70",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "mmHg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalSystolicMax",
+            "ko": "120",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalDiastolicMax",
+            "ko": "80",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasureBSTSequence",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "혈당(BST) 측정 (채혈기 준비 → 시험지 삽입 → 채혈 → 혈액 묻히기)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "AssessHypoglycemia",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "저혈당 증상 사정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "BST_result",
+            "ko": "60mg/dl",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "symptoms",
+            "ko": "Drowsy, 말 안함, 기운없음, 눈만 끔벅임, 피부 차고 축축함",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "BP",
+            "ko": "85/50mmHg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "pulse",
+            "ko": "110회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "respiration",
+            "ko": "26회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "temperature",
+            "ko": "35.9℃",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasureSpO2",
+      "config": {
+        "requiredItems": [
+          "PulseOximeter"
+        ],
+        "targetZoneId": "PatientFinger",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "말초산소포화도(SpO2) 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "SpO2 측정 기계를 켜고 센서에 불이 들어오는지 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "손톱상태 확인 (매니큐어 있는 경우 지운다)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "센서를 손가락에 부착하여 고정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "정확한 측정을 위해 팔을 많이 움직이지 않도록 안내",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "97",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "%",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMin",
+            "ko": "95",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMax",
+            "ko": "100",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "note",
+            "ko": "노인은 수치가 약간 낮을 수 있음",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "CheckVitalSigns",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약 전 활력징후 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "BP",
+            "ko": "140/90mmHg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "pulse",
+            "ko": "75회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "respiration",
+            "ko": "18회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "temperature",
+            "ko": "36.7℃",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "note",
+            "ko": "항고혈압제 투여 전 혈압 측정 필수",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "RecordVitalSigns",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "활력징후 및 BST 측정결과를 임상관찰기록지에 기록",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "BP",
+            "ko": "100/70mmHg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "pulse",
+            "ko": "110회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "respiration",
+            "ko": "30회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "temperature",
+            "ko": "38.5℃",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "BST",
+            "ko": "196mg/dl",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PrepareEKG",
+      "config": {
+        "requiredItems": [
+          "EKGMonitor",
+          "Electrode",
+          "AlcoholSwab"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "심전도 모니터링 준비",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "심전도 모니터링의 목적 및 절차를 환자에게 설명",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "가슴을 노출시키고 전극 부착 위치 피부 상태 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "땀이나 이물질이 있는 경우 알코올솜으로 제거",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "전극(electrode)과 전선을 연결하고 뒷부분 비닐 제거",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "AttachEKGElectrodes_LeadII",
+      "config": {
+        "requiredItems": [
+          "Electrode"
+        ],
+        "targetZoneId": "PatientChest",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "심전도 Lead II 유도법 전극 부착",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "RA_position",
+            "ko": "오른쪽 쇄골 아래",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "LA_position",
+            "ko": "왼쪽 쇄골 아래",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "LL_position",
+            "ko": "왼쪽 5번째 늑간 중심 액와선",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "RA 전극을 오른쪽 쇄골 아래에 부착",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "LA 전극을 왼쪽 쇄골 아래에 부착",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "LL 전극을 왼쪽 5번째 늑간 중심 액와선에 부착",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "잘 고정되었는지 확인",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ConfirmEKGReading",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "심전도 Lead II 설정 후 리듬과 심박동수(HR) 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "checkItems",
+            "ko": "리듬, 심박동수(HR)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "VerifyMedicationOrder",
+      "config": {
+        "requiredItems": [
+          "MedicationCard"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약카드의 약명과 약병의 이름을 비교 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightPatient",
+            "ko": "장ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightDrug",
+            "ko": "Ketocin(ketorolac tromethamine) 30mg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightDose",
+            "ko": "1@",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightTime",
+            "ko": "처방시",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightRoute",
+            "ko": "IM(근육주사)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PrepareMedication",
+      "config": {
+        "requiredItems": [
+          "MedicationCard",
+          "Medication_Bearse"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약카드로 환자명, 등록번호, 날짜, 약명, 용량, 시간, 경로 일치 확인 후 약품 준비",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "투약카드(투약라벨)로 환자명, 등록번호, 날짜, 약명, 용량, 시간, 경로 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "약품 준비",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PrepareMedication_IM",
+      "config": {
+        "requiredItems": [
+          "Medication_Ketocin",
+          "SterileSyringe",
+          "DistilledWater"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "근육주사 약물 준비 (앰플 또는 바이알)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ampuleMethod_step1",
+            "ko": "앰플 머리부분 톡톡 두드려 약물 내리기",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ampuleMethod_step2",
+            "ko": "절단부위를 알코올솜으로 닦고 자연건조",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ampuleMethod_step3",
+            "ko": "표시된 점이 앞으로 오도록 잡고 절단",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ampuleMethod_step4",
+            "ko": "주사침 사면을 아래로 향하게 하여 약물 채취",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "vialMethod_step1",
+            "ko": "고무마개를 알코올솜으로 닦고 자연건조",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "vialMethod_step2",
+            "ko": "증류수나 용해제를 주입하여 혼합",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "vialMethod_step3",
+            "ko": "뽑을 용량만큼 공기 주입 후 약물 채취",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "maxVolumePerSite",
+            "ko": "5ml 이하 (삼각근 1ml)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ExplainMedication",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약목적과 방법, 효과 설명하고 협조를 구한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "purpose",
+            "ko": "통증 완화를 위한 진통제 근육주사",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "AdministerSublingual",
+      "config": {
+        "requiredItems": [
+          "Medication_Nitroglycerin"
+        ],
+        "targetZoneId": "PatientMouth",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "니트로글리세린 설하 투여",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "약물을 혀 아래에 놓는다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "약물이 용해될 때까지 삼키지 않도록 안내",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "간호사가 직접 투여하고 곁에서 지켜본다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "route",
+            "ko": "SL(sublingual)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "AdministerOralSequence",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "베아제정 경구 투여 (약 집기 → 약 투여 → 물 투여)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "SelectInjectionSite",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "Zone_InjectionSite",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "주사부위 선정 및 체위",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site1_ventrogluteal",
+            "ko": "둔부 복면부위 - 가장 안전, 큰혈관/신경 먼곳",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site2_dorsogluteal",
+            "ko": "둔부 배면부위 - 신경/동맥 인접 주의",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site3_vastusLateralis",
+            "ko": "외측광근 - 대전자~외측과 사이 바깥쪽 중간",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site4_rectusFemoris",
+            "ko": "대퇴직근 - 대퇴 앞쪽, 혼자 주사 가능",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site5_deltoid",
+            "ko": "삼각근 - 흡수 가장 빠름, 상완동맥 인접",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "checkItems",
+            "ko": "멍, 찰과상, 감염 없는 부위 선택. 근육 크기가 주사용량에 적합해야 함",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "DisinfectSite",
+      "config": {
+        "requiredItems": [
+          "AlcoholSwab"
+        ],
+        "targetZoneId": "Zone_InjectionSite",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "알코올솜으로 주사부위를 중심에서 가장자리로 직경 5cm 원을 그리며 소독",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "AdministerIM",
+      "config": {
+        "requiredItems": [
+          "SterileSyringe"
+        ],
+        "targetZoneId": "Zone_InjectionSite",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "근육주사 시행",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "주사기의 공기를 뺀다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "왼손으로 주사부위를 팽팽하게 잡는다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "90도 각도로 삽입",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "주사기 내관을 살짝 뒤로 당겨 혈액 확인 (역류시 폐기 후 재준비)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step5",
+            "ko": "혈액 없으면 약물을 천천히 주입",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step6",
+            "ko": "알코올솜을 대고 빠르게 바늘을 뽑은 후 문지른다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step7",
+            "ko": "출혈시 1~2분 정도 압박",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "insertionAngle",
+            "ko": "90",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "needleGauge",
+            "ko": "21~23G",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "needleLength",
+            "ko": "2.5~3.8cm",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PostInjectionCare",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "환자를 편안하게 하고 부작용 관찰",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "observe",
+            "ko": "주사부위 이상반응, 약물 부작용 관찰",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "StopDMMedication",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "의사처방에 따라 당뇨 약물 중단 (No DM medication)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "stoppedMeds",
+            "ko": "NPH 24IU, metformin 500mg bid 모두 중단",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Start10DW_IV",
+      "config": {
+        "requiredItems": [
+          "IVFluid_10DW"
+        ],
+        "targetZoneId": "Zone_IVPort",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "10% D/W 200cc/hr(50gtt) IV 시작",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "fluid",
+            "ko": "10% D/W",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rate",
+            "ko": "200cc/hr (50gtt/min)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "RecheckBST_30min",
+      "config": {
+        "requiredItems": [
+          "BSTMachine",
+          "Lancet",
+          "LancetDevice",
+          "TestStrip",
+          "AlcoholSwab"
+        ],
+        "targetZoneId": "PatientFinger",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "30분 후 BST 재측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "criteria",
+            "ko": "100mg/dl 이상 시 KVO로 변경",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "AdjustIVRate",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "BST 결과에 따라 수액 속도 조절",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "if_above_100",
+            "ko": "KVO(Keep Vein Open)로 변경",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "if_below_100",
+            "ko": "현 속도 유지 후 의사 보고",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "CloseObservation",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "면밀한 관찰 (close observation)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "observeItems",
+            "ko": "의식상태, 활력징후, 피부상태, 혈당 변화 지속 관찰",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ObservePatient",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약 후 30분간 환자 상태 관찰",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "observeItems",
+            "ko": "흉통 완화 여부, 부작용(두통, 어지러움, 저혈압) 관찰",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "RecordMedication",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약카드와 대조하면서 투약자 서명",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "RecordResults",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "측정 결과 및 처치 내용 기록",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "BP",
+            "ko": "85/50mmHg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "pulse",
+            "ko": "110회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "respiration",
+            "ko": "26회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "temperature",
+            "ko": "35.9℃",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "BST_initial",
+            "ko": "60mg/dl",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "intervention",
+            "ko": "No DM med, 10%D/W 200cc/hr IV, 30분후 BST recheck",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    }
+  ]
+}

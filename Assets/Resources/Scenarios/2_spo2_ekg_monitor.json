@@ -1,0 +1,580 @@
+{
+  "scenarioId": "2_spo2_ekg_monitor",
+  "scenarioName": {
+    "ko": "말초산소포화도 측정과 심전도 모니터 적용 (2차)",
+    "en": "",
+    "vi": ""
+  },
+  "version": "1.0",
+  "map": {
+    "objects": [
+      {
+        "prefabId": "HandSanitizer",
+        "position": {
+          "x": 1.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "AlcoholSwab",
+        "position": {
+          "x": 1.2,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "PulseOximeter",
+        "position": {
+          "x": 1.4,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "EKGMonitor",
+        "position": {
+          "x": 2.0,
+          "y": 0.0,
+          "z": 1.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Electrode",
+        "position": {
+          "x": 1.6,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "PatientBed",
+        "position": {
+          "x": 4.0,
+          "y": 0.0,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Patient_Female_Elderly",
+        "position": {
+          "x": 4.0,
+          "y": 0.5,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "patientName",
+            "ko": "김ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "age",
+            "ko": "75",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gender",
+            "ko": "F",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "weight",
+            "ko": "56",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "height",
+            "ko": "158",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chiefComplaint",
+            "ko": "조금만 걸어도 숨이 차고 가슴이 벌렁거려요. 오늘은 조이는듯한 통증도 있는 거 같아요.",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "mentalStatus",
+            "ko": "Alert",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "posture",
+            "ko": "오른손으로 왼쪽 가슴 잡고 있으며 얼굴 찡그림",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": {
+    "tasks": [
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PatientIdentification",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "MeasureSpO2",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "PulseOximeter",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientFinger"
+          }
+        ]
+      },
+      {
+        "moduleId": "PrepareEKG",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "AttachEKGElectrodes_LeadII",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Electrode",
+            "spawnPointId": "SP_Tray",
+            "guideId": "PatientChest"
+          }
+        ]
+      },
+      {
+        "moduleId": "ConfirmEKGReading",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "RecordResults",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "HandHygiene",
+      "config": {
+        "requiredItems": [
+          "HandSanitizer"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "손위생을 실시한다",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PatientIdentification",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "개방형 질문으로 환자 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion1",
+            "ko": "성함이 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer1",
+            "ko": "김ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion2",
+            "ko": "나이는 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer2",
+            "ko": "일흔 다섯입니다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion3",
+            "ko": "어디가 불편 하세요?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer3",
+            "ko": "조금만 걸어도 숨이 차고 가슴이 벌렁거려요. 오늘은 조이는듯한 통증도 있는 거 같아요.",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasureSpO2",
+      "config": {
+        "requiredItems": [
+          "PulseOximeter"
+        ],
+        "targetZoneId": "PatientFinger",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "말초산소포화도(SpO2) 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "SpO2 측정 기계를 켜고 센서에 불이 들어오는지 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "손톱상태 확인 (매니큐어 있는 경우 지운다)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "센서를 손가락에 부착하여 고정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "정확한 측정을 위해 팔을 많이 움직이지 않도록 안내",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "97",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "%",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMin",
+            "ko": "95",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMax",
+            "ko": "100",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "note",
+            "ko": "노인은 수치가 약간 낮을 수 있음",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PrepareEKG",
+      "config": {
+        "requiredItems": [
+          "EKGMonitor",
+          "Electrode",
+          "AlcoholSwab"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "심전도 모니터링 준비",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "심전도 모니터링의 목적 및 절차를 환자에게 설명",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "가슴을 노출시키고 전극 부착 위치 피부 상태 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "땀이나 이물질이 있는 경우 알코올솜으로 제거",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "전극(electrode)과 전선을 연결하고 뒷부분 비닐 제거",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "AttachEKGElectrodes_LeadII",
+      "config": {
+        "requiredItems": [
+          "Electrode"
+        ],
+        "targetZoneId": "PatientChest",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "심전도 Lead II 유도법 전극 부착",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "RA_position",
+            "ko": "오른쪽 쇄골 아래",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "LA_position",
+            "ko": "왼쪽 쇄골 아래",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "LL_position",
+            "ko": "왼쪽 5번째 늑간 중심 액와선",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "RA 전극을 오른쪽 쇄골 아래에 부착",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "LA 전극을 왼쪽 쇄골 아래에 부착",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "LL 전극을 왼쪽 5번째 늑간 중심 액와선에 부착",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "잘 고정되었는지 확인",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ConfirmEKGReading",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "심전도 Lead II 설정 후 리듬과 심박동수(HR) 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "checkItems",
+            "ko": "리듬, 심박동수(HR)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "RecordResults",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "측정 결과 기록",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "BP",
+            "ko": "130/80mmHg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "pulse",
+            "ko": "81회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "respiration",
+            "ko": "22회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "temperature",
+            "ko": "36.7℃",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "SpO2",
+            "ko": "97%",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    }
+  ]
+}

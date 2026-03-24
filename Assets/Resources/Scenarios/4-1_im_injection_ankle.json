@@ -1,0 +1,803 @@
+{
+  "scenarioId": "4-1_im_injection_ankle",
+  "scenarioName": {
+    "ko": "근육주사 - 발목 부상 Ketocin IM (4차 시나리오1)",
+    "en": "",
+    "vi": ""
+  },
+  "version": "1.0",
+  "map": {
+    "objects": [
+      {
+        "prefabId": "HandSanitizer",
+        "position": {
+          "x": 1.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "MedicationCard",
+        "position": {
+          "x": 1.2,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "drugName",
+            "ko": "Ketocin(ketorolac tromethamine) 30mg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dose",
+            "ko": "1@",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "route",
+            "ko": "IM(근육주사)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "Medication_Ketocin",
+        "position": {
+          "x": 1.4,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "DistilledWater",
+        "position": {
+          "x": 1.6,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "SterileSyringe",
+        "position": {
+          "x": 1.8,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "needleGauge",
+            "ko": "21~23G",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "needleLength",
+            "ko": "2.5~3.8cm",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "AlcoholSwab",
+        "position": {
+          "x": 2.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "MedicationTray",
+        "position": {
+          "x": 2.2,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "PatientBed",
+        "position": {
+          "x": 4.0,
+          "y": 0.0,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Patient_Male_Adult",
+        "position": {
+          "x": 4.0,
+          "y": 0.5,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "patientName",
+            "ko": "장ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "age",
+            "ko": "49",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gender",
+            "ko": "M",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "weight",
+            "ko": "80",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "height",
+            "ko": "175",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chiefComplaint",
+            "ko": "발목을 겹질렀어요",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "mentalStatus",
+            "ko": "Alert",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "vas",
+            "ko": "5",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ankleSwelling",
+            "ko": "rt.ankle swelling(+)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "redness",
+            "ko": "rt.ankle redness(+)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gait",
+            "ko": "왼쪽 발에 의지하며 오른발에 힘을 못 주고 절뚝거림",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": {
+    "tasks": [
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "VerifyMedicationOrder",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "MedicationCard",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PrepareMedication_IM",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SterileSyringe",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "Medication_Ketocin",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "DistilledWater",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PatientIdentification",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "ExplainMedication",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "MedicationCard",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "SelectInjectionSite",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "DisinfectSite",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "AlcoholSwab",
+            "spawnPointId": "SP_Tray",
+            "guideId": "Zone_InjectionSite"
+          }
+        ]
+      },
+      {
+        "moduleId": "AdministerIM",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SterileSyringe",
+            "spawnPointId": "SP_Tray",
+            "guideId": "Zone_InjectionSite"
+          }
+        ]
+      },
+      {
+        "moduleId": "PostInjectionCare",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "RecordMedication",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "HandHygiene",
+      "config": {
+        "requiredItems": [
+          "HandSanitizer"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "손위생을 실시한다",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "VerifyMedicationOrder",
+      "config": {
+        "requiredItems": [
+          "MedicationCard"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약카드의 약명과 약병의 이름을 비교 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightPatient",
+            "ko": "장ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightDrug",
+            "ko": "Ketocin(ketorolac tromethamine) 30mg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightDose",
+            "ko": "1@",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightTime",
+            "ko": "처방시",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightRoute",
+            "ko": "IM(근육주사)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PrepareMedication_IM",
+      "config": {
+        "requiredItems": [
+          "Medication_Ketocin",
+          "SterileSyringe",
+          "DistilledWater"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "근육주사 약물 준비 (앰플 또는 바이알)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ampuleMethod_step1",
+            "ko": "앰플 머리부분 톡톡 두드려 약물 내리기",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ampuleMethod_step2",
+            "ko": "절단부위를 알코올솜으로 닦고 자연건조",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ampuleMethod_step3",
+            "ko": "표시된 점이 앞으로 오도록 잡고 절단",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "ampuleMethod_step4",
+            "ko": "주사침 사면을 아래로 향하게 하여 약물 채취",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "vialMethod_step1",
+            "ko": "고무마개를 알코올솜으로 닦고 자연건조",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "vialMethod_step2",
+            "ko": "증류수나 용해제를 주입하여 혼합",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "vialMethod_step3",
+            "ko": "뽑을 용량만큼 공기 주입 후 약물 채취",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "maxVolumePerSite",
+            "ko": "5ml 이하 (삼각근 1ml)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PatientIdentification",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "환자에게 가서 손위생 후 자기소개 및 환자 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion1",
+            "ko": "성함이 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer1",
+            "ko": "장ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion2",
+            "ko": "나이는 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer2",
+            "ko": "마흔 아홉입니다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion3",
+            "ko": "어디가 불편 하세요?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer3",
+            "ko": "발목을 겹질렀어요",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ExplainMedication",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약목적과 방법, 효과 설명하고 협조를 구한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "purpose",
+            "ko": "통증 완화를 위한 진통제 근육주사",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "SelectInjectionSite",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "Zone_InjectionSite",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "주사부위 선정 및 체위",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site1_ventrogluteal",
+            "ko": "둔부 복면부위 - 가장 안전, 큰혈관/신경 먼곳",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site2_dorsogluteal",
+            "ko": "둔부 배면부위 - 신경/동맥 인접 주의",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site3_vastusLateralis",
+            "ko": "외측광근 - 대전자~외측과 사이 바깥쪽 중간",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site4_rectusFemoris",
+            "ko": "대퇴직근 - 대퇴 앞쪽, 혼자 주사 가능",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "site5_deltoid",
+            "ko": "삼각근 - 흡수 가장 빠름, 상완동맥 인접",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "checkItems",
+            "ko": "멍, 찰과상, 감염 없는 부위 선택. 근육 크기가 주사용량에 적합해야 함",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "DisinfectSite",
+      "config": {
+        "requiredItems": [
+          "AlcoholSwab"
+        ],
+        "targetZoneId": "Zone_InjectionSite",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "알코올솜으로 주사부위를 중심에서 가장자리로 직경 5cm 원을 그리며 소독",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "AdministerIM",
+      "config": {
+        "requiredItems": [
+          "SterileSyringe"
+        ],
+        "targetZoneId": "Zone_InjectionSite",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "근육주사 시행",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "주사기의 공기를 뺀다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "왼손으로 주사부위를 팽팽하게 잡는다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "90도 각도로 삽입",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "주사기 내관을 살짝 뒤로 당겨 혈액 확인 (역류시 폐기 후 재준비)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step5",
+            "ko": "혈액 없으면 약물을 천천히 주입",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step6",
+            "ko": "알코올솜을 대고 빠르게 바늘을 뽑은 후 문지른다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step7",
+            "ko": "출혈시 1~2분 정도 압박",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "insertionAngle",
+            "ko": "90",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "needleGauge",
+            "ko": "21~23G",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "needleLength",
+            "ko": "2.5~3.8cm",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PostInjectionCare",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "환자를 편안하게 하고 부작용 관찰",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "observe",
+            "ko": "주사부위 이상반응, 약물 부작용 관찰",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "RecordMedication",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약카드와 대조하면서 투약자 서명",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    }
+  ]
+}

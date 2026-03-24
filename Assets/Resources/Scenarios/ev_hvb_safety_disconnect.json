@@ -1,0 +1,178 @@
+{
+  "scenarioId": "ev_hvb_safety_disconnect",
+  "scenarioName": {
+    "ko": "아이오닉 5N 고전압 시스템 차단 및 절연 저항 측정",
+    "en": "IONIQ 5N High Voltage Disconnection & Insulation Test",
+    "vi": ""
+  },
+  "version": "1.0",
+  "map": {
+    "objects": [
+      {
+        "prefabId": "Ioniq5N",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "vin",
+            "ko": "KMHC251XXXXXXXX",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "batteryStatus",
+            "ko": "SOC 65%",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "Maintenance_Cart",
+        "position": {
+          "x": -2.0,
+          "y": 0,
+          "z": 1.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 90,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      }
+    ]
+  },
+  "scenario": {
+    "tasks": [
+      {
+        "moduleId": "LOTO_Safety",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "LockBox",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_Box_Highlight"
+          },
+          {
+            "prefabId": "SmartKey",
+            "spawnPointId": "SP_Driver_Seat",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "MSD_Removal",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "InsulatedGloves",
+            "spawnPointId": "SP_Cart_Drawer",
+            "guideId": "Guide_Gloves"
+          }
+        ]
+      },
+      {
+        "moduleId": "Voltage_Verification",
+        "timeout": 300,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "TwoPoleTester",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_Inverter_Terminal"
+          }
+        ]
+      }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "LOTO_Safety",
+      "config": {
+        "requiredItems": [ "SmartKey" ],
+        "targetZoneId": "LockBox_Zone",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "스마트키를 수거하여 안전 잠금 박스에 보관하세요.",
+            "en": "Place the smart key into the safety lock box."
+          },
+          {
+            "key": "step1",
+            "ko": "차량 내부에서 스마트키를 찾아 집습니다.",
+            "en": ""
+          },
+          {
+            "key": "step2",
+            "ko": "작업대의 잠금 박스 안에 키를 넣고 자물쇠를 채웁니다.",
+            "en": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MSD_Removal",
+      "config": {
+        "requiredItems": [ "InsulatedGloves" ],
+        "targetZoneId": "MSD_Port_Zone",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "절연 장갑 착용 후 서비스 플러그(MSD)를 탈거하세요.",
+            "en": "Wear insulated gloves and remove the MSD."
+          },
+          {
+            "key": "safety_check",
+            "ko": "반드시 1,000V 급 절연 장갑의 이상 유무를 먼저 확인하세요.",
+            "en": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Voltage_Verification",
+      "config": {
+        "requiredItems": [ "TwoPoleTester" ],
+        "targetZoneId": "Inverter_Check_Point",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "인버터 단자에서 잔류 전압이 0V인지 측정합니다 (3점 측정).",
+            "en": "Verify zero voltage at inverter terminals (3-point test)."
+          },
+          {
+            "key": "expectedValue",
+            "ko": "0",
+            "en": "0"
+          },
+          {
+            "key": "unit",
+            "ko": "V",
+            "en": "V"
+          }
+        ]
+      }
+    }
+  ]
+}

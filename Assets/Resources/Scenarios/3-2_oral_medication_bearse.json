@@ -1,0 +1,506 @@
+{
+  "scenarioId": "3-2_oral_medication_bearse",
+  "scenarioName": {
+    "ko": "경구투약 - 베아제정 (3차 시나리오2)",
+    "en": "",
+    "vi": ""
+  },
+  "version": "1.0",
+  "map": {
+    "objects": [
+      {
+        "prefabId": "HandSanitizer",
+        "position": {
+          "x": 1.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "MedicationCard",
+        "position": {
+          "x": 1.2,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "drugName",
+            "ko": "베아제정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dose",
+            "ko": "1t",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "route",
+            "ko": "PO(경구)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      },
+      {
+        "prefabId": "Medication_Bearse",
+        "position": {
+          "x": 1.4,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "MedicationTray",
+        "position": {
+          "x": 1.6,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "WaterCup",
+        "position": {
+          "x": 1.8,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "PatientBed",
+        "position": {
+          "x": 4.0,
+          "y": 0.0,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Patient_Male_Young",
+        "position": {
+          "x": 4.0,
+          "y": 0.5,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "patientName",
+            "ko": "고ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "age",
+            "ko": "25",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gender",
+            "ko": "M",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "weight",
+            "ko": "70",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "height",
+            "ko": "178",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chiefComplaint",
+            "ko": "아침 먹은 후로 속이 더부룩하고 소화가 안 되요. 약 좀 주세요.",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "mentalStatus",
+            "ko": "Alert",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "currentCondition",
+            "ko": "lt.Achilles tendon rupture OP후 POD#3, 수액 및 항생제 투여중, lt.short leg cast state",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": {
+    "tasks": [
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "VerifyMedicationOrder",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "MedicationCard",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PrepareMedication",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "MedicationCard",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          },
+          {
+            "prefabId": "Medication_Bearse",
+            "spawnPointId": "SP_Tray",
+            "guideId": ""
+          },
+          {
+            "prefabId": "WaterCup",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PatientIdentification",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "ExplainMedication",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "MedicationCard",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "AdministerOralSequence",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Medication_Bearse",
+            "spawnPointId": "SP_Tray",
+            "guideId": "PatientMouth"
+          },
+          {
+            "prefabId": "WaterCup",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "ObservePatient",
+        "timeout": 300,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "RecordMedication",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "HandHygiene",
+      "config": {
+        "requiredItems": [
+          "HandSanitizer"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "손위생을 실시한다",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "VerifyMedicationOrder",
+      "config": {
+        "requiredItems": [
+          "MedicationCard"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약지시와 5 Rights 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightPatient",
+            "ko": "고ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightDrug",
+            "ko": "베아제정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightDose",
+            "ko": "1t",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightTime",
+            "ko": "처방시",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "rightRoute",
+            "ko": "PO(경구)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PrepareMedication",
+      "config": {
+        "requiredItems": [
+          "MedicationCard",
+          "Medication_Bearse"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약카드 확인 후 약품 준비",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PatientIdentification",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "환자 확인 (개방형 질문)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion1",
+            "ko": "성함이 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer1",
+            "ko": "고ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion2",
+            "ko": "어디가 불편 하세요?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer2",
+            "ko": "아침 먹은 후로 속이 더부룩하고 소화가 안 되요. 약 좀 주세요.",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ExplainMedication",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약의 목적, 방법, 효과, 주의점 설명",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "purpose",
+            "ko": "소화불량 증상 완화",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "method",
+            "ko": "물과 함께 경구 복용",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "AdministerOralSequence",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "베아제정 경구 투여 (약 집기 → 약 투여 → 물 투여)",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ObservePatient",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약 후 30분간 환자 상태 관찰",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "RecordMedication",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "투약 후 간호사 서명 및 기록",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    }
+  ]
+}

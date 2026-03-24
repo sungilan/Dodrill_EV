@@ -1,0 +1,779 @@
+{
+  "scenarioId": "1_vital_signs_simple",
+  "scenarioName": {
+    "ko": "활력징후 측정 (단순 version)",
+    "en": "",
+    "vi": ""
+  },
+  "version": "1.0",
+  "map": {
+    "objects": [
+      {
+        "prefabId": "HandSanitizer",
+        "position": {
+          "x": 1.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "SecondHandWatch",
+        "position": {
+          "x": 1.2,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Stethoscope",
+        "position": {
+          "x": 1.4,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Sphygmomanometer",
+        "position": {
+          "x": 1.6,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "TympanicThermometer",
+        "position": {
+          "x": 1.8,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "ThermometerCap",
+        "position": {
+          "x": 2.0,
+          "y": 0.8,
+          "z": 0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "PatientBed",
+        "position": {
+          "x": 3.0,
+          "y": 0.0,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "Patient_Male_Elderly",
+        "position": {
+          "x": 3.0,
+          "y": 0.5,
+          "z": 2.0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "patientName",
+            "ko": "조ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "age",
+            "ko": "71",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "gender",
+            "ko": "M",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "weight",
+            "ko": "68",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "height",
+            "ko": "172",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chiefComplaint",
+            "ko": "열이 나고 머리가 아파요, 약간 춥기도 해요",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "mentalStatus",
+            "ko": "Alert",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "nrs",
+            "ko": "4",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "facialFlushing",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "chilling",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "headache",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "extremitySkinCold",
+            "ko": "true",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": {
+    "tasks": [
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PatientIdentification",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "ExplainProcedure_BT",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "MeasureBodyTemperature",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "TympanicThermometer",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientEar"
+          },
+          {
+            "prefabId": "ThermometerCap",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "ExplainProcedure_Pulse",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "MeasurePulse",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SecondHandWatch",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientRadialArtery"
+          }
+        ]
+      },
+      {
+        "moduleId": "MeasureRespiration",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SecondHandWatch",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientChest"
+          }
+        ]
+      },
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "MeasureBloodPressure",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Sphygmomanometer",
+            "spawnPointId": "SP_Desk",
+            "guideId": "PatientUpperArm"
+          },
+          {
+            "prefabId": "Stethoscope",
+            "spawnPointId": "SP_Desk",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "HandHygiene",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "HandSanitizer",
+            "spawnPointId": "SP_Wall",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "RecordVitalSigns",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "HandHygiene",
+      "config": {
+        "requiredItems": [
+          "HandSanitizer"
+        ],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "손위생을 실시한다",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "PatientIdentification",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "개방형질문으로 환자를 확인하고 이름과 등록번호를 확인한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion1",
+            "ko": "성함이 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer1",
+            "ko": "조ㅇㅇ",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion2",
+            "ko": "나이는 어떻게 되십니까?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer2",
+            "ko": "일흔 하나입니다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueQuestion3",
+            "ko": "어디가 불편 하세요?",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "dialogueAnswer3",
+            "ko": "열이 나고 머리가 아파요, 약간 춥기도 해요",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ExplainProcedure_BT",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "환자에게 체온측정의 목적과 방법을 설명한다",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasureBodyTemperature",
+      "config": {
+        "requiredItems": [
+          "TympanicThermometer",
+          "ThermometerCap"
+        ],
+        "targetZoneId": "PatientEar",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "고막 체온 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "새로운 렌즈캡으로 교환한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "버튼을 누르고 삐 소리와 함께 준비기호 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "귓바퀴를 후상방으로 당긴 후 외이도에 삽입하고 시작버튼",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "삐 소리 신호음이 울리면 체온계를 빼고 온도를 읽는다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step5",
+            "ko": "렌즈캡 분리스위치를 눌러 사용한 렌즈캡을 분리",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "38.3",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "℃",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMin",
+            "ko": "36.0",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMax",
+            "ko": "37.0",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ExplainProcedure_Pulse",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "환자에게 맥박측정의 목적과 방법을 설명한다",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasurePulse",
+      "config": {
+        "requiredItems": [
+          "SecondHandWatch"
+        ],
+        "targetZoneId": "PatientRadialArtery",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "요골동맥 맥박 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "편안한 자세로 앉거나 눕게 한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "요골동맥위에 2,3,4번째 손가락끝을 대고 맥박 확인 후 살며시 누른다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "맥박은 1분 동안 측정한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "110",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMin",
+            "ko": "60",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMax",
+            "ko": "100",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasureRespiration",
+      "config": {
+        "requiredItems": [
+          "SecondHandWatch"
+        ],
+        "targetZoneId": "PatientChest",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "호흡 측정 (환자가 알아차리지 못한 상태에서)",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "맥박 측정 후 손목에서 손을 떼지 않은 상태에서 호흡을 관찰",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "호흡의 깊이와 리듬을 관찰한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "호흡수는 1분간 측정한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "26",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMin",
+            "ko": "12",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalMax",
+            "ko": "20",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MeasureBloodPressure",
+      "config": {
+        "requiredItems": [
+          "Sphygmomanometer",
+          "Stethoscope"
+        ],
+        "targetZoneId": "PatientUpperArm",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "혈압 측정",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step1",
+            "ko": "혈압 측정 전 5~10분간 안정 상태 확인",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step2",
+            "ko": "상박을 심장위치와 같은 높이로 맞춘다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step3",
+            "ko": "커프 하단이 상완동맥 촉지부에서 약 2cm 위에 오도록 한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step4",
+            "ko": "상완동맥위에 청진기를 댄다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step5",
+            "ko": "밸브 잠그고 커프 팽창 후 서서히 공기를 빼면서 수축기압/이완기압 읽는다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "step6",
+            "ko": "커프를 풀고 혈압기를 정리",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "expectedValue",
+            "ko": "130/80",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "unit",
+            "ko": "mmHg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalSystolicMax",
+            "ko": "120",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "normalDiastolicMax",
+            "ko": "80",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "RecordVitalSigns",
+      "config": {
+        "requiredItems": [],
+        "targetZoneId": "",
+        "extra": [
+          {
+            "key": "description",
+            "ko": "활력징후 측정결과를 임상관찰기록지에 기록한다",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "BP",
+            "ko": "130/80mmHg",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "pulse",
+            "ko": "110회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "respiration",
+            "ko": "26회/min",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "temperature",
+            "ko": "38.3℃",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    }
+  ]
+}
