@@ -28,6 +28,7 @@ Material:
   - SHADOW_SHAPE_BLENDING_ON
   - _ALPHATEST_ON
   - _SURFACE_TYPE_TRANSPARENT
+  - _USE_HEIGHT_BIAS
   m_InvalidKeywords:
   - _EMISSION
   m_LightmapFlags: 2
@@ -106,11 +107,11 @@ Material:
     - _AlphaClip: 1
     - _AlphaToMask: 0
     - _Blend: 0
-    - _BlobIntensity: 1.3
-    - _BlobPower: 1.5
+    - _BlobIntensity: 1
+    - _BlobPower: 1
     - _BumpScale: 1
     - _CastShadows: 1
-    - _CubeToSphereBlend: 0.1
+    - _CubeToSphereBlend: 0.185
     - _Cull: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
@@ -119,7 +120,7 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Height_Bias: 0.36
+    - _Height_Bias: -0.078
     - _Height_Power: 0.88
     - _Intensity: 0.5
     - _Metallic: 0
@@ -129,14 +130,14 @@ Material:
     - _Power: 1
     - _QueueControl: 1
     - _QueueOffset: 0
-    - _RoundedCubeBias: 1.35
-    - _RoundedCubePower: 1.86
+    - _RoundedCubeBias: 0.572
+    - _RoundedCubePower: 0.97
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 5
     - _SrcBlendAlpha: 1
     - _Surface: 1
-    - _USE_HEIGHT_BIAS: 0
+    - _USE_HEIGHT_BIAS: 1
     - _UVSec: 0
     - _ZTest: 8
     - _ZWrite: 0
