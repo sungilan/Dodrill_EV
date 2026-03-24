@@ -46,6 +46,8 @@ public class InteractablePart : MonoBehaviour
             autoGrabbable.onGrab.AddListener((hand, grabbable) => OnGrabStart());
             autoGrabbable.onRelease.AddListener((hand, grabbable) => OnGrabEnd());
         }
+
+        NetworkObjectFinder.Instance?.Register(gameObject.name, gameObject);
     }
 
     void Start() => SetPartState(PartState.Assembled);

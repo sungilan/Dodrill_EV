@@ -1,0 +1,600 @@
+{
+  "scenarioId": "ev_p0aa6_battery_insulation",
+  "scenarioName": {
+    "ko": "[P0AA6] 고전압 배터리 절연 파괴 진단 및 정비",
+    "en": "[P0AA6] HV Battery Insulation Failure - Diagnosis & Repair",
+    "vi": ""
+  },
+  "version": "1.0",
+
+  "dtc": {
+    "code": "P0AA6",
+    "faultName": {
+      "ko": "고전압 시스템 절연 저항 이상",
+      "en": "Hybrid/EV Battery Isolation Fault"
+    },
+    "symptom": {
+      "ko": "계기판에 고전압 경고등 점등, 주행 출력 제한, 충전 불가",
+      "en": "HV warning lamp ON, power limited, charging disabled"
+    },
+    "requiresLOTO": true,
+    "dischargeWaitSeconds": 10
+  },
+
+  "map": {
+    "objects": [
+      {
+        "prefabId": "Ioniq5N",
+        "position": { "x": 0,    "y": 0, "z": 0   },
+        "rotation": { "x": 0,    "y": 0, "z": 0   },
+        "scale":    { "x": 1,    "y": 1, "z": 1   },
+        "properties": [
+          { "key": "vin",           "ko": "KMHC251XXXXXXXX", "en": "", "vi": "" },
+          { "key": "batteryStatus", "ko": "SOC 68%",          "en": "", "vi": "" }
+        ]
+      },
+      {
+        "prefabId": "Maintenance_Cart",
+        "position": { "x": -2.0, "y": 0, "z": 1.5 },
+        "rotation": { "x": 0,    "y": 90,"z": 0   },
+        "scale":    { "x": 1,    "y": 1, "z": 1   },
+        "properties": []
+      },
+      {
+        "prefabId": "Vehicle_Lift",
+        "position": { "x": 0,    "y": 0, "z": 0   },
+        "rotation": { "x": 0,    "y": 0, "z": 0   },
+        "scale":    { "x": 1,    "y": 1, "z": 1   },
+        "properties": []
+      }
+    ]
+  },
+
+  "scenario": {
+    "tasks": [
+
+      {
+        "moduleId": "InitialDiagnosis",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "GDS_Tablet",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_OBD_Port"
+          }
+        ]
+      },
+
+      {
+        "moduleId": "LOTO_Gloves",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "InsulatedGloves",
+            "spawnPointId": "SP_Cart_Drawer",
+            "guideId": "Guide_Gloves"
+          }
+        ]
+      },
+
+      {
+        "moduleId": "MSD_Removal",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+
+      {
+        "moduleId": "DischargeWait",
+        "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+
+      {
+        "moduleId": "Voltage_Verification",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "TwoPoleTester",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_HV_Cable_Term"
+          }
+        ]
+      },
+
+      {
+        "moduleId": "BatteryPack_Disassemble",
+        "timeout": 600,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Guide_Battery_Bolts"
+          },
+          {
+            "prefabId": "BatteryJack",
+            "spawnPointId": "SP_Lift_Floor",
+            "guideId": "Guide_BatteryJack"
+          }
+        ]
+      },
+
+      {
+        "moduleId": "Insulation_Measure",
+        "timeout": 300,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "MultimeterKit",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_Battery_Case"
+          }
+        ]
+      },
+
+      {
+        "moduleId": "Contamination_Clean",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "AirGun",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Guide_Busbar_A1"
+          }
+        ]
+      },
+
+      {
+        "moduleId": "Gasket_Replace",
+        "timeout": 300,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SealGasket_New",
+            "spawnPointId": "SP_Parts_Tray",
+            "guideId": "Guide_Seal_Gasket"
+          },
+          {
+            "prefabId": "TorqueWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": ""
+          }
+        ]
+      },
+
+      {
+        "moduleId": "BatteryPack_Assemble",
+        "timeout": 600,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "TorqueWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Guide_Battery_Bolts"
+          }
+        ]
+      },
+
+      {
+        "moduleId": "MSD_Reinstall",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+
+      {
+        "moduleId": "FinalDiagnosis",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "GDS_Tablet",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_OBD_Port"
+          }
+        ]
+      }
+
+    ]
+  },
+
+  "modules": [
+
+    {
+      "moduleId": "InitialDiagnosis",
+      "config": {
+        "actionType": "ScanDTC",
+        "requiredItems": [ "GDS_Tablet" ],
+        "targetObjName": "OBD_Port",
+        "targetZoneId": "OBD_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "GDS 진단기를 OBD-II 단자에 연결하여 고장코드를 확인하세요.",
+            "en": "Connect GDS to OBD-II port and read fault codes."
+          },
+          {
+            "key": "expectedDTC",
+            "ko": "P0AA6",
+            "en": "P0AA6"
+          },
+          {
+            "key": "guideText",
+            "ko": "진단기 연결 → 차량 통신 → 고장코드 판독",
+            "en": "Connect scanner → Vehicle comms → Read DTC"
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "LOTO_Gloves",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [ "InsulatedGloves" ],
+        "targetObjName": "InsulatedGloves",
+        "targetZoneId": "Player_Hand_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "1,000V 절연 장갑의 이상 유무를 확인 후 착용하세요.",
+            "en": "Inspect and wear 1,000V insulated gloves."
+          },
+          {
+            "key": "safetyNote",
+            "ko": "장갑에 구멍·찢김이 있으면 즉시 교체합니다.",
+            "en": "Replace immediately if gloves are punctured or torn."
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "MSD_Removal",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [],
+        "targetObjName": "MSD_Lever",
+        "targetZoneId": "MSD_Port_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "뒷좌석 하단의 서비스 플러그(MSD) 레버를 해제하고 탈거하세요.",
+            "en": "Release and remove the MSD service plug under the rear seat."
+          },
+          {
+            "key": "step1",
+            "ko": "레버를 90° 회전하여 잠금 해제",
+            "en": "Rotate lever 90° to unlock"
+          },
+          {
+            "key": "step2",
+            "ko": "플러그를 위로 당겨 탈거",
+            "en": "Pull plug upward to remove"
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "DischargeWait",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [],
+        "targetObjName": "Discharge_Timer_UI",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "잔류 전압 방전 대기 중입니다. 10초간 기다리세요.",
+            "en": "Waiting for residual voltage to discharge. Wait 10 seconds."
+          },
+          {
+            "key": "waitSeconds",
+            "ko": "10",
+            "en": "10"
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "Voltage_Verification",
+      "config": {
+        "actionType": "MeasureVoltage",
+        "requiredItems": [ "TwoPoleTester" ],
+        "targetObjName": "HV_Cable_Term",
+        "targetZoneId": "Inverter_Check_Point",
+        "targetValue": 0,
+        "toleranceRatio": 0.05,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "인버터 고압 케이블 단자에서 잔류 전압이 0V인지 측정합니다.",
+            "en": "Measure residual voltage at HV cable terminal — must be 0V."
+          },
+          {
+            "key": "expectedValue",
+            "ko": "0",
+            "en": "0"
+          },
+          {
+            "key": "unit",
+            "ko": "V",
+            "en": "V"
+          },
+          {
+            "key": "failWarning",
+            "ko": "전압이 남아있습니다! 추가 방전 후 재측정하세요.",
+            "en": "Voltage remains! Discharge further and re-measure."
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "BatteryPack_Disassemble",
+      "config": {
+        "actionType": "Disassemble",
+        "requiredItems": [ "ImpactWrench", "BatteryJack" ],
+        "targetObjName": "BatteryPack_BoltGroup",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "배터리 잭으로 팩을 지지한 후 고정 볼트를 모두 해체하세요.",
+            "en": "Support the pack with battery jack, then remove all fixing bolts."
+          },
+          {
+            "key": "boltCount",
+            "ko": "12",
+            "en": "12"
+          },
+          {
+            "key": "boltTorque",
+            "ko": "45 Nm",
+            "en": "45 Nm"
+          },
+          {
+            "key": "step1",
+            "ko": "배터리 잭을 팩 하부에 밀착",
+            "en": "Position battery jack under the pack"
+          },
+          {
+            "key": "step2",
+            "ko": "임팩트 렌치로 볼트 12개 해체 (대각선 순서)",
+            "en": "Remove 12 bolts with impact wrench (diagonal pattern)"
+          },
+          {
+            "key": "step3",
+            "ko": "고전압 케이블 커넥터 및 통신 커넥터 분리",
+            "en": "Disconnect HV cable and communication connectors"
+          },
+          {
+            "key": "step4",
+            "ko": "배터리 잭으로 팩을 서서히 하강",
+            "en": "Slowly lower pack using battery jack"
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "Insulation_Measure",
+      "config": {
+        "actionType": "MeasureResistance",
+        "requiredItems": [ "MultimeterKit" ],
+        "targetObjName": "Battery_Case",
+        "targetZoneId": "",
+        "targetValue": 10000000,
+        "toleranceRatio": 0.5,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "배터리 케이스와 단자 간 절연 저항을 측정하세요. 10MΩ 이상이면 정상입니다.",
+            "en": "Measure insulation resistance between case and terminals. ≥10MΩ = normal."
+          },
+          {
+            "key": "expectedValue",
+            "ko": "10000000",
+            "en": "10000000"
+          },
+          {
+            "key": "unit",
+            "ko": "Ω",
+            "en": "Ω"
+          },
+          {
+            "key": "meterMode",
+            "ko": "MΩ (절연 저항 모드)",
+            "en": "MΩ (Insulation resistance mode)"
+          },
+          {
+            "key": "failCondition",
+            "ko": "10MΩ 미만 → 절연 파괴 확정 → 다음 단계 진행",
+            "en": "< 10MΩ → Insulation failure confirmed → proceed to next step"
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "Contamination_Clean",
+      "config": {
+        "actionType": "Lubricate",
+        "requiredItems": [ "AirGun" ],
+        "targetObjName": "Busbar_A1",
+        "targetZoneId": "",
+        "targetValue": 100,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "오염된 버스바 하단 부위에 에어건으로 이물질을 완전히 제거하세요.",
+            "en": "Use air gun to completely remove contaminants from busbar area."
+          },
+          {
+            "key": "toolNote",
+            "ko": "에어건 압력: 0.3~0.5 MPa",
+            "en": "Air gun pressure: 0.3~0.5 MPa"
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "Gasket_Replace",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [ "SealGasket_New", "TorqueWrench" ],
+        "targetObjName": "Seal_Gasket",
+        "targetZoneId": "Battery_Top_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "수분 유입 방지용 실링 가스켓을 신품으로 교체하세요.",
+            "en": "Replace the sealing gasket with a new one to prevent moisture ingress."
+          },
+          {
+            "key": "step1",
+            "ko": "구형 가스켓 완전 제거 및 면 청소",
+            "en": "Remove old gasket completely and clean mating surface"
+          },
+          {
+            "key": "step2",
+            "ko": "신품 가스켓 장착",
+            "en": "Install new gasket"
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "BatteryPack_Assemble",
+      "config": {
+        "actionType": "Disassemble",
+        "requiredItems": [ "TorqueWrench" ],
+        "targetObjName": "BatteryPack_BoltGroup",
+        "targetZoneId": "",
+        "targetValue": 45,
+        "toleranceRatio": 0.05,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "배터리 팩을 차체에 재조립하고 볼트를 규정 토크(45 Nm)로 체결하세요.",
+            "en": "Reinstall battery pack and torque all bolts to spec (45 Nm)."
+          },
+          {
+            "key": "boltCount",
+            "ko": "12",
+            "en": "12"
+          },
+          {
+            "key": "torqueSpec",
+            "ko": "45 Nm (±5%)",
+            "en": "45 Nm (±5%)"
+          },
+          {
+            "key": "step1",
+            "ko": "배터리 잭으로 팩을 차체 위치로 상승",
+            "en": "Raise pack into position with battery jack"
+          },
+          {
+            "key": "step2",
+            "ko": "고전압 커넥터 및 통신 커넥터 체결",
+            "en": "Connect HV cable and communication connectors"
+          },
+          {
+            "key": "step3",
+            "ko": "토크 렌치로 볼트 12개 규정값 체결 + 마킹",
+            "en": "Torque 12 bolts to spec + apply torque marking"
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "MSD_Reinstall",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [],
+        "targetObjName": "MSD_Lever",
+        "targetZoneId": "MSD_Port_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "서비스 플러그(MSD)를 재삽입하고 레버를 잠금 위치로 돌리세요.",
+            "en": "Reinsert the MSD service plug and rotate lever to lock position."
+          }
+        ]
+      }
+    },
+
+    {
+      "moduleId": "FinalDiagnosis",
+      "config": {
+        "actionType": "ScanDTC",
+        "requiredItems": [ "GDS_Tablet" ],
+        "targetObjName": "OBD_Port",
+        "targetZoneId": "OBD_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "GDS 진단기로 고장코드를 소거하고 재확인하세요. 이상 없음이면 정비 완료입니다.",
+            "en": "Use GDS to clear DTCs and re-scan. No fault = repair complete."
+          },
+          {
+            "key": "clearDTC",
+            "ko": "true",
+            "en": "true"
+          },
+          {
+            "key": "expectedResult",
+            "ko": "고장코드 없음",
+            "en": "No fault codes"
+          },
+          {
+            "key": "completionMessage",
+            "ko": "P0AA6 정비 완료. 차량이 정상 상태입니다.",
+            "en": "P0AA6 repair complete. Vehicle status is normal."
+          }
+        ]
+      }
+    }
+
+  ]
+}

@@ -132,6 +132,8 @@ public class SyncGrab : NetworkBehaviour
         {
             Debug.LogError($"[SyncGrab] {name} Grabbable 없음!");
         }
+
+        NetworkObjectFinder.Instance?.Register(gameObject.name, gameObject);
     }
 
     public override void OnStopClient()
