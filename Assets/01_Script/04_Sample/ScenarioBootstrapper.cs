@@ -81,6 +81,8 @@ using Debug = UnityEngine.Debug;
             Registry.Register(new RecordMedicationModule());
             Registry.Register(new RecordResultsModule());
 
-            Debug.Log($"[ScenarioBootstrapper] 총 {Registry.Count}개 모듈 등록 완료");
+            EVModules.RegisterAll(Registry);
+
+        Debug.Log($"[ScenarioBootstrapper] 총 {Registry.Count}개 모듈 등록 완료");
         }
     }

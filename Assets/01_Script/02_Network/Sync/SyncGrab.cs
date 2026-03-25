@@ -113,6 +113,18 @@ public class SyncGrab : NetworkBehaviour
         base.OnStartClient();
         _rb = GetComponent<Rigidbody>();
 
+        // holdPoint 미설정 시 "HoldPoint" 태그로 씬에서 자동 탐색
+        if(holdPoint == null)
+        {
+            var go = GameObject.FindWithTag("HoldPoint");
+            if(go != null)
+                holdPoint = go.transform;
+            else
+                Debug.LogWarning($"[SyncGrab] {name}: holdPoint 없음 — Tag='HoldPoint' 오브젝트를 씬에 추가하세요.");
+        }
+
+        NetworkObjectFinder.Instance?.Register(gameObject.name, gameObject);
+
         // SyncVar 콜백 등록
         _isKinematic.OnChange += OnKinematicChanged;
         _isGrabbed.OnChange += OnIsGrabbedChanged;
@@ -122,7 +134,7 @@ public class SyncGrab : NetworkBehaviour
         ApplyKinematic(_isKinematic.Value);
 
         _grab = GetComponent<Grabbable>();
-        if (_grab != null)
+        if(_grab != null)
         {
             _grab.OnBeforeGrabEvent += OnBeforeGrab;
             _grab.onGrab.AddListener(OnVRGrab);
@@ -134,6 +146,20 @@ public class SyncGrab : NetworkBehaviour
         }
 
         NetworkObjectFinder.Instance?.Register(gameObject.name, gameObject);
+    }
+
+    // ══════════════════════════════════════════════════════
+    // PC 들고 이동 — holdPoint 실시간 추적
+    // ══════════════════════════════════════════════════════
+
+    private void Update()
+    {
+        // PC에서 들고 있는 동안 아이템이 holdPoint를 따라 이동
+        if(_isPCHolding && holdPoint != null && IsOwner && !_isTweening)
+        {
+            transform.position = holdPoint.position;
+            transform.rotation = holdPoint.rotation;
+        }
     }
 
     public override void OnStopClient()
@@ -151,7 +177,7 @@ public class SyncGrab : NetworkBehaviour
         _pendingHand = null;
         StopCoroutineIfRunning(ref _grabCoroutine);
 
-        if (_grab != null)
+        if(_grab != null)
         {
             _grab.OnBeforeGrabEvent -= OnBeforeGrab;
             _grab.onGrab.RemoveListener(OnVRGrab);
@@ -164,7 +190,7 @@ public class SyncGrab : NetworkBehaviour
         base.OnOwnershipServer(prevOwner);
 
         bool ownerGone = NetworkObject.Owner == null || !NetworkObject.Owner.IsValid;
-        if (!_isGrabbed.Value || !ownerGone) return;
+        if(!_isGrabbed.Value || !ownerGone) return;
 
         ServerForceReset();
     }
@@ -176,10 +202,10 @@ public class SyncGrab : NetworkBehaviour
     /// <summary>Rigidbody에 Kinematic 상태 적용. 서버/클라 모두 사용.</summary>
     private void ApplyKinematic(bool isKinematic)
     {
-        if (_rb == null) return;
+        if(_rb == null) return;
         _rb.isKinematic = isKinematic;
         _rb.useGravity = false;
-        if (isKinematic)
+        if(isKinematic)
         {
             _rb.linearVelocity = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
@@ -203,17 +229,17 @@ public class SyncGrab : NetworkBehaviour
     private void OnBeforeGrab(Hand hand, Grabbable g)
     {
         // 이미 Owner → 두 번째 손 포함 즉시 통과
-        if (IsOwner) return;
+        if(IsOwner) return;
 
         // 차단 조건
-        if (_isTweening || _isGrabbed.Value || _isDespawning.Value)
+        if(_isTweening || _isGrabbed.Value || _isDespawning.Value)
         {
             hand.ForceReleaseGrab();
             return;
         }
 
         // 중복 소유권 요청 방지
-        if (_pendingHand != null)
+        if(_pendingHand != null)
         {
             hand.ForceReleaseGrab();
             return;
@@ -232,9 +258,9 @@ public class SyncGrab : NetworkBehaviour
         _pendingHand = null;
         StopCoroutineIfRunning(ref _grabCoroutine);
 
-        if (!IsOwner) return;
+        if(!IsOwner) return;
 
-        if (_isDespawning.Value)
+        if(_isDespawning.Value)
         {
             hand.ForceReleaseGrab();
             return;
@@ -246,10 +272,10 @@ public class SyncGrab : NetworkBehaviour
 
     private void OnVRRelease(Hand hand, Grabbable g)
     {
-        if (!IsOwner) return;
+        if(!IsOwner) return;
 
         // 다른 손이 아직 잡고 있으면 무시
-        if (_grab != null && _grab.GetHeldBy().Count > 0) return;
+        if(_grab != null && _grab.GetHeldBy().Count > 0) return;
 
         ReleaseServerRpc(transform.position, transform.rotation);
     }
@@ -260,18 +286,18 @@ public class SyncGrab : NetworkBehaviour
 
     public void OnPCClick()
     {
-        if (_isTweening) return;
-        if (_isDespawning.Value) return;
+        if(_isTweening) return;
+        if(_isDespawning.Value) return;
 
-        if (_isPCHolding)
+        if(_isPCHolding)
         {
             RequestRelease();
             return;
         }
 
-        if (_isGrabbed.Value) return;
+        if(_isGrabbed.Value) return;
 
-        if (holdPoint == null)
+        if(holdPoint == null)
         {
             Debug.LogWarning($"[SyncGrab] {name}: holdPoint 없음");
             return;
@@ -296,7 +322,8 @@ public class SyncGrab : NetworkBehaviour
         {
             _isTweening = false;
             _isPCHolding = true;
-            ReleaseServerRpc(transform.position, transform.rotation);
+            // 들고 있는 동안 소유권 유지 — 두 번째 클릭 시 RequestRelease()에서 해제
+            //ReleaseServerRpc(transform.position, transform.rotation);
         });
     }
 
@@ -309,7 +336,7 @@ public class SyncGrab : NetworkBehaviour
         _wantCancel = false;
         _onGranted = onGranted;
 
-        if (IsOwner)
+        if(IsOwner)
         {
             _onGranted?.Invoke();
             _onGranted = null;
@@ -329,7 +356,7 @@ public class SyncGrab : NetworkBehaviour
 
     public void RequestRelease()
     {
-        if (!IsOwner) return;
+        if(!IsOwner) return;
 
         _isPCHolding = false;
         _pendingHand = null;
@@ -369,7 +396,7 @@ public class SyncGrab : NetworkBehaviour
         ServerForceReset();
 
         Animator anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>();
-        if (anim != null)
+        if(anim != null)
         {
             anim.SetTrigger("Disappear");
             yield return null;
@@ -382,7 +409,7 @@ public class SyncGrab : NetworkBehaviour
             yield return new WaitForSeconds(2f);
         }
 
-        if (NetworkObject != null && NetworkObject.IsSpawned)
+        if(NetworkObject != null && NetworkObject.IsSpawned)
             NetworkObject.Despawn();
     }
 
@@ -408,7 +435,7 @@ public class SyncGrab : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void RequestGrabServerRpc(NetworkConnection sender = null)
     {
-        if (_isGrabbed.Value || _isDespawning.Value)
+        if(_isGrabbed.Value || _isDespawning.Value)
         {
             DenyGrabTargetRpc(sender);
             return;
@@ -446,7 +473,7 @@ public class SyncGrab : NetworkBehaviour
     [TargetRpc]
     private void GrantGrabTargetRpc(NetworkConnection target)
     {
-        if (_wantCancel)
+        if(_wantCancel)
         {
             _wantCancel = false;
             _onGranted = null;
@@ -456,7 +483,7 @@ public class SyncGrab : NetworkBehaviour
         }
 
         // PC/모바일
-        if (_onGranted != null)
+        if(_onGranted != null)
         {
             _onGranted.Invoke();
             _onGranted = null;
@@ -464,7 +491,7 @@ public class SyncGrab : NetworkBehaviour
         }
 
         // VR: 저장된 손으로 TryGrab
-        if (_pendingHand != null)
+        if(_pendingHand != null)
         {
             StopCoroutineIfRunning(ref _grabCoroutine);
             _grabCoroutine = StartCoroutine(TryGrabAfterOwnership(_pendingHand));
@@ -489,7 +516,7 @@ public class SyncGrab : NetworkBehaviour
     /// </summary>
     private IEnumerator TryGrabAfterOwnership(Hand hand)
     {
-        if (hand == null)
+        if(hand == null)
         {
             RequestRelease();
             yield break;
@@ -497,16 +524,16 @@ public class SyncGrab : NetworkBehaviour
 
         // 소유권 전파 완료 대기 (최대 2프레임)
         yield return null;
-        if (!IsOwner) yield return null;
+        if(!IsOwner) yield return null;
 
-        if (!IsOwner)
+        if(!IsOwner)
         {
             _pendingHand = null;
             RequestRelease();
             yield break;
         }
 
-        if (hand == null)
+        if(hand == null)
         {
             _pendingHand = null;
             RequestRelease();
@@ -545,7 +572,7 @@ public class SyncGrab : NetworkBehaviour
 
     private void OnIsDespawningChanged(bool prev, bool next, bool asServer)
     {
-        if (!next) return;
+        if(!next) return;
         DOTween.Kill(transform);
         _isPCHolding = false;
         _isTweening = false;
@@ -565,13 +592,13 @@ public class SyncGrab : NetworkBehaviour
     private IEnumerator ValidateOwnerRoutine()
     {
         var wait = new WaitForSeconds(0.5f);
-        while (true)
+        while(true)
         {
             yield return wait;
-            if (!_isGrabbed.Value) continue;
+            if(!_isGrabbed.Value) continue;
 
             bool ownerGone = NetworkObject.Owner == null || !NetworkObject.Owner.IsValid;
-            if (!ownerGone) continue;
+            if(!ownerGone) continue;
 
             ServerForceReset();
         }
@@ -583,7 +610,7 @@ public class SyncGrab : NetworkBehaviour
 
     private void StopCoroutineIfRunning(ref Coroutine coroutine)
     {
-        if (coroutine == null) return;
+        if(coroutine == null) return;
         StopCoroutine(coroutine);
         coroutine = null;
     }

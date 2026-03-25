@@ -169,7 +169,7 @@ namespace DoDrill.Training
             {
                 var config = _scenarioData.GetModuleConfig(
                     _scenarioData.scenario.tasks[_currentTaskIndex].moduleId);
-                if (config != null && !string.IsNullOrEmpty(config.targetZoneId)) return;
+                //if (config != null && !string.IsNullOrEmpty(config.targetZoneId)) return;
             }
 
             InstanceFinder.ClientManager.Broadcast(new ItemUsedSignal
@@ -196,30 +196,34 @@ namespace DoDrill.Training
                 var config = _scenarioData.GetModuleConfig(taskDef.moduleId);
 
                 // 해당 태스크가 목표 존(targetZoneId)을 가지고 있는지 확인
-                if (config != null && !string.IsNullOrEmpty(config.targetZoneId))
+
+                // targetZoneId 있는 Task -> 즉시 완료 신호 보내지 않음
+                // TaskInteractionZone.OnTriggerEnter 에서 실제 이동 후 발행
+                if(config != null && !string.IsNullOrEmpty(config.targetZoneId))
                 {
-                    var required = config.requiredItems;
-                    // 아이템 ID 검증 (리스트가 비어있으면 통과, 아니면 포함 여부 확인)
-                    bool validItem = required == null || required.Count == 0 || required.Contains(itemId);
+                    Debug.Log($"[Bridge] Zone Task 감지 ({config.targetZoneId}) — 이동 후 Zone 진입 대기"); return;
+                    //var required = config.requiredItems;
+                    //// 아이템 ID 검증 (리스트가 비어있으면 통과, 아니면 포함 여부 확인)
+                    //bool validItem = required == null || required.Count == 0 || required.Contains(itemId);
 
-                    if (validItem)
-                    {
-                        // 서버로 '존 인터랙션' 신호 전송 (이 신호를 서버가 받아야 연출 브로드캐스트를 쏨)
-                        InstanceFinder.ClientManager.Broadcast(new ZoneInteractionSignal
-                        {
-                            taskIndex = _currentTaskIndex,
-                            zoneId = config.targetZoneId,
-                            itemId = itemId,
-                            clientId = InstanceFinder.ClientManager.Connection.ClientId,
-                        });
+                    //if (validItem)
+                    //{
+                    //    // 서버로 '존 인터랙션' 신호 전송 (이 신호를 서버가 받아야 연출 브로드캐스트를 쏨)
+                    //    InstanceFinder.ClientManager.Broadcast(new ZoneInteractionSignal
+                    //    {
+                    //        taskIndex = _currentTaskIndex,
+                    //        zoneId = config.targetZoneId,
+                    //        itemId = itemId,
+                    //        clientId = InstanceFinder.ClientManager.Connection.ClientId,
+                    //    });
 
-                        Debug.Log($"[Bridge] PC 클릭 성공 -> ZoneSignal 전송: {itemId} -> {config.targetZoneId}");
-                        return; // 연출 로직으로 태웠으므로 일반 Grab 신호는 보내지 않음
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[Bridge] 아이템 불일치: 현재 태스크에 필요한 아이템이 아님 (입력:{itemId})");
-                    }
+                    //    Debug.Log($"[Bridge] PC 클릭 성공 -> ZoneSignal 전송: {itemId} -> {config.targetZoneId}");
+                    //    return; // 연출 로직으로 태웠으므로 일반 Grab 신호는 보내지 않음
+                    //}
+                    //else
+                    //{
+                    //    Debug.LogWarning($"[Bridge] 아이템 불일치: 현재 태스크에 필요한 아이템이 아님 (입력:{itemId})");
+                    //}
                 }
             }
 

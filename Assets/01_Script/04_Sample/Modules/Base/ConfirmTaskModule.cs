@@ -19,16 +19,16 @@ public abstract class ConfirmTaskModule : ITaskModule
     private Action _onComplete;
     private Action _onFail;
 
-    public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
+    public virtual void OnStart(ModuleConfig config, Action onComplete, Action onFail)
     {
         _onComplete = onComplete;
-        _onFail     = onFail;
+        _onFail = onFail;
         InteractionEvents.OnTaskConfirmed += HandleConfirm;
     }
 
     private void HandleConfirm(string moduleId)
     {
-        if (moduleId != ModuleId) return;
+        if(moduleId != ModuleId) return;
         _onComplete?.Invoke();
     }
 
