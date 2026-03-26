@@ -121,23 +121,6 @@ public class VehicleLiftController : MonoBehaviour
         ApplyHeight(_currentHeight);
         BroadcastState();
         UpdateUI();
-
-        ///테스트용
-        if(Input.GetKeyDown(KeyCode.Z))
-        {
-            Debug.Log("키 입력: Z (올리기)");
-            OnUpButton();
-        }
-        if(Input.GetKeyDown(KeyCode.X))
-        {
-            Debug.Log("키 입력: X (내리기)");
-            OnDownButton();
-        }
-        if(Input.GetKeyDown(KeyCode.C))
-        {
-            Debug.Log("키 입력: C (멈추기)");
-            OnStopButton();
-        }
     }
 
     // ═══════════════════════════════════════════

@@ -44,6 +44,22 @@ public class FreeLookController : NetworkBehaviour
     [Tooltip("레이캐스트 최대 거리")]
     public float raycastMaxDistance = 20f;
 
+    [Tooltip("들고 있는 도구를 사용(Use)하는 키 (기본: E)")]
+    public KeyCode useKey = KeyCode.F;  // E키는 수직이동이 점유 — F키 사용
+
+    [Tooltip("우클릭으로도 Use 가능 여부 (카메라 회전과 구분 주의)")]
+    public bool rightClickUse = false;
+
+    [Header("리프트 키")]
+    [Tooltip("차량 리프트 올리기")]
+    public KeyCode liftUpKey = KeyCode.Z;
+    [Tooltip("차량 리프트 내리기")]
+    public KeyCode liftDownKey = KeyCode.X;
+    [Tooltip("배터리 잭 올리기")]
+    public KeyCode batteryUpKey = KeyCode.C;
+    [Tooltip("배터리 잭 내리기")]
+    public KeyCode batteryDownKey = KeyCode.V;
+
     [Header("호버 가이드 UI")]
     [Tooltip("화면 중앙에 표시할 TMP 텍스트 (없으면 생략)")]
     public TMPro.TextMeshProUGUI hoverGuideText;
@@ -81,6 +97,10 @@ public class FreeLookController : NetworkBehaviour
     /// <summary>현재 들고 있는 오브젝트</summary>
     private SyncGrab _heldObject = null;
 
+    // 리프트 캐시 (OnStartClient에서 한 번만 탐색)
+    private VehicleLiftController _vehicleLift = null;
+    private BatteryLiftController _batteryLift = null;
+
     /// <summary>현재 호버 중인 오브젝트 정보</summary>
     private string _hoverGuideMsg = string.Empty;
     private Collider _lastHoveredCol = null;   // 직전 호버 콜라이더
@@ -110,6 +130,20 @@ public class FreeLookController : NetworkBehaviour
 
         _isVR = IsVRDevice();
         EnableMyCamera();
+
+        // ★ LocalNetworkTransform이 있으면 비활성화
+        // FreeLookController가 직접 transform.position을 제어하기 때문에
+        // LNT가 동시에 위치를 덮어쓰면 매 프레임 떨림 발생
+        var lnt = GetComponent<LocalNetworkTransform>();
+        if(lnt != null)
+        {
+            lnt.enabled = false;
+            Log("LocalNetworkTransform 비활성화 — FreeLookController가 위치 직접 제어");
+        }
+
+        // 리프트 컨트롤러 캐시 (매 프레임 FindObjectOfType 방지)
+        _vehicleLift = Object.FindFirstObjectByType<VehicleLiftController>();
+        _batteryLift = Object.FindFirstObjectByType<BatteryLiftController>();
 
         if(!_isVR)
             StartCoroutine(InitCameraForDrag());
@@ -235,6 +269,7 @@ public class FreeLookController : NetworkBehaviour
         }
 
         HandleHover();
+        HandleUseInput();
         HandleClick();
     }
 
@@ -277,6 +312,25 @@ public class FreeLookController : NetworkBehaviour
         if(Input.GetKeyDown(KeyCode.E)) MoveDown();
         if(Input.GetKeyUp(KeyCode.Q)) StopVertical();
         if(Input.GetKeyUp(KeyCode.E)) StopVertical();
+
+        // ── 리프트 키 ──────────────────────────────
+        // 캐시 없으면 재탐색 (씬 전환 등 대비)
+        if(_vehicleLift == null) _vehicleLift = Object.FindFirstObjectByType<VehicleLiftController>();
+        if(_batteryLift == null) _batteryLift = Object.FindFirstObjectByType<BatteryLiftController>();
+
+        if(_vehicleLift != null)
+        {
+            if(Input.GetKeyDown(liftUpKey)) { _vehicleLift.OnUpButton(); Log($"차량 리프트 ▲ ({liftUpKey})"); }
+            if(Input.GetKeyDown(liftDownKey)) { _vehicleLift.OnDownButton(); Log($"차량 리프트 ▼ ({liftDownKey})"); }
+            if(Input.GetKeyUp(liftUpKey) || Input.GetKeyUp(liftDownKey)) _vehicleLift.OnStopButton();
+        }
+
+        if(_batteryLift != null)
+        {
+            if(Input.GetKeyDown(batteryUpKey)) { _batteryLift.OnUpButton(); Log($"배터리 잭 ▲ ({batteryUpKey})"); }
+            if(Input.GetKeyDown(batteryDownKey)) { _batteryLift.OnDownButton(); Log($"배터리 잭 ▼ ({batteryDownKey})"); }
+            if(Input.GetKeyUp(batteryUpKey) || Input.GetKeyUp(batteryDownKey)) _batteryLift.OnStopButton();
+        }
     }
 
     public void MoveUp() => _desiredVertical = 0.5f;
@@ -332,7 +386,7 @@ public class FreeLookController : NetworkBehaviour
         string msg = GetHoverActionMsg(hoveredCol);
 
         // ── 로그 ──
-        //Log($"호버: {objName} — {msg}");
+        Log($"호버: {objName} — {msg}");
 
         // ── 화면 UI ──
         SetGuideUI(msg);
@@ -458,7 +512,7 @@ public class FreeLookController : NetworkBehaviour
             return;
         }
 
-        // ── 들고 있는 상태 → 다시 클릭하면 내려놓기 ──
+        // ── 들고 있는 상태 → 좌클릭 = 내려놓기 ──
         if(_heldObject != null)
         {
             Log($"내려놓기: {_heldObject.name}");
@@ -532,6 +586,86 @@ public class FreeLookController : NetworkBehaviour
         }
 
         return false;
+    }
+
+
+    /// <summary>레이캐스트로 TaskInteractionZone 감지</summary>
+    private TaskInteractionZone RaycastZone(Vector2 screenPos)
+    {
+        if(_mainCamera == null) return null;
+        Ray ray = _mainCamera.ScreenPointToRay(screenPos);
+        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance)) return null;
+
+        return hit.collider.GetComponent<TaskInteractionZone>()
+            ?? hit.collider.GetComponentInParent<TaskInteractionZone>();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Use 입력 (E키 or 우클릭) — 들고 있는 도구 사용
+    // ═══════════════════════════════════════════════════════
+
+    private void HandleUseInput()
+    {
+        // E키 또는 우클릭(rightClickUse=true일 때, 카메라 회전과 구분 필요)
+        bool usePressed = Input.GetKeyDown(useKey)
+                       || (rightClickUse && Input.GetMouseButtonDown(1)
+                           && Input.GetAxis("Mouse X") == 0f
+                           && Input.GetAxis("Mouse Y") == 0f);
+
+        if(!usePressed) return;
+
+        if(_heldObject == null)
+        {
+            // 들고 있지 않을 때 E키 → 바라보는 Zone 직접 활성화 (빈손 터치)
+            if(_mainCamera == null) return;
+            Ray ray = _mainCamera.ScreenPointToRay(
+                new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+            if(Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance))
+            {
+                var zone = hit.collider.GetComponent<TaskInteractionZone>()
+                        ?? hit.collider.GetComponentInParent<TaskInteractionZone>();
+                if(zone != null && zone.gameObject.activeInHierarchy)
+                {
+                    Log($"E키 빈손 Zone 터치: {zone.zoneId}");
+                    InteractionEvents.FireZoneActivated(zone.zoneId, string.Empty);
+                    return;
+                }
+            }
+            return;
+        }
+
+        // 들고 있을 때 E키 → FireItemUsed 발행
+        var item = _heldObject.GetComponent<TaskItem>();
+        string itemId = item != null ? item.prefabId : _heldObject.name;
+
+        Log($"E키 Use: {itemId}");
+        InteractionEvents.FireItemUsed(itemId);
+
+        // 바라보는 Zone에도 함께 발행 (ZoneAndUseModule 완료용)
+        if(_mainCamera != null)
+        {
+            Ray ray = _mainCamera.ScreenPointToRay(
+                new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+            if(Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance))
+            {
+                var zone = hit.collider.GetComponent<TaskInteractionZone>()
+                        ?? hit.collider.GetComponentInParent<TaskInteractionZone>();
+                if(zone != null)
+                {
+                    Log($"E키 ZoneActivated: {zone.zoneId} ← {itemId}");
+                    InteractionEvents.FireZoneActivated(zone.zoneId, itemId);
+                }
+
+                // MeasurementPoint 있으면 멀티테스터 측정 트리거
+                var mp = hit.collider.GetComponent<MeasurementPoint>()
+                      ?? hit.collider.GetComponentInParent<MeasurementPoint>();
+                if(mp != null)
+                {
+                    Log($"E키 측정: {mp.terminalId}");
+                    InteractionEvents.FireZoneActivated(mp.terminalId, itemId);
+                }
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════

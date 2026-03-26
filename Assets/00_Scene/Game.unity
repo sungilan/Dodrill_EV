@@ -2858,7 +2858,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4680365093547661259, guid: f570d3f75e378d547b4087a102159640, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.4
+      value: 0.17
       objectReference: {fileID: 0}
     - target: {fileID: 4680365093547661259, guid: f570d3f75e378d547b4087a102159640, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2903,6 +2903,10 @@ PrefabInstance:
     - target: {fileID: 5456163647249943921, guid: f570d3f75e378d547b4087a102159640, type: 3}
       propertyPath: m_Name
       value: FBX_ElectricCar_01
+      objectReference: {fileID: 0}
+    - target: {fileID: 5456163647249943921, guid: f570d3f75e378d547b4087a102159640, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5528033751639761791, guid: f570d3f75e378d547b4087a102159640, type: 3}
       propertyPath: m_IsActive
@@ -13015,11 +13019,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1263099014453325558, guid: 48c0674ebbf5ca04195b966cb1bcd1c5, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1263099014453325558, guid: 48c0674ebbf5ca04195b966cb1bcd1c5, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.491
+      value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 3874329732888351325, guid: 48c0674ebbf5ca04195b966cb1bcd1c5, type: 3}
       propertyPath: m_LocalRotation.w
@@ -59352,7 +59356,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 8bda908ddd55a604c87b845e52b7c9da, type: 3}
-  m_PlayOnAwake: 1
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
@@ -59452,7 +59456,7 @@ MonoBehaviour:
   uniqueId: VehicleLift_01
   leftArm: {fileID: 224618709}
   rightArm: {fileID: 1802366526}
-  vehicleTransform: {fileID: 616525333}
+  vehicleTransform: {fileID: 1000427483}
   maxHeight: 2
   liftSpeed: 0.4
   slowZone: 0.15
