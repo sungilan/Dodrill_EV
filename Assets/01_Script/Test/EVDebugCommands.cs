@@ -24,7 +24,7 @@ public class EVForceCompleteCommand : IDebugCommand
 
     public void Execute(string[] args, int callerId)
     {
-        var mgr = UnityEngine.Object.FindFirstObjectByType<TrainingFlowManager>();
+        var mgr = UnityEngine.Object.FindFirstObjectByType<ScenarioRunner>();
         if(mgr == null)
         {
             Debug.LogWarning("[Debug] TrainingFlowManager 를 씬에서 찾을 수 없음");
@@ -49,10 +49,10 @@ public class EVJumpToStepCommand : IDebugCommand
             return;
         }
 
-        var mgr = UnityEngine.Object.FindFirstObjectByType<TrainingFlowManager>();
+        var mgr = UnityEngine.Object.FindFirstObjectByType<ScenarioRunner>();
         if(mgr == null)
         {
-            Debug.LogWarning("[Debug] TrainingFlowManager 를 씬에서 찾을 수 없음");
+            Debug.LogWarning("[Debug] ScenarioRunner 를 씬에서 찾을 수 없음");
             return;
         }
 
@@ -69,10 +69,10 @@ public class EVGetStatusCommand : IDebugCommand
 
     public void Execute(string[] args, int callerId)
     {
-        var mgr = UnityEngine.Object.FindFirstObjectByType<TrainingFlowManager>();
+        var mgr = UnityEngine.Object.FindFirstObjectByType<ScenarioRunner>();
         if(mgr == null)
         {
-            Debug.LogWarning("[Debug] TrainingFlowManager 를 씬에서 찾을 수 없음");
+            Debug.LogWarning("[Debug] ScenarioRunner 를 씬에서 찾을 수 없음");
             return;
         }
         Debug.Log($"[Debug] Client#{callerId} → {mgr.GetDebugStatus()}");
@@ -123,14 +123,14 @@ public class EVStartTrainingCommand : IDebugCommand
 
     public void Execute(string[] args, int callerId)
     {
-        var mgr = UnityEngine.Object.FindFirstObjectByType<TrainingFlowManager>();
+        var mgr = UnityEngine.Object.FindFirstObjectByType<ScenarioRunner>();
         if(mgr == null)
         {
-            Debug.LogWarning("[Debug] TrainingFlowManager 를 씬에서 찾을 수 없음");
+            Debug.LogWarning("[Debug] ScenarioRunner 를 씬에서 찾을 수 없음");
             return;
         }
         Debug.Log($"[Debug] Client#{callerId} → EV/StartTraining");
-        mgr.StartTraining();
+        //mgr.StartTraining();
     }
 }
 

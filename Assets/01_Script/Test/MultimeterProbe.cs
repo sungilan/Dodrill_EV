@@ -1,35 +1,48 @@
 using UnityEngine;
-using TMPro;
 
-public class Multimeter : MonoBehaviour
+public class MultimeterProbe : MonoBehaviour
 {
-    public TextMeshProUGUI displayTarget; // Àü¾ĞÀÌ Ç¥½ÃµÉ LCD È­¸é
+    [Header("ê·¹ì„±")]
+    [Tooltip("true = ë¹¨ê°„(+), false = ê²€ì •(-)")]
+    public bool isRedProbe = true;
 
-    private MeasurableNode posNode; // ÇöÀç Á¢ÃË ÁßÀÎ + ³ëµå
-    private MeasurableNode negNode; // ÇöÀç Á¢ÃË ÁßÀÎ - ³ëµå
+    [Header("ì—°ê²°ëœ ë³¸ì²´")]
+    public MultimeterMaster master;
 
-    public void UpdateProbeContact(Polarity probeType, MeasurableNode node)
+    [Tooltip("í˜„ì¬ ì ‘ì´‰ ì¤‘ì¸ ë‹¨ì ID (ë¹„ì–´ìˆìœ¼ë©´ ë¯¸ì ‘ì´‰)")]
+    public string currentTerminalId = "";
+
+    private void OnTriggerEnter(Collider other)
     {
-        if(probeType == Polarity.Positive) posNode = node;
-        else negNode = node;
+        // MeasurementPoint ì»´í¬ë„ŒíŠ¸ê°€ ìˆëŠ” ë‹¨ìë§Œ ì¸ì‹
+        var point = other.GetComponent<MeasurementPoint>();
+        if (point == null) point = other.GetComponentInParent<MeasurementPoint>();
+        if (point == null) return;
 
-        CalculateVoltage();
+        currentTerminalId = point.terminalId;
+
+        // í”¼ë“œë°±
+        Debug.Log($"[Probe:{(isRedProbe ? "RED" : "BLK")}] ì ‘ì´‰: {currentTerminalId}");
+
+        // ë³¸ì²´ì— ì¬ê³„ì‚° ìš”ì²­
+        if (master != null) master.EvaluateConnection();
     }
 
-    private void CalculateVoltage()
+    private void OnTriggerExit(Collider other)
     {
-        if(posNode != null && negNode != null)
+        var point = other.GetComponent<MeasurementPoint>();
+        if (point == null) point = other.GetComponentInParent<MeasurementPoint>();
+        if (point == null) return;
+
+        if (currentTerminalId == point.terminalId)
         {
-            // MSD´Â »Ì¾ÒÁö¸¸ ¹æÀü ½Ã°£À» ¾È ÁöÄ×´Ù¸é?
-            if(LOTOSystem.Instance.isLOCKED && !DischargeTimerUI.Instance.isDischarged)
-            {
-                displayTarget.text = "380.5 V"; // À§Çè! ÀÜ·ù Àü¾Ğ Ç¥½Ã
-                SafetyUIHandler.Instance.TriggerWarning("À§Çè! ÀÜ·ù Àü¾ĞÀÌ ³²¾ÆÀÖ½À´Ï´Ù. ´ë±â ½Ã°£À» ÁØ¼öÇÏ¼¼¿ä.");
-            }
-            else if(DischargeTimerUI.Instance.isDischarged)
-            {
-                displayTarget.text = "0.00 V"; // ¾ÈÀü È®ÀÎ ¿Ï·á
-            }
+            currentTerminalId = "";
+            if (master != null) master.EvaluateConnection();
         }
     }
 }
+
+// ============================================================
+//  MultimeterDial.cs
+//  ë‹¤ì´ì–¼ íšŒì „ê° â†’ MultimeterMode ë³€í™˜
+// ============================================================

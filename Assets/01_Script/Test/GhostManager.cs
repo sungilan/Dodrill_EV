@@ -1,60 +1,69 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
+// ============================================================
+//  GhostManager.cs
+//  ë¶€í’ˆ íƒˆê±° ì‹œ ì›ë˜ ìœ„ì¹˜ì— ë°˜íˆ¬ëª… ê³ ìŠ¤íŠ¸ í‘œì‹œ.
+//  ìˆ˜ì •: GetComponentInChildrenìœ¼ë¡œ ìì‹ MeshFilterë„ íƒìƒ‰
+// ============================================================
 public class GhostManager : MonoBehaviour
 {
     [Header("Ghost Settings")]
-    public Material ghostMaterial; // ¹İÅõ¸íÇÑ ÇÏÀÌ¶óÀÌÆ® ¸ÓÆ¼¸®¾ó
+    public Material ghostMaterial;
     [Range(0, 1)] public float ghostAlpha = 0.3f;
 
-    private GameObject ghostObject;
-    private Material ghostMat;
-    private Color initialColor;
+    private GameObject _ghostObject;
+    private Material _ghostMat;
+    private Color _initialColor;
 
     public void CreateGhost()
     {
-        // 1. »õ·Î¿î °ÔÀÓ ¿ÀºêÁ§Æ® »ı¼º ¹× ÀÌ¸§ ¼³Á¤
-        ghostObject = new GameObject(gameObject.name + "_Ghost");
-
-        // 2. À§Ä¡¿Í È¸Àü°ªÀ» ÇöÀç(Á¶¸³µÈ »óÅÂ)¿Í µ¿ÀÏÇÏ°Ô ¼³Á¤
-        ghostObject.transform.position = transform.position;
-        ghostObject.transform.rotation = transform.rotation;
-        ghostObject.transform.localScale = transform.localScale;
-
-        // 3. ¸Ş½¬ ÇÊÅÍ¿Í ·»´õ·¯ º¹Á¦
-        MeshFilter meshFilter = ghostObject.AddComponent<MeshFilter>();
-        meshFilter.mesh = GetComponent<MeshFilter>().sharedMesh;
-
-        MeshRenderer meshRenderer = ghostObject.AddComponent<MeshRenderer>();
-
-        // 4. °í½ºÆ® Àü¿ë ¸ÓÆ¼¸®¾ó Àû¿ë
-        if(ghostMaterial != null)
+        // ìì‹ í¬í•¨í•´ì„œ MeshFilter íƒìƒ‰
+        var mf = GetComponentInChildren<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null)
         {
-            meshRenderer.material = ghostMaterial;
-            // ÇÊ¿ä ½Ã ·±Å¸ÀÓ¿¡¼­ ¾ËÆÄ°ª Á¶Á¤
-            Color col = meshRenderer.material.color;
-            col.a = ghostAlpha;
-            meshRenderer.material.color = col;
+            Debug.LogWarning($"[GhostManager] {name}: MeshFilter ì—†ìŒ â€” ê³ ìŠ¤íŠ¸ ìƒì„± ìŠ¤í‚µ");
+            return;
         }
 
-        // 5. °í½ºÆ®´Â ÀâÈ÷°Å³ª ºÎµúÈ÷¸é ¾È µÇ¹Ç·Î Äİ¶óÀÌ´õ´Â ³ÖÁö ¾Ê°Å³ª Æ®¸®°Å·Î ¼³Á¤
-        // ÃÊ±â¿¡´Â ²¨µÎ¾ú´Ù°¡ ºÎÇ°ÀÌ Å»°ÅµÉ ¶§¸¸ ÄÕ´Ï´Ù.
-        ghostObject.SetActive(false);
-        ghostMat = meshRenderer.material;
-        initialColor = ghostMat.color;
+        _ghostObject = new GameObject(gameObject.name + "_Ghost");
+        _ghostObject.transform.position = transform.position;
+        _ghostObject.transform.rotation = transform.rotation;
+        _ghostObject.transform.localScale = transform.lossyScale;
+
+        var ghostMF = _ghostObject.AddComponent<MeshFilter>();
+        ghostMF.mesh = mf.sharedMesh;
+
+        var ghostMR = _ghostObject.AddComponent<MeshRenderer>();
+        if (ghostMaterial != null)
+        {
+            ghostMR.material = ghostMaterial;
+            var col = ghostMR.material.color;
+            col.a = ghostAlpha;
+            ghostMR.material.color = col;
+            _ghostMat = ghostMR.material;
+            _initialColor = col;
+        }
+
+        _ghostObject.SetActive(false);
     }
 
     public void SetGhostActive(bool active)
     {
-        if(ghostObject != null) ghostObject.SetActive(active);
+        if (_ghostObject != null) _ghostObject.SetActive(active);
     }
 
     public void UpdateGhostColor(Color newColor)
     {
-        if(ghostMat != null) ghostMat.color = newColor;
+        if (_ghostMat != null) _ghostMat.color = newColor;
     }
 
     public void ResetGhostColor()
     {
-        if(ghostMat != null) ghostMat.color = initialColor;
+        if (_ghostMat != null) _ghostMat.color = _initialColor;
+    }
+
+    private void OnDestroy()
+    {
+        if (_ghostObject != null) Destroy(_ghostObject);
     }
 }

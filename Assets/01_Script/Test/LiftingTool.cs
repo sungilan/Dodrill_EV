@@ -22,7 +22,7 @@ public class LiftingTool : XRGrabInteractable
     {
         targetModule = module;
         // 도구의 위치를 모듈의 소켓 위치로 고정
-        transform.position = module.assemblyTarget.position + Vector3.up * 0.2f;
+        //transform.position = module.assemblyTarget.position + Vector3.up * 0.2f;
         // [사운드] '철컥' 결합음
     }
 

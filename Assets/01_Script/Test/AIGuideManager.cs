@@ -159,7 +159,7 @@ public class AIGuideManager : MonoBehaviour
             {
                 // 현재 도달한 단계보다 이전 단계 부품들은 '완료(제거)' 상태로 강제 세팅
                 // (예: 분해 시나리오라면 Removed, 조립 시나리오라면 Assembled)
-                part.ForceSetState(InteractablePart.PartState.Detached);
+                //part.ForceSetState(InteractablePart.PartState.Detached);
             }
             else if(i == index)
             {

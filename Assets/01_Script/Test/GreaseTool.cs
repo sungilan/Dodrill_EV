@@ -40,15 +40,15 @@ public class GreaseTool : MonoBehaviour
 
     [Header("상태")]
     public float currentAmount = 0f;
-    public bool  isActivated   = false;
+    public bool isActivated = false;
 
     private GreaseTarget _currentTarget;
-    private TaskItem     _taskItem;
-    private Grabbable    _grabbable;
+    private TaskItem _taskItem;
+    private Grabbable _grabbable;
 
     private void Awake()
     {
-        _taskItem  = GetComponent<TaskItem>();
+        _taskItem = GetComponent<TaskItem>();
         _grabbable = GetComponent<Grabbable>();
 
         if (_grabbable != null)
@@ -64,7 +64,7 @@ public class GreaseTool : MonoBehaviour
     {
         if (_grabbable != null)
         {
-            _grabbable.OnSqueezeEvent   -= OnActivate;
+            _grabbable.OnSqueezeEvent -= OnActivate;
             _grabbable.OnUnsqueezeEvent -= OnDeactivate;
         }
     }
@@ -90,7 +90,7 @@ public class GreaseTool : MonoBehaviour
     {
         isActivated = active;
         if (active) sprayParticle?.Play();
-        else        sprayParticle?.Stop();
+        else sprayParticle?.Stop();
     }
 
     // ── 업데이트 ─────────────────────────────
@@ -150,13 +150,7 @@ public class GreaseTool : MonoBehaviour
     {
         Debug.Log($"[GreaseTool] {target.targetId} 도포 완료");
 
-        // TrainingFlowManager 보고
-        TrainingFlowManager.Instance?.ProcessStepAction(
-            RepairActionType.Lubricate,
-            target.targetId,
-            target.currentAmount);
-
-        // 기존 ScenarioRunner 호환 이벤트
+        // ScenarioRunner 호환 이벤트 (ZoneAndFillModule이 수신)
         InteractionEvents.FireZoneActivated(target.targetId, _taskItem?.prefabId ?? "GreaseTool");
     }
 
@@ -164,8 +158,8 @@ public class GreaseTool : MonoBehaviour
 
     public void ResetTool()
     {
-        currentAmount  = 0f;
-        isActivated    = false;
+        currentAmount = 0f;
+        isActivated = false;
         _currentTarget = null;
         sprayParticle?.Stop();
     }
@@ -185,17 +179,17 @@ public class GreaseTarget : MonoBehaviour
 
     [Header("상태 (런타임)")]
     public float currentAmount = 0f;
-    public bool  isCompleted   = false;
+    public bool isCompleted = false;
 
     [Header("비주얼 피드백 (선택)")]
     [Tooltip("도포 진행에 따라 색이 변할 Renderer (없으면 생략)")]
     public Renderer targetRenderer;
 
     [Tooltip("도포 전 색상 (건조)")]
-    public Color dryColor   = Color.gray;
+    public Color dryColor = Color.gray;
 
     [Tooltip("도포 완료 색상 (번들거림)")]
-    public Color wetColor   = Color.white;
+    public Color wetColor = Color.white;
 
     private void Awake()
     {
@@ -217,7 +211,7 @@ public class GreaseTarget : MonoBehaviour
     public void Reset()
     {
         currentAmount = 0f;
-        isCompleted   = false;
+        isCompleted = false;
         UpdateVisual(0f);
     }
 }
