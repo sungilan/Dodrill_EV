@@ -51,6 +51,12 @@ public class LiftButtonUI : MonoBehaviour,
     private void Update()
     {
         if (!_isPressed || vrAutoStopSeconds <= 0f) return;
+
+        if(_isPressed)
+        {
+            _lastActiveTime = Time.time;
+        }
+
         if (Time.time - _lastActiveTime > vrAutoStopSeconds)
             ForceStop("VR 타임아웃");
     }

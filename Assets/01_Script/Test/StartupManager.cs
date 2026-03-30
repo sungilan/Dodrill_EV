@@ -1,107 +1,104 @@
 using ER.Selection;
+using FishNet;
 using System.Collections;
 using UnityEngine;
 
+// ============================================================
+//  StartupManager.cs
+//  Game ì”¬ ë¡œë“œ í›„ SessionData.gameModeë¥¼ ì½ì–´ì„œ ë¶„ê¸°
+//
+//  íë¦„:
+//    Lobby ì”¬ â†’ LobbyModeSelectorì—ì„œ SessionData.gameMode ì €ì¥
+//    â†’ Game ì”¬ ë¡œë“œ (FishNet)
+//    â†’ StartupManager.Start() â†’ gameMode ì½ê¸° â†’ ë¶„ê¸°
+// ============================================================
 public class StartupManager : MonoBehaviour
 {
     public static StartupManager Instance;
 
-    [Header("Spawn Settings")]
-    public VehicleSpawner spawner;      // Â÷·® ½ºÆù ´ã´ç
-    public Transform playerStartPoint; // VR Ä«¸Ş¶ó ¸®±× ½ÃÀÛ À§Ä¡
-    public GameObject playerRig;       // XR Origin ¶Ç´Â Hurricane Rig
+    [Header("ì°¸ì¡°")]
+    public VehicleSpawner spawner;
+    public Transform      playerStartPoint;
+    public GameObject     playerRig;
 
-    [Header("UI & Intro")]
-    public GameObject loadingCanvas;   // ½ÃÀÛ Àü ¾ÏÀü/·Îµù È­¸é
-    public float introDelay = 2f;
+    [Header("UI")]
+    public GameObject loadingCanvas;
+    public float      introDelay = 0.5f;
 
-    void Awake()
+    [Header("ëª¨ë“œë³„ ë£¨íŠ¸")]
+    [Tooltip("EVBootstrapperê°€ ë¶™ì€ GO â€” ì´ˆê¸° ë¹„í™œì„± ìƒíƒœë¡œ ë°°ì¹˜")]
+    public GameObject scenarioBootstrapRoot;
+    public FreeModeManager freeModeManager;
+
+    private void Awake()
     {
         Instance = this;
+
+        // Game ì”¬ ì§„ì… ì‹œ ì‹œë‚˜ë¦¬ì˜¤ ë£¨íŠ¸ëŠ” í•­ìƒ ë¹„í™œì„±ì—ì„œ ì‹œì‘
+        if (scenarioBootstrapRoot != null)
+            scenarioBootstrapRoot.SetActive(false);
     }
 
-    IEnumerator Start()
+    private IEnumerator Start()
     {
-        // 1. ¾ÏÀü »óÅÂ¿¡¼­ ½ÃÀÛ (VR ¸Ö¹Ì ¹æÁö ¹× ·Îµù Ã³¸®)
-        if(loadingCanvas != null) loadingCanvas.SetActive(true);
-
-        // 2. ÇÃ·¹ÀÌ¾î À§Ä¡ ÃÊ±âÈ­
+        if (loadingCanvas != null) loadingCanvas.SetActive(true);
         InitializePlayer();
 
-        yield return new WaitForSeconds(0.5f);
-
-        // 3. Â÷·® ¼ÒÈ¯ ¹× ºÎÇ° µî·Ï
-        if(spawner != null)
-        {
+        // ì°¨ëŸ‰ ìŠ¤í° (ëª¨ë“œ ë¬´ê´€ ê³µí†µ)
+        if (spawner != null && spawner.selectedPrefab != null)
             spawner.SpawnAndInitialize();
-        }
 
-        // 4. ½Ã½ºÅÛ ÃÊ±âÈ­ È®ÀÎ (½Ì±ÛÅæµéÀÌ ÁØºñµÉ ½Ã°£ È®º¸)
         yield return new WaitForSeconds(introDelay);
+        if (loadingCanvas != null) loadingCanvas.SetActive(false);
 
-        // 5. ·Îµù È­¸é ÇØÁ¦ ¹× Ã¹ °¡ÀÌµå ½ÃÀÛ
-        if(loadingCanvas != null) loadingCanvas.SetActive(false);
+        // â˜… ë¡œë¹„ì—ì„œ ì €ì¥í•œ ëª¨ë“œë¡œ ë¶„ê¸°
+        switch (SessionData.gameMode)
+        {
+            case SessionData.GameMode.FreeMode:
+                StartFreeMode();
+                break;
 
-        StartScenario();
+            case SessionData.GameMode.Scenario:
+            default:
+                StartScenarioMode();
+                break;
+        }
     }
+
+    // â”€â”€ ì‹œë‚˜ë¦¬ì˜¤ ëª¨ë“œ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    private void StartScenarioMode()
+    {
+        if (scenarioBootstrapRoot != null)
+            scenarioBootstrapRoot.SetActive(true);
+        // EVBootstrapper.Start()ê°€ ì—¬ê¸°ì„œ ì‹¤í–‰ë¨
+
+        Debug.Log("[StartupManager] ì‹œë‚˜ë¦¬ì˜¤ ëª¨ë“œ");
+    }
+
+    // â”€â”€ ììœ íƒˆê±° ëª¨ë“œ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    private void StartFreeMode()
+    {
+        freeModeManager?.EnterFreeMode();
+        // FishNetì€ Lobbyâ†’Game ì”¬ ì „í™˜ ì‹œ ì´ë¯¸ ì—°ê²°ëœ ìƒíƒœ
+        // FreeModeManager ì•ˆì—ì„œ ë©€í‹°í”Œë ˆì´ ë™ê¸°í™” ê°€ëŠ¥
+
+        Debug.Log("[StartupManager] ììœ íƒˆê±° ëª¨ë“œ");
+    }
+
+    // â”€â”€ ê³µí†µ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private void InitializePlayer()
     {
-        if(playerRig != null && playerStartPoint != null)
-        {
-            playerRig.transform.position = playerStartPoint.position;
-            playerRig.transform.rotation = playerStartPoint.rotation;
-        }
-    }
-
-    private void StartScenario()
-    {
-        // °¡»ó ¾î½Ã½ºÅÏÆ®ÀÇ Ã¹ ¸¶µğ ½ÃÀÛ
-        string carName = "¾ÆÀÌ¿À´Ğ 5"; // ½ÇÁ¦·Î´Â ¼±ÅÃµÈ Â÷·® µ¥ÀÌÅÍ¿¡¼­ °¡Á®¿È
-        //AIGuideManager.Instance.StartGuide();
-
-        // TTS µµÀÔºÎ Ãâ·Â
-        if(TTSManager.Instance != null)
-        {
-            TTSManager.Instance.Speak($"{carName} Á¤ºñ ±³À°À» ½ÃÀÛÇÕ´Ï´Ù. ÀÛ¾÷´ë¿¡¼­ ¾ÈÀü Àå°©À» Âø¿ëÇÏ¼¼¿ä.");
-        }
-
-        Debug.Log("[Startup] ¸ğµç ½Ã½ºÅÛ ÁØºñ ¿Ï·á. ½Ã³ª¸®¿À ½ÃÀÛ.");
+        if (playerRig != null && playerStartPoint != null)
+            playerRig.transform.SetPositionAndRotation(
+                playerStartPoint.position, playerStartPoint.rotation);
     }
 
     public void InitializeTraining(VehicleData selectedData)
     {
-        // 1. ¼±ÅÃ UI ºñÈ°¼ºÈ­
-        // (ÀÌ¹Ì Controller¿¡¼­ ²ô°í ÀÖÁö¸¸, ¿©±â¼­ ÇÑ ¹ø ´õ °ü¸®ÇØµµ ÁÁ½À´Ï´Ù)
-
-        // 2. ½ºÆ÷³Ê¿¡ ¼±ÅÃµÈ ÇÁ¸®ÆÕ Àü´Ş ¹× »ı¼º ½ÃÀÛ
-        if(spawner != null)
-        {
-            spawner.selectedPrefab = selectedData.modelPrefab; // µ¥ÀÌÅÍ Àü´Ş
-            StartCoroutine(StartScenarioRoutine(selectedData.modelName)); // ÄÚ·çÆ¾ ½ÇÇà
-        }
-    }
-
-    private IEnumerator StartScenarioRoutine(string vehicleName)
-    {
-        // ¾ÏÀü/·Îµù ½ÃÀÛ
-        if(loadingCanvas != null) loadingCanvas.SetActive(true);
-
-        InitializePlayer();
-        yield return new WaitForSeconds(0.5f);
-
-        // ½ÇÁ¦ Â÷·® ½ºÆù ¹× ºÎÇ° µî·Ï
-        spawner.SpawnAndInitialize();
-
-        yield return new WaitForSeconds(introDelay);
-
-        if(loadingCanvas != null) loadingCanvas.SetActive(false);
-
-        // TTS °¡ÀÌµå ½ÃÀÛ
-        AIGuideManager.Instance.StartGuide();
-        if(TTSManager.Instance != null)
-        {
-            TTSManager.Instance.Speak($"{vehicleName} Á¤ºñ ±³À°À» ½ÃÀÛÇÕ´Ï´Ù. ¸ÕÀú ÀÛ¾÷´ë¿¡¼­ Àı¿¬ Àå°©À» Âø¿ëÇÏ¼¼¿ä.");
-        }
+        if (spawner != null)
+            spawner.selectedPrefab = selectedData.modelPrefab;
     }
 }
