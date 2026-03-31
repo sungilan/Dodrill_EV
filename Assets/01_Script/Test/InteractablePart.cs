@@ -119,10 +119,19 @@ public class InteractablePart : MonoBehaviour
     // SyncGrab이 내려놓아졌을 때
     private void OnSyncReleased()
     {
-        // 고스트 유지 — 다시 집어서 원위치 근처에 가져가면 자동 스냅
-        // Kinematic은 SyncGrab/ReleaseServerRpc가 관리하므로 여기서 건드리지 않음
-        _ghost?.SetGhostActive(true);
-        Debug.Log($"[InteractablePart] {name}: 놓임 → 고스트 유지, 재집기 대기");
+        // 유저가 물건을 딱 놓았을 때, 트리거(존) 안에 있다면 즉시 조립!
+        if(_isInsideSnapZone)
+        {
+            SnapToOriginalPosition();
+            _isInsideSnapZone = false;
+            Debug.Log($"[InteractablePart] {name}: 존 내부에서 놓임 → 조립 완료");
+        }
+        else
+        {
+            // 존 밖에서 놨다면 평소처럼 바닥에 떨어지고 고스트 유지
+            _ghost?.SetGhostActive(true);
+            Debug.Log($"[InteractablePart] {name}: 존 외부에서 놓임 → 고스트 유지, 재집기 대기");
+        }
     }
 
     private void Start()
@@ -226,9 +235,9 @@ public class InteractablePart : MonoBehaviour
 
         if(_rb != null)
         {
-            _rb.isKinematic = true;
-            _rb.linearVelocity = Vector3.zero;
-            _rb.angularVelocity = Vector3.zero;
+            //_rb.isKinematic = true;
+            //_rb.linearVelocity = Vector3.zero;
+            //_rb.angularVelocity = Vector3.zero;
         }
 
         if(_ghost != null) _ghost.SetGhostActive(true);
@@ -248,7 +257,7 @@ public class InteractablePart : MonoBehaviour
         else
         {
             SetPartState(PartState.Detached);
-            if(_rb != null) _rb.isKinematic = false;
+            //if(_rb != null) _rb.isKinematic = false;
             _ghost?.SetGhostActive(true);
         }
     }
@@ -269,25 +278,15 @@ public class InteractablePart : MonoBehaviour
         Debug.Log($"[Part] {name}: 볼트 해체 완료 → Unlocked");
     }
 
-    // ── 스냅 근접 체크 ─────────────────────────────────────
+    // ── 스냅 근접 체크 (수정) ────────────────────────────────
 
     private void CheckSnapProximity()
     {
+        // Update문에서는 이제 '강제 조립'은 하지 않고, 존 안에 들어왔을 때 색상(초록색)만 바꿔줍니다.
+        // 실제 조립은 물건을 손에서 놓는 OnSyncReleased에서 완벽하게 처리됩니다.
         if(_isInsideSnapZone)
         {
             _ghost?.UpdateGhostColor(snapReadyColor);
-
-            // 누군가 들고 있는지 확인
-            bool syncGrabHeld = (_syncGrab != null && _syncGrab.IsGrabbed);
-            bool autoHeld = (_autoGrabbable != null && _autoGrabbable.IsHeld());
-            bool isHeld = syncGrabHeld || autoHeld || _isPCHeld;
-
-            // 아무도 안 들고 있다면 자동 스냅 (조립)
-            if(!isHeld)
-            {
-                SnapToOriginalPosition();
-                _isInsideSnapZone = false; // 조립 완료 후 초기화
-            }
         }
         else
         {
@@ -299,13 +298,11 @@ public class InteractablePart : MonoBehaviour
 
     private void SnapToOriginalPosition()
     {
-        // ① SyncGrab 홀드 강제 해제 — Update()의 holdPoint 추적을 먼저 멈춤
+        // ① SyncGrab의 '추적'만 멈춤 
+        // (RequestRelease는 밖에서 이미 호출했으므로 중복 호출하지 않고 삭제!)
         if(_syncGrab != null)
         {
-            _syncGrab.OnReleased -= OnSyncReleased; // 루프 방지 — 잠깐 구독 해제
-            _syncGrab.RequestRelease();
-            _syncGrab.StopPCHold();                 // _isPCHolding = false
-            _syncGrab.OnReleased += OnSyncReleased;
+            _syncGrab.StopPCHold();
         }
 
         // ② Rigidbody 고정
@@ -414,7 +411,14 @@ public class InteractablePart : MonoBehaviour
         SetPartState(PartState.Detached);
     }
 
-    public void ForceAssemble() => SnapToOriginalPosition();
+    public void ForceAssemble()
+    {
+        if(_syncGrab != null && _syncGrab.IsGrabbed)
+        {
+            _syncGrab.ForceDetach(); // 억지로 조립할 땐 손에서 강제로 떼어냄
+        }
+        SnapToOriginalPosition();
+    }
     public virtual void ResetPart() => SnapToOriginalPosition();
 
     public bool IsAllBoltsTightened()

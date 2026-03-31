@@ -168,12 +168,12 @@ public class FreeLookController : NetworkBehaviour
         // ★ LocalNetworkTransform이 있으면 비활성화
         // FreeLookController가 직접 transform.position을 제어하기 때문에
         // LNT가 동시에 위치를 덮어쓰면 매 프레임 떨림 발생
-        var lnt = GetComponent<LocalNetworkTransform>();
-        if(lnt != null)
-        {
-            lnt.enabled = false;
-            Log("LocalNetworkTransform 비활성화 — FreeLookController가 위치 직접 제어");
-        }
+        //var lnt = GetComponent<LocalNetworkTransform>();
+        //if(lnt != null)
+        //{
+        //    lnt.enabled = false;
+        //    Log("LocalNetworkTransform 비활성화 — FreeLookController가 위치 직접 제어");
+        //}
 
         // 리프트 컨트롤러 캐시 (매 프레임 FindObjectOfType 방지)
         _vehicleLift = Object.FindFirstObjectByType<VehicleLiftController>();
@@ -622,7 +622,7 @@ public class FreeLookController : NetworkBehaviour
         Vector2 clickPos = Vector2.zero;
 
 #if UNITY_IOS || UNITY_ANDROID
-        if(Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
         {
             clicked = true;
             clickPos = Input.GetTouch(0).position;
@@ -680,23 +680,8 @@ public class FreeLookController : NetworkBehaviour
     {
         Ray ray = _mainCamera.ScreenPointToRay(screenPos);
 
-        // clickLayers 먼저 시도, 실패하면 레이어 무관 fallback
-        // → 부품이 clickLayers에 없어도 TaskItem/SyncGrab 탐지 가능
-        bool layerHit = Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers);
-        if(!layerHit)
-        {
-            // Fallback: 레이어 무관 레이캐스트 (TaskItem/SyncGrab이 있는 경우만 처리)
-            if(!Physics.Raycast(ray, out hit, raycastMaxDistance))
-                return false;
-
-            // Fallback 히트이면 TaskItem/SyncGrab이 있어야만 처리
-            bool hasSyncGrab = hit.collider.GetComponent<SyncGrab>() != null
-                            || hit.collider.GetComponentInParent<SyncGrab>() != null;
-            bool hasTaskItem = hit.collider.GetComponent<TaskItem>() != null
-                            || hit.collider.GetComponentInParent<TaskItem>() != null;
-            if(!hasSyncGrab && !hasTaskItem)
-                return false;
-        }
+        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
+            return false;
 
         // TaskItem 클릭
         var item = hit.collider.GetComponent<TaskItem>()
@@ -884,14 +869,10 @@ public class FreeLookController : NetworkBehaviour
         if(showDebugRay)
             Debug.DrawRay(ray.origin, ray.direction * raycastMaxDistance, Color.red, 0.3f);
 
-        // clickLayers 먼저, 실패 시 전체 레이어 fallback
         if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
         {
-            if(!Physics.Raycast(ray, out hit, raycastMaxDistance))
-            {
-                Log("레이캐스트 히트 없음");
-                return null;
-            }
+            Log("레이캐스트 히트 없음");
+            return null;
         }
 
         Log($"히트: {hit.collider.gameObject.name}");
@@ -1062,16 +1043,12 @@ public class FreeLookController : NetworkBehaviour
     /// <summary>매 프레임 — DOTween 완료(IsGrabbed) 감지 → 스케일 축소</summary>
     private void CheckHoldScaleReady()
     {
-        // OnGrabbed 이벤트로 처리 → 이 폴링 메서드는 비워둠
-    }
-
-    // PCFlyTo 완료(holdPoint 도달) 또는 VR 집기 완료 시 OnGrabbed 이벤트로 호출됨
-    private void OnHeldObjectGrabbed()
-    {
-        _isFlying = false;
-        if(_heldObject != null)
+        if(!_isFlying || _heldObject == null) return;
+        if(_heldObject.IsGrabbed)
+        {
+            _isFlying = false;
             ApplyHoldScale(_heldObject.transform);
-        Log("[LaserGrab] holdPoint 도달 완료");
+        }
     }
 
     /// <summary>부품 클릭 — 레이저 OFF 후 SyncGrab 기존 집기 흐름 실행</summary>
@@ -1087,9 +1064,8 @@ public class FreeLookController : NetworkBehaviour
         _laserHoverTarget = null;
         SetOutline(null);
 
-        // SyncGrab 이벤트 구독
-        target.OnGrabbed += OnHeldObjectGrabbed;   // PCFlyTo 완료 → _isFlying 해제
-        target.OnReleased += OnHeldObjectReleased;  // 강제 해제 시 _heldObject 정리
+        // SyncGrab이 강제 해제되거나 내려놓을 때 _heldObject 자동 정리
+        target.OnReleased += OnHeldObjectReleased;
 
         // SyncGrab.OnPCClick() → RequestGrab → PCFlyTo(holdPoint)
         target.OnPCClick();
@@ -1099,7 +1075,6 @@ public class FreeLookController : NetworkBehaviour
     private void OnHeldObjectReleased()
     {
         if(_heldObject == null) return;
-        _heldObject.OnGrabbed -= OnHeldObjectGrabbed;   // ★ 누락됐던 구독 해제
         _heldObject.OnReleased -= OnHeldObjectReleased;
         // 스케일 복원 (DropHeldObject를 안 거쳤을 경우 대비)
         if(_heldObject != null)
@@ -1116,28 +1091,17 @@ public class FreeLookController : NetworkBehaviour
     {
         if(_heldObject == null) return;
 
-        var dropping = _heldObject;
+        _heldObject.OnReleased -= OnHeldObjectReleased;   // 중복 콜백 방지
+        _heldObject.transform.localScale = _heldOriginalScale;
+        _heldObject.RequestRelease();
+        _heldObject.StopPCHold();
 
-        // ① 구독 먼저 해제 — RequestRelease()가 OnReleased를 발행하기 전에
-        dropping.OnGrabbed -= OnHeldObjectGrabbed;
-        dropping.OnReleased -= OnHeldObjectReleased;
-
-        // ② _heldObject null 처리 — 이후 콜백에서 재진입 방지
+        Log($"[LaserGrab] 내려놓기: {_heldObject.name}");
         _heldObject = null;
         _isFlying = false;
         _laserHoverTarget = null;
         _heldOriginalScale = Vector3.one;
         SetOutline(null);
-
-        // ③ 스케일 복원
-        dropping.transform.localScale = _heldOriginalScale;   // 이미 Vector3.one으로 리셋됐으므로 원본 보존 불필요
-        // (ApplyHoldScale로 축소됐을 수 있으니 원본 스케일은 이미 위에서 null됨 — ForceDetach가 원상복구)
-
-        // ④ holdPoint 추적 중단 → 서버에 내려놓기 통보
-        dropping.StopPCHold();
-        dropping.RequestRelease();   // 내부적으로 OnReleased?.Invoke() 발행 — 이미 구독 해제됨
-
-        Log($"[LaserGrab] G키 내려놓기 완료");
     }
 
     /// <summary>홀드 스케일 적용 — 렌더러 바운드 실제 크기 기준 축소</summary>

@@ -33,6 +33,26 @@ public class LocalNetworkTransform : NetworkBehaviour
 
     public bool sendAuthorityInServer = true;
 
+    [Tooltip("true: Owner는 서버 전송만, Observer 보간 수신 없음")]
+    public bool ownerSendOnly = false;
+
+    private bool _hasExternalTarget;
+    private Vector3 _targetPos;
+    private Quaternion _targetRot;
+
+    public void SetTargetPosition(Vector3 worldPos, Quaternion worldRot)
+    {
+        _hasExternalTarget = true;
+        _targetPos = worldPos;
+        _targetRot = worldRot;
+    }
+
+    public void ClearTargetPosition()
+    {
+        _hasExternalTarget = false;
+    }
+
+
     private void Awake()
     {
         TryFindAnchor();
@@ -40,10 +60,10 @@ public class LocalNetworkTransform : NetworkBehaviour
 
     private void TryFindAnchor()
     {
-        if (anchor == null)
+        if(anchor == null)
         {
             GameObject anchorObj = GameObject.FindGameObjectWithTag("Anchor");
-            if (anchorObj != null)
+            if(anchorObj != null)
                 anchor = anchorObj.transform;
         }
     }
@@ -51,20 +71,33 @@ public class LocalNetworkTransform : NetworkBehaviour
     private void Update()
     {
         TryFindAnchor();
-        if (anchor == null)
+        if(anchor == null)
             return;
 
         float deltaTime = Time.deltaTime;
 
-        if (IsServerInitialized)
+        // ── 외부 목표 주입 모드 (SyncGrab holdPoint 추적) ──
+        if(_hasExternalTarget && IsOwner)
+        {
+            transform.position = Vector3.Lerp(transform.position, _targetPos, lerpSpeed * deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, _targetRot, rotationLerpSpeed * deltaTime);
+            if(Time.time - lastSyncTime > syncInterval)
+            {
+                SendTransformIfNeeded();
+                lastSyncTime = Time.time;
+            }
+            return;
+        }
+
+        if(IsServerInitialized)
         {
             // 서버 authority
-            if (Time.time - lastSyncTime > syncInterval)
+            if(Time.time - lastSyncTime > syncInterval)
             {
                 Vector3 localPos = Quaternion.Inverse(anchor.rotation) * (transform.position - anchor.position);
                 Quaternion localRot = Quaternion.Inverse(anchor.rotation) * transform.rotation;
 
-                if ((localPos - lastSentPos).sqrMagnitude > positionThreshold * positionThreshold ||
+                if((localPos - lastSentPos).sqrMagnitude > positionThreshold * positionThreshold ||
                     Quaternion.Angle(localRot, lastSentRot) > rotationThreshold)
                 {
                     lastSentPos = localPos;
@@ -78,13 +111,13 @@ public class LocalNetworkTransform : NetworkBehaviour
         else
         {
             // Owner → Server 전송
-            if (IsOwner && Time.time - lastSyncTime > syncInterval)
+            if(IsOwner && Time.time - lastSyncTime > syncInterval)
             {
                 SendTransformIfNeeded();
             }
 
             // Observer 보간
-            if (!IsOwner && hasReceivedNetworkTransform)
+            if(!IsOwner && hasReceivedNetworkTransform && !ownerSendOnly)
             {
                 Vector3 targetPos = anchor.position + anchor.rotation * networkLocalPos;
                 Quaternion targetRot = anchor.rotation * networkLocalRot;
@@ -92,7 +125,7 @@ public class LocalNetworkTransform : NetworkBehaviour
                 float distance = Vector3.Distance(transform.position, targetPos);
 
                 // 순간이동 처리
-                if (distance > teleportDistanceThreshold)
+                if(distance > teleportDistanceThreshold)
                 {
                     transform.position = targetPos;
                     transform.rotation = targetRot;
@@ -107,9 +140,9 @@ public class LocalNetworkTransform : NetworkBehaviour
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, r);
 
                     // 근접 시 스냅 보정 (미세 오차 제거)
-                    if (Vector3.Distance(transform.position, targetPos) < 0.001f)
+                    if(Vector3.Distance(transform.position, targetPos) < 0.001f)
                         transform.position = targetPos;
-                    if (Quaternion.Angle(transform.rotation, targetRot) < 0.1f)
+                    if(Quaternion.Angle(transform.rotation, targetRot) < 0.1f)
                         transform.rotation = targetRot;
                 }
             }
@@ -118,12 +151,12 @@ public class LocalNetworkTransform : NetworkBehaviour
 
     private void SendTransformIfNeeded()
     {
-        if (anchor == null) return;
+        if(anchor == null) return;
 
         Vector3 localPos = Quaternion.Inverse(anchor.rotation) * (transform.position - anchor.position);
         Quaternion localRot = Quaternion.Inverse(anchor.rotation) * transform.rotation;
 
-        if ((localPos - lastSentPos).sqrMagnitude > positionThreshold * positionThreshold ||
+        if((localPos - lastSentPos).sqrMagnitude > positionThreshold * positionThreshold ||
             Quaternion.Angle(localRot, lastSentRot) > rotationThreshold)
         {
             SendLocalTransformServerRpc(localPos, localRot);
@@ -149,7 +182,7 @@ public class LocalNetworkTransform : NetworkBehaviour
 
     public override void OnOwnershipClient(NetworkConnection prevOwner)
     {
-        if (!IsServerInitialized && anchor != null)
+        if(!IsServerInitialized && anchor != null)
         {
             Vector3 localPos = Quaternion.Inverse(anchor.rotation) * (transform.position - anchor.position);
             Quaternion localRot = Quaternion.Inverse(anchor.rotation) * transform.rotation;
@@ -167,7 +200,7 @@ public class LocalNetworkTransform : NetworkBehaviour
     [ServerRpc]
     private void SendLocalTransformServerRpc(Vector3 localPos, Quaternion localRot)
     {
-        if (anchor == null)
+        if(anchor == null)
         {
             Debug.LogWarning($"[{name}] Anchor is null in ServerRpc");
             return;
@@ -193,7 +226,7 @@ public class LocalNetworkTransform : NetworkBehaviour
     [ObserversRpc(BufferLast = true)]
     private void UpdateLocalTransformObserversRpc(Vector3 localPos, Quaternion localRot)
     {
-        if (IsOwner) return;
+        if(IsOwner) return;
 
         networkLocalPos = localPos;
         networkLocalRot = localRot;
@@ -204,7 +237,7 @@ public class LocalNetworkTransform : NetworkBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
-        if (anchor == null) return;
+        if(anchor == null) return;
 
         Vector3 target = anchor.position + anchor.rotation * networkLocalPos;
         Gizmos.color = Color.yellow;
