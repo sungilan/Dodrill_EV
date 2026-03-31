@@ -3,15 +3,17 @@ using UnityEngine;
 using Autohand;
 
 // ============================================================
-//  InteractablePart.cs  — VR + PC 통합, localPosition 기준
+//  InteractablePart.cs  — VR + PC 통합
 //
-//  수정 사항:
-//    - XRGrabInteractable 제거 → SyncGrab 방식
-//    - initialPosition을 localPosition 기준으로 변경
-//      (차량이 이동해도 상대 위치 유지)
-//    - GhostManager NullRef 방지 (GetComponentInChildren)
-//    - ElectricSafetyManager.bypassSafety 옵션 지원
-//    - PC: FreeLookController → OnPCClick() → 집기/내려놓기
+//  isFreeMode 옵션:
+//    true  → 볼트/안전 조건 무시, 즉시 집기 가능
+//            VR: Grabbable.canDistanceGrab = true (AutoHand DistanceGrab 활성)
+//            PC: Assembled 상태에서도 OnPCClick() 허용
+//    false → 기존 시나리오 흐름 (볼트 해제 → Unlocked → 집기)
+//
+//  FreeModeManager.IsActive 가 true일 때
+//  ScenarioRunner가 ev_freemode.json을 로드하면서
+//  모든 InteractablePart에 SetFreeMode(true)를 호출
 // ============================================================
 public class InteractablePart : MonoBehaviour
 {
@@ -30,202 +32,292 @@ public class InteractablePart : MonoBehaviour
     [Header("Ghost")]
     public Material ghostMaterial;
 
-    [Header("테스트")]
-    [Tooltip("true: 안전 체크 무시 (MSD/장갑 없어도 집기 가능)")]
+    [Header("옵션")]
+    [Tooltip("true: 안전/볼트 체크 무시 (디버그·개발용)")]
     public bool bypassSafety = false;
+
+    [Tooltip("true: 프리모드 — 볼트·안전 무시, VR DistanceGrab 활성")]
+    public bool isFreeMode = false;
+
+    private bool _isInsideSnapZone = false;
 
     // 컴포넌트
     private Grabbable _autoGrabbable;
     private SyncGrab _syncGrab;
     private GhostManager _ghost;
 
-    // 로컬 기준 초기 위치 (차량 이동에 대응)
+    // 위치 캐시
     private Vector3 _localPos;
     private Quaternion _localRot;
     private Transform _parentCache;
+    private Vector3 _initialScale;
 
-    // PC 집기 상태
+    // PC 집기
     private bool _isPCHeld = false;
-    private Transform _holdPoint = null;   // 카메라 앞 기준점 (Tag: "HoldPoint")
-    private Rigidbody _rb = null;   // 물리 충돌 제어용
+    private Transform _holdPoint = null;
+    private Rigidbody _rb = null;
 
-    // ═══════════════════════════════════════════
-    //  생명주기
-    // ═══════════════════════════════════════════
+    // ── 생명주기 ───────────────────────────────────────────
 
     private void Awake()
     {
         _autoGrabbable = GetComponent<Grabbable>();
         _syncGrab = GetComponent<SyncGrab>();
 
-        // localPosition 기준으로 초기 위치 저장
         _localPos = transform.localPosition;
         _localRot = transform.localRotation;
+        _initialScale = transform.localScale;
         _parentCache = transform.parent;
 
-        // GhostManager 설정 — 자식 MeshFilter도 탐색
         _ghost = gameObject.AddComponent<GhostManager>();
         _ghost.ghostMaterial = ghostMaterial;
         _ghost.CreateGhost();
 
-        // holdPoint: 카메라 앞 기준점 (SyncGrab과 동일한 Tag 사용)
         var holdObj = GameObject.FindWithTag("HoldPoint");
-        if (holdObj != null) _holdPoint = holdObj.transform;
-        else Debug.LogWarning("[InteractablePart] Tag='HoldPoint' 오브젝트 없음 — PC 집기 시 부품이 안 따라다님");
+        if(holdObj != null) _holdPoint = holdObj.transform;
+        else Debug.LogWarning("[InteractablePart] Tag='HoldPoint' 없음");
 
         _rb = GetComponent<Rigidbody>();
 
-        // VR AutoHand 이벤트
-        if (_autoGrabbable != null)
+        if(_autoGrabbable != null)
         {
             _autoGrabbable.onGrab.AddListener((h, g) => OnGrabStart());
             _autoGrabbable.onRelease.AddListener((h, g) => OnGrabEnd());
         }
+
+        // SyncGrab 이벤트 구독
+        // OnGrabbed  : PCFlyTo 완료(holdPoint 도달) 또는 VR 집기 완료 시
+        // OnReleased : RequestRelease(내려놓기) 또는 VR 손 놓음 시
+        // → SyncVar 콜백(스폰 시 오발동) 사용 안 함
+        if(_syncGrab != null)
+        {
+            _syncGrab.OnGrabbed += OnSyncGrabbed;
+            _syncGrab.OnReleased += OnSyncReleased;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if(_syncGrab != null)
+        {
+            _syncGrab.OnGrabbed -= OnSyncGrabbed;
+            _syncGrab.OnReleased -= OnSyncReleased;
+        }
+    }
+
+    // SyncGrab이 holdPoint에 도달 완료했을 때
+    private void OnSyncGrabbed()
+    {
+        if(currentState == PartState.Assembled || currentState == PartState.Unlocked)
+        {
+            SetPartState(PartState.Detached);
+            _ghost?.SetGhostActive(true);
+            Debug.Log($"[InteractablePart] {name}: 집힘 → Detached, 고스트 ON");
+        }
+    }
+
+    // SyncGrab이 내려놓아졌을 때
+    private void OnSyncReleased()
+    {
+        // 고스트 유지 — 다시 집어서 원위치 근처에 가져가면 자동 스냅
+        // Kinematic은 SyncGrab/ReleaseServerRpc가 관리하므로 여기서 건드리지 않음
+        _ghost?.SetGhostActive(true);
+        Debug.Log($"[InteractablePart] {name}: 놓임 → 고스트 유지, 재집기 대기");
     }
 
     private void Start()
     {
         SetPartState(PartState.Assembled);
+        ApplyFreeModeToGrabbable();
     }
 
     private void Update()
     {
-        // ── PC 집기: holdPoint 실시간 추적 ──────────────────────────
-        if (_isPCHeld && _holdPoint != null)
+        if(_isPCHeld && _holdPoint != null)
         {
             transform.position = _holdPoint.position;
             transform.rotation = _holdPoint.rotation;
         }
 
-        switch (currentState)
+        switch(currentState)
         {
             case PartState.Assembled:
-                CheckBoltsForUnlock();
+                // 프리모드: Assembled에서도 집기 가능 — 볼트 체크 스킵
+                if(!isFreeMode) CheckBoltsForUnlock();
                 break;
             case PartState.Detached:
-                if (IsBeingHeld()) CheckSnapProximity();
+                // 집고 있든 내려놨든 항상 스냅 근접 체크
+                // 고스트는 Detached 진입 시 켜지고 Assembled 시 꺼짐
+                CheckSnapProximity();
                 break;
         }
     }
 
-    // ═══════════════════════════════════════════
-    //  PC 인터랙션 (FreeLookController 호출)
-    // ═══════════════════════════════════════════
+    // ── 프리모드 설정 ──────────────────────────────────────
+
+    /// <summary>
+    /// ScenarioRunner / FreeModeBootstrapper에서 씬 시작 시 호출.
+    /// 씬의 모든 InteractablePart에 일괄 적용.
+    /// </summary>
+    public void SetFreeMode(bool enabled)
+    {
+        isFreeMode = enabled;
+        ApplyFreeModeToGrabbable();
+
+        // 프리모드: Assembled → 즉시 Unlocked (볼트 없어도 집기 가능)
+        if(enabled && currentState == PartState.Assembled)
+            SetPartState(PartState.Unlocked);
+    }
+
+    private void ApplyFreeModeToGrabbable()
+    {
+        if(_autoGrabbable == null) return;
+
+        // AutoHand DistanceGrab: 프리모드일 때만 활성
+        // (Grabbable에 canDistanceGrab 프로퍼티가 있는 경우)
+        if(_autoGrabbable is Grabbable g)
+        {
+            // AutoHand 버전에 따라 필드명 다를 수 있음
+            // canDistanceGrab 또는 distanceGrabbable
+            var field = typeof(Grabbable).GetField("canDistanceGrab",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if(field != null)
+                field.SetValue(g, isFreeMode);
+            else
+            {
+                // 필드가 없으면 DistanceGrabber 컴포넌트 활성/비활성
+                var distGrab = GetComponent<Autohand.DistanceGrabbable>();
+                if(distGrab != null) distGrab.enabled = isFreeMode;
+            }
+        }
+    }
+
+    // ── PC 인터랙션 ────────────────────────────────────────
 
     public void OnPCClick()
     {
-        if (currentState == PartState.Assembled)
+        // 프리모드: Assembled 상태에서도 바로 집기 허용
+        if(!isFreeMode && currentState == PartState.Assembled)
         {
-            Debug.Log($"[Part] {name}: 볼트를 먼저 해체하세요 (상태: Assembled)");
+            Debug.Log($"[Part] {name}: 볼트를 먼저 해체하세요");
             return;
         }
 
-        if (!_isPCHeld)
+        if(!_isPCHeld)
         {
-            // 집기
-            if (!CheckSafety()) return;
+            if(!CheckSafety()) return;
             _isPCHeld = true;
-            Debug.Log($"[Part] {name}: PC 집기");
             OnGrabStart();
+            Debug.Log($"[Part] {name}: PC 집기 (freeMode={isFreeMode})");
         }
         else
         {
-            // 내려놓기
             _isPCHeld = false;
-            Debug.Log($"[Part] {name}: PC 내려놓기");
             OnGrabEnd();
+            Debug.Log($"[Part] {name}: PC 내려놓기");
         }
     }
 
-    // ═══════════════════════════════════════════
-    //  집기 / 내려놓기
-    // ═══════════════════════════════════════════
+    // ── 집기 / 내려놓기 ────────────────────────────────────
 
     public void OnGrabStart()
     {
-        if (!CheckSafety()) return;
+        if(!CheckSafety()) return;
 
-        // Rigidbody가 있으면 kinematic으로 전환 (물리가 위치를 덮어쓰지 않게)
-        if (_rb != null)
+        if(_rb != null)
         {
             _rb.isKinematic = true;
             _rb.linearVelocity = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
         }
 
-        // 고스트 표시 (원위치 반투명 가이드)
-        if (_ghost != null) _ghost.SetGhostActive(true);
+        if(_ghost != null) _ghost.SetGhostActive(true);
     }
 
     public void OnGrabEnd()
     {
         _isPCHeld = false;
 
-        float distance = Vector3.Distance(transform.position, GetWorldAssemblyPos());
+        // SyncGrab이 있으면 OnSyncGrabStateChanged(false)가 이미 처리
+        if(_syncGrab != null) return;
 
-        if (distance < snapDistance)
-        {
+        // SyncGrab 없는 경우(VR AutoHand 직접 집기 등) 기존 처리
+        float dist = Vector3.Distance(transform.position, GetWorldAssemblyPos());
+        if(dist < snapDistance)
             SnapToOriginalPosition();
-        }
         else
         {
             SetPartState(PartState.Detached);
-
-            // 탈거 완료: Rigidbody 물리 복원 (중력 적용)
-            if (_rb != null) _rb.isKinematic = false;
+            if(_rb != null) _rb.isKinematic = false;
+            _ghost?.SetGhostActive(true);
         }
     }
 
-    // ═══════════════════════════════════════════
-    //  볼트 해제 체크
-    // ═══════════════════════════════════════════
+    // ── 볼트 해제 체크 ─────────────────────────────────────
 
     private void CheckBoltsForUnlock()
     {
-        // ★ 볼트 해제 체크는 안전 조건과 무관
-        //    안전 체크는 집기(OnGrabStart/OnPCClick)에서만 수행
-        if (requiredBolts == null || requiredBolts.Count == 0)
+        if(requiredBolts == null || requiredBolts.Count == 0)
         {
             SetPartState(PartState.Unlocked);
             return;
         }
+        foreach(var bolt in requiredBolts)
+            if(bolt != null && !bolt.isloosened) return;
 
-        foreach (var bolt in requiredBolts)
-        {
-            if (bolt != null && !bolt.isloosened) return;
-        }
         SetPartState(PartState.Unlocked);
-        Debug.Log($"[Part] {name}: 볼트 해체 완료 → Unlocked (bypassSafety={bypassSafety})");
+        Debug.Log($"[Part] {name}: 볼트 해체 완료 → Unlocked");
     }
 
-    // ═══════════════════════════════════════════
-    //  스냅 근접 체크 (Detached 상태에서 원위치 근처일 때 초록 표시)
-    // ═══════════════════════════════════════════
+    // ── 스냅 근접 체크 ─────────────────────────────────────
 
     private void CheckSnapProximity()
     {
-        if (_ghost == null) return;
-        float distance = Vector3.Distance(transform.position, GetWorldAssemblyPos());
-        if (distance < snapDistance) _ghost.UpdateGhostColor(snapReadyColor);
-        else _ghost.ResetGhostColor();
+        if(_isInsideSnapZone)
+        {
+            _ghost?.UpdateGhostColor(snapReadyColor);
+
+            // 누군가 들고 있는지 확인
+            bool syncGrabHeld = (_syncGrab != null && _syncGrab.IsGrabbed);
+            bool autoHeld = (_autoGrabbable != null && _autoGrabbable.IsHeld());
+            bool isHeld = syncGrabHeld || autoHeld || _isPCHeld;
+
+            // 아무도 안 들고 있다면 자동 스냅 (조립)
+            if(!isHeld)
+            {
+                SnapToOriginalPosition();
+                _isInsideSnapZone = false; // 조립 완료 후 초기화
+            }
+        }
+        else
+        {
+            _ghost?.ResetGhostColor();
+        }
     }
 
-    // ═══════════════════════════════════════════
-    //  스냅 (조립 완료)
-    // ═══════════════════════════════════════════
+    // ── 스냅 (조립 완료) ───────────────────────────────────
 
     private void SnapToOriginalPosition()
     {
-        // Rigidbody kinematic으로 고정 (조립 위치에서 물리 흔들림 방지)
-        if (_rb != null)
+        // ① SyncGrab 홀드 강제 해제 — Update()의 holdPoint 추적을 먼저 멈춤
+        if(_syncGrab != null)
+        {
+            _syncGrab.OnReleased -= OnSyncReleased; // 루프 방지 — 잠깐 구독 해제
+            _syncGrab.RequestRelease();
+            _syncGrab.StopPCHold();                 // _isPCHolding = false
+            _syncGrab.OnReleased += OnSyncReleased;
+        }
+
+        // ② Rigidbody 고정
+        if(_rb != null)
         {
             _rb.isKinematic = true;
             _rb.linearVelocity = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
         }
 
-        // 부모가 바뀌지 않았다면 localPosition 기준으로 복원
-        if (_parentCache != null && transform.parent == _parentCache)
+        // ③ 원위치 복원 및 스케일 롤백
+        if(_parentCache != null && transform.parent == _parentCache)
         {
             transform.localPosition = _localPos;
             transform.localRotation = _localRot;
@@ -235,12 +327,15 @@ public class InteractablePart : MonoBehaviour
             transform.position = GetWorldAssemblyPos();
         }
 
+        // 조립 시 원래 스케일로 원상 복구
+        transform.localScale = _initialScale;
+
+        // ④ 상태 변경 (고스트 OFF 포함)
         SetPartState(PartState.Assembled);
 
-        // 볼트 리셋
-        foreach (var bolt in requiredBolts)
+        foreach(var bolt in requiredBolts)
         {
-            if (bolt == null) continue;
+            if(bolt == null) continue;
             bolt.gameObject.SetActive(true);
             bolt.ResetBolt();
         }
@@ -249,48 +344,52 @@ public class InteractablePart : MonoBehaviour
         InteractionEvents.FireZoneActivated(name + "_Assembled", name);
     }
 
-    // ═══════════════════════════════════════════
-    //  상태 설정
-    // ═══════════════════════════════════════════
+    // ── 상태 설정 ──────────────────────────────────────────
 
     private void SetPartState(PartState newState)
     {
         currentState = newState;
 
-        bool canGrab = (newState != PartState.Assembled);
+        // 프리모드: Unlocked/Detached 모두 집기 가능, Assembled도 허용
+        bool canGrab = isFreeMode || (newState != PartState.Assembled);
 
-        if (_autoGrabbable != null) _autoGrabbable.enabled = canGrab;
-        if (_syncGrab != null) _syncGrab.enabled = canGrab;
-        if (_ghost != null) _ghost.SetGhostActive(newState == PartState.Detached);
+        if(_autoGrabbable != null) _autoGrabbable.enabled = canGrab;
+        // SyncGrab은 enabled 껐다 켜면 NetworkBehaviour 재초기화 문제 있음
+        // 대신 _isGrabbed SyncVar로 집기 차단 — 여기서 enabled 건드리지 않음
+
+        if(newState == PartState.Assembled)
+        {
+            // 조립 완료 — 고스트 OFF, Kinematic ON
+            _ghost?.SetGhostActive(false);
+            if(_rb != null) _rb.isKinematic = true;
+        }
+        else if(newState == PartState.Detached)
+        {
+            // 탈거 — 고스트 ON
+            _ghost?.SetGhostActive(true);
+        }
+        else
+        {
+            // Unlocked — 고스트 OFF
+            _ghost?.SetGhostActive(false);
+        }
     }
 
-    // ═══════════════════════════════════════════
-    //  안전 체크
-    // ═══════════════════════════════════════════
+    // ── 안전 체크 ──────────────────────────────────────────
 
     private bool CheckSafety()
     {
-        if (bypassSafety) return true;
-        if (ElectricSafetyManager.Instance == null) return true;
-        if (ElectricSafetyManager.Instance.IsSafeToWork()) return true;
+        // 프리모드 또는 bypassSafety: 안전 체크 생략
+        if(isFreeMode || bypassSafety) return true;
+        if(ElectricSafetyManager.Instance == null) return true;
+        if(ElectricSafetyManager.Instance.IsSafeToWork()) return true;
 
-        if (SafetyUIHandler.Instance != null)
-            SafetyUIHandler.Instance.TriggerWarning("위험! MSD 탈거 및 절연 장갑 착용 후 작업하세요!");
-
-        Debug.LogWarning($"[Part] {name}: 안전 조건 미충족 — 집기 차단");
+        SafetyUIHandler.Instance?.TriggerWarning("위험! MSD 탈거 및 절연 장갑 착용 후 작업하세요!");
+        Debug.LogWarning($"[Part] {name}: 안전 조건 미충족");
         return false;
     }
 
-    // 볼트 해제 체크용 (경고 없이 조용히 false)
-    private bool CheckSafetyPassive()
-    {
-        if (bypassSafety) return true;
-        return ElectricSafetyManager.Instance == null || ElectricSafetyManager.Instance.IsSafeToWork();
-    }
-
-    // ═══════════════════════════════════════════
-    //  유틸
-    // ═══════════════════════════════════════════
+    // ── 유틸 ───────────────────────────────────────────────
 
     private bool IsBeingHeld()
     {
@@ -300,19 +399,18 @@ public class InteractablePart : MonoBehaviour
 
     private Vector3 GetWorldAssemblyPos()
     {
-        // 부모가 살아있으면 localPosition → world 변환
-        if (_parentCache != null)
+        if(_parentCache != null)
             return _parentCache.TransformPoint(_localPos);
         return transform.position;
     }
 
-    // ── 외부 API ─────────────────────────────
+    // ── 외부 API ───────────────────────────────────────────
 
     public void ForceDetach()
     {
         transform.position = GetWorldAssemblyPos() + Vector3.up * 0.5f;
-        if (requiredBolts != null)
-            foreach (var b in requiredBolts) if (b != null) b.progress = 1f;
+        if(requiredBolts != null)
+            foreach(var b in requiredBolts) if(b != null) b.progress = 1f;
         SetPartState(PartState.Detached);
     }
 
@@ -321,8 +419,13 @@ public class InteractablePart : MonoBehaviour
 
     public bool IsAllBoltsTightened()
     {
-        if (requiredBolts == null || requiredBolts.Count == 0) return true;
-        foreach (var b in requiredBolts) if (b != null && !b.isTightened) return false;
+        if(requiredBolts == null || requiredBolts.Count == 0) return true;
+        foreach(var b in requiredBolts) if(b != null && !b.isTightened) return false;
         return true;
+    }
+
+    public void SetInsideSnapZone(bool isInside)
+    {
+        _isInsideSnapZone = isInside;
     }
 }

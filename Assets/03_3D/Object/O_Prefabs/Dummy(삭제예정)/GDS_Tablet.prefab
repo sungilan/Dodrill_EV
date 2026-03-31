@@ -221,7 +221,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1960370119849075638}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d5f3cd3dd6be3a49aa81f40ab47c0ce, type: 3}
   m_Name: 
@@ -336,9 +336,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GDS_TabletController
   lcdText: {fileID: 5336630353326228115}
+  distributor: {fileID: 0}
   obdPortTag: OBD_Port
   connectDelay: 1.5
   isConnected: 0
+  scenarioStarted: 0
 --- !u!1 &5722550996144296464
 GameObject:
   m_ObjectHideFlags: 0

@@ -65,6 +65,11 @@ public class SyncGrab : NetworkBehaviour
 
     public bool IsGrabbed => _isGrabbed.Value;
 
+    /// <summary>holdPoint 도달 완료(PC) 또는 VR 집기 완료 시 발행</summary>
+    public event System.Action OnGrabbed;
+    /// <summary>내려놓기(PC RequestRelease / VR 손 놓음) 시 발행</summary>
+    public event System.Action OnReleased;
+
     // ──────────────────────────────────────────────────────
     // 컴포넌트
     // ──────────────────────────────────────────────────────
@@ -113,17 +118,13 @@ public class SyncGrab : NetworkBehaviour
         base.OnStartClient();
         _rb = GetComponent<Rigidbody>();
 
-        // holdPoint 미설정 시 "HoldPoint" 태그로 씬에서 자동 탐색
+        // holdPoint 자동 탐색 (인스펙터 미연결 시)
         if(holdPoint == null)
         {
-            var go = GameObject.FindWithTag("HoldPoint");
-            if(go != null)
-                holdPoint = go.transform;
-            else
-                Debug.LogWarning($"[SyncGrab] {name}: holdPoint 없음 — Tag='HoldPoint' 오브젝트를 씬에 추가하세요.");
+            var hp = GameObject.FindWithTag("HoldPoint");
+            if(hp != null) holdPoint = hp.transform;
+            else Debug.LogWarning($"[SyncGrab] {name}: holdPoint 미연결 & Tag='HoldPoint' 오브젝트 없음");
         }
-
-        NetworkObjectFinder.Instance?.Register(gameObject.name, gameObject);
 
         // SyncVar 콜백 등록
         _isKinematic.OnChange += OnKinematicChanged;
@@ -146,20 +147,6 @@ public class SyncGrab : NetworkBehaviour
         }
 
         NetworkObjectFinder.Instance?.Register(gameObject.name, gameObject);
-    }
-
-    // ══════════════════════════════════════════════════════
-    // PC 들고 이동 — holdPoint 실시간 추적
-    // ══════════════════════════════════════════════════════
-
-    private void Update()
-    {
-        // PC에서 들고 있는 동안 아이템이 holdPoint를 따라 이동
-        if(_isPCHolding && holdPoint != null && IsOwner && !_isTweening)
-        {
-            transform.position = holdPoint.position;
-            transform.rotation = holdPoint.rotation;
-        }
     }
 
     public override void OnStopClient()
@@ -264,12 +251,12 @@ public class SyncGrab : NetworkBehaviour
         {
             hand.ForceReleaseGrab();
             return;
+            // OnGrabbed는 return 이후라 호출 안 됨 — 정상
         }
 
         DOTween.Kill(transform);
-        // 상태는 이미 서버가 Grabbing으로 설정했으므로 추가 호출 없음
+        OnGrabbed?.Invoke();   // ★ 버그 수정: return 뒤가 아닌 정상 경로에서 발행
     }
-
     private void OnVRRelease(Hand hand, Grabbable g)
     {
         if(!IsOwner) return;
@@ -277,6 +264,7 @@ public class SyncGrab : NetworkBehaviour
         // 다른 손이 아직 잡고 있으면 무시
         if(_grab != null && _grab.GetHeldBy().Count > 0) return;
 
+        OnReleased?.Invoke();   // ★ 내려놓기 → InteractablePart에 알림
         ReleaseServerRpc(transform.position, transform.rotation);
     }
 
@@ -305,7 +293,6 @@ public class SyncGrab : NetworkBehaviour
 
         RequestGrab(() => PCFlyTo(holdPoint.position, holdPoint.rotation));
     }
-
     private void PCFlyTo(Vector3 targetPos, Quaternion targetRot)
     {
         _isTweening = true;
@@ -322,9 +309,35 @@ public class SyncGrab : NetworkBehaviour
         {
             _isTweening = false;
             _isPCHolding = true;
-            // 들고 있는 동안 소유권 유지 — 두 번째 클릭 시 RequestRelease()에서 해제
-            //ReleaseServerRpc(transform.position, transform.rotation);
+            OnGrabbed?.Invoke();   // ★ holdPoint 도달 확정 → InteractablePart에 알림
+            ReleaseServerRpc(transform.position, transform.rotation);
         });
+    }
+
+    private void Update()
+    {
+        // PC 홀드 중: holdPoint 실시간 추적
+        // InteractablePart가 Assembled로 전환되면 StopPCHold()로 중단됨
+        if(_isPCHolding && holdPoint != null)
+        {
+            transform.position = Vector3.Lerp(
+                transform.position, holdPoint.position, Time.deltaTime * 20f);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation, holdPoint.rotation, Time.deltaTime * 20f);
+        }
+    }
+
+    /// <summary>
+    /// 외부(InteractablePart.SnapToOriginalPosition)에서 호출.
+    /// holdPoint 추적을 즉시 멈추고 소유권을 서버에 반환.
+    /// </summary>
+    public void StopPCHold()
+    {
+        if(!_isPCHolding) return;
+        _isPCHolding = false;
+        DOTween.Kill(transform);
+        // 소유권/Kinematic은 서버가 이미 관리 중이므로 ReleaseServerRpc 불필요
+        // (SnapToOriginalPosition이 직접 위치를 고정)
     }
 
     // ══════════════════════════════════════════════════════
@@ -382,6 +395,7 @@ public class SyncGrab : NetworkBehaviour
         _pendingHand = null;
         StopCoroutineIfRunning(ref _grabCoroutine);
         _grab?.ForceHandsRelease();
+        OnReleased?.Invoke();   // 강제 해제도 알림
     }
 
     [Server]
@@ -541,6 +555,14 @@ public class SyncGrab : NetworkBehaviour
         }
 
         _pendingHand = null;
+
+        // ★ Kinematic 확인: 소유권 전파 후에도 Kinematic=true이면 TryGrab이 물리적으로 안 붙음
+        // SyncVar 전파 타이밍 문제로 클라이언트에서 아직 Kinematic=true일 수 있음
+        if(_rb != null && _rb.isKinematic)
+        {
+            _rb.isKinematic = false;
+        }
+
         hand.TryGrab(_grab);
         // TryGrab 성공 → OnVRGrab 호출 → 정상 흐름
         // TryGrab 실패 → OnVRGrab 미호출 → ValidateOwnerRoutine이 0.5초 내 복구

@@ -138,6 +138,7 @@ public class ScenarioRunner : MonoBehaviour
         _connectedClientCount = InstanceFinder.ServerManager?.Clients?.Count ?? 0;
 
         Debug.Log($"[ScenarioRunner] 시나리오 시작 — {data.scenarioName}, Tasks: {data.scenario.tasks.Count}");
+        _spawner?.SpawnMapObjects(data.map);
         StartTask(0);
     }
 

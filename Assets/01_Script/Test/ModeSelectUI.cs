@@ -30,7 +30,7 @@ public class ModeSelectUI : MonoBehaviour
     [TextArea(2,4)] public string freeModeDesc  = "차량 부품을 자유롭게 탈거하고\n재조립하며 구조를 학습합니다.";
 
     [Header("연결")]
-    public FreeModeManager freeModeManager;
+    //public FreeModeManager freeModeManager;
     // ScenarioManager or ScenarioDistributor - 시나리오 시작용
     public GameObject scenarioBootstrapRoot;
 
@@ -62,7 +62,7 @@ public class ModeSelectUI : MonoBehaviour
     private void OnFreeModeSelected()
     {
         if (panel != null) panel.SetActive(false);
-        freeModeManager?.EnterFreeMode();
+        //freeModeManager?.EnterFreeMode();
         Debug.Log("[ModeSelectUI] 자유탈거 모드 선택");
     }
 

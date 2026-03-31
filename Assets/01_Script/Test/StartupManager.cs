@@ -28,7 +28,7 @@ public class StartupManager : MonoBehaviour
     [Header("모드별 루트")]
     [Tooltip("EVBootstrapper가 붙은 GO — 초기 비활성 상태로 배치")]
     public GameObject scenarioBootstrapRoot;
-    public FreeModeManager freeModeManager;
+    //public FreeModeManager freeModeManager;
 
     private void Awake()
     {
@@ -80,7 +80,7 @@ public class StartupManager : MonoBehaviour
 
     private void StartFreeMode()
     {
-        freeModeManager?.EnterFreeMode();
+        //freeModeManager?.EnterFreeMode();
         // FishNet은 Lobby→Game 씬 전환 시 이미 연결된 상태
         // FreeModeManager 안에서 멀티플레이 동기화 가능
 

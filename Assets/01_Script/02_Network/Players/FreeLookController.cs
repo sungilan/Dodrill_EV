@@ -97,6 +97,40 @@ public class FreeLookController : NetworkBehaviour
     /// <summary>현재 들고 있는 오브젝트</summary>
     private SyncGrab _heldObject = null;
 
+    // ── PC 레이저 그랩 설정 ──────────────────────────────────
+    [Header("PC 레이저 그랩")]
+    [Tooltip("레이저 라인 렌더러 (없으면 자동 생성)")]
+    public LineRenderer laserLine;
+    [Tooltip("곡선 버텍스 수 (많을수록 부드러움)")]
+    public int laserVertexCount = 20;
+    [Tooltip("레이저 색상 시작점 (손 쪽)")]
+    public Color laserColorStart = new Color(0.3f, 0.8f, 1f, 1f);
+    [Tooltip("레이저 색상 끝점 (부품 쪽)")]
+    public Color laserColorEnd = new Color(0.3f, 0.8f, 1f, 0f);
+    [Tooltip("레이저 너비 (시작)")]
+    public float laserStartWidth = 0.006f;
+    [Tooltip("레이저 너비 (끝)")]
+    public float laserEndWidth = 0.002f;
+
+    // 레이저 호버/홀드 상태
+    private SyncGrab _laserHoverTarget = null;
+    private bool _isFlying = false;   // DOTween 날아오는 중
+    private Vector3 _heldOriginalScale = Vector3.one;
+
+    // 아웃라인 호버 상태 추적
+    private GameObject _outlinedObject = null;   // 현재 아웃라인이 켜진 GO
+
+    [Header("호버 아웃라인 (QuickOutline)")]
+    [Tooltip("아웃라인 색상")]
+    public Color outlineHoverColor = new Color(0.3f, 0.85f, 1f);
+    [Tooltip("아웃라인 두께")]
+    [Range(0f, 10f)]
+    public float outlineWidth = 4f;
+
+    // 내려놓기 키 — Update에서 직접 폴링 (HandleClick 진입 불필요)
+    [Header("내려놓기 키")]
+    public KeyCode dropKey = KeyCode.G;
+
     // 리프트 캐시 (OnStartClient에서 한 번만 탐색)
     private VehicleLiftController _vehicleLift = null;
     private BatteryLiftController _batteryLift = null;
@@ -268,9 +302,13 @@ public class FreeLookController : NetworkBehaviour
             if(_mainCamera == null) return;
         }
 
+        HandleLiftButtonRelease(); // LiftButton MouseUp 항상 체크
         HandleHover();
         HandleUseInput();
         HandleClick();
+        HandleDropKey();      // G키 내려놓기 — HandleClick 바깥에서 독립 폴링
+        UpdateLaserLine();    // 레이저 호버/홀드 상태 렌더링
+        CheckHoldScaleReady();// 날아오기 완료 감지 → 스케일 축소
     }
 
     // ═══════════════════════════════════════════════════════
@@ -347,14 +385,13 @@ public class FreeLookController : NetworkBehaviour
 
     private void HandleHover()
     {
-        // 매 프레임 호버 대상 감지
         bool hit = false;
         RaycastHit hitInfo = default;
 
         if(_heldObject == null && _mainCamera != null)
         {
-            Ray ray = _mainCamera.ScreenPointToRay(
-                new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+            // 실제 마우스 위치를 향해 레이캐스트
+            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
 
             hit = Physics.Raycast(ray, out hitInfo, raycastMaxDistance, clickLayers);
             if(!hit)
@@ -363,20 +400,31 @@ public class FreeLookController : NetworkBehaviour
 
         Collider hoveredCol = hit ? hitInfo.collider : null;
 
-        // ── 대상이 바뀐 경우만 처리 ──
-        if(hoveredCol == _lastHoveredCol) return;
+        // ── 같은 대상을 계속 호버 중일 때 (위치만 부드럽게 마우스를 따라감) ──
+        if(hoveredCol == _lastHoveredCol)
+        {
+            if(_worldLabel != null && hit)
+            {
+                Vector3 targetPos = hitInfo.point + Vector3.up * labelHeightOffset;
+                _worldLabel.transform.position = Vector3.Lerp(_worldLabel.transform.position, targetPos, Time.deltaTime * 15f);
+            }
+            return;
+        }
+
         _lastHoveredCol = hoveredCol;
 
-        // 월드 라벨 제거
+        // ── 대상이 바뀌었을 때: 기존 라벨 스스로 사라지게 명령 ──
         if(_worldLabel != null)
         {
-            Destroy(_worldLabel);
+            var fader = _worldLabel.GetComponent<UIHoverFader>();
+            if(fader != null) fader.FadeOut();
+            else Destroy(_worldLabel); // 혹시 fader가 없다면 강제 즉시 파괴
+
             _worldLabel = null;
         }
 
         if(hoveredCol == null)
         {
-            // 아무것도 없음
             SetGuideUI(string.Empty);
             return;
         }
@@ -385,14 +433,57 @@ public class FreeLookController : NetworkBehaviour
         string objName = GetHoverTargetName(hoveredCol);
         string msg = GetHoverActionMsg(hoveredCol);
 
-        // ── 로그 ──
         Log($"호버: {objName} — {msg}");
-
-        // ── 화면 UI ──
         SetGuideUI(msg);
 
-        // ── 월드 라벨 ──
-        SpawnWorldLabel(hitInfo.collider.bounds.center, objName, msg);
+        // 새 라벨 생성
+        SpawnWorldLabel(hitInfo.point, objName, msg);
+    }
+
+    private void SpawnWorldLabel(Vector3 worldPos, string objName, string actionMsg)
+    {
+        if(worldLabelPrefab == null) return;
+
+        Vector3 pos = worldPos + Vector3.up * labelHeightOffset;
+        _worldLabel = Instantiate(worldLabelPrefab, pos, Quaternion.identity);
+
+        // ★ [핵심 1] 라벨이 마우스 광선을 막아서 잔상을 유발하지 않도록 레이어를 Ignore Raycast(2)로 강제 고정
+        SetLayerRecursively(_worldLabel, 2);
+
+        // 텍스트 설정
+        var label = _worldLabel.GetComponent<WorldHoverLabel>();
+        if(label != null)
+        {
+            label.SetText(objName, actionMsg);
+            // return; <--- 이전 코드의 치명적 버그! (삭제됨)
+        }
+        else
+        {
+            var tmpUGUI = _worldLabel.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+            if(tmpUGUI != null)
+            {
+                tmpUGUI.text = $"<b>{objName}</b>\n<size=80%><color=#AAFFAA>{actionMsg}</color></size>";
+            }
+            else
+            {
+                var tmp3D = _worldLabel.GetComponentInChildren<TMPro.TextMeshPro>();
+                if(tmp3D != null)
+                    tmp3D.text = $"<b>{objName}</b>\n<size=80%><color=#AAFFAA>{actionMsg}</color></size>";
+            }
+        }
+
+        // ★ [핵심 2] 외부 코루틴 대신, 라벨 스스로 페이드를 관리하는 컴포넌트 부착
+        _worldLabel.AddComponent<UIHoverFader>();
+    }
+
+    // 오브젝트와 그 자식들의 레이어를 일괄 변경하는 유틸리티
+    private void SetLayerRecursively(GameObject obj, int layer)
+    {
+        obj.layer = layer;
+        foreach(Transform child in obj.transform)
+        {
+            SetLayerRecursively(child.gameObject, layer);
+        }
     }
 
     private void SetGuideUI(string msg)
@@ -405,33 +496,6 @@ public class FreeLookController : NetworkBehaviour
 
         if(hoverGuidePanel != null)
             hoverGuidePanel.SetActive(hasMsg);
-    }
-
-    private void SpawnWorldLabel(Vector3 worldPos, string objName, string actionMsg)
-    {
-        if(worldLabelPrefab == null) return;
-
-        Vector3 pos = worldPos + Vector3.up * labelHeightOffset;
-        _worldLabel = Instantiate(worldLabelPrefab, pos, Quaternion.identity);
-
-        // WorldHoverLabel 컴포넌트가 있으면 SetText 사용
-        var label = _worldLabel.GetComponent<WorldHoverLabel>();
-        if(label != null)
-        {
-            label.SetText(objName, actionMsg);
-            return; // Billboard는 WorldHoverLabel.LateUpdate가 처리
-        }
-
-        // 없으면 TMP 직접 설정 (UGUI / 3D 모두 시도)
-        var tmpUGUI = _worldLabel.GetComponentInChildren<TMPro.TextMeshProUGUI>();
-        if(tmpUGUI != null)
-        {
-            tmpUGUI.text = $"<b>{objName}</b>\n<size=80%><color=#AAFFAA>{actionMsg}</color></size>";
-            return;
-        }
-        var tmp3D = _worldLabel.GetComponentInChildren<TMPro.TextMeshPro>();
-        if(tmp3D != null)
-            tmp3D.text = $"<b>{objName}</b>\n<size=80%><color=#AAFFAA>{actionMsg}</color></size>";
     }
 
     private string GetHoverTargetName(Collider col)
@@ -484,13 +548,81 @@ public class FreeLookController : NetworkBehaviour
         return string.Empty;
     }
 
+    /// <summary>
+    /// Update에서 매 프레임 MouseUp을 체크해 LiftButton 해제.
+    /// HandleClick()은 GetMouseButtonDown에서만 호출되므로
+    /// MouseUp은 별도 처리 필요.
+    /// </summary>
+    private void HandleLiftButtonRelease()
+    {
+        if(_pressedLiftButton == null) return;
+        if(!Input.GetMouseButtonUp(0)) return;
+
+        _pressedLiftButton.OnPointerUp(new UnityEngine.EventSystems.PointerEventData(
+            UnityEngine.EventSystems.EventSystem.current));
+        Log($"리프트 버튼 해제: {_pressedLiftButton.name}");
+        _pressedLiftButton = null;
+    }
+
+    // 현재 눌리고 있는 LiftButtonUI 추적 (MouseUp 처리용)
+    private LiftButtonUI _pressedLiftButton = null;
+
+    /// <summary>
+    /// World Space Canvas 위의 버튼(LiftButtonUI 등)을 처리.
+    /// MouseDown → OnPointerDown / MouseUp → OnPointerUp 으로 분리 호출.
+    /// LiftButtonUI는 "누르는 동안 작동" 방식이므로 Up도 반드시 전달해야 함.
+    /// </summary>
+    private bool HandleWorldSpaceUIClick(Vector2 screenPos)
+    {
+        if(_mainCamera == null) return false;
+
+        // ── MouseUp: 누르고 있던 버튼 해제 ──────────────────────────
+        bool isMouseUp = Input.GetMouseButtonUp(0);
+        if(isMouseUp && _pressedLiftButton != null)
+        {
+            _pressedLiftButton.OnPointerUp(new UnityEngine.EventSystems.PointerEventData(
+                UnityEngine.EventSystems.EventSystem.current));
+            Log($"리프트 버튼 해제: {_pressedLiftButton.name}");
+            _pressedLiftButton = null;
+            return true;
+        }
+
+        // ── MouseDown: 새 버튼 감지 ──────────────────────────────────
+        Ray ray = _mainCamera.ScreenPointToRay(screenPos);
+        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance)) return false;
+
+        // LiftButtonUI 확인
+        var liftBtn = hit.collider.GetComponent<LiftButtonUI>()
+                   ?? hit.collider.GetComponentInParent<LiftButtonUI>();
+        if(liftBtn != null)
+        {
+            _pressedLiftButton = liftBtn;
+            liftBtn.OnPointerDown(new UnityEngine.EventSystems.PointerEventData(
+                UnityEngine.EventSystems.EventSystem.current));
+            Log($"리프트 버튼 누름: {hit.collider.gameObject.name}");
+            return true;
+        }
+
+        // ClickableAnimator (문/후드) 확인
+        var anim = hit.collider.GetComponent<ClickableAnimator>()
+                ?? hit.collider.GetComponentInParent<ClickableAnimator>();
+        if(anim != null)
+        {
+            Log($"ClickableAnimator 클릭: {anim.gameObject.name}");
+            anim.OnPCClick();
+            return true;
+        }
+
+        return false;
+    }
+
     private void HandleClick()
     {
         bool clicked = false;
         Vector2 clickPos = Vector2.zero;
 
 #if UNITY_IOS || UNITY_ANDROID
-        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+        if(Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
         {
             clicked = true;
             clickPos = Input.GetTouch(0).position;
@@ -512,14 +644,19 @@ public class FreeLookController : NetworkBehaviour
             return;
         }
 
-        // ── 들고 있는 상태 → 좌클릭 = 내려놓기 ──
+        // ── 들고 있는 상태 → 우클릭 = 내려놓기, 좌클릭 차단 ──
+        // G키는 Update의 HandleDropKey()에서 독립 처리
         if(_heldObject != null)
         {
-            Log($"내려놓기: {_heldObject.name}");
-            _heldObject.OnPCClick();
-            _heldObject = null;
+            if(Input.GetMouseButtonDown(1))
+                DropHeldObject();
+            // 좌클릭은 다른 오브젝트 클릭과 겹치므로 차단
             return;
         }
+
+        // ── World Space UI 버튼 처리 (LiftButtonUI 등) ──
+        // IsPointerOverUI는 Screen Space만 차단하므로 World Space 버튼은 여기서 처리
+        if(HandleWorldSpaceUIClick(clickPos)) return;
 
         // ── 빈 상태 → Task 인터랙션 시스템 우선, 없으면 SyncGrab ──
         if(HandleTaskClick(clickPos)) return;
@@ -543,8 +680,23 @@ public class FreeLookController : NetworkBehaviour
     {
         Ray ray = _mainCamera.ScreenPointToRay(screenPos);
 
-        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
-            return false;
+        // clickLayers 먼저 시도, 실패하면 레이어 무관 fallback
+        // → 부품이 clickLayers에 없어도 TaskItem/SyncGrab 탐지 가능
+        bool layerHit = Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers);
+        if(!layerHit)
+        {
+            // Fallback: 레이어 무관 레이캐스트 (TaskItem/SyncGrab이 있는 경우만 처리)
+            if(!Physics.Raycast(ray, out hit, raycastMaxDistance))
+                return false;
+
+            // Fallback 히트이면 TaskItem/SyncGrab이 있어야만 처리
+            bool hasSyncGrab = hit.collider.GetComponent<SyncGrab>() != null
+                            || hit.collider.GetComponentInParent<SyncGrab>() != null;
+            bool hasTaskItem = hit.collider.GetComponent<TaskItem>() != null
+                            || hit.collider.GetComponentInParent<TaskItem>() != null;
+            if(!hasSyncGrab && !hasTaskItem)
+                return false;
+        }
 
         // TaskItem 클릭
         var item = hit.collider.GetComponent<TaskItem>()
@@ -563,9 +715,8 @@ public class FreeLookController : NetworkBehaviour
                     Log($"{item.prefabId} 이미 점유 중 — 무시");
                     return true;
                 }
-                Log($"SyncGrab 집기: {item.prefabId}");
-                _heldObject = syncGrab;
-                syncGrab.OnPCClick();
+                Log($"SyncGrab 레이저 그랩 시작: {item.prefabId}");
+                StartLaserPull(syncGrab);
                 return true;
             }
 
@@ -733,10 +884,14 @@ public class FreeLookController : NetworkBehaviour
         if(showDebugRay)
             Debug.DrawRay(ray.origin, ray.direction * raycastMaxDistance, Color.red, 0.3f);
 
+        // clickLayers 먼저, 실패 시 전체 레이어 fallback
         if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
         {
-            Log("레이캐스트 히트 없음");
-            return null;
+            if(!Physics.Raycast(ray, out hit, raycastMaxDistance))
+            {
+                Log("레이캐스트 히트 없음");
+                return null;
+            }
         }
 
         Log($"히트: {hit.collider.gameObject.name}");
@@ -776,5 +931,363 @@ public class FreeLookController : NetworkBehaviour
     private void Log(string msg)
     {
         if(showDebugLog) Debug.Log($"[FreeLook] {msg}");
+    }
+    // ═══════════════════════════════════════════════════════
+    // 레이저 그랩 — PC DistanceGrab 느낌
+    // XR Starter Kit DistanceGrabberLineBender 참고 — 베지어 곡선 레이저
+    //
+    // 흐름:
+    //   [호버] 레이캐스트 → InteractablePart 또는 SyncGrab 감지
+    //          카메라 → 부품 방향 곡선 레이저 표시
+    //   [좌클릭] StartLaserPull → SyncGrab.OnPCClick() → PCFlyTo(holdPoint)
+    //            레이저 즉시 OFF / _isFlying=true
+    //   [홀드완료] IsGrabbed 감지 → ApplyHoldScale
+    //   [G키/우클릭] HandleDropKey/HandleClick → DropHeldObject
+    //               스케일 복원 → SyncGrab.OnPCClick() 두 번째 호출 → 내려놓기
+    // ═══════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Update에서 독립 폴링 — G키 내려놓기.
+    /// HandleClick은 마우스 클릭 시만 진입하므로 키보드는 여기서 처리.
+    /// </summary>
+    private void HandleDropKey()
+    {
+        if(_heldObject == null) return;
+        if(Input.GetKeyDown(dropKey))
+            DropHeldObject();
+    }
+
+    /// <summary>매 프레임 — 호버/홀드 상태에 맞게 곡선 레이저 갱신.</summary>
+    /// <summary>매 프레임 — 호버/홀드 상태에 맞게 곡선 레이저 갱신.</summary>
+    private void UpdateLaserLine()
+    {
+        EnsureLaserLine();
+
+        // 집고 있는 상태 → 레이저 OFF + 아웃라인 OFF
+        if(_heldObject != null)
+        {
+            laserLine.enabled = false;
+            SetOutline(null);
+            return;
+        }
+
+        SyncGrab hovered = null;
+        Transform hoveredTransform = null;
+        GameObject hoveredGO = null;
+        Vector3 exactHitPoint = Vector3.zero; // ★ 정확한 충돌 지점 저장용
+
+        if(_mainCamera != null)
+        {
+            // ★ 화면 중앙이 아닌 실제 마우스 포인터 위치를 향해 레이를 쏩니다
+            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+
+            bool isHit = Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers);
+            if(!isHit)
+            {
+                isHit = Physics.Raycast(ray, out hit, raycastMaxDistance);
+            }
+
+            if(isHit)
+            {
+                // ★ 충돌한 정확한 표면의 좌표를 저장
+                exactHitPoint = hit.point;
+
+                hovered = hit.collider.GetComponent<SyncGrab>()
+                       ?? hit.collider.GetComponentInParent<SyncGrab>();
+
+                if(hovered == null)
+                {
+                    var part = hit.collider.GetComponent<InteractablePart>()
+                            ?? hit.collider.GetComponentInParent<InteractablePart>();
+                    if(part != null && part.currentState != InteractablePart.PartState.Assembled)
+                    {
+                        hoveredTransform = part.transform;
+                        hoveredGO = part.gameObject;
+                    }
+                }
+                else
+                {
+                    hoveredTransform = hovered.transform;
+                    hoveredGO = hovered.gameObject;
+                }
+            }
+        }
+
+        _laserHoverTarget = hovered;
+        SetOutline(hoveredGO);
+
+        // 호버 대상이 있고 정확한 충돌 지점이 확보되었다면 레이저 표시
+        if(hoveredTransform != null && _mainCamera != null)
+        {
+            laserLine.enabled = true;
+            // ★ 오브젝트의 중심점(hoveredTransform) 대신, 정확한 좌표(exactHitPoint)를 넘김
+            DrawCurvedLaser(_mainCamera.transform, exactHitPoint);
+        }
+        else
+        {
+            laserLine.enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// XR Starter Kit LineBender 방식 — 베지어 곡선 레이저.
+    /// origin(카메라) → targetPoint(정확한 레이캐스트 충돌 지점) 사이를 아치 형태로 잇는다.
+    /// </summary>
+    private void DrawCurvedLaser(Transform origin, Vector3 targetPoint)
+    {
+        int count = Mathf.Max(laserVertexCount, 2);
+        laserLine.positionCount = count;
+
+        Vector3 start = origin.position + origin.forward * 0.05f;
+        Vector3 end = targetPoint; // ★ 오브젝트 중심이 아닌, 넘겨받은 정확한 좌표 사용
+
+        // 중간 제어점 — 손 앞쪽으로 0.4m 뻗은 뒤 target 방향 평면에 투영
+        Vector3 forwardPoint = start + origin.forward * 0.4f;
+        Vector3 itemNormal = (start - end).normalized;
+        Vector3 v = forwardPoint - end;
+        Vector3 projected = forwardPoint - Vector3.Project(v, itemNormal);
+        Vector3 midPoint = projected;                 // 베지어 제어점
+
+        for(int i = 0; i < count; i++)
+        {
+            float t = i / (float)(count - 1);
+            // 이차 베지어: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+            Vector3 p = (1 - t) * (1 - t) * start
+                      + 2 * (1 - t) * t * midPoint
+                      + t * t * end;
+            laserLine.SetPosition(i, p);
+        }
+    }
+
+    /// <summary>매 프레임 — DOTween 완료(IsGrabbed) 감지 → 스케일 축소</summary>
+    private void CheckHoldScaleReady()
+    {
+        // OnGrabbed 이벤트로 처리 → 이 폴링 메서드는 비워둠
+    }
+
+    // PCFlyTo 완료(holdPoint 도달) 또는 VR 집기 완료 시 OnGrabbed 이벤트로 호출됨
+    private void OnHeldObjectGrabbed()
+    {
+        _isFlying = false;
+        if(_heldObject != null)
+            ApplyHoldScale(_heldObject.transform);
+        Log("[LaserGrab] holdPoint 도달 완료");
+    }
+
+    /// <summary>부품 클릭 — 레이저 OFF 후 SyncGrab 기존 집기 흐름 실행</summary>
+    private void StartLaserPull(SyncGrab target)
+    {
+        if(_heldObject != null) return;
+
+        _heldOriginalScale = target.transform.localScale;
+        _isFlying = true;
+        _heldObject = target;
+
+        laserLine.enabled = false;
+        _laserHoverTarget = null;
+        SetOutline(null);
+
+        // SyncGrab 이벤트 구독
+        target.OnGrabbed += OnHeldObjectGrabbed;   // PCFlyTo 완료 → _isFlying 해제
+        target.OnReleased += OnHeldObjectReleased;  // 강제 해제 시 _heldObject 정리
+
+        // SyncGrab.OnPCClick() → RequestGrab → PCFlyTo(holdPoint)
+        target.OnPCClick();
+        Log($"[LaserGrab] 집기: {target.name}");
+    }
+
+    private void OnHeldObjectReleased()
+    {
+        if(_heldObject == null) return;
+        _heldObject.OnGrabbed -= OnHeldObjectGrabbed;   // ★ 누락됐던 구독 해제
+        _heldObject.OnReleased -= OnHeldObjectReleased;
+        // 스케일 복원 (DropHeldObject를 안 거쳤을 경우 대비)
+        if(_heldObject != null)
+            _heldObject.transform.localScale = _heldOriginalScale;
+        _heldObject = null;
+        _isFlying = false;
+        _laserHoverTarget = null;
+        _heldOriginalScale = Vector3.one;
+        Log("[LaserGrab] 외부 릴리즈 감지 → _heldObject 정리");
+    }
+
+    /// <summary>내려놓기 — 스케일 복원 후 SyncGrab 해제</summary>
+    private void DropHeldObject()
+    {
+        if(_heldObject == null) return;
+
+        var dropping = _heldObject;
+
+        // ① 구독 먼저 해제 — RequestRelease()가 OnReleased를 발행하기 전에
+        dropping.OnGrabbed -= OnHeldObjectGrabbed;
+        dropping.OnReleased -= OnHeldObjectReleased;
+
+        // ② _heldObject null 처리 — 이후 콜백에서 재진입 방지
+        _heldObject = null;
+        _isFlying = false;
+        _laserHoverTarget = null;
+        _heldOriginalScale = Vector3.one;
+        SetOutline(null);
+
+        // ③ 스케일 복원
+        dropping.transform.localScale = _heldOriginalScale;   // 이미 Vector3.one으로 리셋됐으므로 원본 보존 불필요
+        // (ApplyHoldScale로 축소됐을 수 있으니 원본 스케일은 이미 위에서 null됨 — ForceDetach가 원상복구)
+
+        // ④ holdPoint 추적 중단 → 서버에 내려놓기 통보
+        dropping.StopPCHold();
+        dropping.RequestRelease();   // 내부적으로 OnReleased?.Invoke() 발행 — 이미 구독 해제됨
+
+        Log($"[LaserGrab] G키 내려놓기 완료");
+    }
+
+    /// <summary>홀드 스케일 적용 — 렌더러 바운드 실제 크기 기준 축소</summary>
+    private void ApplyHoldScale(Transform t)
+    {
+        float maxDim = 0f;
+        foreach(var r in t.GetComponentsInChildren<Renderer>())
+        {
+            float d = Mathf.Max(r.bounds.size.x, r.bounds.size.y, r.bounds.size.z);
+            if(d > maxDim) maxDim = d;
+        }
+        if(maxDim < 0.001f) return;
+
+        // 카메라 앞 0.8m 거리에서 화면의 40% 이하를 차지하도록 제한
+        const float maxAllowed = 0.4f;
+        if(maxDim <= maxAllowed) return;
+
+        float ratio = Mathf.Clamp(maxAllowed / maxDim, 0.05f, 1f);
+        t.localScale = _heldOriginalScale * ratio;
+        Log($"[LaserGrab] 스케일 {maxDim:F2}m → {ratio:F2}배");
+    }
+
+    /// <summary>
+    /// 대상 GO에 Outline 컴포넌트를 켜고, 이전 대상은 끈다.
+    /// - 대상이 같으면 아무것도 하지 않음 (매 프레임 갱신 방지)
+    /// - targetGO == null 이면 현재 아웃라인 해제
+    /// QuickOutline(Outline.cs)이 프로젝트에 있어야 작동.
+    /// 없으면 조용히 스킵 (컴파일 오류 없음 — #if 사용).
+    /// </summary>
+    private void SetOutline(GameObject targetGO)
+    {
+        //대상이 바뀌지 않았으면 스킵
+        if(targetGO == _outlinedObject) return;
+
+        // 이전 아웃라인 OFF
+        if(_outlinedObject != null)
+        {
+            var old = _outlinedObject.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+            if(old != null) old.enabled = false;
+            _outlinedObject = null;
+        }
+
+        if(targetGO == null) return;
+
+        // 새 아웃라인 ON — 없으면 동적 추가
+        var outline = targetGO.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+        if(outline == null)
+            outline = targetGO.AddComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+
+        outline.OutlineColor = outlineHoverColor;
+        outline.OutlineWidth = outlineWidth;
+        outline.OutlineMode = MikeNspired.XRIStarterKit.ChrisNolet.Outline.Mode.OutlineAll;
+        outline.enabled = true;
+
+        _outlinedObject = targetGO;
+    }
+
+    /// <summary>LineRenderer 없으면 자동 생성 (URP/HDRP 호환 셰이더 사용)</summary>
+    private void EnsureLaserLine()
+    {
+        if(laserLine != null) return;
+
+        var go = new GameObject("PC_LaserLine");
+        go.transform.SetParent(transform);
+        laserLine = go.AddComponent<LineRenderer>();
+        laserLine.positionCount = laserVertexCount;
+        laserLine.startWidth = laserStartWidth;
+        laserLine.endWidth = laserEndWidth;
+        laserLine.useWorldSpace = true;
+        laserLine.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        laserLine.receiveShadows = false;
+        laserLine.numCapVertices = 4;
+
+        // URP/HDRP/Built-in 모두 작동하는 셰이더 순서로 시도
+        Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                     ?? Shader.Find("Particles/Standard Unlit")
+                     ?? Shader.Find("Sprites/Default")
+                     ?? Shader.Find("Unlit/Color");
+
+        var mat = new Material(shader);
+        mat.SetInt("_ZWrite", 0);
+        mat.renderQueue = 3000;
+        laserLine.material = mat;
+        laserLine.startColor = laserColorStart;
+        laserLine.endColor = laserColorEnd;
+        laserLine.colorGradient = MakeGradient(laserColorStart, laserColorEnd);
+        laserLine.enabled = false;
+
+        Log("[LaserGrab] LineRenderer 자동 생성");
+    }
+
+    private static Gradient MakeGradient(Color start, Color end)
+    {
+        var g = new Gradient();
+        g.SetKeys(
+            new[] { new GradientColorKey(start, 0f), new GradientColorKey(end, 1f) },
+            new[] { new GradientAlphaKey(start.a, 0f), new GradientAlphaKey(end.a, 1f) });
+        return g;
+    }
+}
+
+public class UIHoverFader : MonoBehaviour
+{
+    public float fadeSpeed = 10f; // 숫자가 클수록 빠름
+    private CanvasGroup _cg;
+    private TMPro.TextMeshPro _tmp3D;
+    private bool _isFadingOut = false;
+
+    void Awake()
+    {
+        // 1. 일반 UI용 CanvasGroup 세팅
+        _cg = GetComponent<CanvasGroup>();
+        if(_cg == null) _cg = gameObject.AddComponent<CanvasGroup>();
+
+        // 2. 3D TextMeshPro용 세팅 (CanvasGroup이 먹히지 않으므로 직접 제어)
+        _tmp3D = GetComponentInChildren<TMPro.TextMeshPro>();
+
+        _cg.alpha = 0f;
+        if(_tmp3D != null) _tmp3D.alpha = 0f;
+    }
+
+    void Update()
+    {
+        if(_isFadingOut)
+        {
+            bool isDone = true;
+            if(_cg != null)
+            {
+                _cg.alpha -= Time.deltaTime * fadeSpeed;
+                if(_cg.alpha > 0f) isDone = false;
+            }
+            if(_tmp3D != null)
+            {
+                _tmp3D.alpha -= Time.deltaTime * fadeSpeed;
+                if(_tmp3D.alpha > 0f) isDone = false;
+            }
+
+            // 알파값이 완전히 0이 되면 스스로 파괴
+            if(isDone) Destroy(gameObject);
+        }
+        else
+        {
+            // 나타날 때
+            if(_cg != null && _cg.alpha < 1f) _cg.alpha += Time.deltaTime * fadeSpeed;
+            if(_tmp3D != null && _tmp3D.alpha < 1f) _tmp3D.alpha += Time.deltaTime * fadeSpeed;
+        }
+    }
+
+    public void FadeOut()
+    {
+        _isFadingOut = true;
     }
 }
