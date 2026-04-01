@@ -192,13 +192,20 @@ public class SyncGrab : NetworkBehaviour
     private void ApplyKinematic(bool isKinematic)
     {
         if(_rb == null) return;
-        _rb.isKinematic = isKinematic;
-        _rb.useGravity = false;
+
         if(isKinematic)
         {
+            // Kinematic으로 만들기 전 속도를 먼저 0으로 (에러 방지)
             _rb.linearVelocity = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
+            _rb.isKinematic = true;
         }
+        else
+        {
+            _rb.isKinematic = false;
+            // 필요하다면 여기서 미세한 힘을 주거나 초기화
+        }
+        //_rb.useGravity = false;
     }
 
     /// <summary>
@@ -540,25 +547,19 @@ public class SyncGrab : NetworkBehaviour
     /// </summary>
     private IEnumerator TryGrabAfterOwnership(Hand hand)
     {
-        if(hand == null)
+        float timeout = 1.0f; // 최대 1초 대기
+        float timer = 0f;
+
+        // IsOwner가 true가 될 때까지 명확히 대기
+        while(!IsOwner && timer < timeout)
         {
-            RequestRelease();
-            yield break;
+            timer += Time.deltaTime;
+            yield return null;
         }
 
-        // 소유권 전파 완료 대기 (최대 2프레임)
-        yield return null;
-        if(!IsOwner) yield return null;
-
-        if(!IsOwner)
+        if(!IsOwner || hand == null)
         {
-            _pendingHand = null;
-            RequestRelease();
-            yield break;
-        }
-
-        if(hand == null)
-        {
+            Debug.LogWarning($"[SyncGrab] 소유권 획득 실패 혹은 손 유실. Release 요청.");
             _pendingHand = null;
             RequestRelease();
             yield break;
@@ -566,8 +567,6 @@ public class SyncGrab : NetworkBehaviour
 
         _pendingHand = null;
         hand.TryGrab(_grab);
-        // TryGrab 성공 → OnVRGrab 호출 → 정상 흐름
-        // TryGrab 실패 → OnVRGrab 미호출 → ValidateOwnerRoutine이 0.5초 내 복구
     }
 
     [TargetRpc]
