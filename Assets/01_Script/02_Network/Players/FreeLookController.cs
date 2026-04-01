@@ -290,6 +290,7 @@ public class FreeLookController : NetworkBehaviour
     {
         if(!IsOwner || !IsClientInitialized) return;
 
+        // 카메라 이동/회전은 인벤토리가 켜져 있어도 작동하도록 위쪽 유지
         HandleMovement();
         HandleCameraLook();
         HandleVerticalInput();
@@ -303,12 +304,38 @@ public class FreeLookController : NetworkBehaviour
         }
 
         HandleLiftButtonRelease(); // LiftButton MouseUp 항상 체크
+        CheckHoldScaleReady();     // 날아오기 완료 감지는 항상 체크 (애니메이션 끊김 방지)
+
+        // ★ [핵심 추가] 인벤토리가 켜져 있는지 확인
+        bool isInventoryOpen = EVInventoryUI.Instance != null &&
+                               EVInventoryUI.Instance.panel != null &&
+                               EVInventoryUI.Instance.panel.activeInHierarchy;
+
+        if(isInventoryOpen)
+        {
+            // 인벤토리가 켜져 있다면, 뒤에 떠 있던 레이저와 아웃라인, 호버 텍스트를 모두 끕니다.
+            if(laserLine != null) laserLine.enabled = false;
+            SetOutline(null);
+            SetGuideUI(string.Empty);
+
+            if(_worldLabel != null)
+            {
+                var fader = _worldLabel.GetComponent<UIHoverFader>();
+                if(fader != null) fader.FadeOut();
+                else Destroy(_worldLabel);
+                _worldLabel = null;
+            }
+
+            // 더 이상 아래쪽의 3D 월드 상호작용 코드를 실행하지 않고 여기서 끊어버립니다.
+            return;
+        }
+
+        // 인벤토리가 꺼져 있을 때만 정상적으로 3D 상호작용 실행
         HandleHover();
         HandleUseInput();
         HandleClick();
-        HandleDropKey();      // G키 내려놓기 — HandleClick 바깥에서 독립 폴링
+        HandleDropKey();      // G키 내려놓기 
         UpdateLaserLine();    // 레이저 호버/홀드 상태 렌더링
-        CheckHoldScaleReady();// 날아오기 완료 감지 → 스케일 축소
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1087,21 +1114,68 @@ public class FreeLookController : NetworkBehaviour
     }
 
     /// <summary>내려놓기 — 스케일 복원 후 SyncGrab 해제</summary>
+    //private void DropHeldObject()
+    //{
+    //    if(_heldObject == null) return;
+
+    //    _heldObject.OnReleased -= OnHeldObjectReleased;   // 중복 콜백 방지
+    //    _heldObject.transform.localScale = _heldOriginalScale;
+    //    _heldObject.RequestRelease();
+    //    _heldObject.StopPCHold();
+
+    //    Log($"[LaserGrab] 내려놓기: {_heldObject.name}");
+    //    _heldObject = null;
+    //    _isFlying = false;
+    //    _laserHoverTarget = null;
+    //    _heldOriginalScale = Vector3.one;
+    //    SetOutline(null);
+    //}
+
     private void DropHeldObject()
     {
         if(_heldObject == null) return;
 
-        _heldObject.OnReleased -= OnHeldObjectReleased;   // 중복 콜백 방지
-        _heldObject.transform.localScale = _heldOriginalScale;
-        _heldObject.RequestRelease();
-        _heldObject.StopPCHold();
+        var dropping = _heldObject;
+        var part = dropping.GetComponent<InteractablePart>();
+        var data = dropping.GetComponent<FreeModePartAttachment>()?.partData;
 
-        Log($"[LaserGrab] 내려놓기: {_heldObject.name}");
+        // ① 구독 해제 및 상태 초기화
+        dropping.OnReleased -= OnHeldObjectReleased;
         _heldObject = null;
         _isFlying = false;
         _laserHoverTarget = null;
         _heldOriginalScale = Vector3.one;
         SetOutline(null);
+
+        // 스케일 원복
+        dropping.transform.localScale = Vector3.one;
+
+        // ② [핵심 추가] 조립 존(Snap Zone) 안에 있는지 체크
+        bool isInsideSnapZone = part != null && part.currentState == InteractablePart.PartState.Detached && part._isInsideSnapZone;
+
+        if(isInsideSnapZone)
+        {
+            // 조립 위치라면 인벤토리에 넣지 않고 일반 내려놓기 수행
+            // InteractablePart.Update()에서 isHeld가 false가 되는 순간 SnapToOriginalPosition()을 실행함
+            dropping.StopPCHold();
+            dropping.RequestRelease();
+            Log($"[LaserGrab] {dropping.name} 조립 위치에서 놓음 -> 조립 시도");
+            return;
+        }
+
+        // ③ 조립 위치가 아닐 때만 인벤토리에 추가
+        if(EVInventoryUI.Instance != null && part != null)
+        {
+            dropping.StopPCHold();
+            EVInventoryUI.Instance.AddPart(part, data);
+            Log("[LaserGrab] 인벤토리 드롭");
+            return;
+        }
+
+        // ④ 그 외 예외 상황 (인벤토리가 없거나 파트가 아닐 때)
+        dropping.StopPCHold();
+        dropping.RequestRelease();
+        Log("[LaserGrab] 일반 내려놓기 완료");
     }
 
     /// <summary>홀드 스케일 적용 — 렌더러 바운드 실제 크기 기준 축소</summary>

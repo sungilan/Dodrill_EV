@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.Localization.Components;
 
 // ============================================================
 //  EVInventorySlot.cs
@@ -19,46 +21,38 @@ using UnityEngine;
 public class EVInventorySlot : MonoBehaviour
 {
     [Header("비주얼")]
-    public Transform    itemModelHolder;      // 메시 클론 부모
-    public GameObject   slotDisplayHasItem;   // 부품 있을 때 표시
-    public GameObject   slotDisplayEmpty;     // 비어있을 때 표시
+    public Transform itemModelHolder;      // 메시 클론 부모
+    public GameObject slotDisplayHasItem;   // 부품 있을 때 표시
+    public GameObject slotDisplayEmpty;     // 비어있을 때 표시
     public TMPro.TMP_Text nameLabel;          // 부품 이름
     public TMPro.TMP_Text descLabel;          // 부품 설명 (호버 시)
-    public BoxCollider  inventorySize;        // 슬롯 박스 크기 (스케일 계산용)
+    public BoxCollider inventorySize;        // 슬롯 박스 크기 (스케일 계산용)
+    public Image partIcon;
 
     [Header("오디오")]
     public AudioSource grabAudio;
     public AudioSource storeAudio;
 
     [Header("애니메이션")]
-    public float animateInDuration  = 0.15f;  // 부품 슬롯 진입 애니메이션
+    public float animateInDuration = 0.15f;  // 부품 슬롯 진입 애니메이션
     public float animateOutDuration = 0.2f;
-
-    [Header("호버 표시")]
-    public GameObject tooltipPanel;           // 마우스 호버 시 설명 패널
 
     // ── 이벤트 ────────────────────────────────────────────
     public event Action<EVInventorySlot> OnSlotUpdated;
 
     // ── 상태 ───────────────────────────────────────────────
-    public InteractablePart StoredPart    { get; private set; }
-    public PartDataSO       StoredData    { get; private set; }
-    public bool             HasItem       => StoredPart != null || StoredData != null;
+    public InteractablePart StoredPart { get; private set; }
+    public PartDataSO StoredData { get; private set; }
+    public bool HasItem => StoredPart != null || StoredData != null;
 
     // 메시 클론
-    private Transform   _meshClone;
-    private Transform   _boundCenter;
-    private Vector3     _goalScale;
-    private bool        _isBusy;
-    private Coroutine   _animCoroutine;
+    private Transform _meshClone;
+    private Transform _boundCenter;
+    private Vector3 _goalScale;
+    private bool _isBusy;
+    private Coroutine _animCoroutine;
 
     // ── 초기화 ─────────────────────────────────────────────
-
-    private void Awake()
-    {
-        SetDisplay(false);
-        tooltipPanel?.SetActive(false);
-    }
 
     // ── 외부 API ───────────────────────────────────────────
 
@@ -68,26 +62,31 @@ public class EVInventorySlot : MonoBehaviour
     /// </summary>
     public void StorePart(InteractablePart part, PartDataSO data = null)
     {
-        if (_isBusy) return;
+        if(_isBusy) return;
         _isBusy = true;
 
         StoredPart = part;
         StoredData = data ?? part?.GetComponent<FreeModePartAttachment>()?.partData;
 
-        // 부품 메시 클론 생성
-        if (part != null)
-            SetupMeshClone(part.gameObject);
-
-        // 부품 비활성화 (인벤토리에 들어간 상태)
-        if (part != null)
-            part.gameObject.SetActive(false);
+        if(part != null) SetupMeshClone(part.gameObject);
+        if(part != null) part.gameObject.SetActive(false);
 
         storeAudio?.Play();
+
+        // ★ 핵심: 패널이 꺼져 있어도 내부 UI 활성화 상태를 강제로 갱신합니다.
         RefreshDisplay();
 
-        // 애니메이션
-        if (_animCoroutine != null) StopCoroutine(_animCoroutine);
-        _animCoroutine = StartCoroutine(AnimateModelScale(true, animateInDuration));
+        // 애니메이션 처리
+        if(gameObject.activeInHierarchy)
+        {
+            if(_animCoroutine != null) StopCoroutine(_animCoroutine);
+            _animCoroutine = StartCoroutine(AnimateModelScale(true, animateInDuration));
+        }
+        else
+        {
+            if(_boundCenter != null) _boundCenter.localScale = _goalScale;
+            _isBusy = false;
+        }
 
         OnSlotUpdated?.Invoke(this);
     }
@@ -98,7 +97,7 @@ public class EVInventorySlot : MonoBehaviour
     /// </summary>
     public void RetrievePart()
     {
-        if (!HasItem || _isBusy) return;
+        if(!HasItem || _isBusy) return;
         _isBusy = true;
 
         grabAudio?.Play();
@@ -106,15 +105,39 @@ public class EVInventorySlot : MonoBehaviour
         // 메시 클론 제거
         DestroyMeshClone();
 
-        if (StoredPart != null)
+        if(StoredPart != null)
         {
-            // 직접 활성화 — 플레이어 앞에 배치
+            // 1. 오브젝트 활성화 (스크립트들이 동작할 수 있도록 먼저 켭니다)
+            StoredPart.gameObject.SetActive(true);
+
+            // 2. 잡기 상태 완벽 초기화 (플레이어를 따라다니는 문제 해결)
+            var syncGrab = StoredPart.GetComponent<SyncGrab>();
+            if(syncGrab != null)
+            {
+                syncGrab.StopPCHold();      // PC 홀드 위치 추적 즉시 강제 중지
+                syncGrab.RequestRelease();  // 서버에 소유권 및 잡기 상태 반납
+            }
+            StoredPart.OnGrabEnd(); // InteractablePart 자체의 PC 홀드 상태 해제
+
+            // 3. 내부 상태를 분리(Detached) 모드로 갱신
+            StoredPart.ForceDetach();
+
+            // 4. 플레이어 앞 스폰 위치로 강제 이동 
+            // (ForceDetach 내부의 위치 덮어쓰기를 무시하고 플레이어 앞으로 가져옴)
             var spawnPos = GetSpawnPosition();
             StoredPart.transform.position = spawnPos;
-            StoredPart.gameObject.SetActive(true);
-            StoredPart.ForceDetach();
+
+            // 5. 허공에 멈추지 않고 바닥으로 떨어지도록 물리 상태 강제 리셋
+            var rb = StoredPart.GetComponent<Rigidbody>();
+            if(rb != null)
+            {
+                rb.isKinematic = false;
+                rb.useGravity = true;
+                rb.linearVelocity = Vector3.zero;  // 날아가던 관성 제거
+                rb.angularVelocity = Vector3.zero;
+            }
         }
-        else if (StoredData != null)
+        else if(StoredData != null)
         {
             // 데이터만 있는 경우 FreeModeSpawner에 위임
             //FreeModeSpawner.Instance?.SpawnPart(StoredData.partId);
@@ -124,25 +147,10 @@ public class EVInventorySlot : MonoBehaviour
         StoredData = null;
 
         RefreshDisplay();
-        if (_animCoroutine != null) StopCoroutine(_animCoroutine);
+        if(_animCoroutine != null) StopCoroutine(_animCoroutine);
         _animCoroutine = StartCoroutine(AnimateModelScale(false, animateOutDuration));
 
         OnSlotUpdated?.Invoke(this);
-    }
-
-    /// <summary>PC 마우스 호버 진입 시 호출 (EVInventoryUI에서 EventTrigger로 연결)</summary>
-    public void OnHoverEnter()
-    {
-        if (tooltipPanel == null || StoredData == null) return;
-        tooltipPanel.SetActive(true);
-        if (descLabel != null && StoredData != null)
-            descLabel.text = StoredData.description;
-    }
-
-    /// <summary>PC 마우스 호버 이탈 시 호출</summary>
-    public void OnHoverExit()
-    {
-        tooltipPanel?.SetActive(false);
     }
 
     // ── 내부: 디스플레이 ───────────────────────────────────
@@ -151,16 +159,51 @@ public class EVInventorySlot : MonoBehaviour
     {
         SetDisplay(HasItem);
 
-        if (HasItem && nameLabel != null)
-            nameLabel.text = StoredData?.displayName ?? StoredPart?.name ?? "부품";
+        if(HasItem)
+        {
+            if(nameLabel != null)
+            {
+                // ★ [수정] 코드로 직접 텍스트를 넣지 않고, 로컬라이즈 이벤트의 Key를 변경합니다.
+                var localizeEvent = nameLabel.GetComponent<LocalizeStringEvent>();
+
+                if(localizeEvent != null && StoredData != null)
+                {
+                    // PartDataSO의 partId (예: "SM_Chassis")를 String Table의 Entry Name(Key)으로 사용
+                    localizeEvent.StringReference.TableEntryReference = StoredData.partId;
+                    localizeEvent.RefreshString(); // 바뀐 Key로 즉시 번역본 불러오기
+                }
+                else
+                {
+                    // 로컬라이즈 컴포넌트가 없거나 오류 시 기존 방식(폴백) 사용
+                    nameLabel.text = StoredData?.displayName ?? StoredPart?.name ?? "부품";
+                }
+            }
+
+            // 아이콘 적용 로직 (기존과 동일)
+            if(partIcon != null)
+            {
+                Sprite targetSprite = StoredData?.icon ?? (EVInventoryUI.Instance != null ? EVInventoryUI.Instance.defaultPartIcon : null);
+                if(targetSprite != null)
+                {
+                    partIcon.sprite = targetSprite;
+                    partIcon.enabled = true;
+                    Color c = partIcon.color; c.a = 1f; partIcon.color = c;
+                }
+                else { partIcon.enabled = false; }
+            }
+        }
+        else
+        {
+            if(partIcon != null) partIcon.enabled = false;
+        }
 
         _isBusy = false;
     }
 
     private void SetDisplay(bool hasItem)
     {
-        slotDisplayHasItem?.SetActive(hasItem);
-        slotDisplayEmpty?.SetActive(!hasItem);
+        if(slotDisplayHasItem != null) slotDisplayHasItem.SetActive(hasItem);
+        if(slotDisplayEmpty != null) slotDisplayEmpty.SetActive(!hasItem);
     }
 
     // ── 내부: 메시 클론 (원본 GameObjectCloner 방식 채용) ──
@@ -168,7 +211,7 @@ public class EVInventorySlot : MonoBehaviour
     private void SetupMeshClone(GameObject source)
     {
         DestroyMeshClone();
-        if (itemModelHolder == null) return;
+        if(itemModelHolder == null) return;
 
         // 1. 비주얼만 복제 (물리/컴포넌트 제거)
         _meshClone = CreateVisualClone(source).transform;
@@ -176,21 +219,21 @@ public class EVInventorySlot : MonoBehaviour
 
         // 2. 바운드 계산
         var bounds = GetBounds(_meshClone);
-        if (bounds.size == Vector3.zero)
+        if(bounds.size == Vector3.zero)
         {
             _meshClone.localPosition = Vector3.zero;
             return;
         }
 
         // 3. 중심 피벗 생성
-        if (_boundCenter != null) Destroy(_boundCenter.gameObject);
+        if(_boundCenter != null) Destroy(_boundCenter.gameObject);
         _boundCenter = new GameObject("BoundCenter").transform;
         _boundCenter.SetParent(itemModelHolder, false);
         _boundCenter.position = bounds.center;
         _meshClone.SetParent(_boundCenter, true);
 
         // 4. 슬롯 크기에 맞게 스케일 계산
-        if (inventorySize != null)
+        if(inventorySize != null)
         {
             inventorySize.enabled = true;
             var slotSize = inventorySize.bounds.size;
@@ -208,15 +251,15 @@ public class EVInventorySlot : MonoBehaviour
             _goalScale = Vector3.one * 0.15f; // 기본 크기
         }
 
-        _boundCenter.localScale   = Vector3.zero; // 애니메이션 시작값
+        _boundCenter.localScale = Vector3.zero; // 애니메이션 시작값
         _boundCenter.localPosition = Vector3.zero;
         _boundCenter.localRotation = Quaternion.Euler(0, 90, 0);
     }
 
     private void DestroyMeshClone()
     {
-        if (_meshClone  != null) { Destroy(_meshClone.gameObject);  _meshClone  = null; }
-        if (_boundCenter!= null) { Destroy(_boundCenter.gameObject);_boundCenter= null; }
+        if(_meshClone != null) { Destroy(_meshClone.gameObject); _meshClone = null; }
+        if(_boundCenter != null) { Destroy(_boundCenter.gameObject); _boundCenter = null; }
     }
 
     // 물리/스크립트 없는 비주얼 복제
@@ -224,9 +267,9 @@ public class EVInventorySlot : MonoBehaviour
     {
         var clone = new GameObject(source.name + "_Preview");
 
-        foreach (var mf in source.GetComponentsInChildren<MeshFilter>(true))
+        foreach(var mf in source.GetComponentsInChildren<MeshFilter>(true))
         {
-            if (mf.sharedMesh == null) continue;
+            if(mf.sharedMesh == null) continue;
             var child = new GameObject(mf.name);
             child.transform.SetParent(clone.transform, false);
             child.transform.SetPositionAndRotation(mf.transform.position, mf.transform.rotation);
@@ -236,7 +279,7 @@ public class EVInventorySlot : MonoBehaviour
             newMF.mesh = mf.sharedMesh;
 
             var srcMR = mf.GetComponent<MeshRenderer>();
-            if (srcMR != null)
+            if(srcMR != null)
             {
                 var newMR = child.AddComponent<MeshRenderer>();
                 newMR.sharedMaterials = srcMR.sharedMaterials;
@@ -248,9 +291,9 @@ public class EVInventorySlot : MonoBehaviour
     private static Bounds GetBounds(Transform root)
     {
         var bounds = new Bounds();
-        foreach (var r in root.GetComponentsInChildren<Renderer>())
+        foreach(var r in root.GetComponentsInChildren<Renderer>())
         {
-            if (bounds.extents == Vector3.zero) bounds = r.bounds;
+            if(bounds.extents == Vector3.zero) bounds = r.bounds;
             else bounds.Encapsulate(r.bounds);
         }
         return bounds;
@@ -260,13 +303,13 @@ public class EVInventorySlot : MonoBehaviour
 
     private IEnumerator AnimateModelScale(bool toOne, float duration)
     {
-        if (_boundCenter == null) { _isBusy = false; yield break; }
+        if(_boundCenter == null) { _isBusy = false; yield break; }
 
         float t = 0;
         Vector3 from = toOne ? Vector3.zero : _goalScale;
-        Vector3 to   = toOne ? _goalScale   : Vector3.zero;
+        Vector3 to = toOne ? _goalScale : Vector3.zero;
 
-        while (t < duration)
+        while(t < duration)
         {
             t += Time.deltaTime;
             _boundCenter.localScale = Vector3.Lerp(from, to, t / duration);
@@ -280,7 +323,7 @@ public class EVInventorySlot : MonoBehaviour
 
     private Vector3 GetSpawnPosition()
     {
-        if (Camera.main != null)
+        if(Camera.main != null)
             return Camera.main.transform.position
                  + Camera.main.transform.forward * 1.5f
                  + Vector3.down * 0.3f;

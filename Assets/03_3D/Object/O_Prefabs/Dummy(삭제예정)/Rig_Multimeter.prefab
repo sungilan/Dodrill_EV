@@ -338,6 +338,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4646171079534800391}
+    - targetCorrespondingSourceObject: {fileID: 2267946547502681378, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1477378049597194728}
     - targetCorrespondingSourceObject: {fileID: -3682750994998407170, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2375552068217917624}
@@ -499,6 +502,7 @@ MonoBehaviour:
   rotationThreshold: 0.5
   teleportDistanceThreshold: 2
   sendAuthorityInServer: 1
+  ownerSendOnly: 0
 --- !u!114 &5428132834332259209
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -644,6 +648,29 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.015850782
   m_Center: {x: -0.027198076, y: -0.819618, z: -0.019980893}
+--- !u!1 &4492736196441758156 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2267946547502681378, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
+  m_PrefabInstance: {fileID: 2386972235858171118}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1477378049597194728
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492736196441758156}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03ca45bb53dc94f478358a1b6475653d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DitzelGames.FastIK.FastIKFabric
+  ChainLength: 2
+  Target: {fileID: 0}
+  Pole: {fileID: 0}
+  Iterations: 10
+  Delta: 0.001
+  SnapBackStrength: 1
 --- !u!1 &7909455510228474640 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -3682750994998407170, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}

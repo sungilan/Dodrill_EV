@@ -5,8 +5,8 @@ using UnityEngine;
 
 public class ScenarioAutoLoader : MonoBehaviour
 {
-    [Header("씬 시작 시 자동으로 로드할 시나리오 (폴백용)")]
-    public string autoLoadScenarioId = "0_test_all_features";
+    [Header("폴백 시나리오 ID (MST Args 없을 때 사용)")]
+    public string autoLoadScenarioId = "ev_p0aa6_battery_insulation";
 
     [Header("참조")]
     public ScenarioDistributor distributor;
@@ -42,7 +42,7 @@ public class ScenarioAutoLoader : MonoBehaviour
         yield return new WaitForSeconds(2f);
 
         // MST RoomOptions에서 scenarioId 꺼내기
-        string scenarioId = autoLoadScenarioId; // 폴백 기본값
+        string scenarioId = autoLoadScenarioId;
 
         if (Mst.Server.Rooms != null)
         {
@@ -50,7 +50,7 @@ public class ScenarioAutoLoader : MonoBehaviour
             if (!string.IsNullOrEmpty(roomOptions))
             {
                 scenarioId = roomOptions;
-                Debug.Log($"[AutoLoader] RoomOptions에서 scenarioId 수신: {scenarioId}");
+                Debug.Log($"[AutoLoader] MST scenarioId 수신: {scenarioId}");
             }
             else
             {
@@ -58,7 +58,7 @@ public class ScenarioAutoLoader : MonoBehaviour
             }
         }
 
-        Debug.Log($"[AutoLoader] 시나리오 로드: {scenarioId}");
+        Debug.Log($"[AutoLoader] 로드: {scenarioId}");
         distributor.LoadAndBroadcast(scenarioId);
     }
 }

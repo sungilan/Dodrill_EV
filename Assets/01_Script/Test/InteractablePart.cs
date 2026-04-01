@@ -39,7 +39,7 @@ public class InteractablePart : MonoBehaviour
     [Tooltip("true: 프리모드 — 볼트·안전 무시, VR DistanceGrab 활성")]
     public bool isFreeMode = false;
 
-    private bool _isInsideSnapZone = false;
+    public bool _isInsideSnapZone = false;
 
     // 컴포넌트
     private Grabbable _autoGrabbable;

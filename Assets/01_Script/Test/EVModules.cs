@@ -202,6 +202,19 @@ public class FinalDiagnosisModule : GrabZoneTaskModule
     public override string ModuleId => "FinalDiagnosis";
 }
 
+public class FreeModeTask : ITaskModule
+{
+    public string ModuleId => "FreeModeTask";
+    public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
+    {
+        Debug.Log("[FreeMode] 서버 모듈 시작됨");
+        // 프리모드는 절대 완료되지 않으므로 onComplete를 호출하지 않음
+    }
+    public void OnUpdate(float deltaTime) { }
+    public void OnComplete() { }
+    public void OnFail() { }
+}
+
 // ──────────────────────────────────────────────────────────────
 //  일괄 등록 헬퍼
 // ──────────────────────────────────────────────────────────────
@@ -225,7 +238,8 @@ public static class EVModules
         registry.Register(new BatteryPack_AssembleModule());
         registry.Register(new MSD_ReinstallModule());
         registry.Register(new FinalDiagnosisModule());
+        registry.Register(new FreeModeTask());
 
-        Debug.Log("[EVModules] P0AA6 시나리오 12개 모듈 등록 완료");
+        //Debug.Log("[EVModules] P0AA6 시나리오 12개 모듈 등록 완료");
     }
 }

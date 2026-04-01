@@ -148,6 +148,13 @@ public class ScenarioRunner : MonoBehaviour
     {
         if (_data == null || index >= _data.scenario.tasks.Count)
         {
+            // [수정] 현재 시나리오가 프리모드라면 종료하지 않고 리턴
+            if(_data.scenarioId == "ev_free_mode")
+            {
+                Debug.Log("[ScenarioRunner] 자유 모드 유지 중...");
+                return;
+            }
+
             Debug.Log("[ScenarioRunner] 모든 Task 완료 — 1.5초 후 종료");
             _isRunning = false;
             StartCoroutine(QuitAfterDelay(1.5f));
