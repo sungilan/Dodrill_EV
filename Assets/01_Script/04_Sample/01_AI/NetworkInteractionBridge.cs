@@ -139,14 +139,14 @@ namespace DoDrill.Training
             if (_currentTaskIndex < 0) return;
 
             // PC 직접 존 클릭(itemId 없음) → 현재 태스크 requiredItems[0] 자동 주입
-            if (string.IsNullOrEmpty(itemId) && _scenarioData != null
-                && _currentTaskIndex < _scenarioData.scenario.tasks.Count)
-            {
-                var taskDef = _scenarioData.scenario.tasks[_currentTaskIndex];
-                var config  = _scenarioData.GetModuleConfig(taskDef.moduleId);
-                if (config?.requiredItems?.Count > 0)
-                    itemId = config.requiredItems[0];
-            }
+            //if (string.IsNullOrEmpty(itemId) && _scenarioData != null
+            //    && _currentTaskIndex < _scenarioData.scenario.tasks.Count)
+            //{
+            //    var taskDef = _scenarioData.scenario.tasks[_currentTaskIndex];
+            //    var config  = _scenarioData.GetModuleConfig(taskDef.moduleId);
+            //    if (config?.requiredItems?.Count > 0)
+            //        itemId = config.requiredItems[0];
+            //}
 
             InstanceFinder.ClientManager.Broadcast(new ZoneInteractionSignal
             {

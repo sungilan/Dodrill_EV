@@ -65,7 +65,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ---
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5302535af1044152a457ed104f1f4b91, type: 2}
   m_sharedMaterial: {fileID: 2164040, guid: 5302535af1044152a457ed104f1f4b91, type: 2}
@@ -338,6 +338,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4646171079534800391}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -3747772720529935433}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6904490216802025567}
     - targetCorrespondingSourceObject: {fileID: 2267946547502681378, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1477378049597194728}
@@ -470,7 +476,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 19
+  <PrefabId>k__BackingField: 20
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 10728385243040125964
   <SceneId>k__BackingField: 0
@@ -607,6 +613,39 @@ MonoBehaviour:
   modeDisplay: {fileID: 0}
   currentMode: 0
   bypassModeCheck: 1
+--- !u!114 &-3747772720529935433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3306015186997406143}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
+  currentState: 0
+  requiredBolts: []
+  snapDistance: 0.15
+  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
+  ghostMaterial: {fileID: 0}
+  bypassSafety: 0
+  isFreeMode: 0
+  _isInsideSnapZone: 0
+--- !u!114 &6904490216802025567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3306015186997406143}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2455b212a3e772440b223248d5c613c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FreeModePartAttachment
+  partData: {fileID: 11400000, guid: eb6e65c9553d9d14a8aa1f3596975042, type: 2}
 --- !u!1 &3783081967884463181 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -7665109404756494173, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}

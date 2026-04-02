@@ -420,29 +420,34 @@ public class ScenarioSpawner : MonoBehaviour
     /// </summary>
     public void DespawnCurrentTask()
     {
-        // 스폰 오브젝트 디스폰
-        Debug.Log($"[ScenarioSpawner] DespawnCurrentTask — 대상 {_activeObjects.Count}개, IsServer={InstanceFinder.IsServerStarted}");
         foreach(var obj in _activeObjects)
         {
-            if(obj == null)
+            if(obj == null) continue;
+
+            // 1. 강제 릴리즈 (Hand UI 제거 핵심)
+            // 자식 오브젝트까지 싹 뒤져서 SyncGrab을 찾습니다.
+            var syncGrabs = obj.GetComponentsInChildren<SyncGrab>(true);
+            foreach(var sg in syncGrabs)
             {
-                Debug.LogWarning("[ScenarioSpawner] null 객체 건너뜀");
-                continue;
+                sg.StopPCHold(); // PC 레이저/핸들 UI 즉시 파괴
+                sg.RequestRelease();
             }
 
-            Debug.Log($"[ScenarioSpawner] 디스폰: {obj.name}");
+            var grabbables = obj.GetComponentsInChildren<Autohand.Grabbable>(true);
+            foreach(var gr in grabbables)
+            {
+                gr.ForceHandsRelease(); // VR 손 해제
+            }
 
-            // FishNet Despawn: 서버가 클라이언트에 despawn 메시지 전송 후 오브젝트 파괴
-            // SetActive(false) 또는 Destroy()를 먼저 호출하면 FishNet이 패킷을 보내기 전에
-            // 오브젝트가 파괴되어 클라이언트가 despawn 알림을 받지 못하는 문제 발생
+            // 2. 네트워크 디스폰
             if(InstanceFinder.IsServerStarted)
                 InstanceFinder.ServerManager.Despawn(obj.gameObject);
             else
-                Destroy(obj.gameObject); // 클라이언트 단독 실행 시 폴백
+                Destroy(obj.gameObject);
         }
         _activeObjects.Clear();
 
-        // 가이드 비활성화
+        // 가이드 정리
         foreach(var guideId in _activeGuides)
             _guideRegistry?.Hide(guideId);
         _activeGuides.Clear();

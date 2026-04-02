@@ -18,7 +18,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &3783942657903523634
 Transform:
   m_ObjectHideFlags: 0
@@ -225,6 +225,8 @@ GameObject:
   - component: {fileID: 3784858148752384101}
   - component: {fileID: 1684019177184444750}
   - component: {fileID: 5235070593727556132}
+  - component: {fileID: -4693083535191004925}
+  - component: {fileID: 3890982897511037057}
   m_Layer: 15
   m_Name: ImpactWrench
   m_TagString: Untagged
@@ -355,7 +357,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 23
+  <PrefabId>k__BackingField: 4
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 1150141111137551286
   <SceneId>k__BackingField: 0
@@ -1390,3 +1392,36 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &-4693083535191004925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6472990064727057354}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
+  currentState: 0
+  requiredBolts: []
+  snapDistance: 0.15
+  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
+  ghostMaterial: {fileID: 0}
+  bypassSafety: 0
+  isFreeMode: 0
+  _isInsideSnapZone: 0
+--- !u!114 &3890982897511037057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6472990064727057354}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2455b212a3e772440b223248d5c613c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FreeModePartAttachment
+  partData: {fileID: 11400000, guid: 5d1489478e22d9447a0a5c3c70c92dda, type: 2}

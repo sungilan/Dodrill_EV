@@ -106,7 +106,8 @@ GameObject:
   - component: {fileID: 8442492983181168228}
   - component: {fileID: 1145543895625594426}
   - component: {fileID: 3955992188488722361}
-  - component: {fileID: 245040238544211443}
+  - component: {fileID: -4103986407688949352}
+  - component: {fileID: -6092415357178077016}
   m_Layer: 15
   m_Name: GDS_Tablet
   m_TagString: Untagged
@@ -236,14 +237,14 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 34
+  <PrefabId>k__BackingField: 11
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 5573627896019975906
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
     Position: {x: -4.815, y: 0.988, z: 1.2622}
     Rotation: {x: 0, y: 0, z: 0, w: 1}
-    Scale: {x: 0.18942045, y: 0.22808, z: 0.0070874244}
+    Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
 --- !u!114 &8442492983181168228
 MonoBehaviour:
@@ -355,7 +356,7 @@ MonoBehaviour:
   flyDuration: 0.5
   flyEase: 9
   arcHeight: 0.5
---- !u!114 &245040238544211443
+--- !u!114 &-4103986407688949352
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -364,12 +365,27 @@ MonoBehaviour:
   m_GameObject: {fileID: 1960370119849075638}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 55486ee84d9d51d449cd653ce205dfc0, type: 3}
+  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GDS_TabletController
-  lcdText: {fileID: 0}
-  distributor: {fileID: 0}
-  obdPortTag: OBD_Port
-  connectDelay: 1.5
-  isConnected: 0
-  scenarioStarted: 0
+  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
+  currentState: 0
+  requiredBolts: []
+  snapDistance: 0.15
+  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
+  ghostMaterial: {fileID: 0}
+  bypassSafety: 0
+  isFreeMode: 0
+  _isInsideSnapZone: 0
+--- !u!114 &-6092415357178077016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1960370119849075638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2455b212a3e772440b223248d5c613c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FreeModePartAttachment
+  partData: {fileID: 11400000, guid: e2c71cad983d0e743994aab778ec06a7, type: 2}
