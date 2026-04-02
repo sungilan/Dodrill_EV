@@ -51,6 +51,8 @@ public class GameScenePlatformManager : MonoBehaviour
         CurrentPlatform = Utils.GetPlatformType();
         _isVR = (CurrentPlatform == PlatformType.VR);
         Apply();
+
+        Managers.Sound.Play("GameTheme", Define.Sound.Bgm);
     }
 
     // ── 플랫폼 설정 적용 ───────────────────────────────────

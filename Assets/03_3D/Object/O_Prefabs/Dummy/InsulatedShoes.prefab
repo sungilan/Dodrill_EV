@@ -16,7 +16,6 @@ GameObject:
   - component: {fileID: 8442492983181168228}
   - component: {fileID: 1145543895625594426}
   - component: {fileID: 3955992188488722361}
-  - component: {fileID: 4787968402636068048}
   - component: {fileID: -6668552081011880284}
   m_Layer: 15
   m_Name: InsulatedShoes
@@ -148,7 +147,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 12
+  <PrefabId>k__BackingField: 2
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 661087476651654110
   <SceneId>k__BackingField: 0
@@ -267,26 +266,6 @@ MonoBehaviour:
   flyDuration: 0.5
   flyEase: 9
   arcHeight: 0.5
---- !u!114 &4787968402636068048
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1960370119849075638}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
-  currentState: 0
-  requiredBolts: []
-  snapDistance: 0.15
-  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
-  ghostMaterial: {fileID: 0}
-  bypassSafety: 0
-  isFreeMode: 0
-  _isInsideSnapZone: 0
 --- !u!114 &-6668552081011880284
 MonoBehaviour:
   m_ObjectHideFlags: 0

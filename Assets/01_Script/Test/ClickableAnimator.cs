@@ -150,6 +150,17 @@ public class ClickableAnimator : MonoBehaviour
     [Header("상태 (읽기 전용)")]
     [SerializeField] private bool _isOpen = false;
 
+    [Header("사운드 설정")]
+    [Tooltip("열릴 때 재생할 사운드 파일명 (Resources/Sounds/ 기준)")]
+    public string openSound = "Door_Open";
+
+    [Tooltip("닫힐 때 재생할 사운드 파일명")]
+    public string closeSound = "Door_Close";
+
+    [Tooltip("사운드 볼륨 (0~1)")]
+    [Range(0f, 1f)]
+    public float soundVolume = 1.0f;
+
     private Animator  _animator;
     private Coroutine _autoCloseCoroutine;
 
@@ -223,12 +234,22 @@ public class ClickableAnimator : MonoBehaviour
         _isOpen = open;
         if (_animator == null) return;
 
+        // 1. 애니메이션 적용
         if (useTrigger)
             _animator.SetTrigger(open ? openTrigger : closeTrigger);
         else
             _animator.SetBool(animParamName, open);
 
-        Debug.Log($"[ClickableAnimator] {uniqueId} → {(open ? "열림" : "닫힘")}");
+        // 2. ★ 사운드 재생 (추가된 부분)
+        string soundToPlay = open ? openSound : closeSound;
+
+        if (!string.IsNullOrEmpty(soundToPlay))
+        {
+            // Managers.Sound 시스템을 사용하여 효과음 재생
+            Managers.Sound.Play(soundToPlay, Define.Sound.Effect, 1.0f, soundVolume);
+        }
+
+        Debug.Log($"[ClickableAnimator] {uniqueId} → {(open ? "열림" : "닫힘")} 사운드: {soundToPlay}");
     }
 
     private IEnumerator AutoCloseRoutine()

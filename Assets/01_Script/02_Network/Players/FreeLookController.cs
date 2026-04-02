@@ -70,6 +70,16 @@ public class FreeLookController : NetworkBehaviour
     [Tooltip("라벨이 오브젝트 위에 뜨는 높이 오프셋")]
     public float labelHeightOffset = 0.3f;
 
+    [Header("클릭 사운드 설정")]
+    [Tooltip("일반적인 클릭/상호작용 시 소리")]
+    public string clickSound = "UI_Click";
+    [Tooltip("아이템을 집어올릴 때 소리")]
+    public string grabSound = "Item_Grab";
+    [Tooltip("아이템을 내려놓을 때 소리")]
+    public string dropSound = "Item_Drop";
+    [Tooltip("E키 등으로 아이템을 사용할 때 소리")]
+    public string useSound = "Item_Use";
+
     [Header("디버그")]
     [SerializeField] private bool showDebugLog = true;
     [SerializeField] private bool showDebugRay = true;
@@ -527,6 +537,7 @@ public class FreeLookController : NetworkBehaviour
 
     private string GetHoverTargetName(Collider col)
     {
+        //TODO. 수정 필요(로컬라이징)
         // 우선순위 순으로 이름 결정
         var item = col.GetComponent<TaskItem>() ?? col.GetComponentInParent<TaskItem>();
         if(item != null) return item.prefabId;
@@ -671,9 +682,34 @@ public class FreeLookController : NetworkBehaviour
             return;
         }
 
+        // ── 1. 월드 UI 버튼(리프트 등) 클릭 시 사운드 ──
+        if (HandleWorldSpaceUIClick(clickPos))
+        {
+            Managers.Sound.Play(clickSound); // 딸깍 소리
+            return;
+        }
+
+        // ── 2. 태스크/존 상호작용 성공 시 사운드 ──
+        if (HandleTaskClick(clickPos))
+        {
+            Managers.Sound.Play(clickSound);
+            return;
+        }
+
+        // ── 3. 아이템 집기 성공 시 사운드 ──
+        SyncGrab target = RaycastSyncGrab(clickPos);
+        if (target == null || target.IsGrabbed) return;
+
+        Log($"집기: {target.name}");
+        _heldObject = target;
+        target.OnPCClick();
+
+        Managers.Sound.Play(grabSound); // 훅- 하는 집는 소리
+        HeldItemUI.Instance?.UpdateUI(target.gameObject);
+
         // ── 들고 있는 상태 → 우클릭 = 내려놓기, 좌클릭 차단 ──
         // G키는 Update의 HandleDropKey()에서 독립 처리
-        if(_heldObject != null)
+        if (_heldObject != null)
         {
             if(Input.GetMouseButtonDown(1))
                 DropHeldObject();
@@ -687,21 +723,6 @@ public class FreeLookController : NetworkBehaviour
 
         // ── 빈 상태 → Task 인터랙션 시스템 우선, 없으면 SyncGrab ──
         if(HandleTaskClick(clickPos)) return;
-
-        SyncGrab target = RaycastSyncGrab(clickPos);
-        if(target == null) return;
-
-        if(target.IsGrabbed)
-        {
-            Log($"{target.name} 이미 점유 중 — 무시");
-            return;
-        }
-
-        Log($"집기: {target.name}");
-        _heldObject = target;
-        target.OnPCClick();
-
-        HeldItemUI.Instance?.UpdateUI(target.gameObject);
     }
 
     // TaskItem / Zone 처리. 인터랙션이 발생하면 true 반환
@@ -709,61 +730,74 @@ public class FreeLookController : NetworkBehaviour
     {
         Ray ray = _mainCamera.ScreenPointToRay(screenPos);
 
-        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
+        if (!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
             return false;
 
-        Log($"[Raycast] 클릭 감지됨: {hit.collider.name})");
+        Log($"[Raycast] 클릭 감지됨: {hit.collider.name}");
 
-        // ── 1순위: ClickableAnimator (문, 후드 등 애니메이션) ──
-        // TaskItem보다 먼저 검사하여 애니메이션 우선권을 줍니다.
+        // ── 0순위: 사고 감지 (가장 먼저 체크) ──
+        var part = hit.collider.GetComponent<InteractablePart>()
+                   ?? hit.collider.GetComponentInParent<InteractablePart>();
+
+        if (part != null)
+        {
+            Log($"InteractablePart 발견: {part.name}. 사고 체크 시작.");
+
+            // ★ 핵심: OnPCClick이 bool을 반환하도록 수정하거나, 
+            // 내부의 사고 체크 함수를 직접 호출해서 "안전할 때만" 통과시킵니다.
+            // 만약 사고가 발생했다면(TriggerAccident 호출됨) 여기서 return true로 로직을 종료합니다.
+            if (!part.CheckSafetyAndTriggerAccident())
+            {
+                Log("사고 발생! 상호작용을 중단합니다.");
+                return true; // 사고 연출이 시작되었으므로 클릭 로직 종료
+            }
+
+            Log("안전 확인됨. 다음 상호작용으로 진행합니다.");
+            // 안전하다면 return하지 않고 아래의 TaskItem/SyncGrab 로직으로 내려갑니다.
+        }
+
+        // ── 1순위: ClickableAnimator (문, 후드 등) ──
         var clickableAnim = hit.collider.GetComponent<ClickableAnimator>()
                           ?? hit.collider.GetComponentInParent<ClickableAnimator>();
 
-        if(clickableAnim != null)
+        if (clickableAnim != null)
         {
-            Log($"[애니메이션] ClickableAnimator 발견! ID: {clickableAnim.uniqueId}");
+            Log($"[애니메이션] {clickableAnim.uniqueId} 작동");
             clickableAnim.OnPCClick();
-            return true; // 여기서 로직 종료
-        }
-        else
-        {
-            Log($"[애니메이션] 이 오브젝트에는 ClickableAnimator가 없습니다.");
+            return true;
         }
 
-        // TaskItem 클릭
+        // ── 2순위: TaskItem / SyncGrab (아이템 집기) ──
         var item = hit.collider.GetComponent<TaskItem>()
                 ?? hit.collider.GetComponentInParent<TaskItem>();
-        if(item != null)
+
+        if (item != null)
         {
             Log($"TaskItem 클릭: {item.prefabId}");
 
-            // SyncGrab이 붙어있으면 → 물리 이동 방식 (들고 Zone으로 이동)
             var syncGrab = item.GetComponent<SyncGrab>()
                         ?? item.GetComponentInParent<SyncGrab>();
-            if(syncGrab != null)
+
+            if (syncGrab != null)
             {
-                if(syncGrab.IsGrabbed)
-                {
-                    Log($"{item.prefabId} 이미 점유 중 — 무시");
-                    return true;
-                }
+                if (syncGrab.IsGrabbed) return true;
+
                 Log($"SyncGrab 레이저 그랩 시작: {item.prefabId}");
                 StartLaserPull(syncGrab);
                 return true;
             }
 
-            // SyncGrab 없는 씬 고정 오브젝트 → 기존 방식 (집기 이벤트만 발행)
             InteractionEvents.FireItemGrabbed(item.prefabId);
             InteractionEvents.FireItemUsed(item.prefabId);
             return true;
         }
 
-        // TaskInteractionZone 클릭 → 빈손 터치 대체
+        // ── 3순위: TaskInteractionZone (빈손 터치) ──
         var zone = hit.collider.GetComponent<TaskInteractionZone>()
                 ?? hit.collider.GetComponentInParent<TaskInteractionZone>();
-        if(zone != null && zone.gameObject.activeInHierarchy)
+
+        if (zone != null && zone.gameObject.activeInHierarchy)
         {
-            Log($"TaskInteractionZone 클릭: {zone.zoneId}");
             InteractionEvents.FireZoneActivated(zone.zoneId, string.Empty);
             return true;
         }
@@ -799,8 +833,10 @@ public class FreeLookController : NetworkBehaviour
 
         if(_heldObject == null)
         {
-            // 들고 있지 않을 때 E키 → 바라보는 Zone 직접 활성화 (빈손 터치)
-            if(_mainCamera == null) return;
+            // ── 4. 아이템 사용 시 사운드 ──
+            Managers.Sound.Play(useSound);
+            // 들고 있지 않을 때 F키 → 바라보는 Zone 직접 활성화 (빈손 터치)
+            if (_mainCamera == null) return;
             Ray ray = _mainCamera.ScreenPointToRay(
                 new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
             if(Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance))
@@ -1142,6 +1178,9 @@ public class FreeLookController : NetworkBehaviour
     private void DropHeldObject()
     {
         if(_heldObject == null) return;
+
+        // ── 5. 아이템 내려놓기 시 사운드 ──
+        Managers.Sound.Play(dropSound);
 
         var dropping = _heldObject;
         var part = dropping.GetComponent<InteractablePart>();

@@ -31,6 +31,8 @@ public class TaskItem : MonoBehaviour
             _grabbable.OnGrabEvent    -= OnGrabbed;
             _grabbable.OnSqueezeEvent -= OnUsed;
         }
+
+        ForceReleaseAndCleanup();
     }
 
     private void OnGrabbed(Hand hand, Grabbable grabbable)
@@ -45,4 +47,26 @@ public class TaskItem : MonoBehaviour
 
     /// <summary>ScenarioSpawner에서 스폰 직후 호출하여 ID를 설정</summary>
     public void SetPrefabId(string id) => prefabId = id;
+
+    /// <summary>
+    /// 자신을 잡고 있는 손을 강제로 해제하고 관련 UI(핸들/레이저)를 정리합니다.
+    /// </summary>
+    private void ForceReleaseAndCleanup()
+    {
+        if (_grabbable == null) return;
+
+        // 1. PC 모드 (SyncGrab) 대응
+        var syncGrab = GetComponent<SyncGrab>() ?? GetComponentInParent<SyncGrab>();
+        if (syncGrab != null && syncGrab.IsGrabbed)
+        {
+            syncGrab.StopPCHold();     // PC 레이저 및 가이드 UI 즉시 파괴
+            syncGrab.RequestRelease(); // 서버/클라이언트 물리 해제
+        }
+
+        // 2. VR 모드 (AutoHand) 대응
+        if (_grabbable.IsHeld())
+        {
+            _grabbable.ForceHandsRelease(); // 잡고 있는 모든 VR 손에서 강제 해제
+        }
+    }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Autohand;
+using static EmergencyEventManager;
 
 // ============================================================
 //  InteractablePart.cs  — VR + PC 통합
@@ -40,6 +41,17 @@ public class InteractablePart : MonoBehaviour
     public bool isFreeMode = false;
 
     public bool _isInsideSnapZone = false;
+
+    [Header("사운드 설정")]
+    [Tooltip("부품이 탈거될 때 (손에 잡힐 때) 재생할 사운드")]
+    public string detachSound = "Part_Detach";
+
+    [Tooltip("부품이 원위치에 조립될 때 재생할 사운드")]
+    public string assembleSound = "Part_Assemble";
+
+    [Tooltip("사운드 볼륨 (0~1)")]
+    [Range(0f, 1f)]
+    public float soundVolume = 1.0f;
 
     // 컴포넌트
     private Grabbable _autoGrabbable;
@@ -199,13 +211,13 @@ public class InteractablePart : MonoBehaviour
 
     public void OnPCClick()
     {
-        if(!isFreeMode && currentState == PartState.Assembled)
+        if (!isFreeMode && currentState == PartState.Assembled)
         {
             Debug.Log($"[Part] {name}: 볼트를 먼저 해체하세요");
             return;
         }
 
-        if(!CheckSafety()) return;
+        if(!CheckSafetyAndTriggerAccident()) return;
 
         // _isPCHeld 토글 로직은 더 이상 사용하지 않습니다.
         // SyncGrab이 점유(Grab) 이벤트를 발생시키면 OnGrabStart()가 알아서 불립니다.
@@ -216,7 +228,7 @@ public class InteractablePart : MonoBehaviour
 
     public void OnGrabStart()
     {
-        if(!CheckSafety()) return;
+        if(!CheckSafetyAndTriggerAccident()) return;
 
         if(_rb != null)
         {
@@ -312,10 +324,14 @@ public class InteractablePart : MonoBehaviour
         // 조립 시 원래 스케일로 원상 복구
         transform.localScale = _initialScale;
 
+        // ★ 추가: 조립 사운드 재생
+        if (!string.IsNullOrEmpty(assembleSound))
+            Managers.Sound.Play(assembleSound, Define.Sound.Effect, 1.0f, soundVolume);
+
         // ④ 상태 변경 (고스트 OFF 포함)
         SetPartState(PartState.Assembled);
 
-        foreach(var bolt in requiredBolts)
+        foreach (var bolt in requiredBolts)
         {
             if(bolt == null) continue;
             bolt.gameObject.SetActive(true);
@@ -330,44 +346,70 @@ public class InteractablePart : MonoBehaviour
 
     private void SetPartState(PartState newState)
     {
+        PartState oldState = currentState;
         currentState = newState;
 
-        // 프리모드: Unlocked/Detached 모두 집기 가능, Assembled도 허용
         bool canGrab = isFreeMode || (newState != PartState.Assembled);
+        if (_autoGrabbable != null) _autoGrabbable.enabled = canGrab;
 
-        if(_autoGrabbable != null) _autoGrabbable.enabled = canGrab;
-        // SyncGrab은 enabled 껐다 켜면 NetworkBehaviour 재초기화 문제 있음
-        // 대신 _isGrabbed SyncVar로 집기 차단 — 여기서 enabled 건드리지 않음
-
-        if(newState == PartState.Assembled)
+        if (newState == PartState.Assembled)
         {
-            // 조립 완료 — 고스트 OFF, Kinematic ON
             _ghost?.SetGhostActive(false);
-            if(_rb != null) _rb.isKinematic = true;
+            if (_rb != null) _rb.isKinematic = true;
         }
-        else if(newState == PartState.Detached)
+        else if (newState == PartState.Detached)
         {
-            // 탈거 — 고스트 ON
             _ghost?.SetGhostActive(true);
+
+            // ★ 추가: Assembled 상태에서 Detached로 변할 때만 탈거 사운드 재생
+            if (oldState == PartState.Assembled || oldState == PartState.Unlocked)
+            {
+                if (!string.IsNullOrEmpty(detachSound))
+                    Managers.Sound.Play(detachSound, Define.Sound.Effect, 1.0f, soundVolume);
+            }
         }
-        else
+        else // Unlocked
         {
-            // Unlocked — 고스트 OFF
             _ghost?.SetGhostActive(false);
         }
     }
 
     // ── 안전 체크 ──────────────────────────────────────────
 
-    private bool CheckSafety()
+    public bool CheckSafetyAndTriggerAccident()
     {
-        // 프리모드 또는 bypassSafety: 안전 체크 생략
-        if(isFreeMode || bypassSafety) return true;
-        if(ElectricSafetyManager.Instance == null) return true;
-        if(ElectricSafetyManager.Instance.IsSafeToWork()) return true;
+        // 1. 패스 조건 (프리모드나 디버그 모드)
+        if (isFreeMode || bypassSafety) return true;
+        if (ElectricSafetyManager.Instance == null) return true;
 
-        SafetyUIHandler.Instance?.TriggerWarning("위험! MSD 탈거 및 절연 장갑 착용 후 작업하세요!");
-        Debug.LogWarning($"[Part] {name}: 안전 조건 미충족");
+        // 2. 완벽하게 안전한 상태인지 확인
+        if (ElectricSafetyManager.Instance.IsSafeToWork()) return true;
+
+        // 3. [사고 판단 로직] 안전하지 않다면 어떤 사고인지 결정
+        string reason = "";
+        EmergencyEventManager.AccidentType accidentType;
+
+        // 상황 A: MSD가 아직 꽂혀있는 상태에서 만짐 -> 감전
+        if (!ElectricSafetyManager.Instance.isMSDRemoved)
+        {
+            accidentType = EmergencyEventManager.AccidentType.ElectricShock;
+            reason = "고전압 서비스 플러그(MSD)가 차단되지 않았습니다.";
+        }
+        // 상황 B: MSD는 뽑았는데 장갑을 안 낌 -> 잔류 전압 감전 혹은 화상
+        else if (!ElectricSafetyManager.Instance.isGlovesEquipped)
+        {
+            accidentType = EmergencyEventManager.AccidentType.ElectricShock;
+            reason = "절연 장갑을 착용하지 않았습니다.";
+        }
+        // 상황 C: 기타 위험 상황 (예: 배터리 내부 쇼트 유발 등) -> 열폭주
+        else
+        {
+            accidentType = EmergencyEventManager.AccidentType.ThermalRunaway;
+            reason = "부적절한 도구 사용으로 배터리 셀이 손상되었습니다.";
+        }
+
+        // 사고 발생!
+        EmergencyEventManager.Instance.TriggerAccident(accidentType, reason);
         return false;
     }
 

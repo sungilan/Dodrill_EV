@@ -48,7 +48,7 @@ public class ModulePart : InteractablePart // 상속
         // 일정 속도(Impact) 이상으로 바닥이나 차체에 부딪혔을 때
         if(collision.relativeVelocity.magnitude > 5.0f)
         {
-            EmergencyEventManager.Instance.TriggerThermalRunaway("배터리 모듈 물리적 충격으로 인한 셀 파손");
+            //EmergencyEventManager.Instance.TriggerThermalRunaway("배터리 모듈 물리적 충격으로 인한 셀 파손");
         }
     }
 }

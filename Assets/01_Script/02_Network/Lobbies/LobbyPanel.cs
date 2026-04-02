@@ -50,6 +50,8 @@ public class LobbyPanel : UIView
     {
         base.Awake();
         Mst.Events.AddListener(MstEventKeys.showLobbyView, OnShowLobbyViewEventHandler);
+
+        Managers.Sound.Play("MainTheme", Define.Sound.Bgm);
     }
 
     protected override void OnDestroy()

@@ -106,7 +106,6 @@ GameObject:
   - component: {fileID: 8442492983181168228}
   - component: {fileID: 1145543895625594426}
   - component: {fileID: 3955992188488722361}
-  - component: {fileID: 5897211906178109985}
   - component: {fileID: -8446839920308691717}
   m_Layer: 15
   m_Name: SmartKey
@@ -237,14 +236,14 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 34
+  <PrefabId>k__BackingField: 20
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 8191271924215227488
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -4.815, y: 0.988, z: 1.2622}
+    Position: {x: 0, y: 0, z: 0}
     Rotation: {x: 0, y: 0, z: 0, w: 1}
-    Scale: {x: 0.18942045, y: 0.22808, z: 0.0070874244}
+    Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
 --- !u!114 &8442492983181168228
 MonoBehaviour:
@@ -356,26 +355,6 @@ MonoBehaviour:
   flyDuration: 0.5
   flyEase: 9
   arcHeight: 0.5
---- !u!114 &5897211906178109985
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1960370119849075638}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
-  currentState: 0
-  requiredBolts: []
-  snapDistance: 0.15
-  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
-  ghostMaterial: {fileID: 0}
-  bypassSafety: 0
-  isFreeMode: 0
-  _isInsideSnapZone: 0
 --- !u!114 &-8446839920308691717
 MonoBehaviour:
   m_ObjectHideFlags: 0

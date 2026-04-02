@@ -108,14 +108,19 @@
         ]
       },
       {
-        "moduleId": "LOTO_Gloves",
+        "moduleId": "LOTO_SmartKey",
         "timeout": 90,
         "completionMode": "AllPlayer",
         "spawnObjects": [
           {
-            "prefabId": "InsulatedGloves",
-            "spawnPointId": "SP_Cart_Drawer",
-            "guideId": "Guide_Gloves"
+            "prefabId": "SmartKey",
+            "spawnPointId": "SP_Driver_Seat",
+            "guideId": ""
+          },
+          {
+            "prefabId": "LockBox",
+            "spawnPointId": "SP_LockBox",
+            "guideId": ""
           },
           {
             "prefabId": "GDS_Tablet_In",
@@ -125,10 +130,52 @@
         ]
       },
       {
+        "moduleId": "LOTO_FaceShield",
+        "timeout": 90,
+        "completionMode": "AllPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "FaceShield",
+            "spawnPointId": "SP_Cart_Drawer",
+            "guideId": "Guide_Gloves"
+          }
+        ]
+      },
+      {
+        "moduleId": "LOTO_Gloves",
+        "timeout": 90,
+        "completionMode": "AllPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "InsulatedGloves",
+            "spawnPointId": "SP_Cart_Drawer",
+            "guideId": "Guide_Gloves"
+          }
+        ]
+      },
+      {
+        "moduleId": "LOTO_Shoes",
+        "timeout": 90,
+        "completionMode": "AllPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "InsulatedShoes",
+            "spawnPointId": "SP_Cart_Drawer",
+            "guideId": "Guide_Gloves"
+          }
+        ]
+      },
+      {
         "moduleId": "MSD_Removal",
         "timeout": 120,
         "completionMode": "AnyPlayer",
-        "spawnObjects": []
+        "spawnObjects": [
+          {
+            "prefabId": "LockBox",
+            "spawnPointId": "SP_LockBox",
+            "guideId": ""
+          }
+        ]
       },
       {
         "moduleId": "DischargeWait",
@@ -142,7 +189,7 @@
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
-            "prefabId": "TwoPoleTester",
+            "prefabId": "Multimeter",
             "spawnPointId": "SP_Cart_Top",
             "guideId": "Guide_HV_Cable_Term"
           }
@@ -269,6 +316,54 @@
       }
     },
     {
+      "moduleId": "LOTO_SmartKey",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [ "SmartKey" ],
+        "targetObjName": "SmartKey",
+        "targetZoneId": "LockBox_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "차량 스마트키를 잠금박스에 넣으세요.",
+            "en": "Inspect and wear 1,000V insulated gloves."
+          },
+          {
+            "key": "safetyNote",
+            "ko": "장갑에 구멍·찢김이 있으면 즉시 교체합니다.",
+            "en": "Replace immediately if gloves are punctured or torn."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "LOTO_FaceShield",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [ "FaceShield" ],
+        "targetObjName": "FaceShield",
+        "targetZoneId": "Player_Hand_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "안면보호구를 착용하세요.",
+            "en": "Inspect and wear 1,000V insulated gloves."
+          },
+          {
+            "key": "safetyNote",
+            "ko": "장갑에 구멍·찢김이 있으면 즉시 교체합니다.",
+            "en": "Replace immediately if gloves are punctured or torn."
+          }
+        ]
+      }
+    },
+    {
       "moduleId": "LOTO_Gloves",
       "config": {
         "actionType": "Swap",
@@ -293,25 +388,49 @@
       }
     },
     {
-      "moduleId": "MSD_Removal",
+      "moduleId": "LOTO_Shoes",
       "config": {
-        "actionType": "Grab",
-        "requiredItems": [],
-        "targetObjName": "MSD_Lever",
-        "targetZoneId": "",
+        "actionType": "Swap",
+        "requiredItems": [ "InsulatedShoes" ],
+        "targetObjName": "InsulatedShoes",
+        "targetZoneId": "Player_Hand_Zone",
         "targetValue": 0,
         "toleranceRatio": 0,
         "requiresSafetyCheck": false,
         "extra": [
           {
             "key": "description",
-            "ko": "뒷좌석 하단의 서비스 플러그(MSD)를 클릭하여 탈거를 시작하세요.",
-            "en": "Click the MSD service plug under the rear seat to begin removal."
+            "ko": "절연화를 착용하세요.",
+            "en": "Inspect and wear 1,000V insulated gloves."
+          },
+          {
+            "key": "safetyNote",
+            "ko": "장갑에 구멍·찢김이 있으면 즉시 교체합니다.",
+            "en": "Replace immediately if gloves are punctured or torn."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "MSD_Removal",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [ "MSD_Lever" ],
+        "targetObjName": "MSD_Lever",
+        "targetZoneId": "LockBox_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "12V 배터리 뚜껑 내부의 서비스 플러그(MSD)를 탈거 후 잠금박스에 넣으세요.",
+            "en": "Touch the MSD service plug to begin removal."
           },
           {
             "key": "guideText",
-            "ko": "서비스 플러그 클릭/그랩",
-            "en": "Click/Grab the Service Plug"
+            "ko": "서비스 플러그 접촉",
+            "en": "Touch the Service Plug"
           }
         ]
       }
@@ -344,7 +463,7 @@
       "moduleId": "Voltage_Verification",
       "config": {
         "actionType": "MeasureVoltage",
-        "requiredItems": [ "TwoPoleTester" ],
+        "requiredItems": [ "Multimeter" ],
         "targetObjName": "HV_Cable_Term",
         "targetZoneId": "Inverter_Check_Point",
         "targetValue": 0,

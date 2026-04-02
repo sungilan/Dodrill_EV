@@ -136,29 +136,68 @@ namespace DoDrill.Training
         private void HandleZoneActivated(string zoneId, string itemId)
         {
             if (!InstanceFinder.IsClientStarted) return;
-            if (_currentTaskIndex < 0) return;
+            if (_currentTaskIndex < 0 || _scenarioData == null) return;
 
-            // PC 직접 존 클릭(itemId 없음) → 현재 태스크 requiredItems[0] 자동 주입
-            //if (string.IsNullOrEmpty(itemId) && _scenarioData != null
-            //    && _currentTaskIndex < _scenarioData.scenario.tasks.Count)
-            //{
-            //    var taskDef = _scenarioData.scenario.tasks[_currentTaskIndex];
-            //    var config  = _scenarioData.GetModuleConfig(taskDef.moduleId);
-            //    if (config?.requiredItems?.Count > 0)
-            //        itemId = config.requiredItems[0];
-            //}
+            // 1. 현재 태스크 설정 가져오기
+            var taskDef = _scenarioData.scenario.tasks[_currentTaskIndex];
+            var config = _scenarioData.GetModuleConfig(taskDef.moduleId);
+            if (config == null) return;
 
+            // 2. [핵심 수정] Disassemble 타입인 경우 자동 완료 차단
+            // 이 조건이 없으면 닿자마자 아래 Broadcast가 실행되어 볼트가 삭제됩니다.
+            if (config.actionType.Equals("Disassemble", System.StringComparison.OrdinalIgnoreCase))
+            {
+                // 로그를 남겨서 작동 여부를 확인하세요.
+                Debug.Log($"<color=cyan>[Bridge]</color> {zoneId} 접촉 감지: 'Disassemble' 단계이므로 자동 완료를 차단합니다. 볼트를 직접 끝까지 풀어야 합니다.");
+                return; // ★ 여기서 함수를 종료하여 서버 신호 전송을 막습니다.
+            }
+
+            // 3. 기존 로직 (Touch 등은 그대로 유지)
+            bool isTouchAction = config.actionType.Equals("Touch", System.StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(itemId) && !isTouchAction) return;
+
+            if (!string.IsNullOrEmpty(itemId) && zoneId != "Player_Hand_Zone")
+            {
+                ReleaseHeldItem(itemId);
+            }
+
+            // 4. 서버로 완료 신호 전송 (이 코드가 실행되면 오브젝트가 삭제됨)
             InstanceFinder.ClientManager.Broadcast(new ZoneInteractionSignal
             {
                 taskIndex = _currentTaskIndex,
-                zoneId    = zoneId,
-                itemId    = itemId,
-                clientId  = InstanceFinder.ClientManager.Connection.ClientId,
+                zoneId = zoneId,
+                itemId = itemId,
+                clientId = InstanceFinder.ClientManager.Connection.ClientId,
             });
 
 #if UNITY_EDITOR
-            Debug.Log($"[Bridge] ZoneSignal 전송: zone={zoneId}, item={itemId}, task={_currentTaskIndex}");
+        Debug.Log($"[Bridge] ZoneSignal 전송: zone={zoneId}, item={itemId}, task={_currentTaskIndex}");
 #endif
+        }
+
+        // 아이템 해제 로직
+        private void ReleaseHeldItem(string itemId)
+        {
+            var taskItems = FindObjectsByType<TaskItem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            foreach (var item in taskItems)
+            {
+                if (item.prefabId == itemId)
+                {
+                    var syncGrab = item.GetComponent<SyncGrab>() ?? item.GetComponentInParent<SyncGrab>();
+                    if (syncGrab != null && syncGrab.IsGrabbed)
+                    {
+                        syncGrab.StopPCHold();
+                        syncGrab.RequestRelease();
+                    }
+
+                    var grabbable = item.GetComponent<Autohand.Grabbable>() ?? item.GetComponentInParent<Autohand.Grabbable>();
+                    if (grabbable != null && grabbable.IsHeld())
+                    {
+                        grabbable.ForceHandsRelease();
+                    }
+                    break;
+                }
+            }
         }
 
         private void HandleItemUsed(string itemId)

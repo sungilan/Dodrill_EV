@@ -1,59 +1,154 @@
+ï»¿using System.Collections;
 using UnityEngine;
-using System.Collections;
+using UnityEngine.UI;
 
 public class EmergencyEventManager : MonoBehaviour
 {
     public static EmergencyEventManager Instance;
 
-    [Header("VFX & SFX")]
-    public GameObject smokeEffect;      // ÇÏ¾á ¿¬±â (VFX)
-    public GameObject fireEffect;       // Á¦Æ® ºÒ²É (VFX)
-    public AudioSource alarmSound;      // »çÀÌ·» ¼Ò¸®
-    public AudioSource explosionSound;  // Æø¹ßÀ½
+    public enum AccidentType { ThermalRunaway, ElectricShock }
 
-    [Header("UI & Screen")]
-    public GameObject deathCanvas;      // "¹Ì¼Ç ½ÇÆĞ: ¿­ ÆøÁÖ ¹ß»ı" UI
-    public Animation cameraShake;       // È­¸é Èçµé¸² ¾Ö´Ï¸ŞÀÌ¼Ç
+    [Header("VFX Settings")]
+    public GameObject smokeEffect;
+    public GameObject fireEffect;
+    public GameObject sparkEffect;
+
+    [Header("Sound Names (Resources/Sounds/)")]
+    public string alarmSoundName = "Siren_Loop";
+    public string explosionSoundName = "Explosion_Large";
+    public string electricShockSoundName = "Electric_Shock_Spark";
+    public string failureBgmName = "Sad_Theme"; // ì‹¤íŒ¨ ì‹œ íë¥¼ ë°°ê²½ìŒ
+
+    [Header("UI & Screen Effects")]
+    public GameObject deathCanvas;
+    public TMPro.TextMeshProUGUI failureReasonText;
+    public Animation cameraShake;
+
+    [Header("Flash & Fade Settings")]
+    public CanvasGroup flashCanvasGroup;
+    public float flashSpeed = 5f;
+    public float fadeDuration = 2.0f;
 
     private bool isEventTriggered = false;
 
     void Awake() => Instance = this;
 
-    // ¿­ ÆøÁÖ Æ®¸®°Å ÇÔ¼ö
-    public void TriggerThermalRunaway(string reason)
+    public void TriggerAccident(AccidentType type, string reason)
     {
-        if(isEventTriggered) return;
+        if (isEventTriggered) return;
         isEventTriggered = true;
 
-        StartCoroutine(ThermalRunawayRoutine(reason));
+        // 1. ê¸°ì¡´ ëª¨ë“  ì‚¬ìš´ë“œ(BGM í¬í•¨) ì¦‰ì‹œ ì •ì§€
+        Managers.Sound.StopAll();
+
+        if (type == AccidentType.ThermalRunaway)
+            StartCoroutine(ThermalRunawayRoutine(reason));
+        else
+            StartCoroutine(ElectricShockRoutine(reason));
     }
 
+    // âš¡ ê°ì „ ì‚¬ê³  ë£¨í‹´
+    private IEnumerator ElectricShockRoutine(string reason)
+    {
+        Debug.LogError($"[ê°ì „ ì‚¬ê³ ] {reason}");
+
+        // Managers.Sound í™œìš©: ê°ì „ íš¨ê³¼ìŒ ì¬ìƒ
+        Managers.Sound.Play(electricShockSoundName, Define.Sound.Effect);
+
+        if (cameraShake != null) cameraShake.Play();
+        if (sparkEffect != null) sparkEffect.SetActive(true);
+
+        yield return StartCoroutine(FlashScreenRoutine(Color.red, 3));
+        Managers.Sound.Play(alarmSoundName, Define.Sound.Effect);
+        yield return new WaitForSeconds(1.0f);
+        ShowFailureUI("ê°ì „ ì‚¬ê³  ë°œìƒ!" + reason);
+    }
+
+    // ğŸ”¥ ì—´í­ì£¼(í™”ì¬) ë£¨í‹´
     private IEnumerator ThermalRunawayRoutine(string reason)
     {
-        Debug.LogError($"[»ç°í ¹ß»ı] {reason}");
-
-        // 1´Ü°è: ÇÏ¾á ¿¬±â ¹ß»ı ¹× °æ°íÀ½
         smokeEffect.SetActive(true);
-        alarmSound.Play();
-        // È­¸é¿¡ ÂªÀº °æ°í ÅØ½ºÆ® ¶ç¿ì±â
-        SafetyUIHandler.Instance.TriggerWarning("°æ°í: ¹èÅÍ¸® ³»¾Ğ »ó½Â °¨Áö! ´ëÇÇÇÏ½Ê½Ã¿À!");
 
-        yield return new WaitForSeconds(3.0f);
+        // Managers.Sound í™œìš©: ê²½ê³  ì‚¬ì´ë Œ ì¬ìƒ (BGM íƒ€ì…ìœ¼ë¡œ ì¬ìƒí•˜ë©´ ìë™ ë£¨í”„ ê°€ëŠ¥)
+        Managers.Sound.Play(alarmSoundName, Define.Sound.Effect);
 
-        // 2´Ü°è: Æø¹ß ¹× ºÒ²É ¹ß»ı
-        explosionSound.Play();
+        SafetyUIHandler.Instance?.TriggerWarning("ê²½ê³ : ë°°í„°ë¦¬ ë‚´ì•• ìƒìŠ¹! ëŒ€í”¼í•˜ì‹­ì‹œì˜¤!");
+
+        StartCoroutine(FlashScreenRoutine(new Color(1f, 0.5f, 0f), 1));
+
+        yield return new WaitForSeconds(2.5f);
+
+        // Managers.Sound í™œìš©: í­ë°œìŒ ì¬ìƒ
+        Managers.Sound.Play(explosionSoundName, Define.Sound.Effect);
+
         fireEffect.SetActive(true);
-        if(cameraShake != null) cameraShake.Play();
+        if (cameraShake != null) cameraShake.Play();
 
-        yield return new WaitForSeconds(2.0f);
+        yield return StartCoroutine(FlashScreenRoutine(Color.red, 5));
 
-        // 3´Ü°è: ½Ã³ª¸®¿À Á¾·á ¹× °á°ú ¸®Æ÷Æ®
-        ShowFailureUI(reason);
+        yield return new WaitForSeconds(1.0f);
+        ShowFailureUI("ë°°í„°ë¦¬ í™”ì¬ ë°œìƒ!\n" + reason);
     }
 
     private void ShowFailureUI(string reason)
     {
+        if (failureReasonText != null)
+            failureReasonText.text = reason;
+
+        // ì‹¤íŒ¨ ì „ìš© BGM ì¬ìƒ (ìŠ¬í”ˆ ìŒì•… ë“±)
+        Managers.Sound.Play(failureBgmName, Define.Sound.Bgm);
+
+        StartCoroutine(FadeInDeathCanvas());
+    }
+
+    // âœ¨ í™”ë©´ ë²ˆì©ì„ ë¡œì§ (ê¸°ì¡´ê³¼ ë™ì¼)
+    private IEnumerator FlashScreenRoutine(Color flashColor, int repeatCount)
+    {
+        if (flashCanvasGroup == null) yield break;
+        Image img = flashCanvasGroup.GetComponent<Image>();
+        if (img != null) img.color = flashColor;
+
+        for (int i = 0; i < repeatCount; i++)
+        {
+            while (flashCanvasGroup.alpha < 0.8f)
+            {
+                flashCanvasGroup.alpha += Time.deltaTime * flashSpeed;
+                yield return null;
+            }
+            while (flashCanvasGroup.alpha > 0f)
+            {
+                flashCanvasGroup.alpha -= Time.deltaTime * flashSpeed;
+                yield return null;
+            }
+        }
+    }
+
+    // ğŸ’€ ë°ìŠ¤ ìº”ë²„ìŠ¤ í˜ì´ë“œ ì¸ (ê¸°ì¡´ê³¼ ë™ì¼)
+    private IEnumerator FadeInDeathCanvas()
+    {
+        if (deathCanvas == null) yield break;
         deathCanvas.SetActive(true);
-        // ¿©±â¼­ "ÀÌÀ¯: " + reason À» UI¿¡ Ç¥½Ã
+
+        CanvasGroup cg = deathCanvas.GetComponent<CanvasGroup>();
+        if (cg == null) cg = deathCanvas.AddComponent<CanvasGroup>();
+
+        cg.alpha = 0f;
+        cg.interactable = false;
+        cg.blocksRaycasts = false;
+
+        float elapsedTime = 0f;
+        while (elapsedTime < fadeDuration)
+        {
+            elapsedTime += Time.deltaTime;
+            cg.alpha = Mathf.Lerp(0f, 1f, elapsedTime / fadeDuration);
+            yield return null;
+        }
+
+        cg.alpha = 1f;
+        cg.interactable = true;
+        cg.blocksRaycasts = true;
+
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
     }
 }

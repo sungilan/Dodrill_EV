@@ -161,6 +161,7 @@ public class ModuleConfig
     public List<string> requiredItems = new();
     public string targetZoneId;
     public List<StringKVPair> extra = new();
+    public string actionType;
 
     public string GetExtra(string key)
     {
