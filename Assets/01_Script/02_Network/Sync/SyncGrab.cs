@@ -199,13 +199,13 @@ public class SyncGrab : NetworkBehaviour
             _rb.linearVelocity = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
             _rb.isKinematic = true;
+            _rb.useGravity = false;
         }
         else
         {
             _rb.isKinematic = false;
-            // 필요하다면 여기서 미세한 힘을 주거나 초기화
+            _rb.useGravity = !_isGrabbed.Value;
         }
-        //_rb.useGravity = false;
     }
 
     /// <summary>
@@ -307,6 +307,8 @@ public class SyncGrab : NetworkBehaviour
         _isTweening = true;
         DOTween.Kill(transform);
 
+        if(_rb != null) _rb.isKinematic = true;
+
         Vector3 mid = (transform.position + targetPos) * 0.5f + Vector3.up * arcHeight;
         Vector3[] path = { mid, targetPos };
 
@@ -328,6 +330,8 @@ public class SyncGrab : NetworkBehaviour
         // PC 홀드 중: LNT에 목표 위치 주입 → LNT가 Lerp 이동 + 서버 전파
         // transform을 직접 건드리지 않음 — 다른 클라이언트 동기화는 LNT가 담당
         if(!_isPCHolding || holdPoint == null || !IsOwner) return;
+
+        if(_rb != null) _rb.isKinematic = true;
 
         if(_lnt != null)
         {
@@ -591,7 +595,14 @@ public class SyncGrab : NetworkBehaviour
         ApplyKinematic(next);
     }
 
-    private void OnIsGrabbedChanged(bool prev, bool next, bool asServer) { }
+    private void OnIsGrabbedChanged(bool prev, bool next, bool asServer) 
+    {
+        // 잡힘 상태가 변할 때, 만약 Kinematic이 풀려있다면 중력 상태를 즉시 동기화합니다.
+        if(!_isKinematic.Value && _rb != null)
+        {
+            _rb.useGravity = !next;
+        }
+    }
 
     private void OnIsDespawningChanged(bool prev, bool next, bool asServer)
     {

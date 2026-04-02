@@ -1,9 +1,11 @@
-using UnityEngine;
-using FishNet;
-using FishNet.Transporting;
 using DG.Tweening;
+using FishNet;
+using FishNet.Connection;
+using FishNet.Object;
+using FishNet.Transporting;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace DoDrill.Training
 {
@@ -24,10 +26,10 @@ namespace DoDrill.Training
     //
     //  JSON 설정 (modules[].config.extra):
     //    "snapDuration" : DOTween 이동 시간 (기본 0.5)
-    //    "snapDelay"    : 서버 완료 딜레이  (기본 1.5)
+    //    "snapDelay"    : 서버 완료 딜레이  (기본 1.5)s
     // ============================================================
 
-    public class NetworkInteractionBridge : MonoBehaviour
+    public class NetworkInteractionBridge : NetworkBehaviour
     {
         [Header("DOTween Settings")]
         [SerializeField] private Ease  _snapEase       = Ease.OutQuart;
@@ -245,6 +247,28 @@ namespace DoDrill.Training
                 moduleId  = moduleId,
                 clientId  = InstanceFinder.ClientManager.Connection.ClientId,
             });
+        }
+
+        [TargetRpc]
+        public void TargetPlayGloveEquipAnim(NetworkConnection conn)
+        {
+            StartCoroutine(GloveEquipSequence());
+        }
+
+        private IEnumerator GloveEquipSequence()
+        {
+            // 1. 시각적 연출 실행 (내 손만 바뀜)
+            if (PlayerGloveVisualizer.Instance != null)
+                PlayerGloveVisualizer.Instance?.ApplyGlove(true);
+
+            // 2. 착용 애니메이션 시간만큼 대기 (예: 1초)
+            yield return new WaitForSeconds(1.0f);
+
+            // 3. 서버에 "나 장갑 꼈어"라고 보고 (TaskConfirmed 신호 전송)
+            // 이 신호가 서버의 ScenarioRunner로 전달되어 AllPlayers 체크에 합산됨
+            InteractionEvents.FireTaskConfirmed("LOTO_Gloves");
+
+            Debug.Log("[Bridge] 장갑 착용 완료 보고 전송됨");
         }
 
         // ── Task 상태 수신 → 존 활성화/비활성화 ────────────────────

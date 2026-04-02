@@ -110,7 +110,7 @@ public class EVInventorySlot : MonoBehaviour
             // 1. 오브젝트 활성화 (스크립트들이 동작할 수 있도록 먼저 켭니다)
             StoredPart.gameObject.SetActive(true);
 
-            // 2. 잡기 상태 완벽 초기화 (플레이어를 따라다니는 문제 해결)
+            // 2. 잡기 상태 완벽 초기화
             var syncGrab = StoredPart.GetComponent<SyncGrab>();
             if(syncGrab != null)
             {
@@ -123,18 +123,35 @@ public class EVInventorySlot : MonoBehaviour
             StoredPart.ForceDetach();
 
             // 4. 플레이어 앞 스폰 위치로 강제 이동 
-            // (ForceDetach 내부의 위치 덮어쓰기를 무시하고 플레이어 앞으로 가져옴)
             var spawnPos = GetSpawnPosition();
             StoredPart.transform.position = spawnPos;
 
-            // 5. 허공에 멈추지 않고 바닥으로 떨어지도록 물리 상태 강제 리셋
+            // 5. ★ [핵심 수정] 물리 상태 리셋 (충돌/떨림 방지)
             var rb = StoredPart.GetComponent<Rigidbody>();
             if(rb != null)
             {
-                rb.isKinematic = false;
-                rb.useGravity = true;
-                rb.linearVelocity = Vector3.zero;  // 날아가던 관성 제거
+                // 인벤토리에서 꺼내는 순간에는 물리 연산을 완벽히 끕니다.
+                // 그래야 PC의 DOTween이나 LNT가 위치를 잡을 때 중력과 싸우지 않습니다.
+                rb.isKinematic = true;
+                rb.useGravity = false;
+                rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
+            }
+
+            // 6. ★ [수정] PC/모바일 환경이면 FreeLookController를 통해 쥐어줍니다.
+            if(syncGrab != null && !GameScenePlatformManager.IsVR)
+            {
+                var freeLook = UnityEngine.Object.FindFirstObjectByType<FreeLookController>();
+                if(freeLook != null)
+                {
+                    // FreeLookController에게 "이거 네가 잡은 걸로 처리해!" 라고 넘김
+                    freeLook.ForceGrabFromInventory(syncGrab);
+                }
+                else
+                {
+                    // 혹시라도 컨트롤러를 못 찾으면 폴백(기존 방식)
+                    syncGrab.OnPCClick();
+                }
             }
         }
         else if(StoredData != null)

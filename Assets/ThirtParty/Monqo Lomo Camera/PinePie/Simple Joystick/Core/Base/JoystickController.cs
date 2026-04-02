@@ -90,7 +90,10 @@ namespace PinePie.SimpleJoystick
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
                         joystickBase, eventData.position, eventData.pressEventCamera, out Vector2 localPoint
                     );
-            dragStartedInside = localPoint.magnitude <= joystickRange;
+            //dragStartedInside = localPoint.magnitude <= joystickRange;
+            
+            float baseRadius = joystickBase.rect.width * 0.5f;
+            dragStartedInside = localPoint.magnitude <= baseRadius;
 
             OnDrag(eventData);
         }

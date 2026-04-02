@@ -16720,6 +16720,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d619012772bc7049b46e7220feee5a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentAnchor: {fileID: 0}
 --- !u!1 &5263051845878865654
 GameObject:
   m_ObjectHideFlags: 0
@@ -23338,6 +23339,7 @@ GameObject:
   - component: {fileID: 6698688062908394423}
   - component: {fileID: 234713862711689801}
   - component: {fileID: 7170372304968938837}
+  - component: {fileID: 320829472605696711}
   m_Layer: 0
   m_Name: VR_Player
   m_TagString: Untagged
@@ -23596,6 +23598,22 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 234713862711689801}
   _networkObjectCache: {fileID: 0}
   _uiCamera: {fileID: 1713494296017458274}
+--- !u!114 &320829472605696711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7627685386926881508}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76e060d33c4336546a51e4f16eda5b1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerGloveVisualizer
+  leftHandMesh: {fileID: 4206645340859574304}
+  rightHandMesh: {fileID: 473788539895579814}
+  bareHandMaterial: {fileID: 2100000, guid: aa3c8a4484645e147b088d50a3599f0b, type: 2}
+  insulatedGloveMaterial: {fileID: 2100000, guid: 5874b28730677d041ad4f711fb092ab4, type: 2}
 --- !u!1 &7659404753540851005
 GameObject:
   m_ObjectHideFlags: 0

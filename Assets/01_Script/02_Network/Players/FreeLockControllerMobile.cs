@@ -36,6 +36,21 @@ public class FreeLockControllerMobile : NetworkBehaviour
         base.OnStartClient();
         if (IsOwner == false)
             Destroy(this);
+
+        if(moveJoyStick == null)
+        {
+            // 씬에서 JoystickController 컴포넌트를 가진 UI를 찾아 자동으로 연결합니다.
+            moveJoyStick = Object.FindFirstObjectByType<JoystickController>();
+
+            if(moveJoyStick != null)
+            {
+                Debug.Log($"[MobileController] 조이스틱 자동 연결 성공: {moveJoyStick.name}");
+            }
+            else
+            {
+                Debug.LogError("[MobileController] 씬에서 조이스틱을 찾을 수 없습니다! UI가 켜져 있는지 확인하세요.");
+            }
+        }
     }
 
     void Update()

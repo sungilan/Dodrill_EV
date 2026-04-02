@@ -1,3 +1,4 @@
+using DG.Tweening;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -35,6 +36,11 @@ public class EVInventoryUI : MonoBehaviour
     public GameObject slotPrefab;         // EVInventorySlot 프리팹
     public Sprite defaultPartIcon;
 
+    [Header("Animation Settings")]
+    public float animationDuration = 0.3f; // 애니메이션 속도
+    private CanvasGroup canvasGroup;       // 투명도 조절용
+    private Sequence openCloseSequence;    // 트윈 중복 실행 방지용
+
     [Header("툴팁")]
     public GameObject tooltipPanel;
     public TMPro.TMP_Text tooltipText;
@@ -51,7 +57,15 @@ public class EVInventoryUI : MonoBehaviour
     {
         if(Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        panel?.SetActive(false);
+
+        // CanvasGroup이 없다면 자동으로 추가해줍니다.
+        canvasGroup = panel.GetComponent<CanvasGroup>() ?? panel.AddComponent<CanvasGroup>();
+
+        // 초기 상태 설정
+        panel.SetActive(false);
+        canvasGroup.alpha = 0;
+        panel.transform.localScale = Vector3.one * 0.8f; // 약간 작게 시작
+
         tooltipPanel?.SetActive(false);
     }
 
@@ -88,25 +102,30 @@ public class EVInventoryUI : MonoBehaviour
     {
         if(panel == null) return;
 
-        // 1. 현재 상태의 반대값을 변수에 저장 (현재 꺼져있으면 true, 켜져있으면 false)
-        bool nextState = !panel.activeSelf;
+        bool isOpening = !panel.activeSelf;
 
-        // 2. 패널 활성화 상태 변경
-        panel.SetActive(nextState);
+        // 기존 실행 중인 애니메이션이 있다면 강제 종료 (꼬임 방지)
+        openCloseSequence?.Kill();
+        openCloseSequence = DOTween.Sequence().SetUpdate(true); // 일시정지 상태에서도 작동하게 true
 
-        var adapter = GetComponent<InventoryCanvasAdapter>();
-        if(adapter != null)
+        if(isOpening)
         {
-            adapter.OnPanelOpened(nextState);
+            panel.SetActive(true);
+            // 열릴 때: 투명도 0 -> 1, 크기 0.8 -> 1.0 (톡 튀어나오는 느낌)
+            openCloseSequence.Append(canvasGroup.DOFade(1, animationDuration))
+                             .Join(panel.transform.DOScale(1f, animationDuration).SetEase(Ease.OutBack));
         }
-    }
+        else
+        {
+            // 닫힐 때: 투명도 1 -> 0, 크기 1.0 -> 0.8 (안으로 쑥 들어가는 느낌)
+            openCloseSequence.Append(canvasGroup.DOFade(0, animationDuration))
+                             .Join(panel.transform.DOScale(0.8f, animationDuration).SetEase(Ease.InBack))
+                             .OnComplete(() => panel.SetActive(false));
+        }
 
-    public void ShowPanel() => panel?.SetActive(true);
-    public void HidePanel() => panel?.SetActive(false);
-    public void ClearAll()
-    {
-        foreach(var s in _slots.Values) Destroy(s.gameObject);
-        _slots.Clear();
+        // 기존 어댑터 연동
+        var adapter = GetComponent<InventoryCanvasAdapter>();
+        adapter?.OnPanelOpened(isOpening);
     }
 
     // ── 슬롯 생성 ─────────────────────────────────────────

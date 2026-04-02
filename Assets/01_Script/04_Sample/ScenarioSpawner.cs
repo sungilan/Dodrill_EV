@@ -279,37 +279,55 @@ public class ScenarioSpawner : MonoBehaviour
                 continue;
             }
 
-            // JSON position/rotation/scale → Unity Transform
-            // Vector3Data는 struct이므로 null 체크 없이 직접 변환
-            // JSON 파싱 실패 시 x=0,y=0,z=0 기본값이 자동 적용됨
             Vector3 pos = entry.position.ToVector3();
             Quaternion rot = Quaternion.Euler(entry.rotation.ToVector3());
             Vector3 scale = entry.scale.ToVector3();
 
-            // scale이 (0,0,0)이면 JSON에 scale 미지정 → 기본값 (1,1,1) 적용
             if(scale == Vector3.zero) scale = Vector3.one;
 
             var go = Instantiate(prefab.gameObject, pos, rot);
             go.transform.localScale = scale;
-            go.name = entry.prefabId; // 씬 계층에서 식별하기 쉽게
+            go.name = entry.prefabId; // JSON에 적힌 "Ioniq5Nfree"가 이름이 됨
 
-            // 프로퍼티 적용 (VIN, 배터리 상태 등)
             ApplyProperties(go, entry.properties);
-
-            // FishNet 스폰
             InstanceFinder.ServerManager.Spawn(go);
-
-            // 차량 부품(SyncGrab 포함) 자동 개별 스폰
             SpawnChildNetworkObjects(go);
-
-            // VehicleLiftController 자동 차량 연결
-            TryLinkVehicleToLift(go);
 
             _mapObjects.Add(go);
             Debug.Log($"[ScenarioSpawner] 맵 스폰: {entry.prefabId} @ {pos}");
+
+            // ★ 차량이 스폰되자마자 즉시 리프트 연결을 시도합니다.
+            TryLinkVehicleToLift(go);
         }
 
         Debug.Log($"[ScenarioSpawner] SpawnMapObjects 완료 — {_mapObjects.Count}개");
+    }
+
+    /// <summary>
+    /// 스폰된 오브젝트가 차량이면, 씬에 있는 리프트에 즉시 연결합니다.
+    /// </summary>
+    private void TryLinkVehicleToLift(GameObject go)
+    {
+        string id = go.name.ToLower();
+        bool isVehicle = id.Contains("ioniq") || id.Contains("vehicle") || id.Contains("car");
+
+        // 차량이 아닌 일반 부품/장비면 조용히 넘어갑니다.
+        if(!isVehicle) return;
+
+        Debug.Log($"🔍 [ScenarioSpawner] 스폰된 차량 감지됨: {go.name} - 리프트 연결 시도 중...");
+
+        // 씬에 배치된 리프트 찾기 (꺼져있는 오브젝트도 무조건 찾음)
+        var lift = FindFirstObjectByType<VehicleLiftController>(FindObjectsInactive.Include);
+
+        if(lift != null)
+        {
+            lift.AttachVehicle(go.transform);
+            Debug.Log($"🎉 [ScenarioSpawner] VehicleLiftController ← {go.name} 즉시 자동 연결 완료!");
+        }
+        else
+        {
+            Debug.LogError($"❌ [ScenarioSpawner] 차량({go.name})이 스폰되었으나, 씬에서 'VehicleLiftController' 컴포넌트를 가진 오브젝트를 아예 찾을 수 없습니다!");
+        }
     }
 
     /// <summary>맵 오브젝트 전체 디스폰 (씬 리셋 또는 시나리오 재시작 시)</summary>
@@ -344,24 +362,6 @@ public class ScenarioSpawner : MonoBehaviour
 
             InstanceFinder.ServerManager.Spawn(nob.gameObject);
             Debug.Log($"[ScenarioSpawner] 부품 스폰: {nob.gameObject.name}");
-        }
-    }
-
-    /// <summary>
-    /// 씬의 VehicleLiftController에 스폰된 차량을 자동 연결.
-    /// prefabId에 "Ioniq" 또는 "Vehicle"이 포함된 경우에만 시도.
-    /// </summary>
-    private void TryLinkVehicleToLift(GameObject go)
-    {
-        string id = go.name;
-        bool isVehicle = id.Contains("Ioniq") || id.Contains("Vehicle") || id.Contains("Car");
-        if(!isVehicle) return;
-
-        var lift = FindFirstObjectByType<VehicleLiftController>();
-        if(lift != null)
-        {
-            lift.AttachVehicle(go.transform);
-            Debug.Log($"[ScenarioSpawner] VehicleLiftController ← {go.name} 자동 연결");
         }
     }
 

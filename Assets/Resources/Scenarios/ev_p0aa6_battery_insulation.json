@@ -6,7 +6,6 @@
     "vi": ""
   },
   "version": "1.0",
-
   "dtc": {
     "code": "P0AA6",
     "faultName": {
@@ -20,39 +19,82 @@
     "requiresLOTO": true,
     "dischargeWaitSeconds": 10
   },
-
   "map": {
     "objects": [
       {
         "prefabId": "Ioniq5N",
-        "position": { "x": 1.81,    "y": 1.01, "z": 6.548   },
-        "rotation": { "x": 0,    "y": 0, "z": 0   },
-        "scale":    { "x": 1,    "y": 1, "z": 1   },
+        "position": {
+          "x": 2.844,
+          "y": 0.08,
+          "z": 5.191
+        },
+        "rotation": {
+          "x": 0,
+          "y": 90,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
         "properties": [
-          { "key": "vin",           "ko": "KMHC251XXXXXXXX", "en": "", "vi": "" },
-          { "key": "batteryStatus", "ko": "SOC 68%",          "en": "", "vi": "" }
+          {
+            "key": "vin",
+            "ko": "KMHC251XXXXXXXX",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "batteryStatus",
+            "ko": "SOC 68%",
+            "en": "",
+            "vi": ""
+          }
         ]
       },
       {
         "prefabId": "Maintenance_Cart",
-        "position": { "x": -2.0, "y": 0, "z": 1.5 },
-        "rotation": { "x": 0,    "y": 90,"z": 0   },
-        "scale":    { "x": 1,    "y": 1, "z": 1   },
+        "position": {
+          "x": -2.0,
+          "y": 0,
+          "z": 1.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 90,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
         "properties": []
       },
       {
         "prefabId": "Vehicle_Lift",
-        "position": { "x": 0,    "y": 0, "z": 0   },
-        "rotation": { "x": 0,    "y": 0, "z": 0   },
-        "scale":    { "x": 1,    "y": 1, "z": 1   },
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
         "properties": []
       }
     ]
   },
-
   "scenario": {
     "tasks": [
-
       {
         "moduleId": "InitialDiagnosis",
         "timeout": 120,
@@ -65,7 +107,6 @@
           }
         ]
       },
-
       {
         "moduleId": "LOTO_Gloves",
         "timeout": 90,
@@ -78,21 +119,18 @@
           }
         ]
       },
-
       {
         "moduleId": "MSD_Removal",
         "timeout": 120,
         "completionMode": "AnyPlayer",
         "spawnObjects": []
       },
-
       {
         "moduleId": "DischargeWait",
         "timeout": 30,
         "completionMode": "AnyPlayer",
         "spawnObjects": []
       },
-
       {
         "moduleId": "Voltage_Verification",
         "timeout": 180,
@@ -105,7 +143,6 @@
           }
         ]
       },
-
       {
         "moduleId": "BatteryPack_Disassemble",
         "timeout": 600,
@@ -123,7 +160,6 @@
           }
         ]
       },
-
       {
         "moduleId": "Insulation_Measure",
         "timeout": 300,
@@ -136,7 +172,6 @@
           }
         ]
       },
-
       {
         "moduleId": "Contamination_Clean",
         "timeout": 180,
@@ -149,7 +184,6 @@
           }
         ]
       },
-
       {
         "moduleId": "Gasket_Replace",
         "timeout": 300,
@@ -167,7 +201,6 @@
           }
         ]
       },
-
       {
         "moduleId": "BatteryPack_Assemble",
         "timeout": 600,
@@ -180,14 +213,12 @@
           }
         ]
       },
-
       {
         "moduleId": "MSD_Reinstall",
         "timeout": 60,
         "completionMode": "AnyPlayer",
         "spawnObjects": []
       },
-
       {
         "moduleId": "FinalDiagnosis",
         "timeout": 120,
@@ -200,12 +231,9 @@
           }
         ]
       }
-
     ]
   },
-
   "modules": [
-
     {
       "moduleId": "InitialDiagnosis",
       "config": {
@@ -235,7 +263,6 @@
         ]
       }
     },
-
     {
       "moduleId": "LOTO_Gloves",
       "config": {
@@ -260,37 +287,30 @@
         ]
       }
     },
-
     {
       "moduleId": "MSD_Removal",
       "config": {
-        "actionType": "Swap",
-        "requiredItems": [ "MSD_Lever"],
+        "actionType": "Grab",
+        "requiredItems": [],
         "targetObjName": "MSD_Lever",
-        "targetZoneId": "MSD_Port_Zone",
+        "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
         "requiresSafetyCheck": false,
         "extra": [
           {
             "key": "description",
-            "ko": "뒷좌석 하단의 서비스 플러그(MSD) 레버를 해제하고 탈거하세요.",
-            "en": "Release and remove the MSD service plug under the rear seat."
+            "ko": "뒷좌석 하단의 서비스 플러그(MSD)를 클릭하여 탈거를 시작하세요.",
+            "en": "Click the MSD service plug under the rear seat to begin removal."
           },
           {
-            "key": "step1",
-            "ko": "레버를 90° 회전하여 잠금 해제",
-            "en": "Rotate lever 90° to unlock"
-          },
-          {
-            "key": "step2",
-            "ko": "플러그를 위로 당겨 탈거",
-            "en": "Pull plug upward to remove"
+            "key": "guideText",
+            "ko": "서비스 플러그 클릭/그랩",
+            "en": "Click/Grab the Service Plug"
           }
         ]
       }
     },
-
     {
       "moduleId": "DischargeWait",
       "config": {
@@ -315,7 +335,6 @@
         ]
       }
     },
-
     {
       "moduleId": "Voltage_Verification",
       "config": {
@@ -350,7 +369,6 @@
         ]
       }
     },
-
     {
       "moduleId": "BatteryPack_Disassemble",
       "config": {
@@ -400,7 +418,6 @@
         ]
       }
     },
-
     {
       "moduleId": "Insulation_Measure",
       "config": {
@@ -440,7 +457,6 @@
         ]
       }
     },
-
     {
       "moduleId": "Contamination_Clean",
       "config": {
@@ -465,7 +481,6 @@
         ]
       }
     },
-
     {
       "moduleId": "Gasket_Replace",
       "config": {
@@ -495,11 +510,10 @@
         ]
       }
     },
-
     {
       "moduleId": "BatteryPack_Assemble",
       "config": {
-        "actionType": "Disassemble",
+        "actionType": "Assemble",
         "requiredItems": [ "TorqueWrench" ],
         "targetObjName": "BatteryPack_BoltGroup",
         "targetZoneId": "",
@@ -540,7 +554,6 @@
         ]
       }
     },
-
     {
       "moduleId": "MSD_Reinstall",
       "config": {
@@ -560,7 +573,6 @@
         ]
       }
     },
-
     {
       "moduleId": "FinalDiagnosis",
       "config": {
@@ -595,6 +607,5 @@
         ]
       }
     }
-
   ]
 }

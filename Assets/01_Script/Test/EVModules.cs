@@ -31,9 +31,36 @@ public class InitialDiagnosisModule : GrabZoneTaskModule
 //  InsulatedGloves → Player_Hand_Zone 에 가져오면 완료
 //  (장갑 착용 = GloveItem.OnEquipped 가 InteractionEvents 발행)
 // ──────────────────────────────────────────────────────────────
-public class LOTO_GlovesModule : GrabZoneTaskModule
+public class LOTO_GlovesModule : ITaskModule
 {
-    public override string ModuleId => "LOTO_Gloves";
+    public string ModuleId => "LOTO_Gloves";
+    private Action _onComplete;
+
+    public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
+    {
+        _onComplete = onComplete;
+        // 서버에서 개별 클라이언트의 '확인' 신호를 구독합니다.
+        // ScenarioRunner가 EvaluateCompletion("AllPlayers")를 통해 
+        // 모든 인원이 완료될 때까지 자동으로 대기합니다.
+        InteractionEvents.OnTaskConfirmed += HandleIndividualComplete;
+        Debug.Log("[Server] LOTO_Gloves 시작 - 모든 플레이어의 착용을 기다립니다.");
+    }
+
+    private void HandleIndividualComplete(string moduleId)
+    {
+        if(moduleId != ModuleId) return;
+        // 개별 플레이어 완료 기록 (ScenarioRunner 내부 로직으로 전달됨)
+        Debug.Log("[Server] 한 명의 플레이어가 장갑 착용을 완료했습니다.");
+    }
+
+    public void OnUpdate(float deltaTime) { }
+    public void OnComplete() { Cleanup(); }
+    public void OnFail() { Cleanup(); }
+
+    private void Cleanup()
+    {
+        InteractionEvents.OnTaskConfirmed -= HandleIndividualComplete;
+    }
 }
 
 // ──────────────────────────────────────────────────────────────

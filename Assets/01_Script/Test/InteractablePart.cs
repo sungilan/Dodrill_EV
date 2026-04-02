@@ -142,12 +142,6 @@ public class InteractablePart : MonoBehaviour
 
     private void Update()
     {
-        if(_isPCHeld && _holdPoint != null)
-        {
-            transform.position = _holdPoint.position;
-            transform.rotation = _holdPoint.rotation;
-        }
-
         switch(currentState)
         {
             case PartState.Assembled:
@@ -205,26 +199,17 @@ public class InteractablePart : MonoBehaviour
 
     public void OnPCClick()
     {
-        // 프리모드: Assembled 상태에서도 바로 집기 허용
         if(!isFreeMode && currentState == PartState.Assembled)
         {
             Debug.Log($"[Part] {name}: 볼트를 먼저 해체하세요");
             return;
         }
 
-        if(!_isPCHeld)
-        {
-            if(!CheckSafety()) return;
-            _isPCHeld = true;
-            OnGrabStart();
-            Debug.Log($"[Part] {name}: PC 집기 (freeMode={isFreeMode})");
-        }
-        else
-        {
-            _isPCHeld = false;
-            OnGrabEnd();
-            Debug.Log($"[Part] {name}: PC 내려놓기");
-        }
+        if(!CheckSafety()) return;
+
+        // _isPCHeld 토글 로직은 더 이상 사용하지 않습니다.
+        // SyncGrab이 점유(Grab) 이벤트를 발생시키면 OnGrabStart()가 알아서 불립니다.
+        Debug.Log($"[Part] {name}: PC 집기 신호 통과 (실제 잡기는 SyncGrab이 수행)");
     }
 
     // ── 집기 / 내려놓기 ────────────────────────────────────

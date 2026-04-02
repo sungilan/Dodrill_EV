@@ -700,6 +700,8 @@ public class FreeLookController : NetworkBehaviour
         Log($"집기: {target.name}");
         _heldObject = target;
         target.OnPCClick();
+
+        HeldItemUI.Instance?.UpdateUI(target.gameObject);
     }
 
     // TaskItem / Zone 처리. 인터랙션이 발생하면 true 반환
@@ -709,6 +711,24 @@ public class FreeLookController : NetworkBehaviour
 
         if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
             return false;
+
+        Log($"[Raycast] 클릭 감지됨: {hit.collider.name})");
+
+        // ── 1순위: ClickableAnimator (문, 후드 등 애니메이션) ──
+        // TaskItem보다 먼저 검사하여 애니메이션 우선권을 줍니다.
+        var clickableAnim = hit.collider.GetComponent<ClickableAnimator>()
+                          ?? hit.collider.GetComponentInParent<ClickableAnimator>();
+
+        if(clickableAnim != null)
+        {
+            Log($"[애니메이션] ClickableAnimator 발견! ID: {clickableAnim.uniqueId}");
+            clickableAnim.OnPCClick();
+            return true; // 여기서 로직 종료
+        }
+        else
+        {
+            Log($"[애니메이션] 이 오브젝트에는 ClickableAnimator가 없습니다.");
+        }
 
         // TaskItem 클릭
         var item = hit.collider.GetComponent<TaskItem>()
@@ -1087,6 +1107,8 @@ public class FreeLookController : NetworkBehaviour
         _isFlying = true;
         _heldObject = target;
 
+        HeldItemUI.Instance?.UpdateUI(target.gameObject);
+
         laserLine.enabled = false;
         _laserHoverTarget = null;
         SetOutline(null);
@@ -1111,25 +1133,11 @@ public class FreeLookController : NetworkBehaviour
         _laserHoverTarget = null;
         _heldOriginalScale = Vector3.one;
         Log("[LaserGrab] 외부 릴리즈 감지 → _heldObject 정리");
+
+        HeldItemUI.Instance?.ClearUI();
     }
 
     /// <summary>내려놓기 — 스케일 복원 후 SyncGrab 해제</summary>
-    //private void DropHeldObject()
-    //{
-    //    if(_heldObject == null) return;
-
-    //    _heldObject.OnReleased -= OnHeldObjectReleased;   // 중복 콜백 방지
-    //    _heldObject.transform.localScale = _heldOriginalScale;
-    //    _heldObject.RequestRelease();
-    //    _heldObject.StopPCHold();
-
-    //    Log($"[LaserGrab] 내려놓기: {_heldObject.name}");
-    //    _heldObject = null;
-    //    _isFlying = false;
-    //    _laserHoverTarget = null;
-    //    _heldOriginalScale = Vector3.one;
-    //    SetOutline(null);
-    //}
 
     private void DropHeldObject()
     {
@@ -1139,42 +1147,45 @@ public class FreeLookController : NetworkBehaviour
         var part = dropping.GetComponent<InteractablePart>();
         var data = dropping.GetComponent<FreeModePartAttachment>()?.partData;
 
-        // ① 구독 해제 및 상태 초기화
+        // ① 구독 해제 및 로컬 변수 초기화
         dropping.OnReleased -= OnHeldObjectReleased;
         _heldObject = null;
         _isFlying = false;
         _laserHoverTarget = null;
-        _heldOriginalScale = Vector3.one;
         SetOutline(null);
+
+        HeldItemUI.Instance?.ClearUI();
 
         // 스케일 원복
         dropping.transform.localScale = Vector3.one;
 
-        // ② [핵심 추가] 조립 존(Snap Zone) 안에 있는지 체크
+        // ② 상태 파악 (조립 존 안에 있는지)
         bool isInsideSnapZone = part != null && part.currentState == InteractablePart.PartState.Detached && part._isInsideSnapZone;
 
+        // ③ [핵심 버그 수정] PC 홀드 중지 및 "서버 소유권 즉시 해제"
+        // 이 코드가 인벤토리 이동보다 반드시 먼저 실행되어야 좀비 상태(먹통)가 안 됩니다.
+        dropping.StopPCHold();
+        dropping.RequestRelease();
+
+        // ④ 조립 위치면? -> InteractablePart.OnSyncReleased()가 알아서 조립해줌
         if(isInsideSnapZone)
         {
-            // 조립 위치라면 인벤토리에 넣지 않고 일반 내려놓기 수행
-            // InteractablePart.Update()에서 isHeld가 false가 되는 순간 SnapToOriginalPosition()을 실행함
-            dropping.StopPCHold();
-            dropping.RequestRelease();
             Log($"[LaserGrab] {dropping.name} 조립 위치에서 놓음 -> 조립 시도");
             return;
         }
-
-        // ③ 조립 위치가 아닐 때만 인벤토리에 추가
-        if(EVInventoryUI.Instance != null && part != null)
+        else
         {
-            dropping.StopPCHold();
-            EVInventoryUI.Instance.AddPart(part, data);
-            Log("[LaserGrab] 인벤토리 드롭");
-            return;
+            // 인벤토리에 넣지 않고 그냥 바닥으로 떨어지게 둡니다.
+            Log("[LaserGrab] 허공에서 놓음 -> 바닥으로 추락");
         }
+        //// ⑤ 조립 위치가 아니면? -> 인벤토리로
+        //if(EVInventoryUI.Instance != null && part != null)
+        //{
+        //    EVInventoryUI.Instance.AddPart(part, data);
+        //    Log("[LaserGrab] 허공에서 놓음 -> 인벤토리로 보관");
+        //    return;
+        //}
 
-        // ④ 그 외 예외 상황 (인벤토리가 없거나 파트가 아닐 때)
-        dropping.StopPCHold();
-        dropping.RequestRelease();
         Log("[LaserGrab] 일반 내려놓기 완료");
     }
 
@@ -1196,6 +1207,33 @@ public class FreeLookController : NetworkBehaviour
         float ratio = Mathf.Clamp(maxAllowed / maxDim, 0.05f, 1f);
         t.localScale = _heldOriginalScale * ratio;
         Log($"[LaserGrab] 스케일 {maxDim:F2}m → {ratio:F2}배");
+    }
+
+    /// <summary>
+    /// 인벤토리에서 꺼냈을 때 자동으로 물건을 집고 UI를 갱신합니다.
+    /// </summary>
+    public void ForceGrabFromInventory(SyncGrab target)
+    {
+        // 이미 다른 걸 들고 있다면 무시하거나 버려야 함
+        if(_heldObject != null) return;
+
+        _heldOriginalScale = target.transform.localScale;
+        _isFlying = true;
+        _heldObject = target;
+
+        // ★ 여기서 UI를 띄워줍니다!
+        HeldItemUI.Instance?.UpdateUI(target.gameObject);
+
+        laserLine.enabled = false;
+        _laserHoverTarget = null;
+        SetOutline(null);
+
+        // G키를 누를 때 정상적으로 해제되도록 이벤트 연결
+        target.OnReleased += OnHeldObjectReleased;
+
+        // 실제 물리 이동 명령
+        target.OnPCClick();
+        Log($"[LaserGrab] 인벤토리에서 꺼내 자동 집기: {target.name}");
     }
 
     /// <summary>
