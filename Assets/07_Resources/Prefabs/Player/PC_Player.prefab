@@ -16,9 +16,10 @@ GameObject:
   - component: {fileID: 4130666190411072463}
   - component: {fileID: 823836868806745997}
   - component: {fileID: 4020026540727249397}
+  - component: {fileID: 5818278312418427121}
   m_Layer: 8
   m_Name: PC_Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -91,7 +92,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 33
+  <PrefabId>k__BackingField: 34
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 17400094349353826693
   <SceneId>k__BackingField: 0
@@ -170,6 +171,10 @@ MonoBehaviour:
   hoverGuidePanel: {fileID: 0}
   worldLabelPrefab: {fileID: 7790255784495684290, guid: 275df976be14ea54ebbf6e4e671943f2, type: 3}
   labelHeightOffset: 0.3
+  clickSound: UI_Click
+  grabSound: Item_Grab
+  dropSound: Item_Drop
+  useSound: Item_Use
   showDebugLog: 1
   showDebugRay: 1
   laserLine: {fileID: 0}
@@ -248,6 +253,25 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 7513439500318563725}
   _networkObjectCache: {fileID: 7513439500318563725}
   _uiCamera: {fileID: 7991855557986210841}
+--- !u!114 &5818278312418427121
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 206669820842534176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbf9db670c1df4bb2843b82560ce5409, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
+  icon: {fileID: 21300000, guid: 9abce3e87c5b94d899d1dbbdc1b9a2ff, type: 3}
+  size: {x: 20, y: 20}
+  rotateWithObject: 0
+  upAxis: {x: 0, y: 1, z: 0}
+  initialIconRotation: 0
+  clampIconInBorder: 1
+  clampDistance: 100
 --- !u!1 &2799284014634270396
 GameObject:
   m_ObjectHideFlags: 0

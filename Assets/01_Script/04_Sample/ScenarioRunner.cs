@@ -1,12 +1,13 @@
+using DoDrill;
+using FishNet;
+using FishNet.Broadcast;
+using FishNet.Connection;
+using FishNet.Managing.Scened;
+using FishNet.Transporting;
 using System.Collections;
 using System.Collections.Generic;
-using FishNet;
-using FishNet.Connection;
-using FishNet.Transporting;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
-using FishNet.Managing.Scened;
-using DoDrill;
 
 // ============================================================
 //  ScenarioRunner.cs
@@ -170,6 +171,13 @@ public class ScenarioRunner : MonoBehaviour
             Debug.LogWarning($"[ScenarioRunner] 모듈 없음 — Task[{index}] 더미 모듈로 대기 중 (ForceComplete 로 넘길 수 있음)");
             module = new DummyTaskModule(taskDef.moduleId);
         }
+
+        // 서버가 모든 클라이언트에게 미니맵 업데이트 신호를 보냄
+        var msg = new UpdateMiniMapBroadcast
+        {
+            requiredItemIds = config.requiredItems,
+            targetZoneId = config.targetZoneId
+        };
 
         _completedClients.Clear();
         _taskLocked = false;
@@ -562,5 +570,11 @@ public class ScenarioRunner : MonoBehaviour
                $"| 재도전: {_retryCount}{(_maxRetries > 0 ? $"/{_maxRetries}" : "")} " +
                $"| 모듈: {taskDef.moduleId} " +
                $"| 경과: {_currentTaskState.elapsedTime:F1}s";
+    }
+
+    public struct UpdateMiniMapBroadcast : IBroadcast
+    {
+        public List<string> requiredItemIds;
+        public string targetZoneId;
     }
 }

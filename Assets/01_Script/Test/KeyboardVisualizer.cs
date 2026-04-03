@@ -11,6 +11,8 @@ public class KeyboardVisualizer : MonoBehaviour
     public Image keyD;
     public Image keyG;
     public Image keyF;
+    public Image leftMouseBtn;
+    public Image rightMouseBtn;
 
     [Header("Settings")]
     public Color normalColor = Color.white;
@@ -19,29 +21,34 @@ public class KeyboardVisualizer : MonoBehaviour
 
     void Update()
     {
-        // 각 키 입력을 체크하여 처리
-        HandleKey(KeyCode.W, keyW);
-        HandleKey(KeyCode.A, keyA);
-        HandleKey(KeyCode.S, keyS);
-        HandleKey(KeyCode.D, keyD);
-        HandleKey(KeyCode.G, keyG);
-        HandleKey(KeyCode.F, keyF);
+        // 키보드 입력
+        HandleInput(KeyCode.W, keyW);
+        HandleInput(KeyCode.A, keyA);
+        HandleInput(KeyCode.S, keyS);
+        HandleInput(KeyCode.D, keyD);
+        HandleInput(KeyCode.G, keyG);
+        HandleInput(KeyCode.F, keyF);
+
+        // 마우스 입력 (KeyCode를 활용한 방식)
+        HandleInput(KeyCode.Mouse0, leftMouseBtn);  // 마우스 왼쪽 (0)
+        HandleInput(KeyCode.Mouse1, rightMouseBtn); // 마우스 오른쪽 (1)
     }
 
-    void HandleKey(KeyCode code, Image targetImage)
+    // 메서드 이름을 범용적으로 HandleInput으로 변경했습니다.
+    void HandleInput(KeyCode code, Image targetImage)
     {
         if(targetImage == null) return;
 
         if(Input.GetKeyDown(code))
         {
-            // 눌렀을 때: 주황색으로 즉시 변경 + 살짝 커지는 연출
-            targetImage.DOKill(); // 기존 트윈 중단
+            // 눌렀을 때: 주황색 + 스케일 업
+            targetImage.DOKill();
             targetImage.DOColor(activeColor, duration);
             targetImage.transform.DOScale(1.1f, duration).SetEase(Ease.OutQuad);
         }
         else if(Input.GetKeyUp(code))
         {
-            // 뗐을 때: 원래 색으로 복귀 + 크기 원상복구
+            // 뗐을 때: 원래 색 + 스케일 복구
             targetImage.DOKill();
             targetImage.DOColor(normalColor, duration);
             targetImage.transform.DOScale(1.0f, duration).SetEase(Ease.OutQuad);
