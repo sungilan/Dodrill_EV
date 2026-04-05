@@ -3,6 +3,11 @@ using UnityEngine.Networking;
 using System.Collections;
 using System;
 
+// ============================================================
+//  TTSManager.cs  ‚Äî Google Cloud TTS ÏôÑÏÑ±Î≥∏
+//  Speak(text) Ìïú Ï§ÑÎ°ú ÌïúÍµ≠Ïñ¥ AI ÏùåÏÑ± Ï∂úÎ†•
+// ============================================================
+[RequireComponent(typeof(AudioSource))]
 public class TTSManager : MonoBehaviour
 {
     public static TTSManager Instance;
@@ -10,58 +15,91 @@ public class TTSManager : MonoBehaviour
     [Header("API Settings")]
     [SerializeField] private string apiKey = "YOUR_GOOGLE_API_KEY";
     [SerializeField] private string voiceLanguage = "ko-KR";
-    [SerializeField] private string voiceName = "ko-KR-Standard-A"; // «—±πæÓ ø©º∫/≥≤º∫ º±≈√
+    [SerializeField] private string voiceName = "ko-KR-Neural2-A"; // ÏûêÏó∞Ïä§Îü¨Ïö¥ Neural2 ÏùåÏÑ±
 
-    private AudioSource audioSource;
+    [Header("Ïû¨ÏÉù ÏÑ§Ï†ï")]
+    [SerializeField] private float volume = 1f;
+    [SerializeField] private bool skipIfPlaying = false; // true: Ïû¨ÏÉù Ï§ëÏù¥Î©¥ Î¨¥Ïãú
+
+    private AudioSource _audioSource;
+    private Coroutine _currentCoroutine;
 
     void Awake()
     {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        audioSource = GetComponent<AudioSource>();
-        if(audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        _audioSource = GetComponent<AudioSource>();
+        _audioSource.volume = volume;
     }
 
-    // ø‹∫Œø°º≠ »£√‚«“ «‘ºˆ: "MSD∏¶ ∫–∏Æ«œººø‰" -> ¿Ωº∫ √‚∑¬
     public void Speak(string text)
     {
-        StartCoroutine(DownloadSpeech(text));
+        if (string.IsNullOrEmpty(text)) return;
+        if (skipIfPlaying && _audioSource.isPlaying) return;
+
+        if (_currentCoroutine != null) StopCoroutine(_currentCoroutine);
+        _currentCoroutine = StartCoroutine(DownloadAndPlay(text));
     }
 
-    private IEnumerator DownloadSpeech(string text)
+    public void Stop() => _audioSource.Stop();
+
+    private IEnumerator DownloadAndPlay(string text)
     {
-        // Google Cloud TTS REST API ø£µÂ∆˜¿Œ∆Æ
         string url = $"https://texttospeech.googleapis.com/v1/text:synthesize?key={apiKey}";
+        string json = "{\"input\":{\"text\":\"" + text + "\"}," +
+                      "\"voice\":{\"languageCode\":\"" + voiceLanguage + "\",\"name\":\"" + voiceName + "\"}," +
+                      "\"audioConfig\":{\"audioEncoding\":\"MP3\",\"speakingRate\":0.95}}";
 
-        // JSON ø‰√ª µ•¿Ã≈Õ ±∏º∫
-        string jsonRequest = "{\"input\":{\"text\":\"" + text + "\"}," +
-                             "\"voice\":{\"languageCode\":\"" + voiceLanguage + "\",\"name\":\"" + voiceName + "\"}," +
-                             "\"audioConfig\":{\"audioEncoding\":\"MP3\"}}";
-
-        using(UnityWebRequest request = new UnityWebRequest(url, "POST"))
+        using (var req = new UnityWebRequest(url, "POST"))
         {
-            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonRequest);
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
+            req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+            yield return req.SendWebRequest();
 
-            yield return request.SendWebRequest();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogError($"[TTS] API Ïò§Î•ò: {req.error}");
+                yield break;
+            }
 
-            if(request.result == UnityWebRequest.Result.Success)
-            {
-                // API ¿¿¥‰ø°º≠ Base64 ø¿µø¿ µ•¿Ã≈Õ∏¶ √ﬂ√‚«œø© ¿Áª˝«œ¥¬ ∑Œ¡˜ (Helper « ø‰)
-                ProcessAudioResponse(request.downloadHandler.text);
-            }
-            else
-            {
-                Debug.LogError("TTS API Error: " + request.error);
-            }
+            // JSONÏóêÏÑú audioContent(Base64) Ï∂îÏ∂ú
+            string response = req.downloadHandler.text;
+            string key = "\"audioContent\": \"";
+            int start = response.IndexOf(key);
+            if (start < 0) { Debug.LogError("[TTS] audioContent ÏóÜÏùå"); yield break; }
+            start += key.Length;
+            int end = response.IndexOf("\"", start);
+            string b64 = response.Substring(start, end - start);
+
+            // Base64 ‚Üí MP3 ÌååÏùº ‚Üí AudioClip
+            byte[] bytes = Convert.FromBase64String(b64);
+            string path = Application.persistentDataPath + "/tts_guide.mp3";
+            System.IO.File.WriteAllBytes(path, bytes);
+            yield return StartCoroutine(LoadAndPlay(path));
         }
     }
 
-    private void ProcessAudioResponse(string jsonResponse)
+    private IEnumerator LoadAndPlay(string path)
     {
-        // JSON ∆ƒΩÃ »ƒ Base64 string -> AudioClip ∫Ø»Ø ∑Œ¡˜¿Ã µÈæÓ∞©¥œ¥Ÿ.
-        // Ω«π´ø°º≠¥¬ 'SimpleJSON' ∞∞¿∫ ∂Û¿Ã∫Í∑Ø∏Æ∏¶ ªÁøÎ«œ∏È ∆Ì∏Æ«’¥œ¥Ÿ.
-        Debug.Log("TTS ¿Ωº∫ µ•¿Ã≈Õ ºˆΩ≈ øœ∑· π◊ ¿Áª˝ ¡ÿ∫Ò");
+        using (var www = UnityWebRequestMultimedia.GetAudioClip(
+            "file://" + path, AudioType.MPEG))
+        {
+            yield return www.SendWebRequest();
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                // UnityEngine.Networking.DownloadHandlerAudioClip (Î™®Îì† Î≤ÑÏ†Ñ Í≥µÌÜµ)
+                var clip = UnityEngine.Networking.DownloadHandlerAudioClip.GetContent(www);
+                if (clip != null)
+                {
+                    _audioSource.clip = clip;
+                    _audioSource.Play();
+                }
+            }
+            else
+            {
+                Debug.LogError($"[TTS] Ïò§ÎîîÏò§ Î°úÎìú Ïã§Ìå®: {www.error}");
+            }
+        }
     }
 }

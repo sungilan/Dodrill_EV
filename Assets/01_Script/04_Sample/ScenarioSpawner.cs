@@ -79,28 +79,28 @@ public class ScenarioSpawner : MonoBehaviour
     {
         int added = 0, skipped = 0;
         var registered = new HashSet<string>();
-        foreach(var entry in _prefabRegistry)
-            if(!string.IsNullOrEmpty(entry.prefabId))
+        foreach (var entry in _prefabRegistry)
+            if (!string.IsNullOrEmpty(entry.prefabId))
                 registered.Add(entry.prefabId);
 
         string[] guids = AssetDatabase.FindAssets("t:Prefab");
-        foreach(var guid in guids)
+        foreach (var guid in guids)
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
             var prefabGo = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if(prefabGo == null) continue;
+            if (prefabGo == null) continue;
 
             var netObj = prefabGo.GetComponent<NetworkObject>();
-            if(netObj == null) continue; // NetworkObject 없는 프리팹은 스킵
+            if (netObj == null) continue; // NetworkObject 없는 프리팹은 스킵
 
             // Item_ / SM_ 접두사 제거 후 prefabId로 사용
             string prefabId = prefabGo.name;
-            if(prefabId.StartsWith("Item_", System.StringComparison.OrdinalIgnoreCase))
+            if (prefabId.StartsWith("Item_", System.StringComparison.OrdinalIgnoreCase))
                 prefabId = prefabId.Substring(5);
-            else if(prefabId.StartsWith("SM_", System.StringComparison.OrdinalIgnoreCase))
+            else if (prefabId.StartsWith("SM_", System.StringComparison.OrdinalIgnoreCase))
                 prefabId = prefabId.Substring(3);
 
-            if(registered.Contains(prefabId)) { skipped++; continue; }
+            if (registered.Contains(prefabId)) { skipped++; continue; }
 
             _prefabRegistry.Add(new PrefabEntry { prefabId = prefabId, prefab = netObj });
             registered.Add(prefabId);
@@ -123,7 +123,7 @@ public class ScenarioSpawner : MonoBehaviour
     [Button("③ GuideRegistry 자동 연결", ButtonSizes.Medium), GUIColor(0.4f, 0.8f, 1f)]
     private void AutoFindGuideRegistry()
     {
-        if(_guideRegistry == null)
+        if (_guideRegistry == null)
             _guideRegistry = FindAnyObjectByType<SceneGuideRegistry>();
         EditorUtility.SetDirty(this);
         Debug.Log($"[ScenarioSpawner] GuideRegistry: {(_guideRegistry != null ? "연결 완료" : "씬에 없음")}");
@@ -135,18 +135,18 @@ public class ScenarioSpawner : MonoBehaviour
         // NetworkManager가 실제로 사용하는 DefaultPrefabObjects 탐색
         string assetPath = null;
         var networkManager = FindAnyObjectByType<FishNet.Managing.NetworkManager>();
-        if(networkManager != null && networkManager.SpawnablePrefabs != null)
+        if (networkManager != null && networkManager.SpawnablePrefabs != null)
             assetPath = AssetDatabase.GetAssetPath(networkManager.SpawnablePrefabs);
 
         // 폴백: 후보 경로 순서대로 시도
-        if(string.IsNullOrEmpty(assetPath))
+        if (string.IsNullOrEmpty(assetPath))
         {
             string[] candidates = { "Assets/Settings/DefaultPrefabObjects.asset", "Assets/DefaultPrefabObjects.asset" };
-            foreach(var c in candidates)
-                if(System.IO.File.Exists(System.IO.Path.GetFullPath(c))) { assetPath = c; break; }
+            foreach (var c in candidates)
+                if (System.IO.File.Exists(System.IO.Path.GetFullPath(c))) { assetPath = c; break; }
         }
 
-        if(string.IsNullOrEmpty(assetPath))
+        if (string.IsNullOrEmpty(assetPath))
         {
             EditorUtility.DisplayDialog("에셋 없음",
                 "DefaultPrefabObjects 에셋을 찾을 수 없습니다.\n" +
@@ -157,7 +157,7 @@ public class ScenarioSpawner : MonoBehaviour
         }
 
         var defaultPrefabs = AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(assetPath);
-        if(defaultPrefabs == null)
+        if (defaultPrefabs == null)
         {
             Debug.LogError("[ScenarioSpawner] DefaultPrefabObjects 로드 실패: " + assetPath);
             return;
@@ -167,10 +167,10 @@ public class ScenarioSpawner : MonoBehaviour
         var existingSet = new HashSet<NetworkObject>(defaultPrefabs.Prefabs);
 
         int added = 0, skipped = 0;
-        foreach(var entry in _prefabRegistry)
+        foreach (var entry in _prefabRegistry)
         {
-            if(entry.prefab == null) { skipped++; continue; }
-            if(existingSet.Contains(entry.prefab)) { skipped++; continue; }
+            if (entry.prefab == null) { skipped++; continue; }
+            if (existingSet.Contains(entry.prefab)) { skipped++; continue; }
 
             // FNV-1 64비트 해시 설정 (FishNet DefaultPrefabObjects.SetAssetPathHashes 와 동일)
             string prefabPath = AssetDatabase.GetAssetPath(entry.prefab.gameObject);
@@ -203,7 +203,7 @@ public class ScenarioSpawner : MonoBehaviour
         unchecked
         {
             ulong hash = offset;
-            foreach(char c in text)
+            foreach (char c in text)
             {
                 hash = hash * prime;
                 hash = hash ^ (ulong)c;
@@ -223,14 +223,14 @@ public class ScenarioSpawner : MonoBehaviour
     private void CacheSpawnPoints()
     {
         _spawnPointCache = new Dictionary<string, SpawnPoint>();
-        foreach(var sp in FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (var sp in FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
-            if(string.IsNullOrEmpty(sp.pointId))
+            if (string.IsNullOrEmpty(sp.pointId))
             {
                 Debug.LogWarning($"[ScenarioSpawner] SpawnPoint '{sp.name}' pointId 비어있음 — 스킵");
                 continue;
             }
-            if(_spawnPointCache.ContainsKey(sp.pointId))
+            if (_spawnPointCache.ContainsKey(sp.pointId))
             {
                 Debug.LogWarning($"[ScenarioSpawner] 중복 pointId: '{sp.pointId}' — 첫 번째만 사용");
                 continue;
@@ -253,13 +253,13 @@ public class ScenarioSpawner : MonoBehaviour
     /// </summary>
     public void SpawnMapObjects(MapData mapData)
     {
-        if(mapData == null || mapData.objects == null || mapData.objects.Count == 0)
+        if (mapData == null || mapData.objects == null || mapData.objects.Count == 0)
         {
             Debug.Log("[ScenarioSpawner] map.objects 없음 — 스킵");
             return;
         }
 
-        if(!InstanceFinder.IsServerStarted)
+        if (!InstanceFinder.IsServerStarted)
         {
             Debug.LogWarning("[ScenarioSpawner] SpawnMapObjects는 서버에서만 호출 가능");
             return;
@@ -268,75 +268,57 @@ public class ScenarioSpawner : MonoBehaviour
         // 기존 맵 오브젝트가 있으면 먼저 제거
         DespawnMapObjects();
 
-        foreach(var entry in mapData.objects)
+        foreach (var entry in mapData.objects)
         {
-            if(string.IsNullOrEmpty(entry.prefabId)) continue;
+            if (string.IsNullOrEmpty(entry.prefabId)) continue;
 
             var prefab = FindPrefab(entry.prefabId);
-            if(prefab == null)
+            if (prefab == null)
             {
                 Debug.LogWarning($"[ScenarioSpawner] map prefabId '{entry.prefabId}' 등록 안 됨 — 스킵");
                 continue;
             }
 
+            // JSON position/rotation/scale → Unity Transform
+            // Vector3Data는 struct이므로 null 체크 없이 직접 변환
+            // JSON 파싱 실패 시 x=0,y=0,z=0 기본값이 자동 적용됨
             Vector3 pos = entry.position.ToVector3();
             Quaternion rot = Quaternion.Euler(entry.rotation.ToVector3());
             Vector3 scale = entry.scale.ToVector3();
 
-            if(scale == Vector3.zero) scale = Vector3.one;
+            // scale이 (0,0,0)이면 JSON에 scale 미지정 → 기본값 (1,1,1) 적용
+            if (scale == Vector3.zero) scale = Vector3.one;
 
             var go = Instantiate(prefab.gameObject, pos, rot);
             go.transform.localScale = scale;
-            go.name = entry.prefabId; // JSON에 적힌 "Ioniq5Nfree"가 이름이 됨
+            go.name = entry.prefabId; // 씬 계층에서 식별하기 쉽게
 
+            // 프로퍼티 적용 (VIN, 배터리 상태 등)
             ApplyProperties(go, entry.properties);
+
+            // FishNet 스폰
             InstanceFinder.ServerManager.Spawn(go);
+
+            // 차량 부품(SyncGrab 포함) 자동 개별 스폰
             SpawnChildNetworkObjects(go);
+
+            // VehicleLiftController 자동 차량 연결
+            TryLinkVehicleToLift(go);
 
             _mapObjects.Add(go);
             Debug.Log($"[ScenarioSpawner] 맵 스폰: {entry.prefabId} @ {pos}");
-
-            // ★ 차량이 스폰되자마자 즉시 리프트 연결을 시도합니다.
-            TryLinkVehicleToLift(go);
         }
 
         Debug.Log($"[ScenarioSpawner] SpawnMapObjects 완료 — {_mapObjects.Count}개");
     }
 
-    /// <summary>
-    /// 스폰된 오브젝트가 차량이면, 씬에 있는 리프트에 즉시 연결합니다.
-    /// </summary>
-    private void TryLinkVehicleToLift(GameObject go)
-    {
-        string id = go.name.ToLower();
-        bool isVehicle = id.Contains("ioniq") || id.Contains("vehicle") || id.Contains("car");
-
-        // 차량이 아닌 일반 부품/장비면 조용히 넘어갑니다.
-        if(!isVehicle) return;
-
-        Debug.Log($"🔍 [ScenarioSpawner] 스폰된 차량 감지됨: {go.name} - 리프트 연결 시도 중...");
-
-        // 씬에 배치된 리프트 찾기 (꺼져있는 오브젝트도 무조건 찾음)
-        var lift = FindFirstObjectByType<VehicleLiftController>(FindObjectsInactive.Include);
-
-        if(lift != null)
-        {
-            lift.AttachVehicle(go.transform);
-            Debug.Log($"🎉 [ScenarioSpawner] VehicleLiftController ← {go.name} 즉시 자동 연결 완료!");
-        }
-        else
-        {
-            Debug.LogError($"❌ [ScenarioSpawner] 차량({go.name})이 스폰되었으나, 씬에서 'VehicleLiftController' 컴포넌트를 가진 오브젝트를 아예 찾을 수 없습니다!");
-        }
-    }
-
     /// <summary>맵 오브젝트 전체 디스폰 (씬 리셋 또는 시나리오 재시작 시)</summary>
     public void DespawnMapObjects()
     {
-        foreach(var go in _mapObjects)
+        foreach (var go in _mapObjects)
         {
-            if(go == null) continue;
-            if(InstanceFinder.IsServerStarted)
+            if (go == null) continue;
+            if (InstanceFinder.IsServerStarted)
                 InstanceFinder.ServerManager.Despawn(go);
             else
                 Destroy(go);
@@ -352,40 +334,58 @@ public class ScenarioSpawner : MonoBehaviour
     /// </summary>
     private void SpawnChildNetworkObjects(GameObject root)
     {
-        foreach(var nob in root.GetComponentsInChildren<FishNet.Object.NetworkObject>(true))
+        foreach (var nob in root.GetComponentsInChildren<FishNet.Object.NetworkObject>(true))
         {
             // 루트 자신은 이미 스폰됨
-            if(nob.gameObject == root) continue;
+            if (nob.gameObject == root) continue;
             // SyncGrab이 있는 부품만 개별 스폰
-            if(nob.GetComponent<SyncGrab>() == null) continue;
-            if(nob.IsSpawned) continue;
+            if (nob.GetComponent<SyncGrab>() == null) continue;
+            if (nob.IsSpawned) continue;
 
             InstanceFinder.ServerManager.Spawn(nob.gameObject);
             Debug.Log($"[ScenarioSpawner] 부품 스폰: {nob.gameObject.name}");
         }
     }
 
+    /// <summary>
+    /// 씬의 VehicleLiftController에 스폰된 차량을 자동 연결.
+    /// prefabId에 "Ioniq" 또는 "Vehicle"이 포함된 경우에만 시도.
+    /// </summary>
+    private void TryLinkVehicleToLift(GameObject go)
+    {
+        string id = go.name;
+        bool isVehicle = id.Contains("Ioniq") || id.Contains("Vehicle") || id.Contains("Car");
+        if (!isVehicle) return;
+
+        var lift = FindFirstObjectByType<VehicleLiftController>();
+        if (lift != null)
+        {
+            lift.AttachVehicle(go.transform);
+            Debug.Log($"[ScenarioSpawner] VehicleLiftController ← {go.name} 자동 연결");
+        }
+    }
+
     /// <summary>MapObjectEntry.properties를 GO에 적용</summary>
     private void ApplyProperties(GameObject go, List<StringKVPair> properties)
     {
-        if(properties == null || properties.Count == 0) return;
+        if (properties == null || properties.Count == 0) return;
 
         // IPropertyReceiver를 구현한 컴포넌트에게 위임
         var receiver = go.GetComponentInChildren<IMapPropertyReceiver>();
-        if(receiver != null)
+        if (receiver != null)
         {
-            foreach(var kv in properties)
+            foreach (var kv in properties)
                 receiver.OnMapProperty(kv.key, kv.ko, kv.en);
             return;
         }
 
         // 폴백: TMP_Text에 vin 값 설정
-        foreach(var kv in properties)
+        foreach (var kv in properties)
         {
-            if(kv.key == "vin")
+            if (kv.key == "vin")
             {
                 var tmp = go.GetComponentInChildren<TMPro.TextMeshPro>();
-                if(tmp != null) tmp.text = kv.ko;
+                if (tmp != null) tmp.text = kv.ko;
             }
         }
     }
@@ -397,15 +397,15 @@ public class ScenarioSpawner : MonoBehaviour
     /// </summary>
     public void SpawnForTask(TaskDef taskDef)
     {
-        if(taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0) return;
-        if(!InstanceFinder.IsServerStarted)
+        if (taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0) return;
+        if (!InstanceFinder.IsServerStarted)
         {
             Debug.LogWarning("[ScenarioSpawner] 서버에서만 호출 가능");
             return;
         }
 
         int count = taskDef.spawnObjects.Count;
-        for(int i = 0; i < count; i++)
+        for (int i = 0; i < count; i++)
         {
             // 아이템이 여러 개면 중앙 기준으로 좌우 분산
             // ex) 2개: -0.2 / +0.2 / 3개: -0.4 / 0 / +0.4
@@ -420,35 +420,30 @@ public class ScenarioSpawner : MonoBehaviour
     /// </summary>
     public void DespawnCurrentTask()
     {
-        foreach(var obj in _activeObjects)
+        // 스폰 오브젝트 디스폰
+        Debug.Log($"[ScenarioSpawner] DespawnCurrentTask — 대상 {_activeObjects.Count}개, IsServer={InstanceFinder.IsServerStarted}");
+        foreach (var obj in _activeObjects)
         {
-            if(obj == null) continue;
-
-            // 1. 강제 릴리즈 (Hand UI 제거 핵심)
-            // 자식 오브젝트까지 싹 뒤져서 SyncGrab을 찾습니다.
-            var syncGrabs = obj.GetComponentsInChildren<SyncGrab>(true);
-            foreach(var sg in syncGrabs)
+            if (obj == null)
             {
-                sg.StopPCHold(); // PC 레이저/핸들 UI 즉시 파괴
-                sg.RequestRelease();
+                Debug.LogWarning("[ScenarioSpawner] null 객체 건너뜀");
+                continue;
             }
 
-            var grabbables = obj.GetComponentsInChildren<Autohand.Grabbable>(true);
-            foreach(var gr in grabbables)
-            {
-                gr.ForceHandsRelease(); // VR 손 해제
-            }
+            Debug.Log($"[ScenarioSpawner] 디스폰: {obj.name}");
 
-            // 2. 네트워크 디스폰
-            if(InstanceFinder.IsServerStarted)
+            // FishNet Despawn: 서버가 클라이언트에 despawn 메시지 전송 후 오브젝트 파괴
+            // SetActive(false) 또는 Destroy()를 먼저 호출하면 FishNet이 패킷을 보내기 전에
+            // 오브젝트가 파괴되어 클라이언트가 despawn 알림을 받지 못하는 문제 발생
+            if (InstanceFinder.IsServerStarted)
                 InstanceFinder.ServerManager.Despawn(obj.gameObject);
             else
-                Destroy(obj.gameObject);
+                Destroy(obj.gameObject); // 클라이언트 단독 실행 시 폴백
         }
         _activeObjects.Clear();
 
-        // 가이드 정리
-        foreach(var guideId in _activeGuides)
+        // 가이드 비활성화
+        foreach (var guideId in _activeGuides)
             _guideRegistry?.Hide(guideId);
         _activeGuides.Clear();
     }
@@ -461,9 +456,9 @@ public class ScenarioSpawner : MonoBehaviour
         Vector3 spawnPos = Vector3.zero;
         Quaternion spawnRot = Quaternion.identity;
 
-        if(!string.IsNullOrEmpty(bundle.spawnPointId))
+        if (!string.IsNullOrEmpty(bundle.spawnPointId))
         {
-            if(_spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
+            if (_spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
             {
                 spawnPos = sp.transform.position;
                 spawnRot = sp.transform.rotation;
@@ -471,14 +466,14 @@ public class ScenarioSpawner : MonoBehaviour
             else
             {
                 Debug.LogWarning($"[ScenarioSpawner] spawnPointId '{bundle.spawnPointId}' 없음 — 폴백 사용");
-                if(_fallbackSpawnRoot != null)
+                if (_fallbackSpawnRoot != null)
                 {
                     spawnPos = _fallbackSpawnRoot.position;
                     spawnRot = _fallbackSpawnRoot.rotation;
                 }
             }
         }
-        else if(_fallbackSpawnRoot != null)
+        else if (_fallbackSpawnRoot != null)
         {
             spawnPos = _fallbackSpawnRoot.position;
             spawnRot = _fallbackSpawnRoot.rotation;
@@ -488,14 +483,14 @@ public class ScenarioSpawner : MonoBehaviour
         spawnPos += new Vector3(xOffset, SPAWN_HEIGHT, 0f);
 
         // 2. prefab 스폰
-        if(!string.IsNullOrEmpty(bundle.prefabId))
+        if (!string.IsNullOrEmpty(bundle.prefabId))
         {
             var prefab = FindPrefab(bundle.prefabId);
-            if(prefab != null)
+            if (prefab != null)
             {
                 var instance = Instantiate(prefab, spawnPos, spawnRot);
                 _activeObjects.Add(instance); // Spawn 전에 등록 (Spawn 실패해도 추적 가능)
-                if(InstanceFinder.IsServerStarted)
+                if (InstanceFinder.IsServerStarted)
                     InstanceFinder.ServerManager.Spawn(instance.gameObject);
                 Debug.Log($"[ScenarioSpawner] 스폰: {bundle.prefabId} @ {bundle.spawnPointId}, 총 추적 {_activeObjects.Count}개");
             }
@@ -506,17 +501,19 @@ public class ScenarioSpawner : MonoBehaviour
         }
 
         // 3. 가이드 활성화
-        if(!string.IsNullOrEmpty(bundle.guideId))
+        if (!string.IsNullOrEmpty(bundle.guideId))
         {
             _guideRegistry?.Show(bundle.guideId);
             _activeGuides.Add(bundle.guideId);
         }
+
+        // GuideSystem 표시는 클라이언트(GuideSystem.ShowSpawnPointGuides)가 ScenarioData에서 직접 처리
     }
 
     private NetworkObject FindPrefab(string prefabId)
     {
-        foreach(var entry in _prefabRegistry)
-            if(entry.prefabId == prefabId) return entry.prefab;
+        foreach (var entry in _prefabRegistry)
+            if (entry.prefabId == prefabId) return entry.prefab;
         return null;
     }
 }

@@ -921,20 +921,34 @@ public class FreeLookController : NetworkBehaviour
     /// <summary>디버그용 — UI 위일 때 어떤 오브젝트인지 이름 반환</summary>
     private string GetUIObjectName(Vector2 screenPos)
     {
-        if(EventSystem.current == null) return "EventSystem 없음";
+        if (EventSystem.current == null) return "EventSystem 없음";
 
         var pointerData = new PointerEventData(EventSystem.current) { position = screenPos };
         _uiRaycastResults.Clear();
         EventSystem.current.RaycastAll(pointerData, _uiRaycastResults);
 
-        foreach(var result in _uiRaycastResults)
+        foreach (var result in _uiRaycastResults)
         {
             var canvas = result.gameObject.GetComponentInParent<Canvas>();
-            if(canvas != null && canvas.renderMode != RenderMode.WorldSpace)
-                return result.gameObject.name;
+            if (canvas != null && canvas.renderMode != RenderMode.WorldSpace)
+            {
+                // ★ 수정: 단순 이름 대신 부모 경로까지 다 찍어버립니다.
+                return GetGameObjectPath(result.gameObject);
+            }
         }
-
         return "없음";
+    }
+
+    // 부모 경로를 찾아주는 헬퍼 함수 추가
+    private string GetGameObjectPath(GameObject obj)
+    {
+        string path = obj.name;
+        while (obj.transform.parent != null)
+        {
+            obj = obj.transform.parent.gameObject;
+            path = obj.name + "/" + path;
+        }
+        return path;
     }
 
     // ═══════════════════════════════════════════════════════

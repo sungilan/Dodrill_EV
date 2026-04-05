@@ -27,40 +27,25 @@ public class InitialDiagnosisModule : GrabZoneTaskModule
 }
 
 // ──────────────────────────────────────────────────────────────
+//  Task[01] InsulationFaultCheck
+//  GDS 부가기능 "절연파괴 검출" 실행 → 파괴 부위 특정
+//  GDS_Tablet을 OBD_Zone에 가져다 부가기능 버튼 사용
+// ──────────────────────────────────────────────────────────────
+public class InsulationFaultCheckModule : GrabZoneTaskModule
+{
+    public override string ModuleId => "InsulationFaultCheck";
+}
+
+
+
+// ──────────────────────────────────────────────────────────────
 //  Task[01] LOTO_Gloves
 //  InsulatedGloves → Player_Hand_Zone 에 가져오면 완료
 //  (장갑 착용 = GloveItem.OnEquipped 가 InteractionEvents 발행)
 // ──────────────────────────────────────────────────────────────
-public class LOTO_GlovesModule : ITaskModule
+public class LOTO_GlovesModule : GrabZoneTaskModule
 {
-    public string ModuleId => "LOTO_Gloves";
-    private Action _onComplete;
-
-    public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
-    {
-        _onComplete = onComplete;
-        // 서버에서 개별 클라이언트의 '확인' 신호를 구독합니다.
-        // ScenarioRunner가 EvaluateCompletion("AllPlayers")를 통해 
-        // 모든 인원이 완료될 때까지 자동으로 대기합니다.
-        InteractionEvents.OnTaskConfirmed += HandleIndividualComplete;
-        Debug.Log("[Server] LOTO_Gloves 시작 - 모든 플레이어의 착용을 기다립니다.");
-    }
-
-    private void HandleIndividualComplete(string moduleId)
-    {
-        if(moduleId != ModuleId) return;
-        // 개별 플레이어 완료 기록 (ScenarioRunner 내부 로직으로 전달됨)
-        Debug.Log("[Server] 한 명의 플레이어가 장갑 착용을 완료했습니다.");
-    }
-
-    public void OnUpdate(float deltaTime) { }
-    public void OnComplete() { Cleanup(); }
-    public void OnFail() { Cleanup(); }
-
-    private void Cleanup()
-    {
-        InteractionEvents.OnTaskConfirmed -= HandleIndividualComplete;
-    }
+    public override string ModuleId => "LOTO_Gloves";
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -69,7 +54,7 @@ public class LOTO_GlovesModule : ITaskModule
 //  InteractablePart(MSD_Lever).OnGrabEnd → Detached 시
 //  InteractionEvents.FireZoneActivated("MSD_Port_Zone", "MSD_Lever")
 // ──────────────────────────────────────────────────────────────
-public class MSD_RemovalModule : GrabZoneTaskModule
+public class MSD_RemovalModule : ConfirmTaskModule
 {
     public override string ModuleId => "MSD_Removal";
 }
@@ -119,7 +104,7 @@ public class BatteryPack_DisassembleModule : ITaskModule
 
     private Action _onComplete;
     private Action _onFail;
-    private bool   _completed;
+    private bool _completed;
 
     // JSON requiredItems: ["ImpactWrench", "BatteryJack"]
     private static readonly System.Collections.Generic.HashSet<string> _requiredItems
@@ -128,11 +113,11 @@ public class BatteryPack_DisassembleModule : ITaskModule
     public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
     {
         _onComplete = onComplete;
-        _onFail     = onFail;
-        _completed  = false;
+        _onFail = onFail;
+        _completed = false;
 
+        // 도구 집기 또는 BatteryLiftController의 DetachBattery 이벤트 수신
         InteractionEvents.OnItemGrabbed += HandleGrab;
-        // BatteryPack_BoltGroup이 실제 InteractablePart로 탈거될 경우 대비
         InteractionEvents.OnZoneActivated += HandleZone;
     }
 
@@ -161,11 +146,11 @@ public class BatteryPack_DisassembleModule : ITaskModule
 
     public void OnUpdate(float deltaTime) { }
     public void OnComplete() { Cleanup(); }
-    public void OnFail()    { Cleanup(); }
+    public void OnFail() { Cleanup(); }
 
     private void Cleanup()
     {
-        InteractionEvents.OnItemGrabbed   -= HandleGrab;
+        InteractionEvents.OnItemGrabbed -= HandleGrab;
         InteractionEvents.OnZoneActivated -= HandleZone;
     }
 }
@@ -229,19 +214,6 @@ public class FinalDiagnosisModule : GrabZoneTaskModule
     public override string ModuleId => "FinalDiagnosis";
 }
 
-public class FreeModeTask : ITaskModule
-{
-    public string ModuleId => "FreeModeTask";
-    public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
-    {
-        Debug.Log("[FreeMode] 서버 모듈 시작됨");
-        // 프리모드는 절대 완료되지 않으므로 onComplete를 호출하지 않음
-    }
-    public void OnUpdate(float deltaTime) { }
-    public void OnComplete() { }
-    public void OnFail() { }
-}
-
 // ──────────────────────────────────────────────────────────────
 //  일괄 등록 헬퍼
 // ──────────────────────────────────────────────────────────────
@@ -265,8 +237,80 @@ public static class EVModules
         registry.Register(new BatteryPack_AssembleModule());
         registry.Register(new MSD_ReinstallModule());
         registry.Register(new FinalDiagnosisModule());
-        registry.Register(new FreeModeTask());
+        registry.Register(new Connector_Cover_RemovalModule());
+        registry.Register(new HV_Front_DisconnectModule());
+        registry.Register(new HV_Rear_DisconnectModule());
+        registry.Register(new ICCU_DisconnectModule());
+        registry.Register(new BMU_DisconnectModule());
+        registry.Register(new Ground_RemovalModule());
+        registry.Register(new Coolant_Hose_InModule());
+        registry.Register(new Coolant_Hose_OutModule());
 
-        //Debug.Log("[EVModules] P0AA6 시나리오 12개 모듈 등록 완료");
+        Debug.Log("[EVModules] P0AA6 시나리오 12개 모듈 등록 완료");
     }
+}
+
+// ──────────────────────────────────────────────────────────────
+//  v2 시나리오 추가 모듈 (9개)
+//  모두 ConfirmTaskModule 상속 — 타겟 GO 클릭 or TaskCompleteSignal로 완료
+// ──────────────────────────────────────────────────────────────
+
+public class Connector_Cover_RemovalModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Connector_Cover_Removal";
+}
+
+public class HV_Front_DisconnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "HV_Front_Disconnect";
+}
+
+public class HV_Rear_DisconnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "HV_Rear_Disconnect";
+}
+
+public class ICCU_DisconnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "ICCU_Disconnect";
+}
+
+public class BMU_DisconnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "BMU_Disconnect";
+}
+
+public class Ground_RemovalModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Ground_Removal";
+}
+
+public class Coolant_Hose_InModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Coolant_Hose_In";
+}
+
+public class Coolant_Hose_OutModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Coolant_Hose_Out";
+}
+
+public class BatteryPack_LoweringModule : ConfirmTaskModule
+{
+    public override string ModuleId => "BatteryPack_Lowering";
+}
+
+public class LOTO_SmartKeyModule : GrabZoneTaskModule
+{
+    public override string ModuleId => "LOTO_SmartKey";
+}
+
+public class LOTO_FaceShieldModule : GrabZoneTaskModule
+{
+    public override string ModuleId => "LOTO_FaceShield";
+}
+
+public class LOTO_ShoesModule : GrabZoneTaskModule
+{
+    public override string ModuleId => "LOTO_Shoes";
 }

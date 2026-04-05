@@ -146,6 +146,13 @@ public class SpawnBundle
 
     /// <summary>씬의 SceneGuideRegistry guideId와 매핑. 없으면 빈 문자열</summary>
     public string guideId;
+
+    /// <summary>
+    /// 아이템을 가져다 놓을 타겟 존 GO 이름.
+    /// GuideSystem이 이 이름으로 씬에서 GO를 찾아 황금색 화살표 + 고스트를 표시.
+    /// </summary>
+    public string targetGuideId;
+    public bool showGuide = true;
 }
 
 [Serializable]
@@ -162,6 +169,7 @@ public class ModuleConfig
     public string targetZoneId;
     public List<StringKVPair> extra = new();
     public string actionType;
+    public string targetObjName;
 
     public string GetExtra(string key)
     {

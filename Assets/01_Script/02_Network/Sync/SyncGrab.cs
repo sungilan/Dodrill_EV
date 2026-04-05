@@ -294,10 +294,21 @@ public class SyncGrab : NetworkBehaviour
 
         if(_isGrabbed.Value) return;
 
-        if(holdPoint == null)
+        if (holdPoint == null)
         {
-            Debug.LogWarning($"[SyncGrab] {name}: holdPoint 없음");
-            return;
+            // 1. 캐릭터 프리팹 내부나 씬에서 'HoldPoint' 태그를 가진 오브젝트 탐색
+            var hp = GameObject.FindWithTag("HoldPoint");
+            if (hp != null)
+            {
+                holdPoint = hp.transform;
+                Debug.Log($"[SyncGrab] {name}: 클릭 시점에 holdPoint를 자동 탐색하여 할당했습니다.");
+            }
+            else
+            {
+                // 2. 태그로도 못 찾았을 경우 에러 로그를 남기고 중단 (최소한의 방어선)
+                Debug.LogError($"[SyncGrab] {name}: 씬 내에 'HoldPoint' 태그를 가진 오브젝트가 없어 동작을 취소합니다.");
+                return;
+            }
         }
 
         RequestGrab(() => PCFlyTo(holdPoint.position, holdPoint.rotation));

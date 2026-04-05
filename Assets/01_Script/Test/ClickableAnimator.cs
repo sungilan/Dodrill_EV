@@ -161,6 +161,13 @@ public class ClickableAnimator : MonoBehaviour
     [Range(0f, 1f)]
     public float soundVolume = 1.0f;
 
+    [Header("시나리오 연동")]
+    [Tooltip("클릭 시 완료 신호를 보낼 Task ID (모듈 ID). 비어있으면 무시.")]
+    public string taskId = "";
+
+    [Tooltip("클릭 시 완료 신호를 보낼 Zone ID. (ZoneAndUse 모듈 대응용)")]
+    public string zoneId = "";
+
     private Animator  _animator;
     private Coroutine _autoCloseCoroutine;
 
@@ -247,6 +254,24 @@ public class ClickableAnimator : MonoBehaviour
         {
             // Managers.Sound 시스템을 사용하여 효과음 재생
             Managers.Sound.Play(soundToPlay, Define.Sound.Effect, 1.0f, soundVolume);
+        }
+
+        // ── ★ [추가] 시나리오 단계 완료 신호 발신 ──
+        // 이 함수는 모든 클라이언트에서 실행되므로, '이벤트'를 통해 로컬에서만 반응하거나
+        // 혹은 소유권과 상관없이 클릭한 사람(혹은 서버)이 신호를 보내게 합니다.
+
+        // 1순위: 특정 Task ID가 지정된 경우 (태스크 직접 완료)
+        if (!string.IsNullOrEmpty(taskId))
+        {
+            // ScenarioStateReceiver 등을 통해 서버에 완료 신호 전송
+            // (프로젝트 구조에 따라 InteractionEvents를 사용해도 좋습니다)
+            InteractionEvents.FireTaskConfirmed(taskId);
+        }
+
+        // 2순위: Zone ID가 지정된 경우 (특정 위치 상호작용 완료)
+        if (!string.IsNullOrEmpty(zoneId))
+        {
+            InteractionEvents.FireZoneActivated(zoneId, string.Empty);
         }
 
         Debug.Log($"[ClickableAnimator] {uniqueId} → {(open ? "열림" : "닫힘")} 사운드: {soundToPlay}");

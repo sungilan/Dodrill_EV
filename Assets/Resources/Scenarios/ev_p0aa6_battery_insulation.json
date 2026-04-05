@@ -1,8 +1,8 @@
 {
   "scenarioId": "ev_p0aa6_battery_insulation",
   "scenarioName": {
-    "ko": "[시나리오 모드] 고전압 배터리 절연 파괴 진단 및 정비",
-    "en": "[Scenario Mode] HV Battery Insulation Failure - Diagnosis & Repair",
+    "ko": "[P0AA6] 고전압 배터리 절연 파괴 진단 및 정비",
+    "en": "[P0AA6] HV Battery Insulation Failure - Diagnosis & Repair",
     "vi": ""
   },
   "version": "1.0",
@@ -103,7 +103,7 @@
           {
             "prefabId": "GDS_Tablet",
             "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_GDS"
+            "guideId": "Guide_OBD_Port"
           }
         ]
       },
@@ -115,17 +115,21 @@
           {
             "prefabId": "SmartKey",
             "spawnPointId": "SP_Driver_Seat",
-            "guideId": "Guide_Driver_Seat"
+            "guideId": "Guide_Driver_Seat",
+            "targetGuideId": ""
           },
           {
             "prefabId": "LockBox",
             "spawnPointId": "SP_LockBox",
-            "guideId": "Guide_LockBox"
+            "guideId": "Guide_LockBox",
+            "targetGuideId": ""
           },
           {
             "prefabId": "GDS_Tablet_In",
             "spawnPointId": "SP_GDS_Tablet_In",
-            "guideId": ""
+            "guideId": "",
+            "targetGuideId": "",
+            "showGuide": false
           }
         ]
       },
@@ -137,19 +141,8 @@
           {
             "prefabId": "FaceShield",
             "spawnPointId": "SP_Cart_Drawer",
-            "guideId": "Guide_Cart_Drawer"
-          }
-        ]
-      },
-      {
-        "moduleId": "LOTO_Gloves",
-        "timeout": 90,
-        "completionMode": "AllPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "InsulatedGloves",
-            "spawnPointId": "SP_Cart_Drawer",
-            "guideId": "Guide_Cart_Drawer"
+            "guideId": "Guide_Cart_Drawer",
+            "targetGuideId": ""
           }
         ]
       },
@@ -161,7 +154,20 @@
           {
             "prefabId": "InsulatedShoes",
             "spawnPointId": "SP_Cart_Drawer",
-            "guideId": "Guide_Cart_Drawer"
+            "guideId": "Guide_Cart_Drawer",
+            "targetGuideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "LOTO_Gloves",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "InsulatedGloves",
+            "spawnPointId": "SP_Cart_Drawer",
+            "guideId": "Guide_Gloves"
           }
         ]
       },
@@ -169,17 +175,66 @@
         "moduleId": "MSD_Removal",
         "timeout": 120,
         "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "LockBox",
-            "spawnPointId": "SP_LockBox",
-            "guideId": "Guide_LockBox"
-          }
-        ]
+        "spawnObjects": []
       },
       {
         "moduleId": "DischargeWait",
         "timeout": 30,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Connector_Cover_Removal",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Guide_Cover_Bolts",
+            "targetGuideId": "Front_Cover_Bolts"
+          }
+        ]
+      },
+      {
+        "moduleId": "HV_Front_Disconnect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "HV_Rear_Disconnect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "ICCU_Disconnect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "BMU_Disconnect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Ground_Removal",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Hose_In",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Hose_Out",
+        "timeout": 60,
         "completionMode": "AnyPlayer",
         "spawnObjects": []
       },
@@ -191,7 +246,7 @@
           {
             "prefabId": "Multimeter",
             "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_Cart_Top"
+            "guideId": "Guide_HV_Cable_Term"
           }
         ]
       },
@@ -203,7 +258,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Cart_Tool"
+            "guideId": "Guide_Battery_Bolts"
           },
           {
             "prefabId": "BatteryJack",
@@ -290,8 +345,10 @@
       "moduleId": "InitialDiagnosis",
       "config": {
         "actionType": "ScanDTC",
-        "requiredItems": [ "GDS_Tablet" ],
-        "targetObjName": "OBD_Port",
+        "requiredItems": [
+          "GDS_Tablet"
+        ],
+        "targetObjName": "OBD_Zone",
         "targetZoneId": "OBD_Zone",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -319,7 +376,9 @@
       "moduleId": "LOTO_SmartKey",
       "config": {
         "actionType": "Swap",
-        "requiredItems": [ "SmartKey" ],
+        "requiredItems": [
+          "SmartKey"
+        ],
         "targetObjName": "SmartKey",
         "targetZoneId": "LockBox_Zone",
         "targetValue": 0,
@@ -329,12 +388,14 @@
           {
             "key": "description",
             "ko": "차량 스마트키를 잠금박스에 넣으세요.",
-            "en": "Inspect and wear 1,000V insulated gloves."
+            "en": "Place the smart key in the lock box.",
+            "vi": ""
           },
           {
-            "key": "safetyNote",
-            "ko": "장갑에 구멍·찢김이 있으면 즉시 교체합니다.",
-            "en": "Replace immediately if gloves are punctured or torn."
+            "key": "guideText",
+            "ko": "스마트키 → 잠금박스 투입",
+            "en": "Smart key → Lock box",
+            "vi": ""
           }
         ]
       }
@@ -343,7 +404,9 @@
       "moduleId": "LOTO_FaceShield",
       "config": {
         "actionType": "Swap",
-        "requiredItems": [ "FaceShield" ],
+        "requiredItems": [
+          "FaceShield"
+        ],
         "targetObjName": "FaceShield",
         "targetZoneId": "Player_Hand_Zone",
         "targetValue": 0,
@@ -353,12 +416,42 @@
           {
             "key": "description",
             "ko": "안면보호구를 착용하세요.",
-            "en": "Inspect and wear 1,000V insulated gloves."
+            "en": "Wear the face shield.",
+            "vi": ""
           },
           {
             "key": "safetyNote",
-            "ko": "장갑에 구멍·찢김이 있으면 즉시 교체합니다.",
-            "en": "Replace immediately if gloves are punctured or torn."
+            "ko": "파손 여부를 확인 후 착용하세요.",
+            "en": "Check for damage before wearing.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "LOTO_Shoes",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "InsulatedShoes"
+        ],
+        "targetObjName": "InsulatedShoes",
+        "targetZoneId": "Player_Hand_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "절연화를 착용하세요.",
+            "en": "Wear the insulated shoes.",
+            "vi": ""
+          },
+          {
+            "key": "safetyNote",
+            "ko": "밑창 손상 여부를 확인하세요.",
+            "en": "Check for sole damage.",
+            "vi": ""
           }
         ]
       }
@@ -367,7 +460,9 @@
       "moduleId": "LOTO_Gloves",
       "config": {
         "actionType": "Swap",
-        "requiredItems": [ "InsulatedGloves" ],
+        "requiredItems": [
+          "InsulatedGloves"
+        ],
         "targetObjName": "InsulatedGloves",
         "targetZoneId": "Player_Hand_Zone",
         "targetValue": 0,
@@ -388,49 +483,32 @@
       }
     },
     {
-      "moduleId": "LOTO_Shoes",
-      "config": {
-        "actionType": "Swap",
-        "requiredItems": [ "InsulatedShoes" ],
-        "targetObjName": "InsulatedShoes",
-        "targetZoneId": "Player_Hand_Zone",
-        "targetValue": 0,
-        "toleranceRatio": 0,
-        "requiresSafetyCheck": false,
-        "extra": [
-          {
-            "key": "description",
-            "ko": "절연화를 착용하세요.",
-            "en": "Inspect and wear 1,000V insulated gloves."
-          },
-          {
-            "key": "safetyNote",
-            "ko": "장갑에 구멍·찢김이 있으면 즉시 교체합니다.",
-            "en": "Replace immediately if gloves are punctured or torn."
-          }
-        ]
-      }
-    },
-    {
       "moduleId": "MSD_Removal",
       "config": {
-        "actionType": "Swap",
-        "requiredItems": [ "MSD_Lever" ],
+        "actionType": "ConfirmTask",
+        "requiredItems": [
+          "MSD_Lever"
+        ],
         "targetObjName": "MSD_Lever",
-        "targetZoneId": "LockBox_Zone",
+        "targetZoneId": "MSD_Port_Zone",
         "targetValue": 0,
         "toleranceRatio": 0,
         "requiresSafetyCheck": false,
         "extra": [
           {
             "key": "description",
-            "ko": "12V 배터리 뚜껑 내부의 서비스 플러그(MSD)를 탈거 후 잠금박스에 넣으세요.",
-            "en": "Touch the MSD service plug to begin removal."
+            "ko": "뒷좌석 하단의 서비스 플러그(MSD) 레버를 해제하고 탈거하세요.",
+            "en": "Release and remove the MSD service plug under the rear seat."
           },
           {
-            "key": "guideText",
-            "ko": "서비스 플러그 접촉",
-            "en": "Touch the Service Plug"
+            "key": "step1",
+            "ko": "레버를 90° 회전하여 잠금 해제",
+            "en": "Rotate lever 90° to unlock"
+          },
+          {
+            "key": "step2",
+            "ko": "플러그를 위로 당겨 탈거",
+            "en": "Pull plug upward to remove"
           }
         ]
       }
@@ -460,10 +538,174 @@
       }
     },
     {
+      "moduleId": "Connector_Cover_Removal",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [
+          "ImpactWrench"
+        ],
+        "targetObjName": "Front_Cover_Bolts",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "커버 볼트 4개를 클릭하여 제거하세요.",
+            "en": "Remove 4 cover bolts.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "HV_Front_Disconnect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_Front",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "전방 고압 커넥터를 분리하세요.",
+            "en": "Disconnect front HV connector.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "HV_Rear_Disconnect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_Rear",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "후방 고압 커넥터를 분리하세요.",
+            "en": "Disconnect rear HV connector.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ICCU_Disconnect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_ICCU",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "ICCU 커넥터를 분리하세요.",
+            "en": "Disconnect ICCU connector.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "BMU_Disconnect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_BMU",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "BMU 커넥터를 분리하세요.",
+            "en": "Disconnect BMU connector.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Ground_Removal",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_Ground",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "접지 배선을 분리하세요.",
+            "en": "Remove ground wire.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Hose_In",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Hose_Inlet",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "냉각수 입구 호스를 분리하세요.",
+            "en": "Disconnect coolant inlet hose.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Hose_Out",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Hose_Outlet",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "냉각수 출구 호스를 분리하세요.",
+            "en": "Disconnect coolant outlet hose.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
       "moduleId": "Voltage_Verification",
       "config": {
         "actionType": "MeasureVoltage",
-        "requiredItems": [ "Multimeter" ],
+        "requiredItems": [
+          "Multimeter"
+        ],
         "targetObjName": "HV_Cable_Term",
         "targetZoneId": "Inverter_Check_Point",
         "targetValue": 0,
@@ -497,7 +739,10 @@
       "moduleId": "BatteryPack_Disassemble",
       "config": {
         "actionType": "Disassemble",
-        "requiredItems": [ "ImpactWrench", "BatteryJack" ],
+        "requiredItems": [
+          "ImpactWrench",
+          "BatteryJack"
+        ],
         "targetObjName": "BatteryPack_BoltGroup",
         "targetZoneId": "",
         "targetValue": 0,
@@ -546,7 +791,9 @@
       "moduleId": "Insulation_Measure",
       "config": {
         "actionType": "MeasureResistance",
-        "requiredItems": [ "MultimeterKit" ],
+        "requiredItems": [
+          "MultimeterKit"
+        ],
         "targetObjName": "Battery_Case",
         "targetZoneId": "",
         "targetValue": 10000000,
@@ -585,7 +832,9 @@
       "moduleId": "Contamination_Clean",
       "config": {
         "actionType": "Lubricate",
-        "requiredItems": [ "AirGun" ],
+        "requiredItems": [
+          "AirGun"
+        ],
         "targetObjName": "Busbar_A1",
         "targetZoneId": "",
         "targetValue": 100,
@@ -609,7 +858,10 @@
       "moduleId": "Gasket_Replace",
       "config": {
         "actionType": "Swap",
-        "requiredItems": [ "SealGasket_New", "TorqueWrench" ],
+        "requiredItems": [
+          "SealGasket_New",
+          "TorqueWrench"
+        ],
         "targetObjName": "Seal_Gasket",
         "targetZoneId": "Battery_Top_Zone",
         "targetValue": 0,
@@ -637,8 +889,10 @@
     {
       "moduleId": "BatteryPack_Assemble",
       "config": {
-        "actionType": "Assemble",
-        "requiredItems": [ "TorqueWrench" ],
+        "actionType": "Disassemble",
+        "requiredItems": [
+          "TorqueWrench"
+        ],
         "targetObjName": "BatteryPack_BoltGroup",
         "targetZoneId": "",
         "targetValue": 45,
@@ -701,7 +955,9 @@
       "moduleId": "FinalDiagnosis",
       "config": {
         "actionType": "ScanDTC",
-        "requiredItems": [ "GDS_Tablet" ],
+        "requiredItems": [
+          "GDS_Tablet"
+        ],
         "targetObjName": "OBD_Port",
         "targetZoneId": "OBD_Zone",
         "targetValue": 0,
