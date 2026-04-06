@@ -52,6 +52,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ImpactWrench
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: a32cfd4ec4c23a94db57ef3affbf473a, type: 3}
+      propertyPath: m_Layer
+      value: 15
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -178,8 +182,7 @@ MonoBehaviour:
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 2130118980218106842}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -209,8 +212,8 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 1150141111137551286
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 1}
+    Position: {x: 4.0562406, y: 0.0027706125, z: 8.224005}
+    Rotation: {x: 0, y: -0, z: -0, w: 1}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
 --- !u!114 &384187183016501084
@@ -292,13 +295,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ad070006259cc144bc759874631f905, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SyncGrab
-  _componentIndexCache: 1
+  _componentIndexCache: 0
   _addedNetworkObject: {fileID: 1793545340383942425}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 1793545340383942425}
   holdPoint: {fileID: 0}
   flyDuration: 0.5
   flyEase: 9
   arcHeight: 0.5
+  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdRotationOffset: {x: 0, y: -90, z: 0}
 --- !u!114 &1981831815227425690
 MonoBehaviour:
   m_ObjectHideFlags: 0

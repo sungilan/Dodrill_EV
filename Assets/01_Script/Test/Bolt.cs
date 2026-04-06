@@ -1,75 +1,76 @@
-using UnityEngine;
+ï»¿using UnityEngine;
+using System;
 
 public class Bolt : MonoBehaviour
 {
-    [Header("Animation Settings")]
-    public float progress = 0f; // 0: Á¶ÀÓ, 1: Ç®¸²
+    [Header("í’€ë¦¬ëŠ” ì‹œê°„ (ì´ˆ)")]
     public float timeToComplete = 2.0f;
-    public bool isloosened => progress >= 1.0f;
 
-    [Header("Torque Settings")]
-    public float currentTorque = 0f;   // ÇöÀç Á¶¿©Áø Èû (Nm)
-    public float requiredTorque = 52f; // ¸ñÇ¥ ±ÔÁ¤ ÅäÅ©
-    public bool isTightened = false;   // ÃÖÁ¾ Ã¼°á ¿Ï·á ¿©ºÎ
-    public bool isBroken = false;      // °úÅäÅ©·Î ÀÎÇÑ ÆÄ¼Õ ¿©ºÎ
+    [Header("í† í¬ ì„¤ì •")]
+    public float requiredTorque = 52f;
+    public float currentTorque = 0f;
+    public bool isTightened = false;
+    public bool isBroken = false;
 
-    [Header("VFX & Mesh")]
-    public Mesh brokenBoltMesh;        // ºÎ·¯Áø º¼Æ® ¸Ş½¬ (¼±ÅÃ)
-    public GameObject breakEffect;     // ÆÄ¼Õ ½Ã ½ºÆÄÅ©/¿¬±â (¼±ÅÃ)
+    [Header("íŒŒì† VFX")]
+    public Mesh brokenBoltMesh;
+    public GameObject breakEffect;
+
+    [Header("ìƒíƒœ (ì½ê¸° ì „ìš©)")]
+    [SerializeField] private float _progress = 0f;
+
+    // ì´ë²¤íŠ¸: Counterê°€ êµ¬ë…í•¨
+    public event Action<Bolt> OnBoltLoosened;
+
+    public float Progress => _progress;
+    public bool isloosened => _progress >= 1.0f;
 
     public void InteractWithTool(float deltaProgress)
     {
-        if(isBroken) return; // ºÎ·¯Áø º¼Æ®´Â Á¶ÀÛ ºÒ°¡
+        if(isBroken || isloosened) return;
 
-        // º¼Æ®°¡ ¿ÏÀüÈ÷ ¹ÚÈù »óÅÂ(progress 0)¿¡¼­ Á¶ÀÌ·Á°í ÇÏ¸é ¹«½Ã
-        if(progress <= 0.001f && deltaProgress < 0) return;
+        // â˜… prevProgress ì •ì˜ ì¶”ê°€
+        float prevProgress = _progress;
+        _progress += deltaProgress / timeToComplete;
+        _progress = Mathf.Clamp01(_progress);
 
-        progress += deltaProgress / timeToComplete;
-        progress = Mathf.Clamp01(progress);
+        // UI ì—…ë°ì´íŠ¸
+        if(InteractionProgressBarUI.Instance != null)
+        {
+            InteractionProgressBarUI.Instance.ShowProgress(_progress, "ë³¼íŠ¸ í•´ì œ ì¤‘...", gameObject.name);
+        }
 
-        UpdateBoltTransform();
+        // í”„ë¡œê·¸ë ˆìŠ¤ê°€ 1ì´ ë˜ëŠ” ìˆœê°„ ë”± í•œ ë²ˆ ì´ë²¤íŠ¸ ë°œìƒ
+        if(prevProgress < 1.0f && _progress >= 1.0f)
+        {
+            OnBoltLoosened?.Invoke(this);
+        }
     }
 
     public void ApplyFinalTorque(float torqueAmount)
     {
-        if(isBroken || progress > 0.05f) return;
-
+        if(isBroken || _progress > 0.05f) return;
         currentTorque = torqueAmount;
-
-        // ±ÔÁ¤ ÅäÅ© ¹üÀ§ È®ÀÎ (¿ÀÂ÷ ¡¾2Nm)
         isTightened = Mathf.Abs(currentTorque - requiredTorque) <= 2f;
     }
 
     public void BreakBoltByOverTorque()
     {
         if(isBroken) return;
-
         isBroken = true;
         isTightened = false;
-        progress = 0f; // ¹ÚÈù Ã¤·Î °íÁ¤
-
-        // ½Ã°¢Àû ÇÇµå¹é
+        _progress = 0f;
         if(breakEffect != null) breakEffect.SetActive(true);
         if(brokenBoltMesh != null) GetComponent<MeshFilter>().mesh = brokenBoltMesh;
-
-        // »ç¿îµå ¹× Áøµ¿ ·ÎÁ÷À» ¿©±â¿¡ Ãß°¡ °¡´É
-        Debug.LogError($"[Æò°¡] {gameObject.name} °úÅäÅ©·Î ÆÄ¼ÕµÊ! -20Á¡");
-        // ScoreManager.Instance.DeductScore(20, "ºÎÇ° ÆÄ¼Õ");
-    }
-
-    private void UpdateBoltTransform()
-    {
-        // È¸ÀüÇÏ¸ç À§¾Æ·¡·Î ¿òÁ÷ÀÓ (³ª»ç»ê ¿¬Ãâ)
-        transform.localRotation = Quaternion.Euler(0, progress * 1000f, 0);
-        transform.localPosition = new Vector3(0, progress * 0.02f, 0);
+        Debug.LogError($"[Bolt] {gameObject.name} ê³¼í† í¬ íŒŒì†!");
     }
 
     public void ResetBolt()
     {
-        progress = 0f;
+        _progress = 0f;
         currentTorque = 0f;
         isTightened = false;
         isBroken = false;
-        // ¸Ş½¬ ¿øº¹ ·ÎÁ÷ ÇÊ¿ä ½Ã Ãß°¡
+        if(breakEffect != null) breakEffect.SetActive(false);
     }
 }

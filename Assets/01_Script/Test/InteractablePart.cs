@@ -434,7 +434,7 @@ public class InteractablePart : MonoBehaviour
     {
         transform.position = GetWorldAssemblyPos() + Vector3.up * 0.5f;
         if(requiredBolts != null)
-            foreach(var b in requiredBolts) if(b != null) b.progress = 1f;
+            //foreach(var b in requiredBolts) if(b != null) b.Progress = 1f;
         SetPartState(PartState.Detached);
     }
 

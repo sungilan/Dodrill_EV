@@ -47,6 +47,12 @@ public class SyncGrab : NetworkBehaviour
     public Ease flyEase = Ease.OutCubic;
     public float arcHeight = 0.5f;
 
+    [Header("PC/모바일 — 잡기 자세 오프셋")]
+    [Tooltip("잡혔을 때 HoldPoint로부터의 위치 오프셋")]
+    public Vector3 holdPositionOffset = Vector3.zero;
+    [Tooltip("잡혔을 때 HoldPoint로부터의 회전 오프셋 (오브젝트 기준)")]
+    public Vector3 holdRotationOffset = Vector3.zero;
+
     // ──────────────────────────────────────────────────────
     // SyncVar — 서버만 쓰기
     // ──────────────────────────────────────────────────────
@@ -313,6 +319,30 @@ public class SyncGrab : NetworkBehaviour
 
         RequestGrab(() => PCFlyTo(holdPoint.position, holdPoint.rotation));
     }
+
+    //private void PCFlyTo(Vector3 targetPos, Quaternion targetRot)
+    //{
+    //    _isTweening = true;
+    //    DOTween.Kill(transform);
+
+    //    if(_rb != null) _rb.isKinematic = true;
+
+    //    Vector3 mid = (transform.position + targetPos) * 0.5f + Vector3.up * arcHeight;
+    //    Vector3[] path = { mid, targetPos };
+
+    //    Sequence seq = DOTween.Sequence();
+    //    seq.Join(transform.DOPath(path, flyDuration, PathType.CatmullRom).SetEase(flyEase).SetOptions(false));
+    //    seq.Join(transform.DORotateQuaternion(targetRot, flyDuration).SetEase(flyEase));
+    //    seq.SetLink(gameObject);
+    //    seq.OnComplete(() =>
+    //    {
+    //        _isTweening = false;
+    //        _isPCHolding = true;
+    //        OnGrabbed?.Invoke();   // ★ holdPoint 도달 확정 → InteractablePart에 알림
+    //        //ReleaseServerRpc(transform.position, transform.rotation);
+    //    });
+    //}
+
     private void PCFlyTo(Vector3 targetPos, Quaternion targetRot)
     {
         _isTweening = true;
@@ -320,41 +350,66 @@ public class SyncGrab : NetworkBehaviour
 
         if(_rb != null) _rb.isKinematic = true;
 
-        Vector3 mid = (transform.position + targetPos) * 0.5f + Vector3.up * arcHeight;
-        Vector3[] path = { mid, targetPos };
+        // ★ 오프셋이 적용된 최종 목표 위치와 회전 계산
+        Vector3 finalPos = targetPos + (targetRot * holdPositionOffset);
+        // HoldPoint의 회전에 오브젝트 고유의 오프셋 회전을 결합
+        Quaternion finalRot = targetRot * Quaternion.Euler(holdRotationOffset);
+
+        Vector3 mid = (transform.position + finalPos) * 0.5f + Vector3.up * arcHeight;
+        Vector3[] path = { mid, finalPos };
 
         Sequence seq = DOTween.Sequence();
         seq.Join(transform.DOPath(path, flyDuration, PathType.CatmullRom).SetEase(flyEase).SetOptions(false));
-        seq.Join(transform.DORotateQuaternion(targetRot, flyDuration).SetEase(flyEase));
+        seq.Join(transform.DORotateQuaternion(finalRot, flyDuration).SetEase(flyEase));
         seq.SetLink(gameObject);
         seq.OnComplete(() =>
         {
             _isTweening = false;
             _isPCHolding = true;
-            OnGrabbed?.Invoke();   // ★ holdPoint 도달 확정 → InteractablePart에 알림
-            //ReleaseServerRpc(transform.position, transform.rotation);
+            OnGrabbed?.Invoke();
         });
     }
 
+    //private void Update()
+    //{
+    //    // PC 홀드 중: LNT에 목표 위치 주입 → LNT가 Lerp 이동 + 서버 전파
+    //    // transform을 직접 건드리지 않음 — 다른 클라이언트 동기화는 LNT가 담당
+    //    if(!_isPCHolding || holdPoint == null || !IsOwner) return;
+
+    //    if(_rb != null) _rb.isKinematic = true;
+
+    //    if(_lnt != null)
+    //    {
+    //        _lnt.SetTargetPosition(holdPoint.position, holdPoint.rotation);
+    //    }
+    //    else
+    //    {
+    //        // LNT 없으면 폴백 (동기화 없음)
+    //        transform.position = Vector3.Lerp(
+    //            transform.position, holdPoint.position, Time.deltaTime * 20f);
+    //        transform.rotation = Quaternion.Slerp(
+    //            transform.rotation, holdPoint.rotation, Time.deltaTime * 20f);
+    //    }
+    //}
+
     private void Update()
     {
-        // PC 홀드 중: LNT에 목표 위치 주입 → LNT가 Lerp 이동 + 서버 전파
-        // transform을 직접 건드리지 않음 — 다른 클라이언트 동기화는 LNT가 담당
         if(!_isPCHolding || holdPoint == null || !IsOwner) return;
 
         if(_rb != null) _rb.isKinematic = true;
 
+        // ★ 실시간 추적 시에도 오프셋 적용
+        Vector3 finalPos = holdPoint.position + (holdPoint.rotation * holdPositionOffset);
+        Quaternion finalRot = holdPoint.rotation * Quaternion.Euler(holdRotationOffset);
+
         if(_lnt != null)
         {
-            _lnt.SetTargetPosition(holdPoint.position, holdPoint.rotation);
+            _lnt.SetTargetPosition(finalPos, finalRot);
         }
         else
         {
-            // LNT 없으면 폴백 (동기화 없음)
-            transform.position = Vector3.Lerp(
-                transform.position, holdPoint.position, Time.deltaTime * 20f);
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation, holdPoint.rotation, Time.deltaTime * 20f);
+            transform.position = Vector3.Lerp(transform.position, finalPos, Time.deltaTime * 20f);
+            transform.rotation = Quaternion.Slerp(transform.rotation, finalRot, Time.deltaTime * 20f);
         }
     }
 

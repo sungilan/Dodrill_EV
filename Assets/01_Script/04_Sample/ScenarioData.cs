@@ -171,6 +171,9 @@ public class ModuleConfig
     public string actionType;
     public string targetObjName;
 
+    public float targetValue = 0f;
+    public float toleranceRatio = 0.05f;
+
     public string GetExtra(string key)
     {
         foreach (var pair in extra)

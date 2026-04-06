@@ -1149,6 +1149,28 @@ public class FreeLookController : NetworkBehaviour
     }
 
     /// <summary>부품 클릭 — 레이저 OFF 후 SyncGrab 기존 집기 흐름 실행</summary>
+    //private void StartLaserPull(SyncGrab target)
+    //{
+    //    if(_heldObject != null) return;
+
+    //    _heldOriginalScale = target.transform.localScale;
+    //    _isFlying = true;
+    //    _heldObject = target;
+
+    //    HeldItemUI.Instance?.UpdateUI(target.gameObject);
+
+    //    laserLine.enabled = false;
+    //    _laserHoverTarget = null;
+    //    SetOutline(null);
+
+    //    // SyncGrab이 강제 해제되거나 내려놓을 때 _heldObject 자동 정리
+    //    target.OnReleased += OnHeldObjectReleased;
+
+    //    // SyncGrab.OnPCClick() → RequestGrab → PCFlyTo(holdPoint)
+    //    target.OnPCClick();
+    //    Log($"[LaserGrab] 집기: {target.name}");
+    //}
+
     private void StartLaserPull(SyncGrab target)
     {
         if(_heldObject != null) return;
@@ -1163,10 +1185,10 @@ public class FreeLookController : NetworkBehaviour
         _laserHoverTarget = null;
         SetOutline(null);
 
-        // SyncGrab이 강제 해제되거나 내려놓을 때 _heldObject 자동 정리
         target.OnReleased += OnHeldObjectReleased;
 
-        // SyncGrab.OnPCClick() → RequestGrab → PCFlyTo(holdPoint)
+        // ★ 단순히 OnPCClick만 호출하면 SyncGrab 내부에서 
+        // 자신의 인스펙터에 설정된 오프셋을 사용하여 날아갑니다.
         target.OnPCClick();
         Log($"[LaserGrab] 집기: {target.name}");
     }

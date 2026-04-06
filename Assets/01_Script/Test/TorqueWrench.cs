@@ -60,7 +60,7 @@ public class TorqueWrench : XRGrabInteractable
     // 볼트에 도구를 갖다 댔을 때 호출 (Trigger 이벤트 등에 연결)
     public void ConnectToBolt(Bolt bolt)
     {
-        if(!bolt.isBroken && bolt.progress <= 0.05f)
+        if(!bolt.isBroken && bolt.Progress <= 0.05f)
         {
             targetBolt = bolt;
             currentTorque = 0f;

@@ -75,8 +75,19 @@ public class ImpactWrench : MonoBehaviour
         // 볼트 작업: 버튼 누르는 동안 + 볼트 접촉 시
         if(working && _targetBolt != null)
         {
+            // 이미 다 풀린 볼트 — 애니메이션 트리거하고 스킵
+            if(_targetBolt.isloosened)
+            {
+                TriggerBoltAnimation(_targetBolt.gameObject);
+                return;
+            }
+
             float dir = (currentMode == WrenchMode.Unscrew) ? 1f : -1f;
             _targetBolt.InteractWithTool(dir * rotationSpeed * Time.deltaTime);
+
+            // 방금 다 풀린 순간 감지 → 애니메이션 실행
+            if(_targetBolt.isloosened)
+                TriggerBoltAnimation(_targetBolt.gameObject);
         }
     }
 
@@ -146,6 +157,23 @@ public class ImpactWrench : MonoBehaviour
         if(modeIndicator != null)
             modeIndicator.material.color =
                 (currentMode == WrenchMode.Unscrew) ? unscrewColor : screwColor;
+    }
+
+    // ── 볼트 애니메이션 트리거 ────────────────────────────────
+
+    /// <summary>
+    /// progress >= 1 이 된 순간 호출.
+    /// 같은 GO의 ClickableAnimator.Open()으로 볼트 풀리는 애니메이션 실행.
+    /// ClickableAnimator가 FishNet Broadcast로 전체 클라 동기화 처리.
+    /// </summary>
+    private void TriggerBoltAnimation(GameObject boltGO)
+    {
+        var ca = boltGO.GetComponent<ClickableAnimator>();
+        if(ca == null) return;
+        if(ca.IsOpen) return;   // 이미 실행됨
+
+        ca.Open();
+        Debug.Log($"[ImpactWrench] 볼트 애니메이션 실행: {boltGO.name}");
     }
 
     // ── 공개 API ───────────────────────────────────────────

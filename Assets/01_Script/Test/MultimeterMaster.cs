@@ -118,10 +118,16 @@ public class MultimeterMaster : MonoBehaviour
         // 진동(소수점 흔들림) 시작
         StartFluctuation(baseValue);
 
-        // ── ScenarioRunner 호환 이벤트 발행 ──
-        // ZoneAndMeasureModule이 primaryTarget(단자 ID) 감지 → Task 완료
-        string primaryTarget = red; // 빨간 프로브 단자가 주 측정 대상
+        // ── 시나리오 시스템 연동 수정 ──
+        // 단순 ZoneActivated가 아니라, 측정값을 포함하여 이벤트를 보냅니다.
+        string primaryTarget = red; // 빨간 프로브가 닿은 단자 ID
+
+        // InteractionEvents에 측정값(baseValue)을 함께 보낼 수 있는 함수가 있다면 사용
+        // 만약 FireZoneActivated만 있다면, 내부적으로 해당 값을 체크하는 로직이 필요함
         InteractionEvents.FireZoneActivated(primaryTarget, gameObject.name);
+
+        // 중요: 시스템이 '값'을 체크해야 한다면 별도의 Value 이벤트를 발생시켜야 합니다.
+        // 예: InteractionEvents.FireValueMeasured(primaryTarget, baseValue);
 
         Debug.Log($"[Multimeter] {red}↔{black} | 모드:{currentMode} | 값:{baseValue}");
     }
