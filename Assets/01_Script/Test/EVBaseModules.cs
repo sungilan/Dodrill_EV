@@ -40,32 +40,32 @@ public abstract class ZoneAndUseModule : ITaskModule
 {
     public abstract string ModuleId { get; }
 
-    protected string       _targetZoneId;
+    protected string _targetZoneId;
     protected List<string> _requiredItems;
-    protected Action       _onComplete;
-    protected Action       _onFail;
-    protected bool         _completed;
-    protected bool         _inZone;          // 현재 도구가 존 안에 있는지
-    protected string       _itemInZone;      // 존에 들어온 아이템 ID
+    protected Action _onComplete;
+    protected Action _onFail;
+    protected bool _completed;
+    protected bool _inZone;          // 현재 도구가 존 안에 있는지
+    protected string _itemInZone;      // 존에 들어온 아이템 ID
 
     public virtual void OnStart(ModuleConfig config, Action onComplete, Action onFail)
     {
-        _targetZoneId  = config?.targetZoneId ?? string.Empty;
+        _targetZoneId = config?.targetZoneId ?? string.Empty;
         _requiredItems = config?.requiredItems ?? new List<string>();
-        _onComplete    = onComplete;
-        _onFail        = onFail;
-        _completed     = false;
-        _inZone        = false;
-        _itemInZone    = string.Empty;
+        _onComplete = onComplete;
+        _onFail = onFail;
+        _completed = false;
+        _inZone = false;
+        _itemInZone = string.Empty;
 
         bool isServerOnly = InstanceFinder.IsServerStarted && !InstanceFinder.IsClientStarted;
-        if (!isServerOnly)
+        if(!isServerOnly)
         {
             var zone = TaskInteractionZone.Find(_targetZoneId);
             zone?.Activate();
 
             InteractionEvents.OnZoneActivated += HandleZoneActivated;
-            InteractionEvents.OnItemUsed      += HandleItemUsed;
+            InteractionEvents.OnItemUsed += HandleItemUsed;
         }
 
         Debug.Log($"[{ModuleId}] 시작 — Zone:{_targetZoneId} / 도구:{string.Join(",", _requiredItems)}");
@@ -74,13 +74,13 @@ public abstract class ZoneAndUseModule : ITaskModule
     // 존 진입 — 아이템이 존에 들어오면 _inZone = true
     private void HandleZoneActivated(string zoneId, string itemId)
     {
-        if (_completed) return;
-        if (zoneId != _targetZoneId) return;
+        if(_completed) return;
+        if(zoneId != _targetZoneId) return;
 
         bool validItem = _requiredItems.Count == 0 || _requiredItems.Contains(itemId);
-        if (!validItem) return;
+        if(!validItem) return;
 
-        _inZone     = true;
+        _inZone = true;
         _itemInZone = itemId;
         Debug.Log($"[{ModuleId}] 존 진입: {itemId} — 이제 사용(Squeeze)하세요");
 
@@ -91,14 +91,14 @@ public abstract class ZoneAndUseModule : ITaskModule
     // 존 안에서 아이템 사용 → 완료
     private void HandleItemUsed(string itemId)
     {
-        if (_completed || !_inZone) return;
+        if(_completed || !_inZone) return;
 
         // 존에 들어온 아이템과 동일한 아이템이어야 함
         bool validItem = _requiredItems.Count == 0
                       || _requiredItems.Contains(itemId);
-        if (!validItem) return;
+        if(!validItem) return;
 
-        if (!string.IsNullOrEmpty(_itemInZone) && _itemInZone != itemId) return;
+        if(!string.IsNullOrEmpty(_itemInZone) && _itemInZone != itemId) return;
 
         _completed = true;
         Debug.Log($"[{ModuleId}] 완료 — {itemId} 사용");
@@ -111,15 +111,15 @@ public abstract class ZoneAndUseModule : ITaskModule
     public void OnUpdate(float deltaTime) { }
 
     public virtual void OnComplete() => Cleanup();
-    public virtual void OnFail()    => Cleanup();
+    public virtual void OnFail() => Cleanup();
 
     protected void Cleanup()
     {
         bool isServerOnly = InstanceFinder.IsServerStarted && !InstanceFinder.IsClientStarted;
-        if (!isServerOnly)
+        if(!isServerOnly)
         {
             InteractionEvents.OnZoneActivated -= HandleZoneActivated;
-            InteractionEvents.OnItemUsed      -= HandleItemUsed;
+            InteractionEvents.OnItemUsed -= HandleItemUsed;
             TaskInteractionZone.Find(_targetZoneId)?.Deactivate();
         }
     }
@@ -146,91 +146,115 @@ public abstract class ZoneAndMeasureModule : ITaskModule
 {
     public abstract string ModuleId { get; }
 
-    protected string       _targetZoneId;   // 이동해야 할 존
-    protected string       _targetObjName;  // 측정해야 할 단자 이름 (extra에서 읽거나 서브클래스 오버라이드)
+    protected string _targetZoneId;    // 이동해야 할 작업 구역 (Inverter_Check_Point 등)
+    protected string _targetObjName;   // 측정 대상 단자 ID (HV_Cable_Term 등)
+    protected float _targetValue;      // 목표 측정값 (0V, 10MΩ 등)
+    protected float _tolerance;        // 허용 오차 범위
     protected List<string> _requiredItems;
-    protected Action       _onComplete;
-    protected Action       _onFail;
-    protected bool         _completed;
-    protected bool         _inZone;
+    protected Action _onComplete;
+    protected Action _onFail;
+    protected bool _completed;
+    protected bool _inZone;
 
     public virtual void OnStart(ModuleConfig config, Action onComplete, Action onFail)
     {
-        _targetZoneId  = config?.targetZoneId ?? string.Empty;
-        _targetObjName = config?.GetExtraRaw("targetObjName") ?? string.Empty;
+        _targetZoneId = config?.targetZoneId ?? string.Empty;
+        _targetObjName = config?.targetObjName ?? string.Empty; // JSON의 targetObjName 사용
+        _targetValue = config?.targetValue ?? 0f;
+        _tolerance = (config?.targetValue ?? 0f) * (config?.toleranceRatio ?? 0.05f);
         _requiredItems = config?.requiredItems ?? new List<string>();
-        _onComplete    = onComplete;
-        _onFail        = onFail;
-        _completed     = false;
-        _inZone        = false;
 
-        // targetObjName이 extra에 없으면 서브클래스에서 직접 지정
-        if (string.IsNullOrEmpty(_targetObjName))
-            _targetObjName = GetTargetObjName();
+        _onComplete = onComplete;
+        _onFail = onFail;
+        _completed = false;
+        _inZone = false;
 
         bool isServerOnly = InstanceFinder.IsServerStarted && !InstanceFinder.IsClientStarted;
-        if (!isServerOnly)
+        if(!isServerOnly)
         {
+            // 1. 작업 구역 가이드 활성화
             var zone = TaskInteractionZone.Find(_targetZoneId);
             zone?.Activate();
 
+            // 2. 이벤트 구독
             InteractionEvents.OnZoneActivated += HandleZoneActivated;
+            // OnValueMeasured 구독 안 함 — ScenarioRunner가 직접 HandleValueMeasured() 호출
         }
 
-        Debug.Log($"[{ModuleId}] 시작 — Zone:{_targetZoneId} / 측정단자:{_targetObjName}");
+        Debug.Log($"[{ModuleId}] 시작 — 구역:{_targetZoneId} / 단자:{_targetObjName} / 목표값:{_targetValue}");
     }
 
+    // ── 구역 진입 판정 ──────────────────────────────────────────
     private void HandleZoneActivated(string zoneId, string itemId)
     {
-        if (_completed) return;
+        if(_completed) return;
 
-        // 1. 존 진입 감지
-        if (zoneId == _targetZoneId)
+        // 플레이어 또는 멀티미터가 작업 구역(Zone)에 들어왔는지 체크
+        if(zoneId == _targetZoneId)
         {
             bool validItem = _requiredItems.Count == 0 || _requiredItems.Contains(itemId);
-            if (validItem)
+            if(validItem)
             {
                 _inZone = true;
-                Debug.Log($"[{ModuleId}] 존 진입 — 이제 단자를 측정하세요 ({_targetObjName})");
-                return;
+                Debug.Log($"[{ModuleId}] 작업 구역 진입 완료. 단자를 측정하세요.");
             }
-        }
-
-        // 2. 측정 완료 감지 (MultimeterMaster가 FireZoneActivated(targetObjName, ...) 발행)
-        if (zoneId == _targetObjName || itemId == _targetObjName)
-        {
-            // 존에 진입한 상태여야 함
-            // (존 없는 경우 _targetZoneId가 비어있으면 바로 통과)
-            bool zoneOk = _inZone || string.IsNullOrEmpty(_targetZoneId);
-            if (!zoneOk) return;
-
-            _completed = true;
-            Debug.Log($"[{ModuleId}] 측정 완료 — {_targetObjName}");
-            _onComplete?.Invoke();
         }
     }
 
+    // ── 측정값 판정 (핵심 수정 부분) ─────────────────────────────
     /// <summary>
-    /// targetObjName을 extra 대신 서브클래스에서 직접 지정할 때 오버라이드
+    /// ScenarioRunner.OnReceiveValueMeasured에서 직접 호출.
+    /// 판정만 수행 — 완료 처리(딜레이)는 ScenarioRunner가 담당.
     /// </summary>
+    public void HandleValueMeasured(string terminalId, float measuredValue)
+    {
+        if(_completed) return;
+
+        // terminalId 매칭: targetObjName 또는 targetZoneId와 일치하면 OK
+        bool terminalMatch = terminalId == _targetObjName
+                          || terminalId == _targetZoneId
+                          || (!string.IsNullOrEmpty(_targetObjName) && _targetObjName.Contains(terminalId))
+                          || (!string.IsNullOrEmpty(_targetZoneId) && _targetZoneId.Contains(terminalId));
+        if(!terminalMatch)
+        {
+            Debug.Log($"[{ModuleId}] 단자 불일치 — terminal={terminalId} / 기대={_targetObjName}|{_targetZoneId}");
+            return;
+        }
+
+        // targetValue == 0 이면 5V 이하 = 방전완료 판정
+        bool valueMatch;
+        if(_targetValue == 0f)
+            valueMatch = measuredValue <= 5f;
+        else
+            valueMatch = Mathf.Abs(measuredValue - _targetValue) <= _tolerance;
+
+        Debug.Log($"[{ModuleId}] 값 비교 — 측정:{measuredValue:F2} / 목표:{_targetValue} / {(valueMatch ? "✅ 성공" : "❌ 실패")}");
+
+        if(valueMatch)
+            _completed = true;
+        // ★ _onComplete() 호출 금지 — ScenarioRunner가 IsCompleted 체크 후 딜레이 처리
+    }
+
+    /// <summary>ScenarioRunner가 딜레이 처리 여부 판단에 사용</summary>
+    public bool IsCompleted => _completed;
     protected virtual string GetTargetObjName() => string.Empty;
 
     public void OnUpdate(float deltaTime) { }
 
     public virtual void OnComplete() => Cleanup();
-    public virtual void OnFail()    => Cleanup();
+    public virtual void OnFail() => Cleanup();
 
     protected void Cleanup()
     {
         bool isServerOnly = InstanceFinder.IsServerStarted && !InstanceFinder.IsClientStarted;
-        if (!isServerOnly)
+        if(!isServerOnly)
         {
             InteractionEvents.OnZoneActivated -= HandleZoneActivated;
+
             TaskInteractionZone.Find(_targetZoneId)?.Deactivate();
         }
     }
 }
-
 
 // ──────────────────────────────────────────────────────────────
 //  ZoneAndFillModule

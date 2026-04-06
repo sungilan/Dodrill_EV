@@ -26,6 +26,8 @@ public static class InteractionEvents
     /// </summary>
     public static event Action<string, string> OnZoneActivated; // (zoneId, itemId)
 
+    public static event Action<string, float> OnValueMeasured; // (terminalId, value)
+
     // ── 발행 메서드 ───────────────────────────────────────────
 
     public static void FireTaskConfirmed(string moduleId)
@@ -50,6 +52,20 @@ public static class InteractionEvents
     {
         Debug.Log($"[InteractionEvents] ZoneActivated: zone={zoneId}, item={itemId}");
         OnZoneActivated?.Invoke(zoneId, itemId);
+    }
+
+    // ── ValueMeasured (멀티미터 측정값) ───────────────────────
+    /// <summary>
+    /// MultimeterMaster가 양 프로브 접촉 시 발행.
+    /// ZoneAndMeasureModule이 수신해서 targetValue와 비교 후 완료 판정.
+    /// </summary>
+    /// <param name="terminalId">빨간 프로브 단자 ID (targetZoneId/targetObjName과 매칭)</param>
+    /// <param name="value">측정된 값 (V 또는 Ω)</param>
+    
+    public static void FireValueMeasured(string terminalId, float value)
+    {
+        Debug.Log($"[InteractionEvents] ValueMeasured: terminal={terminalId}, value={value:F2}");
+        OnValueMeasured?.Invoke(terminalId, value);
     }
 
     // ── StepAdvanced (다단계 Task 스텝 진행) ──────────────────

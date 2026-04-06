@@ -74,6 +74,7 @@ public class ScenarioRunner : MonoBehaviour
             InstanceFinder.ServerManager.RegisterBroadcast<ItemUsedSignal>(OnReceiveItemUsed);
             InstanceFinder.ServerManager.RegisterBroadcast<ItemGrabbedSignal>(OnReceiveItemGrabbed);
             InstanceFinder.ServerManager.RegisterBroadcast<TaskConfirmSignal>(OnReceiveTaskConfirm);
+            InstanceFinder.ServerManager.RegisterBroadcast<ValueMeasuredSignal>(OnReceiveValueMeasured);
             InteractionEvents.OnStepAdvanced += OnStepAdvanced;
         }
         else if (InstanceFinder.ServerManager != null)
@@ -108,6 +109,7 @@ public class ScenarioRunner : MonoBehaviour
             InstanceFinder.ServerManager.UnregisterBroadcast<ItemUsedSignal>(OnReceiveItemUsed);
             InstanceFinder.ServerManager.UnregisterBroadcast<ItemGrabbedSignal>(OnReceiveItemGrabbed);
             InstanceFinder.ServerManager.UnregisterBroadcast<TaskConfirmSignal>(OnReceiveTaskConfirm);
+            InstanceFinder.ServerManager.UnregisterBroadcast<ValueMeasuredSignal>(OnReceiveValueMeasured);
         }
         InteractionEvents.OnStepAdvanced -= OnStepAdvanced;
     }
@@ -426,6 +428,39 @@ public class ScenarioRunner : MonoBehaviour
         Debug.Log($"[ScenarioRunner] ZoneSignal: zone={signal.zoneId}, item={signal.itemId}, " +
                   $"guide={guideIdSingle}, snapDur={snapDurationSingle}s, delay={snapDelaySingle}s");
     }
+
+   private void OnReceiveValueMeasured(NetworkConnection conn, ValueMeasuredSignal signal, Channel channel)
+{
+    // 1. 중복 진입 차단: 이미 락이 걸렸거나 실행 중이 아니면 즉시 리턴
+    if (_taskLocked || !_isRunning || _currentModule == null) return;
+    
+    // 2. 현재 활성화된 태스크와 일치하는 신호인지 검증
+    if (signal.taskIndex != _currentTaskState.taskIndex) return;
+
+    if (_currentModule is ZoneAndMeasureModule measureModule)
+    {
+        // 3. 모듈에서 측정값 판정 수행
+        measureModule.HandleValueMeasured(signal.terminalId, signal.value);
+
+        // 4. 판정 결과가 성공(IsCompleted)인 경우에만 후속 처리 실행
+        if (measureModule.IsCompleted)
+        {
+            // 5. 서버 락 활성화: 코루틴 대기 중 추가 신호 처리 방지
+            _taskLocked = true;
+
+            // 6. JSON의 extra 설정에서 지연 시간(snapDelay) 추출 (기본값 1.5초)
+            var config = _data.GetModuleConfig(_currentTaskState.taskIndex < _data.scenario.tasks.Count ? 
+                         _data.scenario.tasks[_currentTaskState.taskIndex].moduleId : "");
+            float delay = ParseExtraFloat(config, "snapDelay", 1.5f);
+
+            // 7. 기존 로직의 CompleteAfterSnapDelay를 활용하여 지연 후 완료
+            StartCoroutine(CompleteAfterSnapDelay(delay));
+
+            Debug.Log($"[ScenarioRunner] 측정 성공: {signal.terminalId}={signal.value:F2}. " +
+                      $"{delay}초 대기 후 다음 단계로 이동합니다.");
+        }
+    }
+}
 
     private IEnumerator UnlockAfterStepDelay(float delay)
     {

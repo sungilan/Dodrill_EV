@@ -114,3 +114,15 @@ public struct PlaySnapAnimBroadcast : IBroadcast
     public string guideId;      // 목표 위치 (TaskInteractionZone.zoneId)
     public float snapDuration;  // DOTween 이동 시간 (초)
 }
+
+// ──────────────────────────────────────────
+//  클라이언트 → 서버: 멀티미터 측정값 신호
+//  (ZoneAndMeasureModule 검증용)
+// ──────────────────────────────────────────
+public struct ValueMeasuredSignal : IBroadcast
+{
+    public int taskIndex;      // 현재 진행 중인 태스크 인덱스
+    public string terminalId;  // 측정된 단자 ID (예: "HV_Cable_Term")
+    public float value;        // 측정된 실제 값 (V 또는 Ω)
+    public int clientId;       // 신호를 보낸 클라이언트 ID
+}

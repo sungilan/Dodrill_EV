@@ -56,9 +56,9 @@
       {
         "prefabId": "Front_Cover_Bolts",
         "position": {
-          "x": 2.663,
+          "x": 2.784,
           "y": 1.155,
-          "z": 6.634
+          "z": 6.463
         },
         "rotation": {
           "x": 0,
@@ -73,11 +73,30 @@
         "properties": []
       },
       {
-        "prefabId": "Vehicle_Lift",
+        "prefabId": "BatteryPack_Bolts1",
         "position": {
+          "x": 1.897,
+          "y": 1.153,
+          "z": 6.363
+        },
+        "rotation": {
           "x": 0,
           "y": 0,
           "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": []
+      },
+      {
+        "prefabId": "BatteryPack_Bolts2",
+        "position": {
+          "x": 2.55,
+          "y": 1.236,
+          "z": 6.354
         },
         "rotation": {
           "x": 0,
@@ -209,6 +228,30 @@
         "spawnObjects": []
       },
       {
+        "moduleId": "HV_Front_Voltage",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Multimeter",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_HV_Cable_Term"
+          }
+        ]
+      },
+      {
+        "moduleId": "HV_Rear_Voltage",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Multimeter",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_HV_Cable_Term"
+          }
+        ]
+      },
+      {
         "moduleId": "ICCU_Disconnect",
         "timeout": 60,
         "completionMode": "AnyPlayer",
@@ -251,7 +294,24 @@
         ]
       },
       {
-        "moduleId": "BatteryPack_Disassemble",
+        "moduleId": "BatteryPack_Disassemble1",
+        "timeout": 600,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Guide_Battery_Bolts"
+          },
+          {
+            "prefabId": "BatteryJack",
+            "spawnPointId": "SP_Lift_Floor",
+            "guideId": "Guide_BatteryJack"
+          }
+        ]
+      },
+      {
+        "moduleId": "BatteryPack_Disassemble2",
         "timeout": 600,
         "completionMode": "AnyPlayer",
         "spawnObjects": [
@@ -309,16 +369,99 @@
         ]
       },
       {
-        "moduleId": "BatteryPack_Assemble",
+        "moduleId": "BatteryPack_Assemble1",
         "timeout": 600,
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
-            "prefabId": "TorqueWrench",
+            "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Guide_Battery_Bolts"
+          },
+          {
+            "prefabId": "BatteryPack_Bolts3",
+            "spawnPointId": "SP_BatteryPack_Bolts3",
             "guideId": "Guide_Battery_Bolts"
           }
         ]
+      },
+      {
+        "moduleId": "BatteryPack_Assemble2",
+        "timeout": 600,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Guide_Battery_Bolts"
+          },
+          {
+            "prefabId": "BatteryPack_Bolts4",
+            "spawnPointId": "SP_BatteryPack_Bolts4",
+            "guideId": "Guide_Battery_Bolts"
+          }
+        ]
+      },
+      {
+        "moduleId": "Connector_Cover_Reinstall",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Guide_Cover_Bolts",
+            "targetGuideId": "Front_Cover_Bolts"
+          },
+          {
+            "prefabId": "Front_Cover_Bolts2",
+            "spawnPointId": "SP_ForntConnector_Bolts",
+            "guideId": "Guide_Cover_Bolts",
+            "targetGuideId": "Front_Cover_Bolts"
+          }
+        ]
+      },
+      {
+        "moduleId": "HV_Front_Connect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "HV_Rear_Connect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "ICCU_Connect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "BMU_Connect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Ground_Reinstall",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Hose_In_Connect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Hose_Out_Connect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
       },
       {
         "moduleId": "MSD_Reinstall",
@@ -600,6 +743,86 @@
       }
     },
     {
+      "moduleId": "HV_Front_Voltage",
+      "config": {
+        "actionType": "MeasureVoltage",
+        "requiredItems": [
+          "Multimeter"
+        ],
+        "targetObjName": "HV_Front_Cable_Term",
+        "targetZoneId": "Inverter_Check_Point",
+        "targetValue": 0,
+        "toleranceRatio": 0.05,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "snapDelay",
+            "ko": "2.5"
+          },
+          {
+            "key": "description",
+            "ko": "인버터 고압 케이블 단자에서 잔류 전압이 0V인지 측정합니다.",
+            "en": "Measure residual voltage at HV cable terminal — must be 0V."
+          },
+          {
+            "key": "expectedValue",
+            "ko": "0",
+            "en": "0"
+          },
+          {
+            "key": "unit",
+            "ko": "V",
+            "en": "V"
+          },
+          {
+            "key": "failWarning",
+            "ko": "전압이 남아있습니다! 추가 방전 후 재측정하세요.",
+            "en": "Voltage remains! Discharge further and re-measure."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "HV_Rear_Voltage",
+      "config": {
+        "actionType": "MeasureVoltage",
+        "requiredItems": [
+          "Multimeter"
+        ],
+        "targetObjName": "HV_Rear_Cable_Term",
+        "targetZoneId": "Inverter_Check_Point",
+        "targetValue": 0,
+        "toleranceRatio": 0.05,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "snapDelay",
+            "ko": "2.5"
+          },
+          {
+            "key": "description",
+            "ko": "인버터 고압 케이블 단자에서 잔류 전압이 0V인지 측정합니다.",
+            "en": "Measure residual voltage at HV cable terminal — must be 0V."
+          },
+          {
+            "key": "expectedValue",
+            "ko": "0",
+            "en": "0"
+          },
+          {
+            "key": "unit",
+            "ko": "V",
+            "en": "V"
+          },
+          {
+            "key": "failWarning",
+            "ko": "전압이 남아있습니다! 추가 방전 후 재측정하세요.",
+            "en": "Voltage remains! Discharge further and re-measure."
+          }
+        ]
+      }
+    },
+    {
       "moduleId": "ICCU_Disconnect",
       "config": {
         "actionType": "ConfirmTask",
@@ -713,6 +936,10 @@
         "requiresSafetyCheck": false,
         "extra": [
           {
+            "key": "snapDelay",
+            "ko": "2.5"
+          },
+          {
             "key": "description",
             "ko": "인버터 고압 케이블 단자에서 잔류 전압이 0V인지 측정합니다.",
             "en": "Measure residual voltage at HV cable terminal — must be 0V."
@@ -736,14 +963,66 @@
       }
     },
     {
-      "moduleId": "BatteryPack_Disassemble",
+      "moduleId": "BatteryPack_Disassemble1",
       "config": {
-        "actionType": "Disassemble",
+        "actionType": "ConfirmTask",
         "requiredItems": [
           "ImpactWrench",
           "BatteryJack"
         ],
-        "targetObjName": "BatteryPack_BoltGroup",
+        "targetObjName": "BatteryPack_Bolts1",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "배터리 잭으로 팩을 지지한 후 고정 볼트를 모두 해체하세요.",
+            "en": "Support the pack with battery jack, then remove all fixing bolts."
+          },
+          {
+            "key": "boltCount",
+            "ko": "12",
+            "en": "12"
+          },
+          {
+            "key": "boltTorque",
+            "ko": "45 Nm",
+            "en": "45 Nm"
+          },
+          {
+            "key": "step1",
+            "ko": "배터리 잭을 팩 하부에 밀착",
+            "en": "Position battery jack under the pack"
+          },
+          {
+            "key": "step2",
+            "ko": "임팩트 렌치로 볼트 12개 해체 (대각선 순서)",
+            "en": "Remove 12 bolts with impact wrench (diagonal pattern)"
+          },
+          {
+            "key": "step3",
+            "ko": "고전압 케이블 커넥터 및 통신 커넥터 분리",
+            "en": "Disconnect HV cable and communication connectors"
+          },
+          {
+            "key": "step4",
+            "ko": "배터리 잭으로 팩을 서서히 하강",
+            "en": "Slowly lower pack using battery jack"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "BatteryPack_Disassemble2",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [
+          "ImpactWrench",
+          "BatteryJack"
+        ],
+        "targetObjName": "BatteryPack_Bolts2",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -887,47 +1166,191 @@
       }
     },
     {
-      "moduleId": "BatteryPack_Assemble",
+      "moduleId": "BatteryPack_Assemble1",
       "config": {
-        "actionType": "Disassemble",
+        "actionType": "ConfirmTask",
+        "targetObjName": "BatteryPack_Bolts3",
+        "requiredItems": [ "ImpactWrench" ],
+        "extra": [
+          {
+            "key": "description",
+            "ko": "새 볼트를 규정 토크로 체결하세요."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "BatteryPack_Assemble2",
+      "config": {
+        "actionType": "ConfirmTask",
+        "targetObjName": "BatteryPack_Bolts4",
+        "requiredItems": [ "ImpactWrench" ],
+        "extra": [
+          {
+            "key": "description",
+            "ko": "새 볼트를 규정 토크로 체결하세요."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Connector_Cover_Reinstall",
+      "config": {
+        "actionType": "ConfirmTask",
         "requiredItems": [
-          "TorqueWrench"
+          "ImpactWrench"
         ],
-        "targetObjName": "BatteryPack_BoltGroup",
+        "targetObjName": "Front_Cover_Bolts",
         "targetZoneId": "",
-        "targetValue": 45,
-        "toleranceRatio": 0.05,
+        "targetValue": 0,
+        "toleranceRatio": 0,
         "requiresSafetyCheck": true,
         "extra": [
           {
             "key": "description",
-            "ko": "배터리 팩을 차체에 재조립하고 볼트를 규정 토크(45 Nm)로 체결하세요.",
-            "en": "Reinstall battery pack and torque all bolts to spec (45 Nm)."
-          },
+            "ko": "커버 볼트 4개를 재결합하세요.",
+            "en": "Remove 4 cover bolts.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "HV_Front_Connect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_Front",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
           {
-            "key": "boltCount",
-            "ko": "12",
-            "en": "12"
-          },
+            "key": "description",
+            "ko": "전방 고압 커넥터를 연결하세요.",
+            "en": "Connect front HV connector.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "HV_Rear_Connect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_Rear",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
           {
-            "key": "torqueSpec",
-            "ko": "45 Nm (±5%)",
-            "en": "45 Nm (±5%)"
-          },
+            "key": "description",
+            "ko": "후방 고압 커넥터를 연결하세요.",
+            "en": "Connect rear HV connector.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "ICCU_Connect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_ICCU",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
           {
-            "key": "step1",
-            "ko": "배터리 잭으로 팩을 차체 위치로 상승",
-            "en": "Raise pack into position with battery jack"
-          },
+            "key": "description",
+            "ko": "ICCU 커넥터를 연결하세요.",
+            "en": "Connect ICCU connector.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "BMU_Connect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_BMU",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
           {
-            "key": "step2",
-            "ko": "고전압 커넥터 및 통신 커넥터 체결",
-            "en": "Connect HV cable and communication connectors"
-          },
+            "key": "description",
+            "ko": "BMU 커넥터를 연결하세요.",
+            "en": "Connect BMU connector.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Ground_Reinstall",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Conn_Ground",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
           {
-            "key": "step3",
-            "ko": "토크 렌치로 볼트 12개 규정값 체결 + 마킹",
-            "en": "Torque 12 bolts to spec + apply torque marking"
+            "key": "description",
+            "ko": "접지 배선을 연결하세요.",
+            "en": "Remove ground wire.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Hose_In_Connect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Hose_Inlet",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "냉각수 입구 호스를 연결하세요.",
+            "en": "Connect coolant inlet hose.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Hose_Out_Connect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Hose_Outlet",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "냉각수 출구 호스를 연결하세요.",
+            "en": "Connect coolant outlet hose.",
+            "vi": ""
           }
         ]
       }
@@ -935,7 +1358,7 @@
     {
       "moduleId": "MSD_Reinstall",
       "config": {
-        "actionType": "Swap",
+        "actionType": "ConfirmTask",
         "requiredItems": [],
         "targetObjName": "MSD_Lever",
         "targetZoneId": "MSD_Port_Zone",

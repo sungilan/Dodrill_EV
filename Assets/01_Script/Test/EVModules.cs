@@ -92,67 +92,32 @@ public class Voltage_VerificationModule : ZoneAndMeasureModule
     protected override string GetTargetObjName() => "HV_Cable_Term";
 }
 
+public class HV_FrontVoltageModule : ZoneAndMeasureModule
+{
+    public override string ModuleId => "HV_Front_Voltage";
+    protected override string GetTargetObjName() => "HV_Front_Cable_Term";
+}
+
+public class HV_RearVoltageModule : ZoneAndMeasureModule
+{
+    public override string ModuleId => "HV_Rear_Voltage";
+    protected override string GetTargetObjName() => "HV_Rear_Cable_Term";
+}
+
 // ──────────────────────────────────────────────────────────────
 //  Task[05] BatteryPack_Disassemble
 //  spawnObjects: ImpactWrench, BatteryJack
 //  targetZoneId 없음 → PC에서 requiredItems 중 하나를 집으면 완료
 //  (볼트 그룹 실제 분해는 InteractablePart로 처리, 지금은 도구 집기로 완료 판정)
 // ──────────────────────────────────────────────────────────────
-public class BatteryPack_DisassembleModule : ITaskModule
+public class BatteryPack_Disassemble1Module : ConfirmTaskModule
 {
-    public string ModuleId => "BatteryPack_Disassemble";
+    public override string ModuleId => "BatteryPack_Disassemble1";
+}
 
-    private Action _onComplete;
-    private Action _onFail;
-    private bool _completed;
-
-    // JSON requiredItems: ["ImpactWrench", "BatteryJack"]
-    private static readonly System.Collections.Generic.HashSet<string> _requiredItems
-        = new() { "ImpactWrench", "BatteryJack" };
-
-    public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
-    {
-        _onComplete = onComplete;
-        _onFail = onFail;
-        _completed = false;
-
-        // 도구 집기 또는 BatteryLiftController의 DetachBattery 이벤트 수신
-        InteractionEvents.OnItemGrabbed += HandleGrab;
-        InteractionEvents.OnZoneActivated += HandleZone;
-    }
-
-    private void HandleGrab(string itemId)
-    {
-        if (_completed) return;
-
-        // config의 requiredItems 중 하나라도 집으면 완료
-        if (!_requiredItems.Contains(itemId)) return;
-        Complete();
-    }
-
-    private void HandleZone(string zoneId, string itemId)
-    {
-        if (_completed) return;
-        // BatteryPack_BoltGroup이 존으로 등록된 경우 대비
-        if (zoneId != "BatteryPack_BoltGroup" && itemId != "BatteryPack_BoltGroup") return;
-        Complete();
-    }
-
-    private void Complete()
-    {
-        _completed = true;
-        _onComplete?.Invoke();
-    }
-
-    public void OnUpdate(float deltaTime) { }
-    public void OnComplete() { Cleanup(); }
-    public void OnFail() { Cleanup(); }
-
-    private void Cleanup()
-    {
-        InteractionEvents.OnItemGrabbed -= HandleGrab;
-        InteractionEvents.OnZoneActivated -= HandleZone;
-    }
+public class BatteryPack_Disassemble2Module : ConfirmTaskModule
+{
+    public override string ModuleId => "BatteryPack_Disassemble2";
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -191,16 +156,20 @@ public class Gasket_ReplaceModule : GrabZoneTaskModule
 //  BatteryPack_BoltGroup 재조립 (볼트 체결) 완료 시
 //  DisassemblyManager.onAllPartsAssembled → InteractionEvents.FireTaskConfirmed("BatteryPack_Assemble")
 // ──────────────────────────────────────────────────────────────
-public class BatteryPack_AssembleModule : ConfirmTaskModule
+public class BatteryPack_Assemble1Module : ConfirmTaskModule
 {
-    public override string ModuleId => "BatteryPack_Assemble";
+    public override string ModuleId => "BatteryPack_Assemble1";
+}
+public class BatteryPack_Assemble2Module : ConfirmTaskModule
+{
+    public override string ModuleId => "BatteryPack_Assemble2";
 }
 
 // ──────────────────────────────────────────────────────────────
 //  Task[10] MSD_Reinstall
 //  MSD_Lever 를 MSD_Port_Zone 에 꽂으면 완료
 // ──────────────────────────────────────────────────────────────
-public class MSD_ReinstallModule : GrabZoneTaskModule
+public class MSD_ReinstallModule : ConfirmTaskModule
 {
     public override string ModuleId => "MSD_Reinstall";
 }
@@ -225,28 +194,46 @@ public static class EVModules
     /// </summary>
     public static void RegisterAll(ModuleRegistry registry)
     {
+        // 기존 등록 로직
         registry.Register(new InitialDiagnosisModule());
         registry.Register(new LOTO_GlovesModule());
         registry.Register(new MSD_RemovalModule());
         registry.Register(new DischargeWaitModule());
         registry.Register(new Voltage_VerificationModule());
-        registry.Register(new BatteryPack_DisassembleModule());
+        registry.Register(new HV_FrontVoltageModule());
+        registry.Register(new HV_RearVoltageModule());
+        registry.Register(new BatteryPack_Disassemble1Module());
+        registry.Register(new BatteryPack_Disassemble2Module());
         registry.Register(new Insulation_MeasureModule());
         registry.Register(new Contamination_CleanModule());
         registry.Register(new Gasket_ReplaceModule());
-        registry.Register(new BatteryPack_AssembleModule());
+        registry.Register(new BatteryPack_Assemble1Module());
+        registry.Register(new BatteryPack_Assemble2Module());
         registry.Register(new MSD_ReinstallModule());
         registry.Register(new FinalDiagnosisModule());
+
+        // ★ [중요] 누락된 v2 시나리오 추가 모듈 9개 등록 ★
+        registry.Register(new LOTO_SmartKeyModule());      // 시나리오 2번째 단계
+        registry.Register(new LOTO_FaceShieldModule());    // 시나리오 3번째 단계
+        registry.Register(new LOTO_ShoesModule());        // 시나리오 4번째 단계
         registry.Register(new Connector_Cover_RemovalModule());
         registry.Register(new HV_Front_DisconnectModule());
+        registry.Register(new HV_Front_ConnectModule());
         registry.Register(new HV_Rear_DisconnectModule());
+        registry.Register(new HV_Rear_ConnectModule());
         registry.Register(new ICCU_DisconnectModule());
+        registry.Register(new ICCU_ConnectModule());
         registry.Register(new BMU_DisconnectModule());
+        registry.Register(new BMU_ConnectModule());
         registry.Register(new Ground_RemovalModule());
+        registry.Register(new Ground_ReinstallModule());
         registry.Register(new Coolant_Hose_InModule());
+        registry.Register(new Coolant_Hose_In_ConnectModule());
         registry.Register(new Coolant_Hose_OutModule());
+        registry.Register(new Coolant_Hose_Out_ConnectModule());
+        registry.Register(new BatteryPack_LoweringModule());
 
-        Debug.Log("[EVModules] P0AA6 시나리오 12개 모듈 등록 완료");
+        Debug.Log($"[EVModules] P0AA6 시나리오 전체 모듈 등록 완료 (v2 포함)");
     }
 }
 
@@ -264,35 +251,63 @@ public class HV_Front_DisconnectModule : ConfirmTaskModule
 {
     public override string ModuleId => "HV_Front_Disconnect";
 }
+public class HV_Front_ConnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "HV_Front_Connect";
+}
 
 public class HV_Rear_DisconnectModule : ConfirmTaskModule
 {
     public override string ModuleId => "HV_Rear_Disconnect";
+}
+public class HV_Rear_ConnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "HV_Rear_Connect";
 }
 
 public class ICCU_DisconnectModule : ConfirmTaskModule
 {
     public override string ModuleId => "ICCU_Disconnect";
 }
+public class ICCU_ConnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "ICCU_Connect";
+}
 
 public class BMU_DisconnectModule : ConfirmTaskModule
 {
     public override string ModuleId => "BMU_Disconnect";
+}
+public class BMU_ConnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "BMU_Connect";
 }
 
 public class Ground_RemovalModule : ConfirmTaskModule
 {
     public override string ModuleId => "Ground_Removal";
 }
+public class Ground_ReinstallModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Ground_Reinstall";
+}
 
 public class Coolant_Hose_InModule : ConfirmTaskModule
 {
     public override string ModuleId => "Coolant_Hose_In";
 }
+public class Coolant_Hose_In_ConnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Coolant_Hose_In_Connect";
+}
 
 public class Coolant_Hose_OutModule : ConfirmTaskModule
 {
     public override string ModuleId => "Coolant_Hose_Out";
+}
+public class Coolant_Hose_Out_ConnectModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Coolant_Hose_Out_Connect";
 }
 
 public class BatteryPack_LoweringModule : ConfirmTaskModule

@@ -464,20 +464,61 @@ public abstract class LiftControllerBase : NetworkBehaviour, ILiftController
         SyncPayloadLateUpdate();
     }
 
+    //private void Update()
+    //{
+    //    // 업데이트 로직은 서버에서만 수행하여 동기화
+    //    if(!IsServerInitialized || !_isMoving) return;
+
+    //    float prevHeight = _currentHeight;
+    //    float speed = CalculateSpeed();
+    //    float newHeight = Mathf.Clamp(_currentHeight + _direction * speed * Time.deltaTime, 0f, MaxValue);
+
+    //    bool reachedEdge = newHeight <= 0f || newHeight >= MaxValue;
+    //    if(reachedEdge)
+    //    {
+    //        bool wasAtBottom = newHeight <= 0f;
+    //        newHeight = Mathf.Clamp(newHeight, 0f, MaxValue);
+
+    //        // 정지
+    //        _syncDirection.Value = 0;
+
+    //        if(liftAudio != null) liftAudio.Stop();
+
+    //        if(wasAtBottom) OnReachedBottom();
+    //        else OnReachedTop();
+    //    }
+
+    //    _syncCurrentHeight.Value = newHeight;
+    //    OnHeightChanged(newHeight, prevHeight);
+    //}
+
     private void Update()
     {
-        // 업데이트 로직은 서버에서만 수행하여 동기화
-        if(!IsServerInitialized || !_isMoving) return;
+        // 1. 서버 초기화 및 이동 상태 체크 로그
+        //if(!IsServerInitialized) return;
 
+        // 리프트가 멈춰있는데 로그가 안 찍힌다면 _syncDirection이 0인 상태입니다.
+        if(!_isMoving) return;
+        Debug.Log($"[LiftBase] 1");
         float prevHeight = _currentHeight;
         float speed = CalculateSpeed();
-        float newHeight = Mathf.Clamp(_currentHeight + _direction * speed * Time.deltaTime, 0f, MaxValue);
+
+        // 현재 방향에 따른 계산값 로그
+        float movement = _direction * speed * Time.deltaTime;
+        float newHeight = Mathf.Clamp(_currentHeight + movement, 0f, MaxValue);
+
+        // [로그 추가] 실시간 높이 변화 모니터링 (너무 많이 찍히지 않게 0.1초 간격 권장하나, 일단 전체 출력)
+        Debug.Log($"[LiftBase] 이동 중 - ID: {uniqueId} | 방향: {_direction} | 이전높이: {prevHeight:F3} -> 새높이: {newHeight:F3} (Max: {MaxValue})");
 
         bool reachedEdge = newHeight <= 0f || newHeight >= MaxValue;
+
         if(reachedEdge)
         {
             bool wasAtBottom = newHeight <= 0f;
             newHeight = Mathf.Clamp(newHeight, 0f, MaxValue);
+
+            // [로그 추가] 경계 도달 판정
+            Debug.Log($"[LiftBase] 경계 도달 - {(wasAtBottom ? "최하단(Bottom)" : "최상단(Top)")} 정지 실행");
 
             // 정지
             _syncDirection.Value = 0;
@@ -488,7 +529,10 @@ public abstract class LiftControllerBase : NetworkBehaviour, ILiftController
             else OnReachedTop();
         }
 
+        // 서버 변수 갱신
         _syncCurrentHeight.Value = newHeight;
+
+        // 자식 클래스(BatteryLiftController)의 판정 로직 호출
         OnHeightChanged(newHeight, prevHeight);
     }
 
@@ -513,6 +557,7 @@ public abstract class LiftControllerBase : NetworkBehaviour, ILiftController
     [ServerRpc(RequireOwnership = false)]
     private void RequestMoveServerRpc(int dir)
     {
+        Debug.Log($"[LiftBase] 서버 RPC 수신 - 요청 방향: {dir}");
         _syncDirection.Value = dir;
     }
 

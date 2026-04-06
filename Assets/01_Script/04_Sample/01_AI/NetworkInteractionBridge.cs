@@ -94,6 +94,7 @@ namespace DoDrill.Training
             InteractionEvents.OnItemUsed       += HandleItemUsed;
             InteractionEvents.OnItemGrabbed    += HandleItemGrabbed;
             InteractionEvents.OnTaskConfirmed  += HandleTaskConfirmed;
+            InteractionEvents.OnValueMeasured += HandleValueMeasured;
 
             // 시나리오 상태 수신 (존 활성화 + taskIndex 추적)
             ScenarioStateReceiver.OnTaskStateUpdated += HandleTaskStateUpdated;
@@ -114,6 +115,7 @@ namespace DoDrill.Training
             ScenarioStateReceiver.OnTaskStateUpdated -= HandleTaskStateUpdated;
             ScenarioStateReceiver.OnSnapshotReceived -= HandleSnapshotReceived;
             ScenarioReceiver.OnScenarioReceived      -= HandleScenarioReceived;
+            InteractionEvents.OnValueMeasured -= HandleValueMeasured;
 
             if (InstanceFinder.ClientManager != null)
                 InstanceFinder.ClientManager.UnregisterBroadcast<PlaySnapAnimBroadcast>(OnReceiveSnapBroadcast);
@@ -286,6 +288,24 @@ namespace DoDrill.Training
                 moduleId  = moduleId,
                 clientId  = InstanceFinder.ClientManager.Connection.ClientId,
             });
+        }
+
+        // ★ 서버로 측정 신호를 보내는 핸들러 추가
+        private void HandleValueMeasured(string terminalId, float value)
+        {
+            if(!InstanceFinder.IsClientStarted || _currentTaskIndex < 0) return;
+
+            // 서버로 '값 측정' 신호 전송
+            // (ValueMeasuredSignal 구조체는 이미 정의되어 있어야 함)
+            InstanceFinder.ClientManager.Broadcast(new ValueMeasuredSignal
+            {
+                taskIndex = _currentTaskIndex,
+                terminalId = terminalId,
+                value = value,
+                clientId = InstanceFinder.ClientManager.Connection.ClientId,
+            });
+
+            Debug.Log($"<color=orange>[Bridge]</color> 측정 신호 서버 전송: {terminalId} = {value:F2}");
         }
 
         [TargetRpc]
