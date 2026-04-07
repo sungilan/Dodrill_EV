@@ -166,11 +166,23 @@ public class GuideSystem : MonoBehaviour
 
         if(currentLevel != GuideLevel.Hard)
         {
-            // requiredItems 아웃라인
-            foreach(var item in _requiredItemObjects) SetOutline(item, true);
-            // targetObjName / targetZoneId GO (ClickableAnimator 등) 아웃라인
+            // 1. 클릭 대상(targetObjName) 찾기 및 아웃라인
             _clickTargets = FindClickTargets(config);
-            foreach(var t in _clickTargets) SetOutline(t, true);
+            foreach(var t in _clickTargets)
+            {
+                SetOutline(t, true);
+
+                // ★ 추가: 스폰 물체가 없는 단계(클릭 태스크)라면 targetObjName 위치에 마커 생성
+                if(taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0)
+                {
+                    string label = GetExtraValue(config, "description", "이곳을 클릭하세요.");
+                    SpawnMarker(t.transform.position, label, targetGuideColor, isTarget: true);
+                    Debug.Log($"[Guide] 클릭 대상({t.name})에 직접 마커 생성");
+                }
+            }
+
+            // 2. 기존 스폰 물체 가이드 로직
+            foreach(var item in _requiredItemObjects) SetOutline(item, true);
             BuildSpawnGuides(taskDef);
             SpeakGuide(config);
         }
@@ -240,23 +252,49 @@ public class GuideSystem : MonoBehaviour
 
                 if(targetGO != null)
                 {
-                    string label = $"{GetDisplayName(bundle.prefabId)}을(를) 여기로 이동하세요";
-                    var marker = SpawnMarker(targetGO.transform.position, label,
-                                              targetGuideColor, isTarget: true);
-                    if(marker != null) _targetMarker = marker;
+                    // ── 볼트 그룹 여부 확인 ──
+                    var boltGroup = targetGO.GetComponent<BoltGroupCounter>();
+                    bool isBoltTask = boltGroup != null || targetGO.name.Contains("Bolt");
+                    bool shouldShowCircle = !isBoltTask;
 
-                    var itemGO = FindSpawnedItem(bundle.prefabId);
-                    Debug.Log($"[Guide] 고스트용 아이템: '{bundle.prefabId}' → {(itemGO != null ? itemGO.name : "null")} / ghostMat={(ghostMaterial != null ? "있음" : "없음")}");
-                    if(itemGO != null && ghostMaterial != null)
-                        _ghostObject = SpawnGhost(itemGO, targetGO.transform.position);
-                    else if(ghostMaterial == null)
-                        Debug.LogWarning("[Guide] ghostMaterial 미설정 — Inspector에서 연결 필요");
+                    // 1. 라벨 텍스트 결정 (볼트인 경우 전용 텍스트 사용)
+                    string label;
+                    if(isBoltTask)
+                    {
+                        // 현재 작업이 조립 모드인지 확인 (BoltGroupCounter의 변수명에 따라 수정 필요)
+                        bool isAssemble = boltGroup != null && boltGroup.assembleMode;
+                        string actionStr = isAssemble ? "체결" : "제거";
+                        label = $"볼트를 임팩트 렌치로 {actionStr}하세요.";
+                    }
                     else
-                        Debug.LogWarning($"[Guide] 아이템 '{bundle.prefabId}' 씬에서 못 찾음 (스폰 전일 수 있음)");
+                    {
+                        label = $"{GetDisplayName(bundle.prefabId)}을(를) 여기로 이동하세요";
+                    }
+
+                    // 2. 마커 생성 (볼트 그룹이면 바운드 중앙에 생성)
+                    Vector3 markerPos = isBoltTask ? GetBoundsCenter(targetGO) : targetGO.transform.position;
+                    var marker = SpawnMarker(markerPos, label, targetGuideColor, isTarget: true);
+                    if(marker != null)
+                    {
+                        marker.Setup(label, targetGuideColor, shouldShowCircle);
+                        _targetMarker = marker;
+                    }  
+
+                    // 3. 아웃라인 강제 적용 (자식 볼트들까지)
+                    SetOutline(targetGO, true);
+
+                    // 4. 고스트 생성 (볼트 미션이 아닐 때만 생성하거나, 필요시 유지)
+                    var itemGO = FindSpawnedItem(bundle.prefabId);
+                    if(itemGO != null && ghostMaterial != null)
+                    {
+                        // 볼트 그룹 자체가 타겟일 때는 고스트를 생성하지 않는 것이 시야 확보에 좋습니다.
+                        if(!isBoltTask)
+                            _ghostObject = SpawnGhost(itemGO, targetGO.transform.position);
+                    }
                 }
                 else
                 {
-                    Debug.LogWarning($"[Guide] targetGuideId GO '{bundle.guideId}' 씬에 없음 — GO 이름과 정확히 일치하는지 확인");
+                    Debug.LogWarning($"[Guide] targetGuideId GO '{bundle.guideId}' 씬에 없음");
                 }
             }
         }

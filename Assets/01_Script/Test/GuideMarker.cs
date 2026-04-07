@@ -31,7 +31,7 @@ public class GuideMarker : MonoBehaviour
     /// GuideSystem이 마커 생성 직후 호출.
     /// color = spawnGuideColor 또는 targetGuideColor
     /// </summary>
-    public void Setup(string description, Color color)
+    public void Setup(string description, Color color, bool showHighlight = true)
     {
         // 자식에서 자동 탐색 (Inspector 연결 생략 가능)
         if (highlightCircle == null)
@@ -44,6 +44,7 @@ public class GuideMarker : MonoBehaviour
         // ① HighlightCircle — Renderer 색상
         if (highlightCircle != null)
         {
+            highlightCircle.SetActive(showHighlight);
             // 자식들을 포함하여 모든 Outline 컴포넌트를 찾아 색상 적용
             var outlines = highlightCircle.GetComponentsInChildren<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
             foreach (var outline in outlines)
