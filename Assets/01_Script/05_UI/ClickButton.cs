@@ -177,4 +177,22 @@ public class ClickButton : MonoBehaviour,
             buttonText.fontMaterial = _normalMaterial;
         }
     }
+
+    /// <summary>
+    /// VR 손가락 트리거 등 — 포인터 이벤트 없이 눌림 스프라이트 → onClick → 복귀.
+    /// </summary>
+    public void TriggerAsIfClicked()
+    {
+        var btn = GetComponent<Button>();
+        var es = EventSystem.current;
+        if (es != null)
+        {
+            var data = new PointerEventData(es);
+            OnPointerDown(data);
+            btn?.onClick.Invoke();
+            OnPointerUp(data);
+        }
+        else
+            btn?.onClick.Invoke();
+    }
 }

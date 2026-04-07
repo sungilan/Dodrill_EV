@@ -361,7 +361,7 @@ public static class ClickableAnimatorManager
     }
 }
 
-[RequireComponent(typeof(Animator))]
+//[RequireComponent(typeof(Animator))]
 public class ClickableAnimator : MonoBehaviour
 {
     [Header("식별")]
@@ -373,6 +373,9 @@ public class ClickableAnimator : MonoBehaviour
     public bool useTrigger = false;
     public string openTrigger = "Open";
     public string closeTrigger = "Close";
+
+    [Header("참조")]
+    [SerializeField] private Animator _animator;
 
     [Header("설정")]
     public float autoCloseDelay = 0f;
@@ -389,13 +392,22 @@ public class ClickableAnimator : MonoBehaviour
     [Tooltip("체크 시 클릭하자마자 시나리오 단계를 완료 신호를 보냅니다. (단순 클릭 태스크용)")]
     public bool sendScenarioSignal = true;
 
-    private Animator _animator;
     private Coroutine _autoCloseCoroutine;
     private Grabbable _grabbable;
 
     private void Awake()
     {
+        // 1. 이미 인스펙터에서 할당했다면 그것을 사용
+        if(_animator != null) return;
+
+        // 2. 할당이 안 되어 있다면 자기 자신에게서 찾음
         _animator = GetComponent<Animator>();
+
+        // 3. 그래도 없다면 부모에게서 찾음
+        if(_animator == null)
+        {
+            _animator = GetComponentInParent<Animator>();
+        }
         _grabbable = GetComponent<Grabbable>();
     }
 

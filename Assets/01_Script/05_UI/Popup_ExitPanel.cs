@@ -9,6 +9,7 @@ namespace DoDrill
         protected override void Awake()
         {
             base.Awake();
+            Rect.anchoredPosition = new Vector2(0f, 50f);
             Mst.Events.AddListener(MstEventKeys.showExitPopup, (_) => Show());
             Mst.Events.AddListener(MstEventKeys.hideExitPopup, (_) => Hide());
         }
