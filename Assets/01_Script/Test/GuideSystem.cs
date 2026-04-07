@@ -234,7 +234,8 @@ public class GuideSystem : MonoBehaviour
             Debug.Log($"[Guide] GuideId 체크: '{bundle.guideId}' (비어있음={string.IsNullOrEmpty(bundle.guideId)})");
             if(!string.IsNullOrEmpty(bundle.guideId))
             {
-                var targetGO = GameObject.Find(bundle.guideId);
+                //var targetGO = GameObject.Find(bundle.guideId);
+                var targetGO = FindSpawnedItem(bundle.guideId);
                 Debug.Log($"[Guide] targetGO 탐색: '{bundle.guideId}' → {(targetGO != null ? targetGO.name : "null — 씬에 없음")}");
 
                 if(targetGO != null)
@@ -261,6 +262,8 @@ public class GuideSystem : MonoBehaviour
         }
         Debug.Log($"[Guide] BuildSpawnGuides 완료 — 마커:{_spawnMarkers.Count}, 고스트:{(_ghostObject != null ? "있음" : "없음")}, 타겟마커:{(_targetMarker != null ? "있음" : "없음")}");
     }
+
+
 
     // ── 마커 스폰 ────────────────────────────────────────
 

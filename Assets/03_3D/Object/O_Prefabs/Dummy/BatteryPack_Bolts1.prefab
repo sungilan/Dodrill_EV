@@ -119,6 +119,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &5422628678838953943
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -192,6 +193,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open
@@ -433,6 +435,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &2255952826014681832
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -506,6 +509,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open
@@ -747,6 +751,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &8571074822291392948
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -820,6 +825,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open
@@ -1061,6 +1067,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &2881906336545089399
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -1134,6 +1141,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open
@@ -1375,6 +1383,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &7303721250373818273
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -1448,6 +1457,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open
@@ -1622,7 +1632,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bab84ae395954ef4aa75abc5b9501406, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoltGroupCounter
-  groupId: BoltGroup_BatteryPack1
+  assembleMode: 0
+  groupId: BatteryPack_Bolts1
   taskId: BatteryPack_Disassemble1
   ejectDuration: 0.4
   _totalCount: 0
@@ -1824,6 +1835,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &8659879539548695166
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -1897,6 +1909,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open

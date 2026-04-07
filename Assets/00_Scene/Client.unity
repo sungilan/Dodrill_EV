@@ -3955,6 +3955,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66b3fd141e8e4fc479b41cb47e0be993, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ToggleButton
+  ignorePointerClick: 0
   bgImage: {fileID: 241479966}
   bgNormal: {fileID: 21300000, guid: a074323028a58d64d9da7c576bbdddac, type: 3}
   bgSelected: {fileID: 21300000, guid: e9e0ebb69d94d564c955c7de8bc03b9f, type: 3}
@@ -13268,8 +13269,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1393264114}
-        m_TargetAssemblyTypeName: BottomButtonsPanel, Assembly-CSharp
+      - m_Target: {fileID: 1393264118}
+        m_TargetAssemblyTypeName: LobbyBottomPanel, Assembly-CSharp
         m_MethodName: CreateRoom
         m_Mode: 1
         m_Arguments:
@@ -22281,6 +22282,7 @@ GameObject:
   - component: {fileID: 1393264116}
   - component: {fileID: 1393264115}
   - component: {fileID: 1393264114}
+  - component: {fileID: 1393264118}
   m_Layer: 5
   m_Name: HLD_ButtonHolder
   m_TagString: Untagged
@@ -22342,36 +22344,21 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1393264111}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01f02e27fdfe11a4e82bda578f81a456, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  id: New View Id
-  title: bottomButtons
-  hideOnStart: 0
-  allwaysOnTop: 1
-  ignoreHideAll: 0
-  useRaycastBlock: 1
-  blockInput: 0
-  unlockCursor: 0
-  logLevel: 3
-  titleLable: {fileID: 0}
-  OnShowEvent:
+  slidePanel: {fileID: 0}
+  toggleButton: {fileID: 0}
+  currentTaskText: {fileID: 0}
+  openedY: 0
+  closedY: -400
+  duration: 0.3
+  startOpened: 1
+  onOpenStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  OnHideEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  OnShowFinishedEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  OnHideFinishedEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  CreateRoomView: {fileID: 5612985367120152262}
-  RoomListView: {fileID: 8477452573156746615}
-  ContentsListView: {fileID: 6449577994220395436}
 --- !u!225 &1393264115
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -22424,6 +22411,43 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &1393264118
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1393264111}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9fc8a6ee0d6b9941bf769ed87455b28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LobbyBottomPanel
+  id: New View Id
+  title: HLD_ButtonHolder
+  hideOnStart: 0
+  allwaysOnTop: 0
+  ignoreHideAll: 0
+  useRaycastBlock: 1
+  blockInput: 0
+  unlockCursor: 0
+  logLevel: 3
+  titleLable: {fileID: 0}
+  OnShowEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  OnHideEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  OnShowFinishedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  OnHideFinishedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  CreateRoomView: {fileID: 5612985367120152262}
+  RoomListView: {fileID: 8477452573156746615}
+  ContentsListView: {fileID: 6449577994220395436}
 --- !u!1 &1406949402
 GameObject:
   m_ObjectHideFlags: 0
@@ -22857,8 +22881,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1393264114}
-        m_TargetAssemblyTypeName: BottomButtonsPanel, Assembly-CSharp
+      - m_Target: {fileID: 1393264118}
+        m_TargetAssemblyTypeName: LobbyBottomPanel, Assembly-CSharp
         m_MethodName: JoinRoom
         m_Mode: 1
         m_Arguments:
@@ -33457,7 +33481,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.00002155867}
+  m_AnchoredPosition: {x: 0, y: 0.00022856498}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &400257194601319637
@@ -37990,7 +38014,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 3399938633997671816}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.9999878
+  m_Size: 0.9999818
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -46229,21 +46253,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a0f5cf6e79f40d47b46947f3ecb02cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LanguageButtonManager
-  displayFlagImage: {fileID: 656789963}
-  btnLeft: {fileID: 2062418243}
-  btnRight: {fileID: 1702863416}
-  btnConfirm: {fileID: 8754869035761789901}
-  locales:
-  - languageName: "\uD55C\uAD6D\uC5B4"
-    flagSprite: {fileID: 21300000, guid: c68c57f82b094db48a0e13085f312d51, type: 3}
-    localeIndex: 0
-  - languageName: "\uC601\uC5B4"
-    flagSprite: {fileID: 21300000, guid: 321e5bd132fac3344ae8eb78f22ceed2, type: 3}
-    localeIndex: 1
-  - languageName: "\uBCA0\uD2B8\uB0A8\uC5B4"
-    flagSprite: {fileID: 21300000, guid: 1c51357beef30914d95fc23c094948e9, type: 3}
-    localeIndex: 2
-  _currentIndex: 0
+  _flagImage: {fileID: 0}
+  _leftButton: {fileID: 0}
+  _rightButton: {fileID: 0}
+  _languages: []
 --- !u!114 &7734212109359100326
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -50,7 +50,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bab84ae395954ef4aa75abc5b9501406, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoltGroupCounter
-  groupId: BoltGroup_Connector
+  assembleMode: 0
+  groupId: Front_Cover_Bolts
   taskId: Connector_Cover_Removal
   ejectDuration: 0.4
   _totalCount: 0
@@ -80,12 +81,6 @@ MonoBehaviour:
   - {fileID: 1315838004333991376}
   - {fileID: 5395070349694853188}
   - {fileID: 6160834601027217691}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
   - {fileID: 565180654694296172}
   RuntimeParentNetworkBehaviour: {fileID: 0}
   RuntimeChildNetworkBehaviours: []
@@ -109,7 +104,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 33
+  <PrefabId>k__BackingField: 37
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 16825271082377106144
   <SceneId>k__BackingField: 0
@@ -258,6 +253,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &8306617239765738146
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -331,6 +327,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open
@@ -386,7 +383,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0, y: 0, z: -0.3449998}
+    Position: {x: 0.033, y: 0, z: -0.058000088}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -583,6 +580,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &6770184694158169955
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -656,6 +654,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open
@@ -711,7 +710,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -0.21229243, y: 0, z: -0.3449998}
+    Position: {x: -0.032, y: 0, z: -0.058}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -908,6 +907,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &2807952835576782000
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -981,6 +981,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open
@@ -1002,7 +1003,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 10
+  <ComponentIndex>k__BackingField: 4
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -1036,7 +1037,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0, y: 0, z: 0}
+    Position: {x: 0.032999992, y: 0, z: 0.03999996}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -1233,6 +1234,7 @@ MonoBehaviour:
   brokenBoltMesh: {fileID: 0}
   breakEffect: {fileID: 0}
   _progress: 0
+  isAssembleMode: 0
 --- !u!135 &953287981581263778
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -1306,6 +1308,7 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
+  _animator: {fileID: 0}
   autoCloseDelay: 0
   _isOpen: 0
   openSound: Door_Open
@@ -1361,7 +1364,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -0.21229243, y: 0, z: 0}
+    Position: {x: -0.032000065, y: 0, z: 0.04}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1

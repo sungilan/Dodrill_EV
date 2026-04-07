@@ -134,7 +134,7 @@
           {
             "prefabId": "SmartKey",
             "spawnPointId": "SP_Driver_Seat",
-            "guideId": "Guide_Driver_Seat",
+            "guideId": "Guide_LockBox",
             "targetGuideId": ""
           },
           {
@@ -210,8 +210,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Cover_Bolts",
-            "targetGuideId": "Front_Cover_Bolts"
+            "guideId": "Front_Cover_Bolts"
           }
         ]
       },
@@ -289,12 +288,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Battery_Bolts"
-          },
-          {
-            "prefabId": "BatteryJack",
-            "spawnPointId": "SP_Lift_Floor",
-            "guideId": "Guide_BatteryJack"
+            "guideId": "BatteryPack_Bolts1"
           }
         ]
       },
@@ -306,12 +300,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Battery_Bolts"
-          },
-          {
-            "prefabId": "BatteryJack",
-            "spawnPointId": "SP_Lift_Floor",
-            "guideId": "Guide_BatteryJack"
+            "guideId": "BatteryPack_Bolts2"
           }
         ]
       },
@@ -328,7 +317,7 @@
           {
             "prefabId": "BatteryPack_Bolts3",
             "spawnPointId": "SP_BatteryPack_Bolts3",
-            "guideId": "Guide_Battery_Bolts"
+            "guideId": "BatteryPack_Bolts3"
           }
         ]
       },
@@ -345,7 +334,7 @@
           {
             "prefabId": "BatteryPack_Bolts4",
             "spawnPointId": "SP_BatteryPack_Bolts4",
-            "guideId": "Guide_Battery_Bolts"
+            "guideId": "BatteryPack_Bolts4"
           }
         ]
       },
@@ -357,14 +346,12 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Cover_Bolts",
-            "targetGuideId": "Front_Cover_Bolts"
+            "guideId": "Guide_Cover_Bolts"
           },
           {
             "prefabId": "Front_Cover_Bolts2",
             "spawnPointId": "SP_ForntConnector_Bolts",
-            "guideId": "Guide_Cover_Bolts",
-            "targetGuideId": "Front_Cover_Bolts"
+            "guideId": "Front_Cover_Bolts"
           }
         ]
       },
@@ -435,9 +422,7 @@
       "moduleId": "InitialDiagnosis",
       "config": {
         "actionType": "ScanDTC",
-        "requiredItems": [
-          "GDS_Tablet"
-        ],
+        "requiredItems": [ "GDS_Tablet" ],
         "targetObjName": "OBD_Zone",
         "targetZoneId": "OBD_Zone",
         "targetValue": 0,
@@ -466,9 +451,7 @@
       "moduleId": "LOTO_SmartKey",
       "config": {
         "actionType": "Swap",
-        "requiredItems": [
-          "SmartKey"
-        ],
+        "requiredItems": [ "SmartKey" ],
         "targetObjName": "SmartKey",
         "targetZoneId": "LockBox_Zone",
         "targetValue": 0,
@@ -494,9 +477,7 @@
       "moduleId": "LOTO_FaceShield",
       "config": {
         "actionType": "Swap",
-        "requiredItems": [
-          "FaceShield"
-        ],
+        "requiredItems": [ "FaceShield" ],
         "targetObjName": "FaceShield",
         "targetZoneId": "Player_Hand_Zone",
         "targetValue": 0,
@@ -522,9 +503,7 @@
       "moduleId": "LOTO_Shoes",
       "config": {
         "actionType": "Swap",
-        "requiredItems": [
-          "InsulatedShoes"
-        ],
+        "requiredItems": [ "InsulatedShoes" ],
         "targetObjName": "InsulatedShoes",
         "targetZoneId": "Player_Hand_Zone",
         "targetValue": 0,
@@ -550,9 +529,7 @@
       "moduleId": "LOTO_Gloves",
       "config": {
         "actionType": "Swap",
-        "requiredItems": [
-          "InsulatedGloves"
-        ],
+        "requiredItems": [ "InsulatedGloves" ],
         "targetObjName": "InsulatedGloves",
         "targetZoneId": "Player_Hand_Zone",
         "targetValue": 0,
@@ -576,9 +553,7 @@
       "moduleId": "MSD_Removal",
       "config": {
         "actionType": "ConfirmTask",
-        "requiredItems": [
-          "MSD_Lever"
-        ],
+        "requiredItems": [ "MSD_Lever" ],
         "targetObjName": "MSD_Lever",
         "targetZoneId": "MSD_Port_Zone",
         "targetValue": 0,
@@ -631,9 +606,7 @@
       "moduleId": "Connector_Cover_Removal",
       "config": {
         "actionType": "ConfirmTask",
-        "requiredItems": [
-          "ImpactWrench"
-        ],
+        "requiredItems": [ "ImpactWrench" ],
         "targetObjName": "Front_Cover_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
@@ -693,9 +666,7 @@
       "moduleId": "HV_Front_Voltage",
       "config": {
         "actionType": "MeasureVoltage",
-        "requiredItems": [
-          "Multimeter"
-        ],
+        "requiredItems": [ "Multimeter" ],
         "targetObjName": "HV_Front_Cable_Term",
         "targetZoneId": "Inverter_Check_Point",
         "targetValue": 0,
@@ -733,9 +704,7 @@
       "moduleId": "HV_Rear_Voltage",
       "config": {
         "actionType": "MeasureVoltage",
-        "requiredItems": [
-          "Multimeter"
-        ],
+        "requiredItems": [ "Multimeter" ],
         "targetObjName": "HV_Rear_Cable_Term",
         "targetZoneId": "Inverter_Check_Point",
         "targetValue": 0,
@@ -873,10 +842,7 @@
       "moduleId": "BatteryPack_Disassemble1",
       "config": {
         "actionType": "ConfirmTask",
-        "requiredItems": [
-          "ImpactWrench",
-          "BatteryJack"
-        ],
+        "requiredItems": [ "ImpactWrench", "BatteryJack" ],
         "targetObjName": "BatteryPack_Bolts1",
         "targetZoneId": "",
         "targetValue": 0,
@@ -925,10 +891,7 @@
       "moduleId": "BatteryPack_Disassemble2",
       "config": {
         "actionType": "ConfirmTask",
-        "requiredItems": [
-          "ImpactWrench",
-          "BatteryJack"
-        ],
+        "requiredItems": [ "ImpactWrench", "BatteryJack" ],
         "targetObjName": "BatteryPack_Bolts2",
         "targetZoneId": "",
         "targetValue": 0,
@@ -977,8 +940,12 @@
       "moduleId": "BatteryPack_Assemble1",
       "config": {
         "actionType": "ConfirmTask",
-        "targetObjName": "BatteryPack_Bolts3",
         "requiredItems": [ "ImpactWrench" ],
+        "targetObjName": "BatteryPack_Bolts3",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
         "extra": [
           {
             "key": "description",
@@ -991,8 +958,12 @@
       "moduleId": "BatteryPack_Assemble2",
       "config": {
         "actionType": "ConfirmTask",
-        "targetObjName": "BatteryPack_Bolts4",
         "requiredItems": [ "ImpactWrench" ],
+        "targetObjName": "BatteryPack_Bolts4",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
         "extra": [
           {
             "key": "description",
@@ -1005,9 +976,7 @@
       "moduleId": "Connector_Cover_Reinstall",
       "config": {
         "actionType": "ConfirmTask",
-        "requiredItems": [
-          "ImpactWrench"
-        ],
+        "requiredItems": [ "ImpactWrench" ],
         "targetObjName": "Front_Cover_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
@@ -1017,7 +986,7 @@
           {
             "key": "description",
             "ko": "커버 볼트 4개를 재결합하세요.",
-            "en": "Remove 4 cover bolts.",
+            "en": "Reinstall 4 cover bolts.",
             "vi": ""
           }
         ]
@@ -1117,7 +1086,7 @@
           {
             "key": "description",
             "ko": "접지 배선을 연결하세요.",
-            "en": "Remove ground wire.",
+            "en": "Reinstall ground wire.",
             "vi": ""
           }
         ]
@@ -1186,9 +1155,7 @@
       "moduleId": "FinalDiagnosis",
       "config": {
         "actionType": "ScanDTC",
-        "requiredItems": [
-          "GDS_Tablet"
-        ],
+        "requiredItems": [ "GDS_Tablet" ],
         "targetObjName": "OBD_Port",
         "targetZoneId": "OBD_Zone",
         "targetValue": 0,
