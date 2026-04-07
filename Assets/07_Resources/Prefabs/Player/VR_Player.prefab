@@ -2288,6 +2288,8 @@ GameObject:
   - component: {fileID: 2277022531678626424}
   - component: {fileID: 8805405710126855412}
   - component: {fileID: 7396033249236239170}
+  - component: {fileID: 7585746017981885791}
+  - component: {fileID: 5029106878335127790}
   m_Layer: 0
   m_Name: Helper Scripts
   m_TagString: Untagged
@@ -2350,6 +2352,41 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.15
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!135 &7585746017981885791
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 616535230833889300}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.15
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5029106878335127790
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 616535230833889300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1da379afe8fcde428379fc5af3f8ada, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TaskInteractionZone
+  zoneId: Player_Hand_Zone
+  startDisabled: 1
 --- !u!1 &628518522496878400
 GameObject:
   m_ObjectHideFlags: 0
@@ -17236,6 +17273,8 @@ GameObject:
   - component: {fileID: 8458673029070975049}
   - component: {fileID: 2212930443536650919}
   - component: {fileID: 4729758477863316290}
+  - component: {fileID: 1377984172773810348}
+  - component: {fileID: 8935337307098311057}
   m_Layer: 0
   m_Name: Helper Scripts
   m_TagString: Untagged
@@ -17298,6 +17337,41 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.15
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!135 &1377984172773810348
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5378934016258872726}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.15
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8935337307098311057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5378934016258872726}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1da379afe8fcde428379fc5af3f8ada, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TaskInteractionZone
+  zoneId: Player_Hand_Zone
+  startDisabled: 1
 --- !u!1 &5389028959159401326
 GameObject:
   m_ObjectHideFlags: 0
