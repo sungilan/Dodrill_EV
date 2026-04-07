@@ -1345,7 +1345,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 1.6537772, y: 0.12298709, z: 1.3497753}
   m_Center: {x: -0.21502106, y: -0.004454702, z: -0.028495438}
@@ -7019,7 +7019,6 @@ GameObject:
   - component: {fileID: 3276254541063462229}
   - component: {fileID: 1556849866007927215}
   - component: {fileID: 1976371557942444271}
-  - component: {fileID: 3090037890183600119}
   m_Layer: 15
   m_Name: SM_Ioniq_DoorRearRight
   m_TagString: Untagged
@@ -7262,7 +7261,7 @@ MonoBehaviour:
   instantGrab: 0
   useGentleGrab: 0
   maintainGrabOffset: 0
-  parentOnGrab: 1
+  parentOnGrab: 0
   heldNoFriction: 1
   ignoreWeight: 0
   allowHeldSwapping: 1
@@ -7387,30 +7386,7 @@ MonoBehaviour:
   openSound: Door_Open
   closeSound: Door_Close
   soundVolume: 1
-  sendScenarioSignal: 1
---- !u!114 &3090037890183600119
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4041088001774691493}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
-  currentState: 0
-  requiredBolts: []
-  snapDistance: 0.15
-  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
-  ghostMaterial: {fileID: 0}
-  bypassSafety: 0
-  isFreeMode: 1
-  _isInsideSnapZone: 0
-  detachSound: Part_Detach
-  assembleSound: Part_Assemble
-  soundVolume: 1
+  sendScenarioSignal: 0
 --- !u!1 &4055163917019189898
 GameObject:
   m_ObjectHideFlags: 0
@@ -9939,7 +9915,6 @@ GameObject:
   - component: {fileID: 5793757371766072068}
   - component: {fileID: 4950926265793055433}
   - component: {fileID: 7578225534519441422}
-  - component: {fileID: 8837320734985812324}
   m_Layer: 15
   m_Name: SM_Ioniq_DoorFrontRight
   m_TagString: Untagged
@@ -10182,7 +10157,7 @@ MonoBehaviour:
   instantGrab: 0
   useGentleGrab: 0
   maintainGrabOffset: 0
-  parentOnGrab: 1
+  parentOnGrab: 0
   heldNoFriction: 1
   ignoreWeight: 0
   allowHeldSwapping: 1
@@ -10307,30 +10282,7 @@ MonoBehaviour:
   openSound: Door_Open
   closeSound: Door_Close
   soundVolume: 1
-  sendScenarioSignal: 1
---- !u!114 &8837320734985812324
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5258153735513188166}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
-  currentState: 0
-  requiredBolts: []
-  snapDistance: 0.15
-  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
-  ghostMaterial: {fileID: 0}
-  bypassSafety: 0
-  isFreeMode: 1
-  _isInsideSnapZone: 0
-  detachSound: Part_Detach
-  assembleSound: Part_Assemble
-  soundVolume: 1
+  sendScenarioSignal: 0
 --- !u!1 &5393683406946012086
 GameObject:
   m_ObjectHideFlags: 0
@@ -10351,7 +10303,6 @@ GameObject:
   - component: {fileID: 7878410738750569944}
   - component: {fileID: 1856199035861742467}
   - component: {fileID: 8642843530027178398}
-  - component: {fileID: 8931473949554639975}
   m_Layer: 15
   m_Name: SM_Ioniq_DoorRearLeft
   m_TagString: Untagged
@@ -10594,7 +10545,7 @@ MonoBehaviour:
   instantGrab: 0
   useGentleGrab: 0
   maintainGrabOffset: 0
-  parentOnGrab: 1
+  parentOnGrab: 0
   heldNoFriction: 1
   ignoreWeight: 0
   allowHeldSwapping: 1
@@ -10719,30 +10670,7 @@ MonoBehaviour:
   openSound: Door_Open
   closeSound: Door_Close
   soundVolume: 1
-  sendScenarioSignal: 1
---- !u!114 &8931473949554639975
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5393683406946012086}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
-  currentState: 0
-  requiredBolts: []
-  snapDistance: 0.15
-  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
-  ghostMaterial: {fileID: 0}
-  bypassSafety: 0
-  isFreeMode: 1
-  _isInsideSnapZone: 0
-  detachSound: Part_Detach
-  assembleSound: Part_Assemble
-  soundVolume: 1
+  sendScenarioSignal: 0
 --- !u!1 &5419021566332493889
 GameObject:
   m_ObjectHideFlags: 0
@@ -14762,7 +14690,6 @@ GameObject:
   - component: {fileID: 8380765677347635515}
   - component: {fileID: 4597427120323481340}
   - component: {fileID: 6653012327922697239}
-  - component: {fileID: 2086091950409923571}
   m_Layer: 15
   m_Name: SM_Ioniq_Hood
   m_TagString: Untagged
@@ -14987,7 +14914,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6639488447421951678}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 822bc9090447b9c40833509c4a32e597, type: 3}
   m_Name: 
@@ -15004,7 +14931,7 @@ MonoBehaviour:
   instantGrab: 0
   useGentleGrab: 0
   maintainGrabOffset: 0
-  parentOnGrab: 1
+  parentOnGrab: 0
   heldNoFriction: 1
   ignoreWeight: 0
   allowHeldSwapping: 1
@@ -15054,7 +14981,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6639488447421951678}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 935aaf7da50abf94697c8d70a7a71efe, type: 3}
   m_Name: 
@@ -15129,30 +15056,7 @@ MonoBehaviour:
   openSound: Door_Open
   closeSound: Door_Close
   soundVolume: 1
-  sendScenarioSignal: 1
---- !u!114 &2086091950409923571
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6639488447421951678}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
-  currentState: 0
-  requiredBolts: []
-  snapDistance: 0.15
-  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
-  ghostMaterial: {fileID: 0}
-  bypassSafety: 0
-  isFreeMode: 1
-  _isInsideSnapZone: 0
-  detachSound: Part_Detach
-  assembleSound: Part_Assemble
-  soundVolume: 1
+  sendScenarioSignal: 0
 --- !u!1 &6649200336521488325
 GameObject:
   m_ObjectHideFlags: 0
@@ -16851,7 +16755,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8220047888542079911}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 935aaf7da50abf94697c8d70a7a71efe, type: 3}
   m_Name: 
@@ -17361,7 +17265,6 @@ GameObject:
   - component: {fileID: 4261090525005446526}
   - component: {fileID: 2159391827241013559}
   - component: {fileID: 5679631419689014850}
-  - component: {fileID: 8384865564183057904}
   m_Layer: 15
   m_Name: SM_Ioniq_DoorFrontLeft
   m_TagString: Untagged
@@ -17604,7 +17507,7 @@ MonoBehaviour:
   instantGrab: 0
   useGentleGrab: 0
   maintainGrabOffset: 0
-  parentOnGrab: 1
+  parentOnGrab: 0
   heldNoFriction: 1
   ignoreWeight: 0
   allowHeldSwapping: 1
@@ -17729,30 +17632,7 @@ MonoBehaviour:
   openSound: Door_Open
   closeSound: Door_Close
   soundVolume: 1
-  sendScenarioSignal: 1
---- !u!114 &8384865564183057904
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8528799366370232401}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c407e9729350fc64eb69b2f2197a58cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InteractablePart
-  currentState: 0
-  requiredBolts: []
-  snapDistance: 0.15
-  snapReadyColor: {r: 0, g: 1, b: 0, a: 1}
-  ghostMaterial: {fileID: 0}
-  bypassSafety: 0
-  isFreeMode: 1
-  _isInsideSnapZone: 0
-  detachSound: Part_Detach
-  assembleSound: Part_Assemble
-  soundVolume: 1
+  sendScenarioSignal: 0
 --- !u!1 &8591223173548653681
 GameObject:
   m_ObjectHideFlags: 0

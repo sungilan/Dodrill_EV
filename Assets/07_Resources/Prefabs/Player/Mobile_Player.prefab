@@ -171,6 +171,24 @@ MonoBehaviour:
   moveSmoothTime: 0.12
   verticalSmoothTime: 0.12
   moveJoyStick: {fileID: 0}
+  clickLayers:
+    serializedVersion: 2
+    m_Bits: 32768
+  raycastMaxDistance: 20
+  dropKey: 103
+  useKey: 101
+  hoverGuideText: {fileID: 0}
+  hoverGuidePanel: {fileID: 0}
+  worldLabelPrefab: {fileID: 7790255784495684290, guid: 275df976be14ea54ebbf6e4e671943f2, type: 3}
+  labelHeightOffset: 0.3
+  clickSound: UI_Click
+  grabSound: Item_Grab
+  dropSound: Item_Drop
+  useSound: Item_Use
+  outlineHoverColor: {r: 0.3, g: 0.85, b: 1, a: 1}
+  outlineWidth: 4
+  showDebugLog: 1
+  showDebugRay: 1
   isInteracting: 0
 --- !u!54 &416602216742204258
 Rigidbody:
@@ -222,6 +240,7 @@ MonoBehaviour:
   rotationThreshold: 0.5
   teleportDistanceThreshold: 2
   sendAuthorityInServer: 1
+  ownerSendOnly: 0
 --- !u!1 &314091367877228519
 GameObject:
   m_ObjectHideFlags: 0

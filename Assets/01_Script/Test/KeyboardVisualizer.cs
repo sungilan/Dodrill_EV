@@ -4,54 +4,49 @@ using DG.Tweening;
 
 public class KeyboardVisualizer : MonoBehaviour
 {
-    [Header("Key Images")]
-    public Image keyW;
-    public Image keyA;
-    public Image keyS;
-    public Image keyD;
-    public Image keyG;
-    public Image keyF;
-    public Image leftMouseBtn;
-    public Image rightMouseBtn;
+    [System.Serializable]
+    public struct KeyVisualData
+    {
+        public KeyCode code;
+        public Image targetImage;
+        public Sprite onSprite;  // 눌렸을 때 이미지
+        public Sprite offSprite; // 뗐을 때 이미지
+    }
 
-    [Header("Settings")]
-    public Color normalColor = Color.white;
-    public Color activeColor = new Color(1f, 0.5f, 0f); // 주황색
+    [Header("Key Settings")]
+    public KeyVisualData[] keys; // 인스펙터에서 리스트로 관리하면 훨씬 편합니다.
+
+    [Header("Animation Settings")]
     public float duration = 0.1f;
+    public float pressedScale = 1.1f;
 
     void Update()
     {
-        // 키보드 입력
-        HandleInput(KeyCode.W, keyW);
-        HandleInput(KeyCode.A, keyA);
-        HandleInput(KeyCode.S, keyS);
-        HandleInput(KeyCode.D, keyD);
-        HandleInput(KeyCode.G, keyG);
-        HandleInput(KeyCode.F, keyF);
-
-        // 마우스 입력 (KeyCode를 활용한 방식)
-        HandleInput(KeyCode.Mouse0, leftMouseBtn);  // 마우스 왼쪽 (0)
-        HandleInput(KeyCode.Mouse1, rightMouseBtn); // 마우스 오른쪽 (1)
+        foreach(var keyData in keys)
+        {
+            HandleInput(keyData);
+        }
     }
 
-    // 메서드 이름을 범용적으로 HandleInput으로 변경했습니다.
-    void HandleInput(KeyCode code, Image targetImage)
+    void HandleInput(KeyVisualData data)
     {
-        if(targetImage == null) return;
+        if(data.targetImage == null) return;
 
-        if(Input.GetKeyDown(code))
+        if(Input.GetKeyDown(data.code))
         {
-            // 눌렀을 때: 주황색 + 스케일 업
-            targetImage.DOKill();
-            targetImage.DOColor(activeColor, duration);
-            targetImage.transform.DOScale(1.1f, duration).SetEase(Ease.OutQuad);
+            // 눌렀을 때: On 이미지로 교체 + 스케일 업
+            data.targetImage.DOKill();
+            if(data.onSprite != null) data.targetImage.sprite = data.onSprite;
+
+            data.targetImage.transform.DOScale(pressedScale, duration).SetEase(Ease.OutQuad);
         }
-        else if(Input.GetKeyUp(code))
+        else if(Input.GetKeyUp(data.code))
         {
-            // 뗐을 때: 원래 색 + 스케일 복구
-            targetImage.DOKill();
-            targetImage.DOColor(normalColor, duration);
-            targetImage.transform.DOScale(1.0f, duration).SetEase(Ease.OutQuad);
+            // 뗐을 때: Off 이미지로 교체 + 스케일 복구
+            data.targetImage.DOKill();
+            if(data.offSprite != null) data.targetImage.sprite = data.offSprite;
+
+            data.targetImage.transform.DOScale(1.0f, duration).SetEase(Ease.OutQuad);
         }
     }
 }

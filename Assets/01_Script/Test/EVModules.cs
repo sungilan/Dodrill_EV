@@ -165,6 +165,11 @@ public class BatteryPack_Assemble2Module : ConfirmTaskModule
     public override string ModuleId => "BatteryPack_Assemble2";
 }
 
+public class Connector_Cover_ReInstalModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Connector_Cover_Reinstall";
+}
+
 // ──────────────────────────────────────────────────────────────
 //  Task[10] MSD_Reinstall
 //  MSD_Lever 를 MSD_Port_Zone 에 꽂으면 완료
@@ -209,6 +214,7 @@ public static class EVModules
         registry.Register(new Gasket_ReplaceModule());
         registry.Register(new BatteryPack_Assemble1Module());
         registry.Register(new BatteryPack_Assemble2Module());
+        registry.Register(new Connector_Cover_ReInstalModule());
         registry.Register(new MSD_ReinstallModule());
         registry.Register(new FinalDiagnosisModule());
 

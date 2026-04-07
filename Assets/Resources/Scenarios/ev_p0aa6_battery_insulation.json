@@ -282,18 +282,6 @@
         "spawnObjects": []
       },
       {
-        "moduleId": "Voltage_Verification",
-        "timeout": 180,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "Multimeter",
-            "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_HV_Cable_Term"
-          }
-        ]
-      },
-      {
         "moduleId": "BatteryPack_Disassemble1",
         "timeout": 600,
         "completionMode": "AnyPlayer",
@@ -324,47 +312,6 @@
             "prefabId": "BatteryJack",
             "spawnPointId": "SP_Lift_Floor",
             "guideId": "Guide_BatteryJack"
-          }
-        ]
-      },
-      {
-        "moduleId": "Insulation_Measure",
-        "timeout": 300,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "MultimeterKit",
-            "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_Battery_Case"
-          }
-        ]
-      },
-      {
-        "moduleId": "Contamination_Clean",
-        "timeout": 180,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "AirGun",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Busbar_A1"
-          }
-        ]
-      },
-      {
-        "moduleId": "Gasket_Replace",
-        "timeout": 300,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "SealGasket_New",
-            "spawnPointId": "SP_Parts_Tray",
-            "guideId": "Guide_Seal_Gasket"
-          },
-          {
-            "prefabId": "TorqueWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": ""
           }
         ]
       },
@@ -695,7 +642,7 @@
         "extra": [
           {
             "key": "description",
-            "ko": "커버 볼트 4개를 클릭하여 제거하세요.",
+            "ko": "커버 볼트 4개를 임팩트렌치를 이용하여 제거하세요.",
             "en": "Remove 4 cover bolts.",
             "vi": ""
           }
@@ -923,46 +870,6 @@
       }
     },
     {
-      "moduleId": "Voltage_Verification",
-      "config": {
-        "actionType": "MeasureVoltage",
-        "requiredItems": [
-          "Multimeter"
-        ],
-        "targetObjName": "HV_Cable_Term",
-        "targetZoneId": "Inverter_Check_Point",
-        "targetValue": 0,
-        "toleranceRatio": 0.05,
-        "requiresSafetyCheck": false,
-        "extra": [
-          {
-            "key": "snapDelay",
-            "ko": "2.5"
-          },
-          {
-            "key": "description",
-            "ko": "인버터 고압 케이블 단자에서 잔류 전압이 0V인지 측정합니다.",
-            "en": "Measure residual voltage at HV cable terminal — must be 0V."
-          },
-          {
-            "key": "expectedValue",
-            "ko": "0",
-            "en": "0"
-          },
-          {
-            "key": "unit",
-            "ko": "V",
-            "en": "V"
-          },
-          {
-            "key": "failWarning",
-            "ko": "전압이 남아있습니다! 추가 방전 후 재측정하세요.",
-            "en": "Voltage remains! Discharge further and re-measure."
-          }
-        ]
-      }
-    },
-    {
       "moduleId": "BatteryPack_Disassemble1",
       "config": {
         "actionType": "ConfirmTask",
@@ -1062,105 +969,6 @@
             "key": "step4",
             "ko": "배터리 잭으로 팩을 서서히 하강",
             "en": "Slowly lower pack using battery jack"
-          }
-        ]
-      }
-    },
-    {
-      "moduleId": "Insulation_Measure",
-      "config": {
-        "actionType": "MeasureResistance",
-        "requiredItems": [
-          "MultimeterKit"
-        ],
-        "targetObjName": "Battery_Case",
-        "targetZoneId": "",
-        "targetValue": 10000000,
-        "toleranceRatio": 0.5,
-        "requiresSafetyCheck": true,
-        "extra": [
-          {
-            "key": "description",
-            "ko": "배터리 케이스와 단자 간 절연 저항을 측정하세요. 10MΩ 이상이면 정상입니다.",
-            "en": "Measure insulation resistance between case and terminals. ≥10MΩ = normal."
-          },
-          {
-            "key": "expectedValue",
-            "ko": "10000000",
-            "en": "10000000"
-          },
-          {
-            "key": "unit",
-            "ko": "Ω",
-            "en": "Ω"
-          },
-          {
-            "key": "meterMode",
-            "ko": "MΩ (절연 저항 모드)",
-            "en": "MΩ (Insulation resistance mode)"
-          },
-          {
-            "key": "failCondition",
-            "ko": "10MΩ 미만 → 절연 파괴 확정 → 다음 단계 진행",
-            "en": "< 10MΩ → Insulation failure confirmed → proceed to next step"
-          }
-        ]
-      }
-    },
-    {
-      "moduleId": "Contamination_Clean",
-      "config": {
-        "actionType": "Lubricate",
-        "requiredItems": [
-          "AirGun"
-        ],
-        "targetObjName": "Busbar_A1",
-        "targetZoneId": "",
-        "targetValue": 100,
-        "toleranceRatio": 0,
-        "requiresSafetyCheck": true,
-        "extra": [
-          {
-            "key": "description",
-            "ko": "오염된 버스바 하단 부위에 에어건으로 이물질을 완전히 제거하세요.",
-            "en": "Use air gun to completely remove contaminants from busbar area."
-          },
-          {
-            "key": "toolNote",
-            "ko": "에어건 압력: 0.3~0.5 MPa",
-            "en": "Air gun pressure: 0.3~0.5 MPa"
-          }
-        ]
-      }
-    },
-    {
-      "moduleId": "Gasket_Replace",
-      "config": {
-        "actionType": "Swap",
-        "requiredItems": [
-          "SealGasket_New",
-          "TorqueWrench"
-        ],
-        "targetObjName": "Seal_Gasket",
-        "targetZoneId": "Battery_Top_Zone",
-        "targetValue": 0,
-        "toleranceRatio": 0,
-        "requiresSafetyCheck": true,
-        "extra": [
-          {
-            "key": "description",
-            "ko": "수분 유입 방지용 실링 가스켓을 신품으로 교체하세요.",
-            "en": "Replace the sealing gasket with a new one to prevent moisture ingress."
-          },
-          {
-            "key": "step1",
-            "ko": "구형 가스켓 완전 제거 및 면 청소",
-            "en": "Remove old gasket completely and clean mating surface"
-          },
-          {
-            "key": "step2",
-            "ko": "신품 가스켓 장착",
-            "en": "Install new gasket"
           }
         ]
       }

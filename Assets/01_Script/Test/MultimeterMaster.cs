@@ -124,7 +124,7 @@ public class MultimeterMaster : MonoBehaviour
 
         // InteractionEvents에 측정값(baseValue)을 함께 보낼 수 있는 함수가 있다면 사용
         // 만약 FireZoneActivated만 있다면, 내부적으로 해당 값을 체크하는 로직이 필요함
-        //InteractionEvents.FireZoneActivated(primaryTarget, gameObject.name);  // 기존 유지
+        InteractionEvents.FireZoneActivated(primaryTarget, gameObject.name);  // 기존 유지
         InteractionEvents.FireValueMeasured(primaryTarget, baseValue);
 
         Debug.Log($"[Multimeter] {red}↔{black} | 모드:{currentMode} | 값:{baseValue}");

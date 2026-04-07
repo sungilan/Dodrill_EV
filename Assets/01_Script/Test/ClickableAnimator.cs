@@ -284,13 +284,14 @@
 //    }
 //}
 
-using UnityEngine;
+using Autohand;
 using FishNet;
 using FishNet.Broadcast;
-using FishNet.Transporting;
 using FishNet.Connection;
+using FishNet.Transporting;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 // ============================================================
 //  ClickableAnimator.cs
@@ -390,24 +391,89 @@ public class ClickableAnimator : MonoBehaviour
 
     private Animator _animator;
     private Coroutine _autoCloseCoroutine;
+    private Grabbable _grabbable;
 
     private void Awake()
     {
         _animator = GetComponent<Animator>();
+        _grabbable = GetComponent<Grabbable>();
     }
 
     private void Start()
     {
         ClickableAnimatorManager.Register(uniqueId, this);
+
+        if(GameScenePlatformManager.IsVR)
+        {
+            // VR 플랫폼인 경우: Auto Hand의 Grab 이벤트에 연결
+            if(_grabbable != null)
+            {
+                _grabbable.onGrab.AddListener(OnVRGrab);
+            }
+        }
     }
 
     private void OnDestroy()
     {
         ClickableAnimatorManager.Unregister(uniqueId);
+
+        if(_grabbable != null)
+        {
+            _grabbable.onGrab.RemoveListener(OnVRGrab);
+        }
     }
 
     /// <summary>FreeLookController 등에서 레이캐스트 클릭 시 호출</summary>
     public void OnPCClick() => RequestSetState(!_isOpen);
+
+    private void OnVRGrab(Hand hand, Grabbable grabbable)
+    {
+        //if(hand == null) return;
+
+        //// ★ 핵심: 즉시 손에서 오브젝트 분리
+        //hand.Release();
+
+        //// 상태 변경
+        //RequestSetState(!_isOpen);
+
+        //// 물리 안정화를 위해 한 프레임 대기
+        //StartCoroutine(StabilizeAfterRelease());
+    }
+
+    private IEnumerator StabilizeAfterRelease()
+    {
+        yield return null;
+        // 필요시 Rigidbody 안정화
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if(!GameScenePlatformManager.IsVR) return;
+
+        // 1. Hand 컴포넌트 찾기
+        Hand hand = other.GetComponentInParent<Hand>();
+        if(hand == null)
+            hand = other.GetComponent<Hand>();
+
+        if(hand == null) return;
+
+        // 2. Hand의 활성 상태 확인
+        if(!hand.gameObject.activeInHierarchy) return;
+
+        // 3. 간단하게: Hand가 이 오브젝트에 닿아있으면 반응
+        // (정확한 그랩 제스처 대신 단순히 접촉으로 활성화)
+        Debug.Log($"[VR] Hand proximity: {other.name}");
+
+        // 원한다면 시간 제한을 두어 연속 활성화 방지
+        if(!_lastVRInteractionTime.HasValue ||
+           Time.time - _lastVRInteractionTime.Value > 1f)
+        {
+            RequestSetState(!_isOpen);
+            _lastVRInteractionTime = Time.time;
+        }
+    }
+
+    private float? _lastVRInteractionTime = null;
 
     public void RequestSetState(bool open)
     {

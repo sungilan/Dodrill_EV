@@ -69,7 +69,7 @@ public class GuideSystem : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if(Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
     }
 
@@ -77,12 +77,15 @@ public class GuideSystem : MonoBehaviour
     {
         ScenarioStateReceiver.OnTaskStateUpdated += OnTaskUpdated;
         ScenarioStateReceiver.OnSnapshotReceived += OnSnapshotReceived;
+        // 시나리오 최초 수신 시 데이터 확보
+        ScenarioReceiver.OnScenarioReceived += OnScenarioReceived;
     }
 
     private void OnDisable()
     {
         ScenarioStateReceiver.OnTaskStateUpdated -= OnTaskUpdated;
         ScenarioStateReceiver.OnSnapshotReceived -= OnSnapshotReceived;
+        ScenarioReceiver.OnScenarioReceived -= OnScenarioReceived;
     }
 
     private void Start()
@@ -93,11 +96,11 @@ public class GuideSystem : MonoBehaviour
 
     private void Update()
     {
-        if (currentLevel == GuideLevel.Hard) return;
-        if (_ghostObject == null && _requiredItemObjects.Count == 0) return;
-        if (guidePanel == null || !guidePanel.activeSelf) return;
+        if(currentLevel == GuideLevel.Hard) return;
+        if(_ghostObject == null && _requiredItemObjects.Count == 0) return;
+        if(guidePanel == null || !guidePanel.activeSelf) return;
         _idleTimer += Time.deltaTime;
-        if (_idleTimer >= nudgeIdleTime) { _idleTimer = 0f; TriggerNudge(); }
+        if(_idleTimer >= nudgeIdleTime) { _idleTimer = 0f; TriggerNudge(); }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -108,8 +111,19 @@ public class GuideSystem : MonoBehaviour
     {
         _currentTask = broadcast.currentTask;
         _totalTasks = broadcast.totalTaskCount;
-        if (_currentTask.status == TaskStatus.Running) ShowGuideForCurrentTask();
-        else if (_currentTask.status == TaskStatus.Completed) OnTaskCompleted();
+
+        if(_currentTask.status == TaskStatus.Running)
+        {
+            if(_scenarioData == null)
+            {
+
+            }
+            ShowGuideForCurrentTask();
+        }
+        else if(_currentTask.status == TaskStatus.Completed)
+        {
+            OnTaskCompleted();
+        }
     }
 
     private void OnSnapshotReceived(ScenarioSnapshotBroadcast broadcast)
@@ -117,7 +131,17 @@ public class GuideSystem : MonoBehaviour
         _scenarioData = broadcast.scenarioData;
         _currentTask = broadcast.currentTask;
         _totalTasks = broadcast.totalTaskCount;
-        if (_currentTask.status == TaskStatus.Running) ShowGuideForCurrentTask();
+        if(_currentTask.status == TaskStatus.Running) ShowGuideForCurrentTask();
+    }
+
+    // ScenarioReceiver.OnScenarioReceived — 시나리오 최초 로드 시 데이터 확보
+    private void OnScenarioReceived(ScenarioData data)
+    {
+        _scenarioData = data;
+        Debug.Log($"[GuideSystem] ScenarioData 수신: {data?.scenarioId}");
+        // TaskStateBroadcast가 이미 도착해서 ShowGuide를 대기 중이었으면 재시도
+        if(_currentTask.status == TaskStatus.Running)
+            ShowGuideForCurrentTask();
     }
 
     // ═══════════════════════════════════════════════════════
@@ -126,10 +150,10 @@ public class GuideSystem : MonoBehaviour
 
     private void ShowGuideForCurrentTask()
     {
-        if (_scenarioData == null) return;
+        if(_scenarioData == null) return;
         int idx = _currentTask.taskIndex;
         var tasks = _scenarioData.scenario?.tasks;
-        if (tasks == null || idx >= tasks.Count) return;
+        if(tasks == null || idx >= tasks.Count) return;
 
         var taskDef = tasks[idx];
         var config = _scenarioData.GetModuleConfig(taskDef.moduleId);
@@ -140,13 +164,13 @@ public class GuideSystem : MonoBehaviour
         _requiredItemObjects = FindRequiredItems(config);
         _idleTimer = 0f;
 
-        if (currentLevel != GuideLevel.Hard)
+        if(currentLevel != GuideLevel.Hard)
         {
             // requiredItems 아웃라인
-            foreach (var item in _requiredItemObjects) SetOutline(item, true);
+            foreach(var item in _requiredItemObjects) SetOutline(item, true);
             // targetObjName / targetZoneId GO (ClickableAnimator 등) 아웃라인
             _clickTargets = FindClickTargets(config);
-            foreach (var t in _clickTargets) SetOutline(t, true);
+            foreach(var t in _clickTargets) SetOutline(t, true);
             BuildSpawnGuides(taskDef);
             SpeakGuide(config);
         }
@@ -161,16 +185,16 @@ public class GuideSystem : MonoBehaviour
 
     private void BuildSpawnGuides(TaskDef taskDef)
     {
-        if (taskDef.spawnObjects == null) return;
+        if(taskDef.spawnObjects == null) return;
 
         var allSP = Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         var spCache = new Dictionary<string, SpawnPoint>();
-        foreach (var sp in allSP)
-            if (!string.IsNullOrEmpty(sp.pointId)) spCache[sp.pointId] = sp;
+        foreach(var sp in allSP)
+            if(!string.IsNullOrEmpty(sp.pointId)) spCache[sp.pointId] = sp;
 
-        foreach (var bundle in taskDef.spawnObjects)
+        foreach(var bundle in taskDef.spawnObjects)
         {
-            if (string.IsNullOrEmpty(bundle.prefabId)) continue;
+            if(string.IsNullOrEmpty(bundle.prefabId)) continue;
 
             // ── 진입 로그 ──────────────────────────────────────
             Debug.Log($"[Guide] 번들 처리: prefabId={bundle.prefabId} " +
@@ -179,16 +203,16 @@ public class GuideSystem : MonoBehaviour
                       $"showGuide={bundle.showGuide}");
 
             // showGuide = false면 가이드 생성 스킵
-            if (!bundle.showGuide)
+            if(!bundle.showGuide)
             {
                 Debug.Log($"[Guide] {bundle.prefabId} → showGuide=false, 스킵");
                 continue;
             }
 
             // ① 스폰포인트 마커 (하늘색)
-            if (!string.IsNullOrEmpty(bundle.spawnPointId))
+            if(!string.IsNullOrEmpty(bundle.spawnPointId))
             {
-                if (spCache.TryGetValue(bundle.spawnPointId, out var spPt))
+                if(spCache.TryGetValue(bundle.spawnPointId, out var spPt))
                 {
                     var itemGO = FindSpawnedItem(bundle.prefabId);
                     Vector3 pos = itemGO != null
@@ -197,7 +221,7 @@ public class GuideSystem : MonoBehaviour
                     Debug.Log($"[Guide] 스폰마커 생성: {bundle.prefabId} @ {pos} (item={itemGO?.name ?? "null"})");
                     string label = GetDisplayName(bundle.prefabId);
                     var markerGO = SpawnMarker(pos, label, spawnGuideColor, isTarget: false);
-                    if (markerGO != null)
+                    if(markerGO != null)
                         _spawnMarkers[bundle.prefabId] = markerGO.gameObject;
                 }
                 else
@@ -208,23 +232,23 @@ public class GuideSystem : MonoBehaviour
 
             // ② 타겟 존 마커 (황금색) + 고스트
             Debug.Log($"[Guide] GuideId 체크: '{bundle.guideId}' (비어있음={string.IsNullOrEmpty(bundle.guideId)})");
-            if (!string.IsNullOrEmpty(bundle.guideId))
+            if(!string.IsNullOrEmpty(bundle.guideId))
             {
                 var targetGO = GameObject.Find(bundle.guideId);
                 Debug.Log($"[Guide] targetGO 탐색: '{bundle.guideId}' → {(targetGO != null ? targetGO.name : "null — 씬에 없음")}");
 
-                if (targetGO != null)
+                if(targetGO != null)
                 {
                     string label = $"{GetDisplayName(bundle.prefabId)}을(를) 여기로 이동하세요";
                     var marker = SpawnMarker(targetGO.transform.position, label,
                                               targetGuideColor, isTarget: true);
-                    if (marker != null) _targetMarker = marker;
+                    if(marker != null) _targetMarker = marker;
 
                     var itemGO = FindSpawnedItem(bundle.prefabId);
                     Debug.Log($"[Guide] 고스트용 아이템: '{bundle.prefabId}' → {(itemGO != null ? itemGO.name : "null")} / ghostMat={(ghostMaterial != null ? "있음" : "없음")}");
-                    if (itemGO != null && ghostMaterial != null)
+                    if(itemGO != null && ghostMaterial != null)
                         _ghostObject = SpawnGhost(itemGO, targetGO.transform.position);
-                    else if (ghostMaterial == null)
+                    else if(ghostMaterial == null)
                         Debug.LogWarning("[Guide] ghostMaterial 미설정 — Inspector에서 연결 필요");
                     else
                         Debug.LogWarning($"[Guide] 아이템 '{bundle.prefabId}' 씬에서 못 찾음 (스폰 전일 수 있음)");
@@ -243,7 +267,7 @@ public class GuideSystem : MonoBehaviour
     private GuideMarker SpawnMarker(Vector3 worldPos, string description,
                                     Color color, bool isTarget)
     {
-        if (guidePrefab == null)
+        if(guidePrefab == null)
         {
             // 폴백
             var fallback = CreateFallbackMarker(worldPos, description, color);
@@ -253,7 +277,7 @@ public class GuideSystem : MonoBehaviour
 
         var go = Instantiate(guidePrefab, worldPos, Quaternion.identity);
         var marker = go.GetComponent<GuideMarker>();
-        if (marker == null)
+        if(marker == null)
         {
             Debug.LogWarning("[Guide] guidePrefab에 GuideMarker 컴포넌트 없음");
             Destroy(go);
@@ -288,9 +312,9 @@ public class GuideSystem : MonoBehaviour
     /// </summary>
     public void OnItemGrabbed(string prefabId)
     {
-        if (_spawnMarkers.TryGetValue(prefabId, out var markerGO))
+        if(_spawnMarkers.TryGetValue(prefabId, out var markerGO))
         {
-            if (markerGO != null)
+            if(markerGO != null)
             {
                 _tempGuides.Remove(markerGO);
                 Destroy(markerGO);
@@ -307,19 +331,19 @@ public class GuideSystem : MonoBehaviour
     {
         var ghost = Instantiate(sourceItem, ghostPos, sourceItem.transform.rotation);
         ghost.name = "Ghost_" + sourceItem.name;
-        foreach (var col in ghost.GetComponentsInChildren<Collider>()) Destroy(col);
-        foreach (var rb in ghost.GetComponentsInChildren<Rigidbody>()) Destroy(rb);
-        foreach (var mono in ghost.GetComponentsInChildren<MonoBehaviour>()) Destroy(mono);
-        foreach (var r in ghost.GetComponentsInChildren<Renderer>())
+        foreach(var col in ghost.GetComponentsInChildren<Collider>()) Destroy(col);
+        foreach(var rb in ghost.GetComponentsInChildren<Rigidbody>()) Destroy(rb);
+        foreach(var mono in ghost.GetComponentsInChildren<MonoBehaviour>()) Destroy(mono);
+        foreach(var r in ghost.GetComponentsInChildren<Renderer>())
         {
             var mats = new Material[r.sharedMaterials.Length];
-            for (int i = 0; i < mats.Length; i++) mats[i] = ghostMaterial;
+            for(int i = 0; i < mats.Length; i++) mats[i] = ghostMaterial;
             r.materials = mats;
         }
         _tempGuides.Add(ghost);
 
         ghost.transform.DOLocalMoveY(0.05f, 1.5f).SetLoops(-1, LoopType.Yoyo).SetRelative();
-        foreach (var r in ghost.GetComponentsInChildren<Renderer>())
+        foreach(var r in ghost.GetComponentsInChildren<Renderer>())
             r.material.DOFade(0.3f, 1.2f).SetLoops(-1, LoopType.Yoyo);
 
         return ghost;
@@ -331,13 +355,13 @@ public class GuideSystem : MonoBehaviour
 
     private void TriggerNudge()
     {
-        if (_ghostObject != null)
+        if(_ghostObject != null)
             _ghostObject.transform.DOShakePosition(1.5f, 0.06f, 12, 90f, false, true);
         _targetMarker?.Nudge();
-        if (currentLevel == GuideLevel.Easy)
+        if(currentLevel == GuideLevel.Easy)
         {
             var config = GetCurrentConfig();
-            if (config != null) SpeakGuide(config);
+            if(config != null) SpeakGuide(config);
         }
     }
 
@@ -347,19 +371,19 @@ public class GuideSystem : MonoBehaviour
 
     public void ShowHint()
     {
-        if (_hintCoroutine != null) StopCoroutine(_hintCoroutine);
+        if(_hintCoroutine != null) StopCoroutine(_hintCoroutine);
         _hintCoroutine = StartCoroutine(ShowHintRoutine());
     }
 
     private IEnumerator ShowHintRoutine()
     {
-        foreach (var item in _requiredItemObjects) SetOutline(item, true);
+        foreach(var item in _requiredItemObjects) SetOutline(item, true);
         string msg = _requiredItemObjects.Count > 0
             ? $"{_requiredItemObjects[0].name}을(를) 목표 위치로 가져가세요."
             : "목표 위치를 확인하세요.";
         TTSManager.Instance?.Speak(msg);
         yield return new WaitForSeconds(hintDuration);
-        foreach (var item in _requiredItemObjects) SetOutline(item, false);
+        foreach(var item in _requiredItemObjects) SetOutline(item, false);
     }
 
     // ═══════════════════════════════════════════════════════
@@ -370,7 +394,7 @@ public class GuideSystem : MonoBehaviour
     {
         ClearVisualGuides();
         TTSManager.Instance?.Stop();
-        if (currentLevel != GuideLevel.Hard)
+        if(currentLevel != GuideLevel.Hard)
             TTSManager.Instance?.Speak("잘 하셨습니다! 다음 단계로 넘어갑니다.");
     }
 
@@ -390,13 +414,13 @@ public class GuideSystem : MonoBehaviour
     // 내부 유틸
     // ═══════════════════════════════════════════════════════
 
-     private void RefreshUI(int taskIdx, string moduleId, ModuleConfig config)
+    private void RefreshUI(int taskIdx, string moduleId, ModuleConfig config)
     {
-        if (taskIndexText) taskIndexText.text = $"{taskIdx + 1} / {_totalTasks}";
-        if (titleText) titleText.text = GetExtraValue(config, "title", moduleId);
+        if(taskIndexText) taskIndexText.text = $"{taskIdx + 1} / {_totalTasks}";
+        if(titleText) titleText.text = GetExtraValue(config, "title", moduleId);
         string desc = GetExtraValue(config, "description", "다음 작업을 수행하세요.");
         string guide = GetExtraValue(config, "guideText", "");
-        if (instructionText)
+        if(instructionText)
             instructionText.text = (currentLevel == GuideLevel.Easy && !string.IsNullOrEmpty(guide))
                 ? desc + "\n\n<size=85%><color=#AAFFAA>" + guide + "</color></size>"
                 : desc;
@@ -405,17 +429,17 @@ public class GuideSystem : MonoBehaviour
     private void SpeakGuide(ModuleConfig config)
     {
         string text = GetExtraValue(config, "description", "");
-        if (!string.IsNullOrEmpty(text)) TTSManager.Instance?.Speak(text);
+        if(!string.IsNullOrEmpty(text)) TTSManager.Instance?.Speak(text);
     }
 
     private void ClearVisualGuides()
     {
-        foreach (var g in _tempGuides) if (g) Destroy(g);
+        foreach(var g in _tempGuides) if(g) Destroy(g);
         _tempGuides.Clear();
         _spawnMarkers.Clear();
-        foreach (var item in _requiredItemObjects) SetOutline(item, false);
+        foreach(var item in _requiredItemObjects) SetOutline(item, false);
         _requiredItemObjects.Clear();
-        foreach (var t in _clickTargets) SetOutline(t, false);
+        foreach(var t in _clickTargets) SetOutline(t, false);
         _clickTargets.Clear();
         _ghostObject = null;
         _targetMarker = null;
@@ -424,20 +448,20 @@ public class GuideSystem : MonoBehaviour
 
     private void SetOutline(GameObject target, bool on)
     {
-        if (target == null) return;
+        if(target == null) return;
 
         // 모든 자식 렌더러를 찾음
         var renderers = target.GetComponentsInChildren<Renderer>(true);
 
-        foreach (var r in renderers)
+        foreach(var r in renderers)
         {
             // 이미 Outline 컴포넌트가 있는지 확인
             var o = r.gameObject.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
 
-            if (on)
+            if(on)
             {
                 // 없으면 새로 추가
-                if (o == null)
+                if(o == null)
                     o = r.gameObject.AddComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
 
                 // 프로퍼티 설정 및 강제 활성화
@@ -448,12 +472,12 @@ public class GuideSystem : MonoBehaviour
                 o.needsUpdate = true; // 셰이더 업데이트 플래그 (중요)
 
                 // 가끔 Renderer가 꺼져있어서 안 보일 수 있음
-                if (!r.enabled) r.enabled = true;
+                if(!r.enabled) r.enabled = true;
             }
             else
             {
                 // 끌 때는 컴포넌트 비활성화
-                if (o != null) o.enabled = false;
+                if(o != null) o.enabled = false;
             }
         }
     }
@@ -462,14 +486,14 @@ public class GuideSystem : MonoBehaviour
     {
         var go = new GameObject("Label");
         go.transform.position = worldPos;
-        if (parent != null) go.transform.SetParent(parent, true);
+        if(parent != null) go.transform.SetParent(parent, true);
         var tm = go.AddComponent<TextMesh>();
         tm.text = text; tm.fontSize = 28; tm.color = color;
         tm.anchor = TextAnchor.MiddleCenter;
         tm.alignment = TextAlignment.Center;
         tm.characterSize = 0.05f;
         go.AddComponent<GuideLabelBillboard>();
-        if (parent == null) _tempGuides.Add(go);
+        if(parent == null) _tempGuides.Add(go);
     }
 
     private GameObject CreateDefaultArrow(Vector3 pos, Color color)
@@ -497,9 +521,9 @@ public class GuideSystem : MonoBehaviour
     private Vector3 GetBoundsCenter(GameObject go)
     {
         var renderers = go.GetComponentsInChildren<Renderer>();
-        if (renderers == null || renderers.Length == 0) return go.transform.position;
+        if(renderers == null || renderers.Length == 0) return go.transform.position;
         var bounds = renderers[0].bounds;
-        for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+        for(int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
         return bounds.center;
     }
 
@@ -510,12 +534,12 @@ public class GuideSystem : MonoBehaviour
     private List<GameObject> FindClickTargets(ModuleConfig config)
     {
         var result = new List<GameObject>();
-        if (config == null) return result;
+        if(config == null) return result;
 
-        if (!string.IsNullOrEmpty(config.targetObjName))
+        if(!string.IsNullOrEmpty(config.targetObjName))
         {
             var go = FindByNameOrClickableId(config.targetObjName);
-            if (go != null)
+            if(go != null)
             {
                 Debug.Log($"[Guide] targetObjName 찾음: {go.name}"); // ★ 로그 확인
                 result.Add(go);
@@ -535,13 +559,13 @@ public class GuideSystem : MonoBehaviour
     {
         // 1. 이름 직접 탐색
         var go = GameObject.Find(id);
-        if (go != null) return go;
+        if(go != null) return go;
 
         // 2. ClickableAnimator.uniqueId로 탐색
-        foreach (var ca in Object.FindObjectsByType<ClickableAnimator>(
+        foreach(var ca in Object.FindObjectsByType<ClickableAnimator>(
             FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
-            if (ca.uniqueId == id) return ca.gameObject;
+            if(ca.uniqueId == id) return ca.gameObject;
         }
 
         return null;
@@ -550,12 +574,12 @@ public class GuideSystem : MonoBehaviour
     private List<GameObject> FindRequiredItems(ModuleConfig config)
     {
         var result = new List<GameObject>();
-        if (config?.requiredItems == null) return result;
-        foreach (var id in config.requiredItems)
+        if(config?.requiredItems == null) return result;
+        foreach(var id in config.requiredItems)
         {
-            if (string.IsNullOrEmpty(id)) continue;
+            if(string.IsNullOrEmpty(id)) continue;
             var go = FindSpawnedItem(id);
-            if (go != null) result.Add(go);
+            if(go != null) result.Add(go);
         }
         return result;
     }
@@ -563,27 +587,27 @@ public class GuideSystem : MonoBehaviour
     private GameObject FindSpawnedItem(string prefabId)
     {
         var go = GameObject.Find(prefabId);
-        if (go != null) return go;
+        if(go != null) return go;
         go = GameObject.Find(prefabId + "(Clone)");
-        if (go != null) return go;
-        foreach (var obj in Object.FindObjectsByType<GameObject>(
+        if(go != null) return go;
+        foreach(var obj in Object.FindObjectsByType<GameObject>(
             FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-            if (obj.name.StartsWith(prefabId)) return obj;
+            if(obj.name.StartsWith(prefabId)) return obj;
         return null;
     }
 
     private ModuleConfig GetCurrentConfig()
     {
-        if (_scenarioData == null) return null;
+        if(_scenarioData == null) return null;
         var tasks = _scenarioData.scenario?.tasks;
-        if (tasks == null || _currentTask.taskIndex >= tasks.Count) return null;
+        if(tasks == null || _currentTask.taskIndex >= tasks.Count) return null;
         return _scenarioData.GetModuleConfig(tasks[_currentTask.taskIndex].moduleId);
     }
 
     private string GetExtraValue(ModuleConfig config, string key, string fallback)
     {
-        if (config?.extra == null) return fallback;
-        foreach (var kv in config.extra) if (kv.key == key) return kv.GetLocalized();
+        if(config?.extra == null) return fallback;
+        foreach(var kv in config.extra) if(kv.key == key) return kv.GetLocalized();
         return fallback;
     }
 
@@ -614,8 +638,8 @@ public class GuideLabelBillboard : MonoBehaviour
     private void Start() => _cam = Camera.main;
     private void LateUpdate()
     {
-        if (_cam == null) _cam = Camera.main;
-        if (_cam == null) return;
+        if(_cam == null) _cam = Camera.main;
+        if(_cam == null) return;
         transform.LookAt(transform.position + _cam.transform.rotation * Vector3.forward,
                          _cam.transform.rotation * Vector3.up);
     }
