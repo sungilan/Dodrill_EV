@@ -96,6 +96,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a32cfd4ec4c23a94db57ef3affbf473a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6340024170231805039}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a32cfd4ec4c23a94db57ef3affbf473a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -8953883702177701562}
   m_SourcePrefab: {fileID: 100100000, guid: a32cfd4ec4c23a94db57ef3affbf473a, type: 3}
 --- !u!1 &4910085193603353779 stripped
 GameObject:
@@ -1259,3 +1262,23 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.08499217
   m_Center: {x: 0.078929186, y: 0.15963438, z: -0.0026238635}
+--- !u!114 &-8953883702177701562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4910085193603353779}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbf9db670c1df4bb2843b82560ce5409, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
+  icon: {fileID: 21300000, guid: 71f4e56b53f4da24b9dbae8275e6752b, type: 3}
+  size: {x: 40, y: 40}
+  rotateWithObject: 0
+  upAxis: {x: 0, y: 1, z: 0}
+  initialIconRotation: 0
+  clampIconInBorder: 1
+  clampDistance: 100
+  myMapName: "\uC784\uD329\uD2B8\uB80C\uCE58"

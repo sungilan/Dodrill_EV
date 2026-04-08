@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 1145543895625594426}
   - component: {fileID: 3955992188488722361}
   - component: {fileID: -5648731460315898419}
+  - component: {fileID: 3520520158268281274}
   m_Layer: 15
   m_Name: FaceShield
   m_TagString: Untagged
@@ -146,7 +147,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 9
+  <PrefabId>k__BackingField: 11
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 4323284322577283888
   <SceneId>k__BackingField: 0
@@ -265,6 +266,8 @@ MonoBehaviour:
   flyDuration: 0.5
   flyEase: 9
   arcHeight: 0.5
+  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!114 &-5648731460315898419
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -278,6 +281,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeModePartAttachment
   partData: {fileID: 11400000, guid: ae187a784a1cd514c9e7d236866de709, type: 2}
+--- !u!114 &3520520158268281274
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1960370119849075638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbf9db670c1df4bb2843b82560ce5409, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
+  icon: {fileID: 21300000, guid: f77be0b1e51b9e34fbe262854aad14d1, type: 3}
+  size: {x: 40, y: 40}
+  rotateWithObject: 0
+  upAxis: {x: 0, y: 1, z: 0}
+  initialIconRotation: 0
+  clampIconInBorder: 1
+  clampDistance: 100
+  myMapName: "\uC548\uBA74\uBCF4\uD638\uAD6C"
 --- !u!1001 &2468268985979897944
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -326,6 +349,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 7123a62c06598874b870a979a457bbf8, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 6a16a13be898ae1489cc2f0a24a9c2ca, type: 2}
+    - target: {fileID: -7511558181221131132, guid: 7123a62c06598874b870a979a457bbf8, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 6a16a13be898ae1489cc2f0a24a9c2ca, type: 2}
     - target: {fileID: 919132149155446097, guid: 7123a62c06598874b870a979a457bbf8, type: 3}
       propertyPath: m_Name
       value: FBX_Mechanic_FaceShield

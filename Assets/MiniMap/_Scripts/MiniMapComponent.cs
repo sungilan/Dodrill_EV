@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using XRAirpotrSecurity;
 
 public class MiniMapEntity{
 	public bool showDetails = false;
@@ -12,6 +13,7 @@ public class MiniMapEntity{
 	public bool clampInBorder;
 	public float clampDist;
 	public List<GameObject> mapObjects;
+    public string objectName;
 }
 
 public class MiniMapComponent : MonoBehaviour {
@@ -29,8 +31,9 @@ public class MiniMapComponent : MonoBehaviour {
 	public bool clampIconInBorder = true;
 	[Tooltip("Set the distance from target after which the icon will not be shown. Setting it 0 will always show the icon.")]
 	public float clampDistance = 100;
+    public string myMapName = "이름 입력";
 
-	MiniMapController miniMapController;
+    MiniMapController miniMapController;
 	MiniMapEntity mme;
 	MapObject mmo;
 
@@ -45,7 +48,23 @@ public class MiniMapComponent : MonoBehaviour {
 		mme.clampInBorder = clampIconInBorder;
 		mme.clampDist = clampDistance;
 
-		mmo = miniMapController.RegisterMapObject(this.gameObject, mme);
+        // 1. 플레이어라면 플랫폼 정보를 확인하여 아이콘 결정
+        if(gameObject.CompareTag("Player"))
+        {
+            // UserName 반영 로직 (이전 작업 내용)
+            if(!string.IsNullOrEmpty(UserInfo.UserName))
+            {
+                myMapName = UserInfo.UserName;
+            }
+        }
+        else
+        {
+            // 플레이어가 아닌 경우 기존처럼 단일 아이콘 사용 (기존 변수 활용 시)
+            mme.icon = icon;
+        }
+
+        mme.objectName = myMapName;
+        mmo = miniMapController.RegisterMapObject(this.gameObject, mme);
 	}
 
 	void OnDisable(){

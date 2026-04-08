@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 1145543895625594426}
   - component: {fileID: 3955992188488722361}
   - component: {fileID: 7455158736230975800}
+  - component: {fileID: 4562062786973503067}
   m_Layer: 15
   m_Name: SafetyGlasses
   m_TagString: Untagged
@@ -146,7 +147,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 28
+  <PrefabId>k__BackingField: 31
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 14595380281383475244
   <SceneId>k__BackingField: 0
@@ -265,6 +266,8 @@ MonoBehaviour:
   flyDuration: 0.5
   flyEase: 9
   arcHeight: 0.5
+  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!114 &7455158736230975800
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -278,6 +281,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeModePartAttachment
   partData: {fileID: 11400000, guid: 489eddd93f8c1be43af24dab2f4b10a1, type: 2}
+--- !u!114 &4562062786973503067
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1960370119849075638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbf9db670c1df4bb2843b82560ce5409, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
+  icon: {fileID: 21300000, guid: 45a69fabd2e83df4ea525f7fa999a535, type: 3}
+  size: {x: 40, y: 40}
+  rotateWithObject: 0
+  upAxis: {x: 0, y: 1, z: 0}
+  initialIconRotation: 0
+  clampIconInBorder: 1
+  clampDistance: 100
+  myMapName: "\uBCF4\uC548\uACBD"
 --- !u!1001 &5442289200765491149
 PrefabInstance:
   m_ObjectHideFlags: 0

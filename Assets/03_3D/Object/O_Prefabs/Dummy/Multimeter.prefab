@@ -693,6 +693,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6904490216802025567}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7656039883289308297}
     - targetCorrespondingSourceObject: {fileID: 2267946547502681378, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1477378049597194728}
@@ -850,7 +853,9 @@ MonoBehaviour:
   - {fileID: 837962530663658924}
   - {fileID: 3130852901259440375}
   InitializedParentNetworkBehaviour: {fileID: 0}
-  InitializedNestedNetworkObjects: []
+  InitializedNestedNetworkObjects:
+  - {fileID: 831852565008024471}
+  - {fileID: 8619010328172026178}
   RuntimeParentNetworkBehaviour: {fileID: 0}
   RuntimeChildNetworkBehaviours: []
   _isNetworked: 1
@@ -873,7 +878,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 20
+  <PrefabId>k__BackingField: 22
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 10728385243040125964
   <SceneId>k__BackingField: 0
@@ -1025,6 +1030,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeModePartAttachment
   partData: {fileID: 11400000, guid: eb6e65c9553d9d14a8aa1f3596975042, type: 2}
+--- !u!114 &7656039883289308297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3306015186997406143}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbf9db670c1df4bb2843b82560ce5409, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
+  icon: {fileID: 21300000, guid: 012d064337f2a3f40bb75245da31f979, type: 3}
+  size: {x: 40, y: 40}
+  rotateWithObject: 0
+  upAxis: {x: 0, y: 1, z: 0}
+  initialIconRotation: 0
+  clampIconInBorder: 1
+  clampDistance: 100
+  myMapName: "\uBA40\uD2F0\uBBF8\uD130"
 --- !u!1 &3783081967884463181 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -7665109404756494173, guid: ffe89e65b99efbb4d91e067a801fecc0, type: 3}
@@ -1078,14 +1103,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
-  <IsNested>k__BackingField: 0
+  <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 0
+  <ComponentIndex>k__BackingField: 2
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
-  NetworkBehaviours: []
-  InitializedParentNetworkBehaviour: {fileID: 0}
+  NetworkBehaviours:
+  - {fileID: 9008765029263639880}
+  - {fileID: 2265935094289981237}
+  InitializedParentNetworkBehaviour: {fileID: 837962530663658924}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
   RuntimeChildNetworkBehaviours: []
@@ -1114,10 +1141,10 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 0}
-    Scale: {x: 0, y: 0, z: 0}
-    IsValid: 0
+    Position: {x: 0.165, y: 0.14999998, z: -0.176}
+    Rotation: {x: 0, y: -0, z: -0, w: 1}
+    Scale: {x: 1, y: 1, z: 1}
+    IsValid: 1
 --- !u!114 &9008765029263639880
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1130,9 +1157,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d5f3cd3dd6be3a49aa81f40ab47c0ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalNetworkTransform
-  _componentIndexCache: 255
+  _componentIndexCache: 0
   _addedNetworkObject: {fileID: 8619010328172026178}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 8619010328172026178}
   anchor: {fileID: 0}
   syncInterval: 0.025
   lerpSpeed: 12
@@ -1202,9 +1229,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ad070006259cc144bc759874631f905, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SyncGrab
-  _componentIndexCache: 255
+  _componentIndexCache: 1
   _addedNetworkObject: {fileID: 8619010328172026178}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 8619010328172026178}
   holdPoint: {fileID: 0}
   flyDuration: 0.5
   flyEase: 9
@@ -1422,14 +1449,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
-  <IsNested>k__BackingField: 0
+  <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 0
+  <ComponentIndex>k__BackingField: 1
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
-  NetworkBehaviours: []
-  InitializedParentNetworkBehaviour: {fileID: 0}
+  NetworkBehaviours:
+  - {fileID: 6513979530138097248}
+  - {fileID: 5883469243610865735}
+  InitializedParentNetworkBehaviour: {fileID: 837962530663658924}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
   RuntimeChildNetworkBehaviours: []
@@ -1458,10 +1487,10 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 0}
-    Scale: {x: 0, y: 0, z: 0}
-    IsValid: 0
+    Position: {x: 0.16, y: 0.134, z: 0.1}
+    Rotation: {x: 0, y: -0, z: -0, w: 1}
+    Scale: {x: 1, y: 1, z: 1}
+    IsValid: 1
 --- !u!114 &6513979530138097248
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1474,9 +1503,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d5f3cd3dd6be3a49aa81f40ab47c0ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalNetworkTransform
-  _componentIndexCache: 255
+  _componentIndexCache: 0
   _addedNetworkObject: {fileID: 831852565008024471}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 831852565008024471}
   anchor: {fileID: 0}
   syncInterval: 0.025
   lerpSpeed: 12
@@ -1546,9 +1575,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ad070006259cc144bc759874631f905, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SyncGrab
-  _componentIndexCache: 255
+  _componentIndexCache: 1
   _addedNetworkObject: {fileID: 831852565008024471}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 831852565008024471}
   holdPoint: {fileID: 0}
   flyDuration: 0.5
   flyEase: 9

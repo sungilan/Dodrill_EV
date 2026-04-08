@@ -107,6 +107,7 @@ GameObject:
   - component: {fileID: 1145543895625594426}
   - component: {fileID: 3955992188488722361}
   - component: {fileID: -8446839920308691717}
+  - component: {fileID: 6504083620616071176}
   m_Layer: 15
   m_Name: SmartKey
   m_TagString: Untagged
@@ -236,7 +237,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 17
+  <PrefabId>k__BackingField: 19
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 8191271924215227488
   <SceneId>k__BackingField: 0
@@ -370,3 +371,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeModePartAttachment
   partData: {fileID: 11400000, guid: ea8c2134b0fdadb4588c7191990a6ded, type: 2}
+--- !u!114 &6504083620616071176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1960370119849075638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbf9db670c1df4bb2843b82560ce5409, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
+  icon: {fileID: 21300000, guid: 555204717250c9442a6681783c311087, type: 3}
+  size: {x: 40, y: 40}
+  rotateWithObject: 0
+  upAxis: {x: 0, y: 1, z: 0}
+  initialIconRotation: 0
+  clampIconInBorder: 1
+  clampDistance: 100
+  myMapName: "\uC2A4\uB9C8\uD2B8\uD0A4"

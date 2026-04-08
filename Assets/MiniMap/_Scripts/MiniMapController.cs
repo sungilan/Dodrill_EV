@@ -84,7 +84,6 @@ public class MiniMapController : MonoBehaviour {
 		mapPanelRect = miniMapPanel.GetComponent<RectTransform> ();
 		mapPanelRect.anchoredPosition = mapPanelMaskRect.anchoredPosition;
 		res = new Vector2(Screen.width,Screen.height);
-
 		miniMapPanelImage = miniMapPanel.GetComponent<Image> ();
 		miniMapPanelImage.enabled = !showBackground;
 		SetupRenderTexture();
