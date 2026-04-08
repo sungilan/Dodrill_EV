@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: M_Wall_Painted
-  m_Shader: {fileID: -6465566751694194690, guid: 866686f72f9abed4192ea12b9e767f8d, type: 3}
+  m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
@@ -17,7 +17,7 @@ Material:
   - _OCCLUSIONMAP
   m_InvalidKeywords: []
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap:
@@ -61,7 +61,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
-        m_Texture: {fileID: 2800000, guid: 6f066fa3c6451d04aa48b1627994722b, type: 3}
+        m_Texture: {fileID: 2800000, guid: bec68612f9f40a9498e3191815595f75, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
@@ -113,7 +113,7 @@ Material:
     - _Metallic: 0
     - _NORMALMAP: 0
     - _OCCLUSIONMAP: 0
-    - _OcclusionStrength: 1
+    - _OcclusionStrength: 0.7
     - _PARALLAXMAP: 0
     - _Parallax: 0.005
     - _QueueControl: 0

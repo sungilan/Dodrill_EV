@@ -27,7 +27,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5012509869302272529}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -68,7 +68,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: f0cf8ea72113bab4f82875556785d454, type: 2}
+  - {fileID: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -148,7 +148,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4575354430943270, guid: 86a063313e6f317449f26a10de490268, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.079
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4575354430943270, guid: 86a063313e6f317449f26a10de490268, type: 3}
       propertyPath: m_LocalRotation.w
@@ -181,8 +181,32 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1177190117032102, guid: 86a063313e6f317449f26a10de490268, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2081408731981159612}
   m_SourcePrefab: {fileID: 100100000, guid: 86a063313e6f317449f26a10de490268, type: 3}
+--- !u!1 &6089005565957025617 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1177190117032102, guid: 86a063313e6f317449f26a10de490268, type: 3}
+  m_PrefabInstance: {fileID: 6090081556913516535}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2081408731981159612
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6089005565957025617}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9540628a4e1292c408aa4043c4113857, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BlobShadow::PixelTea.BlobShadow.FollowObject
+  ObjectToFollow: {fileID: 5852240247212172688}
+  WorldOffset: {x: 0, y: 0, z: 0}
+  LocalOffset: {x: 0, y: 0, z: 0}
+  MatchRotation: 0
 --- !u!4 &6094515619652116433 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4575354430943270, guid: 86a063313e6f317449f26a10de490268, type: 3}

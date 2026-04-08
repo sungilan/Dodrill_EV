@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7022835085566299825}
   - component: {fileID: 5085382036710275707}
   - component: {fileID: 4607014614703097518}
+  - component: {fileID: 1750438224294036864}
   m_Layer: 0
   m_Name: Preb_Headboard
   m_TagString: Untagged
@@ -116,6 +117,46 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 2020716421033259184, guid: 5bc84c6c7f960ac47804791e022e1d33, type: 3}
+--- !u!114 &1750438224294036864
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6742474084399651758}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2693064c5c2b3ed47861708c1188d7bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FakeLightSystem.FakeLight
+  InheritFromLight: 0
+  LightType: 1
+  LightColor: {r: 1, g: 1, b: 1, a: 1}
+  LightIntensity: 1
+  LightIntensityMultiplier: 1
+  LightAngle: 90
+  LightRange: 2
+  LightRangeMultiplier: 0.1
+  LightPositionalOffset: {x: -0.24, y: 0.19, z: 0}
+  LightRotationalOffset: {x: 0, y: 0, z: 0, w: 1}
+  LightDistanceAttenuation: 0.8
+  LightSideSoftness: 4.5
+  LightConeSharpness: 0.5
+  LightFrontGlareIntensity: 0.5
+  LightRearGlareIntensity: 0.5
+  LightTipRadius: 0.01
+  LightNoiseEnabled: 0
+  LightNoiseTiling: 1
+  LightNoiseSpeed: 50
+  LightNoiseIntensity: 0.1
+  LightFogEnabled: 0
+  LightFogTiling: 0.5
+  LightFogSpeed: {x: 0.1, y: 0, z: 0}
+  LightFogIntensity: 0.75
+  LightCameraFadeEnabled: 1
+  LightCameraFadeIntensity: 4
+  LightGeometryFadeEnabled: 0
+  LightGeometryFadeIntensity: 0.5
 --- !u!1001 &4717530232112580160
 PrefabInstance:
   m_ObjectHideFlags: 0

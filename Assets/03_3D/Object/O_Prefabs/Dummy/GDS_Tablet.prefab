@@ -107,6 +107,7 @@ GameObject:
   - component: {fileID: 1145543895625594426}
   - component: {fileID: 3955992188488722361}
   - component: {fileID: -6092415357178077016}
+  - component: {fileID: 6703994904317688264}
   m_Layer: 15
   m_Name: GDS_Tablet
   m_TagString: Untagged
@@ -370,3 +371,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeModePartAttachment
   partData: {fileID: 11400000, guid: e2c71cad983d0e743994aab778ec06a7, type: 2}
+--- !u!114 &6703994904317688264
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1960370119849075638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbf9db670c1df4bb2843b82560ce5409, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
+  icon: {fileID: 21300000, guid: 6c4f20102d8334441b27dbb2383c839d, type: 3}
+  size: {x: 40, y: 40}
+  rotateWithObject: 0
+  upAxis: {x: 0, y: 1, z: 0}
+  initialIconRotation: 0
+  clampIconInBorder: 1
+  clampDistance: 100

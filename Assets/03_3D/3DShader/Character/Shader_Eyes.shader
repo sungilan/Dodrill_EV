@@ -239,8 +239,7 @@ Shader "Custom/Shader_Eyes"
 			#define _EMISSION
 			#define _NORMALMAP 1
 			#define ASE_VERSION 19901
-			#define ASE_SRP_VERSION 
-			04
+			#define ASE_SRP_VERSION 170004
 			#define ASE_USING_SAMPLING_MACROS 1
 
 
