@@ -470,6 +470,22 @@ public class FreeLookController : NetworkBehaviour
         string objName = GetHoverTargetName(hoveredCol);
         string msg = GetHoverActionMsg(hoveredCol);
 
+        // ★ 추가: 메시지가 비어있다면(상호작용 대상이 아니라면) 가이드를 띄우지 않음
+        if(string.IsNullOrEmpty(msg))
+        {
+            SetGuideUI(string.Empty);
+
+            // 기존에 떠있던 라벨이 있다면 지워줌
+            if(_worldLabel != null)
+            {
+                var fader = _worldLabel.GetComponent<UIHoverFader>();
+                if(fader != null) fader.FadeOut();
+                else Destroy(_worldLabel);
+                _worldLabel = null;
+            }
+            return; // 여기서 중단하여 새 라벨 생성을 막음
+        }
+
         Log($"호버: {objName} — {msg}");
         SetGuideUI(msg);
 

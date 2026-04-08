@@ -440,55 +440,19 @@ public class ClickableAnimator : MonoBehaviour
 
     private void OnVRGrab(Hand hand, Grabbable grabbable)
     {
-        //if(hand == null) return;
-
-        //// ★ 핵심: 즉시 손에서 오브젝트 분리
-        //hand.Release();
-
-        //// 상태 변경
-        //RequestSetState(!_isOpen);
-
-        //// 물리 안정화를 위해 한 프레임 대기
-        //StartCoroutine(StabilizeAfterRelease());
+        StartCoroutine(ReleaseAndActivate(hand));
     }
 
-    private IEnumerator StabilizeAfterRelease()
+    private IEnumerator ReleaseAndActivate(Hand hand)
     {
-        yield return null;
-        // 필요시 Rigidbody 안정화
+        yield return null;           // ← 한 프레임 대기
+        hand.ForceReleaseGrab();     //    AutoHand 내부 상태 세팅 완료 후 해제
+        RequestSetState(!_isOpen);   //    손이 자유로운 상태에서 상태 변경
     }
-
-    private void OnTriggerStay(Collider other)
-    {
-        if(!GameScenePlatformManager.IsVR) return;
-
-        // 1. Hand 컴포넌트 찾기
-        Hand hand = other.GetComponentInParent<Hand>();
-        if(hand == null)
-            hand = other.GetComponent<Hand>();
-
-        if(hand == null) return;
-
-        // 2. Hand의 활성 상태 확인
-        if(!hand.gameObject.activeInHierarchy) return;
-
-        // 3. 간단하게: Hand가 이 오브젝트에 닿아있으면 반응
-        // (정확한 그랩 제스처 대신 단순히 접촉으로 활성화)
-        Debug.Log($"[VR] Hand proximity: {other.name}");
-
-        // 원한다면 시간 제한을 두어 연속 활성화 방지
-        if(!_lastVRInteractionTime.HasValue ||
-           Time.time - _lastVRInteractionTime.Value > 1f)
-        {
-            RequestSetState(!_isOpen);
-            _lastVRInteractionTime = Time.time;
-        }
-    }
-
-    private float? _lastVRInteractionTime = null;
 
     public void RequestSetState(bool open)
     {
+        Debug.Log($"[Clickable] {uniqueId} 상태 변경 요청 (열림: {open})");
         var broadcast = new AnimatorStateBroadcast { id = uniqueId, isOpen = open };
 
         if(InstanceFinder.IsServerStarted)
@@ -514,7 +478,7 @@ public class ClickableAnimator : MonoBehaviour
     public void ApplyAnimState(bool open)
     {
         _isOpen = open;
-        if(_animator == null) return;
+        //if(_animator == null) return;
 
         // 1. 애니메이션 적용
         if(useTrigger)

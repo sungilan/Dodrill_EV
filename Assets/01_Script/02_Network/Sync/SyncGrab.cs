@@ -1,11 +1,12 @@
 ﻿using Autohand;
+using DG.Tweening;
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
-using UnityEngine;
+using Sirenix.OdinInspector;
 using System.Collections;
-using DG.Tweening;
+using UnityEngine;
 
 /// <summary>
 /// 멀티플레이어 오브젝트 그랩 동기화 — 완전 서버 권위 구조.
@@ -52,6 +53,8 @@ public class SyncGrab : NetworkBehaviour
     public Vector3 holdPositionOffset = Vector3.zero;
     [Tooltip("잡혔을 때 HoldPoint로부터의 회전 오프셋 (오브젝트 기준)")]
     public Vector3 holdRotationOffset = Vector3.zero;
+
+    private TaskItem _taskItem;
 
     // ──────────────────────────────────────────────────────
     // SyncVar — 서버만 쓰기
@@ -125,6 +128,12 @@ public class SyncGrab : NetworkBehaviour
         base.OnStartClient();
         _rb = GetComponent<Rigidbody>();
         _lnt = GetComponent<LocalNetworkTransform>();
+
+        _taskItem = GetComponent<TaskItem>();
+        if(_taskItem == null)
+        {
+            Debug.LogWarning($"[SyncGrab] {name}: TaskItem 컴포넌트 없음");
+        }
 
         // holdPoint 자동 탐색 (인스펙터 미연결 시)
         if(holdPoint == null)
@@ -262,6 +271,8 @@ public class SyncGrab : NetworkBehaviour
 
         if(!IsOwner) return;
 
+        GuideSystem.Instance?.OnItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
+
         if(_isDespawning.Value)
         {
             hand.ForceReleaseGrab();
@@ -299,6 +310,8 @@ public class SyncGrab : NetworkBehaviour
         }
 
         if(_isGrabbed.Value) return;
+
+        GuideSystem.Instance?.OnItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
 
         if (holdPoint == null)
         {
@@ -713,5 +726,21 @@ public class SyncGrab : NetworkBehaviour
         if(coroutine == null) return;
         StopCoroutine(coroutine);
         coroutine = null;
+    }
+
+    /// <summary>TaskItem에서 prefabId 얻기</summary>
+    private string GetPrefabId()
+    {
+        if(_taskItem != null && !string.IsNullOrEmpty(_taskItem.prefabId))
+        {
+            return _taskItem.prefabId;
+        }
+
+        // Fallback: GameObject 이름에서 추출
+        string name = gameObject.name.Replace("(Clone)", "").Trim();
+        if(name.Contains("_"))
+            return name.Split('_')[0];
+
+        return name;
     }
 }

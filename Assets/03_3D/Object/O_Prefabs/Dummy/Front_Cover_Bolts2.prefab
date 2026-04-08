@@ -50,9 +50,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bab84ae395954ef4aa75abc5b9501406, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoltGroupCounter
-  assembleMode: 1
-  groupId: Front_Cover_Bolts2
-  taskId: Connector_Cover_Reinstall
+  assembleMode: 0
+  groupId: Front_Cover_Bolts
+  taskId: Connector_Cover_Removal
   ejectDuration: 0.4
   _totalCount: 0
   _removedCount: 0
@@ -104,7 +104,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 8
+  <PrefabId>k__BackingField: 37
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 3057579597898870488
   <SceneId>k__BackingField: 0
@@ -150,15 +150,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.033
+      value: 0.0316
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.0024999878
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.058000088
+      value: -0.1188
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalRotation.w
@@ -383,7 +383,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0.033, y: 0, z: -0.058000088}
+    Position: {x: 0.0316, y: 0.0024999878, z: -0.1188}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -477,11 +477,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.032
+      value: -0.0667
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.0028
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.z
@@ -710,7 +710,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -0.032, y: 0, z: -0.058}
+    Position: {x: -0.0667, y: 0.0028, z: -0.058}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -804,15 +804,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.032999992
+      value: 0.0356
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.0027999878
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.03999996
+      value: 0.0923
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1037,7 +1037,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0.032999992, y: 0, z: 0.03999996}
+    Position: {x: 0.0356, y: 0.0027999878, z: 0.0923}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -1131,11 +1131,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.032000065
+      value: -0.0652
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.0027999878
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 28d25d18001a80549a7c53f0c82f707e, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1364,7 +1364,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -0.032000065, y: 0, z: 0.04}
+    Position: {x: -0.0652, y: 0.0027999878, z: 0.04}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1

@@ -33,6 +33,7 @@ namespace DoDrill.Training
         [SerializeField] private TMP_Text   _statusText;      // Running / Failed
         [SerializeField] private Button     _confirmButton;   // 완료 버튼
         [SerializeField] private TMP_Text   _confirmBtnLabel; // 버튼 텍스트
+        [SerializeField] private TMP_Text _boltProgressText;
 
         private ScenarioData _scenarioData;
         private int          _currentTaskIndex = -1;
@@ -64,6 +65,7 @@ namespace DoDrill.Training
             ScenarioStateReceiver.OnTaskStateUpdated += OnTaskStateUpdated;
             ScenarioStateReceiver.OnSnapshotReceived += OnSnapshotReceived;
             ScenarioReceiver.OnScenarioReceived      += OnScenarioReceived;
+            InstanceFinder.ClientManager?.RegisterBroadcast<BoltProgressBroadcast>(OnBoltProgressReceived);
 
             if (_confirmButton != null)
                 _confirmButton.onClick.AddListener(OnConfirmClicked);
@@ -74,6 +76,7 @@ namespace DoDrill.Training
             ScenarioStateReceiver.OnTaskStateUpdated -= OnTaskStateUpdated;
             ScenarioStateReceiver.OnSnapshotReceived -= OnSnapshotReceived;
             ScenarioReceiver.OnScenarioReceived      -= OnScenarioReceived;
+            InstanceFinder.ClientManager?.RegisterBroadcast<BoltProgressBroadcast>(OnBoltProgressReceived);
 
             if (_confirmButton != null)
                 _confirmButton.onClick.RemoveListener(OnConfirmClicked);
@@ -121,8 +124,26 @@ namespace DoDrill.Training
             Refresh(broadcast.currentTask);
         }
 
+        private void OnBoltProgressReceived(BoltProgressBroadcast msg, FishNet.Transporting.Channel channel)
+        {
+            if(_boltProgressText == null) return;
+
+            int remaining = msg.total - msg.removed;
+
+            if(remaining > 0)
+            {
+                _boltProgressText.gameObject.SetActive(true);
+                _boltProgressText.text = $"남은 볼트: <color=yellow>{remaining}</color> / {msg.total}";
+            }
+            else
+            {
+                _boltProgressText.gameObject.SetActive(false);
+            }
+        }
         private void Refresh(TaskState state)
         {
+            if(_boltProgressText != null) _boltProgressText.gameObject.SetActive(false);
+
             _currentTaskIndex = state.taskIndex;
 
             bool visible = state.status == TaskStatus.Running

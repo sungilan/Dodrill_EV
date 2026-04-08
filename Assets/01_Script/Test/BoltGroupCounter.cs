@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using FishNet;
 using FishNet.Broadcast;
@@ -6,21 +6,21 @@ using FishNet.Object;
 using FishNet.Transporting;
 using UnityEngine;
 
-// ¦¡¦¡ º¼Æ® Á¦°Å ¿äÃ»/¸í·É Broadcast ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+// â”€â”€ ë³¼íŠ¸ ì œê±° ìš”ì²­/ëª…ë ¹ Broadcast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 public struct BoltHideBroadcast : IBroadcast
 {
-    public string groupId;   // ¾î´À ±×·ìÀÇ º¼Æ®ÀÎÁö
-    public int boltIndex;    // ¸®½ºÆ® ³» ÀÎµ¦½º
+    public string groupId;   // ì–´ëŠ ê·¸ë£¹ì˜ ë³¼íŠ¸ì¸ì§€
+    public int boltIndex;    // ë¦¬ìŠ¤íŠ¸ ë‚´ ì¸ë±ìŠ¤
 }
 
-// ¦¡¦¡ º¼Æ® ³«ÇÏ ¿¬Ãâ ¸í·É ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+// â”€â”€ ë³¼íŠ¸ ë‚™í•˜ ì—°ì¶œ ëª…ë ¹ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 public struct BoltFallBroadcast : IBroadcast
 {
     public string groupId;
     public int boltIndex;
 }
 
-// ¦¡¦¡ º¼Æ® ÁøÇàµµ µ¿±âÈ­ Broadcast ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+// â”€â”€ ë³¼íŠ¸ ì§„í–‰ë„ ë™ê¸°í™” Broadcast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 public struct BoltProgressBroadcast : IBroadcast
 {
     public string groupId;
@@ -30,47 +30,77 @@ public struct BoltProgressBroadcast : IBroadcast
 
 public class BoltGroupCounter : MonoBehaviour
 {
-    [Header("¸ğµå ¼³Á¤")]
-    [Tooltip("True: Á¶¸³ ¸ğµå(º¼Æ® À¯Áö), False: ºĞÇØ ¸ğµå(º¼Æ® »èÁ¦)")]
+    [Header("ëª¨ë“œ ì„¤ì •")]
+    [Tooltip("True: ì¡°ë¦½ ëª¨ë“œ(ë³¼íŠ¸ ìœ ì§€), False: ë¶„í•´ ëª¨ë“œ(ë³¼íŠ¸ ì‚­ì œ)")]
     public bool assembleMode = false;
 
-    [Header("½Äº° (¾À ³» °íÀ¯°ª)")]
+    [Header("ì‹ë³„ (ì”¬ ë‚´ ê³ ìœ ê°’)")]
     public string groupId = "BoltGroup_Default";
 
-    [Header("¿Ï·á ½Ã ¹ß½ÅÇÒ Task ID (moduleId)")]
+    [Header("ì™„ë£Œ ì‹œ ë°œì‹ í•  Task ID (moduleId)")]
     public string taskId = "";
 
-    [Header("º¼Æ® Á¦°Å ¿¬Ãâ (ºĞÇØ Àü¿ë)")]
-    [Tooltip("º¼Æ®°¡ ³«ÇÏ ¿¬ÃâÀ» º¸¿©ÁÖ´Â ½Ã°£ ÈÄ µğ½ºÆù")]
+    [Header("ë³¼íŠ¸ ì œê±° ì—°ì¶œ (ë¶„í•´ ì „ìš©)")]
+    [Tooltip("ë³¼íŠ¸ê°€ ë‚™í•˜ ì—°ì¶œì„ ë³´ì—¬ì£¼ëŠ” ì‹œê°„ í›„ ë””ìŠ¤í°")]
     public float ejectDuration = 1.0f;
 
-    [Header("»óÅÂ (ÀĞ±â Àü¿ë)")]
+    [Header("â˜… ì™„ë£Œ ì‹œ ë””ìŠ¤í°í•  ì˜¤ë¸Œì íŠ¸")]
+    [Tooltip("ëª¨ë“  ë³¼íŠ¸ê°€ ì²˜ë¦¬ë˜ë©´ ì´ ì˜¤ë¸Œì íŠ¸ë¥¼ ì„œë²„ì—ì„œ ë””ìŠ¤í° (ë™ì  ìƒì„± ë¶€í’ˆ)")]
+    public GameObject targetDespawnObject;
+    [Tooltip("ë””ìŠ¤í° ì „ ëŒ€ê¸° ì‹œê°„ (ì´ˆ)")]
+    public float despawnDelay = 1.5f;
+
+    [Header("ìƒíƒœ (ì½ê¸° ì „ìš©)")]
     [SerializeField] private int _totalCount;
-    [SerializeField] private int _removedCount; // Á¶¸³ ½Ã¿¡´Â 'Ã¼°áµÈ °³¼ö'·Î ÀÇ¹Ì º¯°æ
+    [SerializeField] private int _removedCount;
 
     private List<Bolt> _bolts = new();
-    private HashSet<int> _removedIndices = new(); // Ã³¸®°¡ ¿Ï·áµÈ º¼Æ® ÀÎµ¦½ºµé
+    private HashSet<int> _removedIndices = new();
     private bool _completed = false;
+    private VehiclePartsManager _vehicleManager;
 
     private void Awake()
     {
         _bolts.Clear();
         _bolts.AddRange(GetComponentsInChildren<Bolt>());
         _totalCount = _bolts.Count;
+        _vehicleManager = GetComponentInParent<VehiclePartsManager>();
+
+        Debug.Log($"[BoltGroup] Awake: {groupId} - {_totalCount}ê°œ ë³¼íŠ¸ ë°œê²¬");
     }
 
     private void Start()
     {
+        // VehiclePartsManagerì—ì„œ ë¶€í’ˆ ìë™ í• ë‹¹
+        if(_vehicleManager == null)
+        {
+            _vehicleManager = GetComponentInParent<VehiclePartsManager>();
+        }
+
+        if(targetDespawnObject == null && _vehicleManager != null)
+        {
+            targetDespawnObject = _vehicleManager.GetPartByBoltGroup(this);
+            if(targetDespawnObject != null)
+            {
+                Debug.Log($"[BoltGroup] âœ“ ì°¨ëŸ‰ ë§¤ë‹ˆì €ì—ì„œ ë¶€í’ˆ ì°¾ìŒ: {targetDespawnObject.name}");
+            }
+            else
+            {
+                Debug.LogWarning($"[BoltGroup] âš ï¸ ì°¨ëŸ‰ ë§¤ë‹ˆì €ì—ì„œ ë¶€í’ˆì„ ì°¾ì„ ìˆ˜ ì—†ìŒ (groupId: {groupId})");
+            }
+        }
+
         foreach(var bolt in _bolts)
         {
             if(bolt != null)
             {
                 bolt.OnBoltLoosened += HandleBoltLoosened;
-                // Bolt ½ºÅ©¸³Æ®¿¡µµ ÇöÀç ¸ğµå¸¦ Àü´Ş (UI ¹®±¸ º¯°æ¿ë)
                 bolt.isAssembleMode = this.assembleMode;
             }
         }
         RegisterBroadcast();
+
+        Debug.Log($"[BoltGroup] Start ì™„ë£Œ: {groupId}");
     }
 
     private void OnDestroy()
@@ -96,42 +126,74 @@ public class BoltGroupCounter : MonoBehaviour
         InstanceFinder.ClientManager?.UnregisterBroadcast<BoltFallBroadcast>(OnClientBoltFall);
     }
 
-    // º¼Æ®°¡ 100% Ç®¸®°Å³ª(ºĞÇØ) 100% Á¶¿©Á³À» ¶§(Á¶¸³) È£Ãâ
+    // ë³¼íŠ¸ê°€ 100% í’€ë¦¬ê±°ë‚˜(ë¶„í•´) 100% ì¡°ì—¬ì¡Œì„ ë•Œ(ì¡°ë¦½) í˜¸ì¶œ
     private void HandleBoltLoosened(Bolt bolt)
     {
-        if(_completed) return;
+        Debug.Log($"[BoltGroup] HandleBoltLoosened í˜¸ì¶œ: {bolt.name}");
+
+        if(_completed)
+        {
+            Debug.LogWarning($"[BoltGroup] ì´ë¯¸ ì™„ë£Œë¨ - ë¬´ì‹œ");
+            return;
+        }
 
         int idx = _bolts.IndexOf(bolt);
-        if(idx == -1 || _removedIndices.Contains(idx)) return;
+        if(idx == -1)
+        {
+            Debug.LogError($"[BoltGroup] âŒ ë³¼íŠ¸ë¥¼ ë¦¬ìŠ¤íŠ¸ì—ì„œ ì°¾ì„ ìˆ˜ ì—†ìŒ: {bolt.name}");
+            return;
+        }
 
-        // [·ÎÄÃ] ¾Ö´Ï¸ŞÀÌ¼Ç/»ç¿îµå ½ÇÇà
+        if(_removedIndices.Contains(idx))
+        {
+            Debug.LogWarning($"[BoltGroup] ë³¼íŠ¸ {idx}ë²ˆì€ ì´ë¯¸ ì²˜ë¦¬ë¨");
+            return;
+        }
+
+        // [ë¡œì»¬] ì• ë‹ˆë©”ì´ì…˜/ì‚¬ìš´ë“œ ì‹¤í–‰
         var ca = bolt.GetComponent<ClickableAnimator>();
-        if(ca != null) ca.Open();
+        if(ca != null)
+        {
+            ca.Open();
+            Debug.Log($"[BoltGroup] ë³¼íŠ¸ {idx}ë²ˆ ì• ë‹ˆë©”ì´ì…˜ ì‹¤í–‰");
+        }
 
         if(InstanceFinder.IsClientStarted)
         {
-            // ¼­¹ö¿¡ ÀÌ º¼Æ® ÀÛ¾÷ ³¡³µ´Ù°í º¸°í
+            // ì„œë²„ì— ì´ ë³¼íŠ¸ ì‘ì—… ëë‚¬ë‹¤ê³  ë³´ê³ 
             var msg = new BoltHideBroadcast { groupId = groupId, boltIndex = idx };
             InstanceFinder.ClientManager.Broadcast(msg);
+            Debug.Log($"[BoltGroup] ì„œë²„ì— ë³´ê³ : groupId={groupId}, boltIndex={idx}");
         }
     }
 
     private void OnServerHide(FishNet.Connection.NetworkConnection conn, BoltHideBroadcast msg, Channel ch)
     {
-        if(msg.groupId != groupId) return;
-        if(_removedIndices.Contains(msg.boltIndex)) return;
+        Debug.Log($"[BoltGroup] OnServerHide ìˆ˜ì‹ : groupId={msg.groupId}, boltIndex={msg.boltIndex}");
+
+        if(msg.groupId != groupId)
+        {
+            Debug.Log($"[BoltGroup] groupId ë¶ˆì¼ì¹˜ (ë°›ì€: {msg.groupId}, ë‚´: {groupId}) â†’ ë¬´ì‹œ");
+            return;
+        }
+
+        if(_removedIndices.Contains(msg.boltIndex))
+        {
+            Debug.Log($"[BoltGroup] ë³¼íŠ¸ {msg.boltIndex}ëŠ” ì´ë¯¸ ì²˜ë¦¬ë¨ â†’ ë¬´ì‹œ");
+            return;
+        }
 
         _removedIndices.Add(msg.boltIndex);
+        Debug.Log($"[BoltGroup] {groupId}: ë³¼íŠ¸ {msg.boltIndex}ë²ˆ ì¶”ê°€ ì™„ë£Œ â†’ í˜„ì¬: {_removedIndices.Count}/{_totalCount}");
 
         if(assembleMode)
         {
-            // [Á¶¸³ ¸ğµå] º¼Æ®¸¦ »èÁ¦ÇÏÁö ¾Ê°í Ä«¿îÆ®¸¸ ¾÷µ¥ÀÌÆ®
-            Debug.Log($"[BoltGroup] º¼Æ® {msg.boltIndex}¹ø Á¶¸³ ¿Ï·á");
+            Debug.Log($"[BoltGroup] {groupId} ì¡°ë¦½ ëª¨ë“œ â†’ ApplyCountAndCheckCompletion í˜¸ì¶œ");
             ApplyCountAndCheckCompletion();
         }
         else
         {
-            // [ºĞÇØ ¸ğµå] ±âÁ¸ ³«ÇÏ ¿¬Ãâ ¹× »èÁ¦ ·ÎÁ÷ ½ÇÇà
+            Debug.Log($"[BoltGroup] {groupId} ë¶„í•´ ëª¨ë“œ â†’ DespawnAfterDelay ì‹œì‘");
             InstanceFinder.ServerManager.Broadcast(new BoltFallBroadcast
             {
                 groupId = groupId,
@@ -141,24 +203,39 @@ public class BoltGroupCounter : MonoBehaviour
         }
     }
 
+
     private IEnumerator DespawnAfterDelay(int boltIndex)
     {
+        Debug.Log($"[BoltGroup] DespawnAfterDelay ì‹œì‘: boltIndex={boltIndex}, ëŒ€ê¸°ì‹œê°„={ejectDuration}ì´ˆ");
         yield return new WaitForSeconds(ejectDuration);
+        Debug.Log($"[BoltGroup] {ejectDuration}ì´ˆ ëŒ€ê¸° ì™„ë£Œ â†’ ë³¼íŠ¸ {boltIndex}ë²ˆ ë””ìŠ¤í°");
 
         if(boltIndex >= 0 && boltIndex < _bolts.Count)
         {
             var boltObj = _bolts[boltIndex];
             if(boltObj != null && InstanceFinder.IsServerStarted)
             {
+                Debug.Log($"[BoltGroup] ë³¼íŠ¸ {boltIndex}ë²ˆ ë””ìŠ¤í°: {boltObj.name}");
                 InstanceFinder.ServerManager.Despawn(boltObj.gameObject);
             }
+            else
+            {
+                Debug.LogError($"[BoltGroup] âŒ ë³¼íŠ¸ ë””ìŠ¤í° ì‹¤íŒ¨: boltObj={boltObj}, IsServer={InstanceFinder.IsServerStarted}");
+            }
         }
+        else
+        {
+            Debug.LogError($"[BoltGroup] âŒ boltIndex ë²”ìœ„ ì´ˆê³¼: {boltIndex} >= {_bolts.Count}");
+        }
+
+        Debug.Log($"[BoltGroup] ApplyCountAndCheckCompletion í˜¸ì¶œ (DespawnAfterDelay í›„)");
         ApplyCountAndCheckCompletion();
     }
 
     private void ApplyCountAndCheckCompletion()
     {
         _removedCount = _removedIndices.Count;
+        Debug.Log($"[BoltGroup] ApplyCountAndCheckCompletion: {_removedCount}/{_totalCount} ì™„ë£Œë¨");
 
         if(InstanceFinder.IsServerStarted)
         {
@@ -169,40 +246,108 @@ public class BoltGroupCounter : MonoBehaviour
                 total = _totalCount
             });
 
-            var runner = Object.FindFirstObjectByType<ScenarioRunner>();
-            string currentModuleId = runner != null ? runner.CurrentModuleId : "Runner ¾øÀ½";
-            Debug.Log($"[BoltCheck] {groupId} ({_removedCount}/{_totalCount}) | Mode: {(assembleMode ? "Á¶¸³" : "ºĞÇØ")} | Task: {taskId}");
+            var runner = UnityEngine.Object.FindFirstObjectByType<ScenarioRunner>();
+            string currentModuleId = runner != null ? runner.CurrentModuleId : "Runner ì—†ìŒ";
+            Debug.Log($"[BoltCheck] {groupId} ({_removedCount}/{_totalCount}) | Mode: {(assembleMode ? "ì¡°ë¦½" : "ë¶„í•´")} | Task: {taskId}");
         }
 
-        if(_removedCount >= _totalCount && !_completed)
+        // â˜… ì™„ë£Œ ì¡°ê±´ ì²´í¬
+        Debug.Log($"[BoltGroup] ì™„ë£Œ ì¡°ê±´ ì²´í¬: _removedCount({_removedCount}) >= _totalCount({_totalCount}) && !_completed({!_completed})");
+
+        if(_removedCount >= _totalCount)
         {
             _completed = true;
+            Debug.Log($"[BoltGroup] ========== ëª¨ë“  ë³¼íŠ¸ ì™„ë£Œ! ==========");
+
             if(InstanceFinder.IsServerStarted)
             {
+                 //â˜… Task ì™„ë£Œ ì‹ í˜¸ ë°œì‹ 
                 if(!string.IsNullOrEmpty(taskId))
+                {
                     InteractionEvents.FireTaskConfirmed(taskId);
+                    Debug.Log($"[BoltGroup] âœ… Task '{taskId}' ì™„ë£Œ ì‹ í˜¸ ë°œì‹ ");
+                }
 
-                // Á¶¸³ ¸ğµå¿¡¼­´Â ±×·ì ·çÆ®¸¦ »èÁ¦ÇÏÁö ¾ÊÀ½ (Â÷¿¡ ºÙ¾î ÀÖ¾î¾ß ÇÏ¹Ç·Î)
+                // â˜… íƒ€ê²Ÿ ë¶€í’ˆ ë””ìŠ¤í° ìƒíƒœ í™•ì¸
+                Debug.Log($"[BoltGroup] targetDespawnObject: {(targetDespawnObject != null ? targetDespawnObject.name : "NULL")}");
+
+                if(targetDespawnObject != null)
+                {
+                    Debug.Log($"[BoltGroup] ğŸ—‘ï¸ DespawnTargetObject ì½”ë£¨í‹´ ì‹œì‘ (delay={despawnDelay}ì´ˆ)");
+                    StartCoroutine(DespawnTargetObject());
+                }
+                else
+                {
+                    Debug.LogError($"[BoltGroup] âŒâŒâŒ targetDespawnObjectê°€ NULLì…ë‹ˆë‹¤! í• ë‹¹ë˜ì§€ ì•ŠìŒ!!");
+                }
+
+                // ì¡°ë¦½ ëª¨ë“œì—ì„œëŠ” ê·¸ë£¹ ë£¨íŠ¸ë¥¼ ì‚­ì œí•˜ì§€ ì•ŠìŒ (ì°¨ì— ë¶™ì–´ ìˆì–´ì•¼ í•˜ë¯€ë¡œ)
                 if(!assembleMode)
                 {
+                    Debug.Log($"[BoltGroup] ë¶„í•´ ëª¨ë“œ â†’ DespawnGroupRoot ì½”ë£¨í‹´ ì‹œì‘");
                     StartCoroutine(DespawnGroupRoot());
                 }
             }
+        }
+        else
+        {
+            Debug.Log($"[BoltGroup] ì•„ì§ ì™„ë£Œ ì•ˆ ë¨ (ì¡°ê±´ ë¶ˆë§Œì¡±)");
+        }
+    }
+
+    /// <summary>
+    /// ì§€ì •ëœ íƒ€ê²Ÿ ì˜¤ë¸Œì íŠ¸ë¥¼ ì„œë²„ì—ì„œ ë””ìŠ¤í° (ë™ì  ìƒì„± ë¶€í’ˆìš©)
+    /// </summary>
+    private IEnumerator DespawnTargetObject()
+    {
+        Debug.Log($"[BoltGroup] DespawnTargetObject ì½”ë£¨í‹´ ì‹œì‘: {targetDespawnObject.name}, ëŒ€ê¸°={despawnDelay}ì´ˆ");
+        yield return new WaitForSeconds(despawnDelay);
+        Debug.Log($"[BoltGroup] {despawnDelay}ì´ˆ ëŒ€ê¸° ì™„ë£Œ");
+
+        if(targetDespawnObject != null && InstanceFinder.IsServerStarted)
+        {
+            Debug.Log($"[BoltGroup] ğŸ—‘ï¸ğŸ—‘ï¸ ë¶€í’ˆ ë””ìŠ¤í° ì‹¤í–‰: {targetDespawnObject.name}");
+            InstanceFinder.ServerManager.Despawn(targetDespawnObject);
+        }
+        else
+        {
+            Debug.LogError($"[BoltGroup] âŒ ë¶€í’ˆ ë””ìŠ¤í° ì‹¤íŒ¨: targetDespawnObject={targetDespawnObject}, IsServer={InstanceFinder.IsServerStarted}");
         }
     }
 
     private IEnumerator DespawnGroupRoot()
     {
-        yield return new WaitForSeconds(1.5f);
+        Debug.Log($"[BoltGroup] DespawnGroupRoot ì½”ë£¨í‹´ ì‹œì‘: {gameObject.name}, ëŒ€ê¸°={despawnDelay}ì´ˆ");
+        yield return new WaitForSeconds(despawnDelay);
+        Debug.Log($"[BoltGroup] {despawnDelay}ì´ˆ ëŒ€ê¸° ì™„ë£Œ");
+
         if(gameObject != null && InstanceFinder.IsServerStarted)
+        {
+            Debug.Log($"[BoltGroup] ğŸ—‘ï¸ğŸ—‘ï¸ ë³¼íŠ¸ ê·¸ë£¹ ë””ìŠ¤í°: {gameObject.name}");
             InstanceFinder.ServerManager.Despawn(gameObject);
+        }
+        else
+        {
+            Debug.LogError($"[BoltGroup] âŒ ê·¸ë£¹ ë””ìŠ¤í° ì‹¤íŒ¨: gameObject={gameObject}, IsServer={InstanceFinder.IsServerStarted}");
+        }
     }
 
     private void OnClientBoltFall(BoltFallBroadcast msg, Channel ch)
     {
         if(msg.groupId != groupId) return;
+
+        if(msg.boltIndex >= _bolts.Count || msg.boltIndex < 0)
+        {
+            Debug.LogError($"[BoltGroup] âŒ boltIndex ë²”ìœ„ ì´ˆê³¼: {msg.boltIndex}");
+            return;
+        }
+
         var bolt = _bolts[msg.boltIndex];
-        if(bolt == null) return;
+        if(bolt == null)
+        {
+            Debug.LogError($"[BoltGroup] âŒ ë³¼íŠ¸ null: index={msg.boltIndex}");
+            return;
+        }
 
         Rigidbody rb = bolt.GetComponent<Rigidbody>();
         if(rb == null) rb = bolt.gameObject.AddComponent<Rigidbody>();
@@ -211,12 +356,15 @@ public class BoltGroupCounter : MonoBehaviour
         rb.useGravity = true;
         rb.AddForce(Vector3.down * 2f, ForceMode.Impulse);
         rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
+
+        Debug.Log($"[BoltGroup] ë³¼íŠ¸ {msg.boltIndex}ë²ˆ ë‚™í•˜ ì• ë‹ˆë©”ì´ì…˜ ì‹¤í–‰");
     }
 
     private void OnClientProgress(BoltProgressBroadcast msg, Channel ch)
     {
         if(msg.groupId != groupId) return;
         _removedCount = msg.removed;
+        Debug.Log($"[BoltGroup] í´ë¼ì´ì–¸íŠ¸ ì§„í–‰ë„ ì—…ë°ì´íŠ¸: {_removedCount}/{msg.total}");
     }
 
     public void ResetCounter()
@@ -224,8 +372,15 @@ public class BoltGroupCounter : MonoBehaviour
         _removedCount = 0;
         _completed = false;
         _removedIndices.Clear();
+        Debug.Log($"[BoltGroup] {groupId} ë¦¬ì…‹");
     }
 
     public int RemovedCount => _removedCount;
     public int TotalCount => _totalCount;
+
+    // â˜… ì§„í–‰ë„ í…ìŠ¤íŠ¸ ë°˜í™˜
+    public string GetProgressText()
+    {
+        return $"{TotalCount - RemovedCount}/{TotalCount}";
+    }
 }

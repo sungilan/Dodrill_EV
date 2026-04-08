@@ -21,6 +21,7 @@ public class GuideMarker : MonoBehaviour
     public GameObject highlightCircle;
     public GameObject nameCanvas;
     public TextMeshProUGUI descriptionText;
+    public TextMeshProUGUI _labelText;
     public GameObject arrow;
 
     private Tween _arrowTween;
@@ -107,5 +108,25 @@ public class GuideMarker : MonoBehaviour
         // 공유 머테리얼을 건드리지 않도록 인스턴스 복사
         if (r.material != null)
             r.material.color = color;
+    }
+
+    // ★ 진행도 텍스트 추가
+    public void SetProgressText(string progressText)
+    {
+        if(_labelText != null)
+        {
+            _labelText.text += $"\n<size=80%>{progressText}</size>";
+        }
+    }
+
+    // ★ 진행도만 업데이트
+    public void UpdateProgressText(string progressText)
+    {
+        // 기존 텍스트에서 진행도 부분만 교체
+        if(_labelText != null)
+        {
+            string[] parts = _labelText.text.Split('\n');
+            _labelText.text = parts[0] + $"\n<size=80%>{progressText}</size>";
+        }
     }
 }

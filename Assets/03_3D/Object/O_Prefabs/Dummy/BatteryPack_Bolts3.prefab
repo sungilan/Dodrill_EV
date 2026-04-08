@@ -36,7 +36,7 @@ Transform:
   m_GameObject: {fileID: 915051103395062966}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
-  m_LocalPosition: {x: -0.444, y: 0, z: -0.21}
+  m_LocalPosition: {x: -0.531, y: 0.011999965, z: -0.287}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -249,7 +249,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -0.444, y: 0, z: -0.21}
+    Position: {x: -0.531, y: 0.011999965, z: -0.287}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -352,7 +352,7 @@ Transform:
   m_GameObject: {fileID: 921186649967303062}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
-  m_LocalPosition: {x: -0.019, y: 0, z: 0.196}
+  m_LocalPosition: {x: -0.019, y: 0.011999965, z: 0.215}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -565,7 +565,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -0.019, y: 0, z: 0.196}
+    Position: {x: -0.019, y: 0.011999965, z: 0.215}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -668,7 +668,7 @@ Transform:
   m_GameObject: {fileID: 1503535651537106312}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
-  m_LocalPosition: {x: 0.359, y: 0, z: -0.21}
+  m_LocalPosition: {x: 0.455, y: 0.012, z: -0.286}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -881,7 +881,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0.359, y: 0, z: -0.21}
+    Position: {x: 0.455, y: 0.012, z: -0.286}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -984,7 +984,7 @@ Transform:
   m_GameObject: {fileID: 2885101642897758972}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
-  m_LocalPosition: {x: 0.359, y: 0, z: 0.196}
+  m_LocalPosition: {x: 0.45499995, y: 0.011999965, z: 0.215}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1197,7 +1197,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0.359, y: 0, z: 0.196}
+    Position: {x: 0.45499995, y: 0.011999965, z: 0.215}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -1300,7 +1300,7 @@ Transform:
   m_GameObject: {fileID: 5301685385598985975}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
-  m_LocalPosition: {x: -0.4440001, y: 0, z: 0.196}
+  m_LocalPosition: {x: -0.53100014, y: 0.011999965, z: 0.22}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1513,7 +1513,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -0.4440001, y: 0, z: 0.196}
+    Position: {x: -0.53100014, y: 0.011999965, z: 0.22}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
@@ -1632,9 +1632,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bab84ae395954ef4aa75abc5b9501406, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoltGroupCounter
-  assembleMode: 1
-  groupId: BatteryPack_Bolts3
-  taskId: BatteryPack_Assemble1
+  assembleMode: 0
+  groupId: BatteryPack_Bolts1
+  taskId: BatteryPack_Disassemble1
   ejectDuration: 0.4
   _totalCount: 0
   _removedCount: 0
@@ -1688,7 +1688,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 30
+  <PrefabId>k__BackingField: 40
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 14363558395537755728
   <SceneId>k__BackingField: 0
@@ -1748,7 +1748,7 @@ Transform:
   m_GameObject: {fileID: 9188717962681321207}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
-  m_LocalPosition: {x: -0.019000143, y: 0, z: -0.21}
+  m_LocalPosition: {x: -0.019000143, y: 0.011999965, z: -0.287}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1961,7 +1961,7 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -0.019000143, y: 0, z: -0.21}
+    Position: {x: -0.019000143, y: 0.011999965, z: -0.287}
     Rotation: {x: -0, y: 0.7071068, z: -0.7071068, w: 0}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1

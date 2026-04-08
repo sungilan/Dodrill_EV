@@ -52,63 +52,6 @@
             "vi": ""
           }
         ]
-      },
-      {
-        "prefabId": "Front_Cover_Bolts",
-        "position": {
-          "x": 2.784,
-          "y": 1.155,
-          "z": 6.463
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
-        },
-        "properties": []
-      },
-      {
-        "prefabId": "BatteryPack_Bolts1",
-        "position": {
-          "x": 1.897,
-          "y": 1.153,
-          "z": 6.363
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
-        },
-        "properties": []
-      },
-      {
-        "prefabId": "BatteryPack_Bolts2",
-        "position": {
-          "x": 2.55,
-          "y": 1.236,
-          "z": 6.354
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
-        },
-        "properties": []
       }
     ]
   },
@@ -134,12 +77,6 @@
           {
             "prefabId": "SmartKey",
             "spawnPointId": "SP_Driver_Seat",
-            "guideId": "Guide_LockBox",
-            "targetGuideId": ""
-          },
-          {
-            "prefabId": "LockBox",
-            "spawnPointId": "SP_LockBox",
             "guideId": "Guide_LockBox",
             "targetGuideId": ""
           },
@@ -203,7 +140,7 @@
         "spawnObjects": []
       },
       {
-        "moduleId": "Connector_Cover_Removal",
+        "moduleId": "Front_Cover_Removal",
         "timeout": 120,
         "completionMode": "AnyPlayer",
         "spawnObjects": [
@@ -211,6 +148,42 @@
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
             "guideId": "Front_Cover_Bolts"
+          }
+        ]
+      },
+      {
+        "moduleId": "Rear_Cover_Removal",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Rear_Cover_Bolts"
+          }
+        ]
+      },
+      {
+        "moduleId": "Battery_Cover_Removal",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "Battery_Cover_Bolts"
+          }
+        ]
+      },
+      {
+        "moduleId": "Connector_Cover_Removal",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "BatteryPack_Front_Cover_Bolts"
           }
         ]
       },
@@ -234,7 +207,7 @@
           {
             "prefabId": "Multimeter",
             "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_HV_Cable_Term"
+            "guideId": "Guide_HV_Front_Cable_Term"
           }
         ]
       },
@@ -246,7 +219,7 @@
           {
             "prefabId": "Multimeter",
             "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_HV_Cable_Term"
+            "guideId": "Guide_HV_Rear_Cable_Term"
           }
         ]
       },
@@ -351,7 +324,7 @@
           {
             "prefabId": "Front_Cover_Bolts2",
             "spawnPointId": "SP_ForntConnector_Bolts",
-            "guideId": "Front_Cover_Bolts"
+            "guideId": "Front_Cover_Bolts2"
           }
         ]
       },
@@ -562,7 +535,7 @@
         "extra": [
           {
             "key": "description",
-            "ko": "뒷좌석 하단의 서비스 플러그(MSD) 레버를 해제하고 탈거하세요.",
+            "ko": "저전압 배터리 뚜껑을 열고 서비스 플러그(MSD) 레버를 해제하고 탈거하세요.",
             "en": "Release and remove the MSD service plug under the rear seat."
           },
           {
@@ -603,7 +576,7 @@
       }
     },
     {
-      "moduleId": "Connector_Cover_Removal",
+      "moduleId": "Front_Cover_Removal",
       "config": {
         "actionType": "ConfirmTask",
         "requiredItems": [ "ImpactWrench" ],
@@ -615,7 +588,67 @@
         "extra": [
           {
             "key": "description",
-            "ko": "커버 볼트 4개를 임팩트렌치를 이용하여 제거하세요.",
+            "ko": "차량 하부 앞부분 커버 볼트를 임팩트렌치를 이용하여 제거하세요.",
+            "en": "Remove 4 cover bolts.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Rear_Cover_Removal",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [ "ImpactWrench" ],
+        "targetObjName": "Front_Cover_Bolts",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "차량 하부 뒷부분 커버 볼트를 임팩트렌치를 이용하여 제거하세요.",
+            "en": "Remove 4 cover bolts.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_Cover_Removal",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [ "ImpactWrench" ],
+        "targetObjName": "Battery_Cover_Bolts",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "배터리 커버 볼트를 임팩트렌치를 이용하여 제거하세요.",
+            "en": "Remove 4 cover bolts.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Connector_Cover_Removal",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [ "ImpactWrench" ],
+        "targetObjName": "BatteryPack_Front_Cover_Bolts",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "description",
+            "ko": "배터리팩 앞부분의 볼트를 임팩트렌치를 이용하여 제거하세요.",
             "en": "Remove 4 cover bolts.",
             "vi": ""
           }
@@ -679,7 +712,7 @@
           },
           {
             "key": "description",
-            "ko": "인버터 고압 케이블 단자에서 잔류 전압이 0V인지 측정합니다.",
+            "ko": "전방 인버터 고압 케이블 단자에서 잔류 전압이 0V인지 측정합니다.",
             "en": "Measure residual voltage at HV cable terminal — must be 0V."
           },
           {
@@ -717,7 +750,7 @@
           },
           {
             "key": "description",
-            "ko": "인버터 고압 케이블 단자에서 잔류 전압이 0V인지 측정합니다.",
+            "ko": "후방 인버터 고압 케이블 단자에서 잔류 전압이 0V인지 측정합니다.",
             "en": "Measure residual voltage at HV cable terminal — must be 0V."
           },
           {
@@ -851,7 +884,7 @@
         "extra": [
           {
             "key": "description",
-            "ko": "배터리 잭으로 팩을 지지한 후 고정 볼트를 모두 해체하세요.",
+            "ko": "임팩트 렌치로 배터리 고정 볼트를 모두 해체하세요.",
             "en": "Support the pack with battery jack, then remove all fixing bolts."
           },
           {
@@ -900,7 +933,7 @@
         "extra": [
           {
             "key": "description",
-            "ko": "배터리 잭으로 팩을 지지한 후 고정 볼트를 모두 해체하세요.",
+            "ko": "임팩트 렌치로 배터리 고정 볼트를 모두 해체하세요.",
             "en": "Support the pack with battery jack, then remove all fixing bolts."
           },
           {

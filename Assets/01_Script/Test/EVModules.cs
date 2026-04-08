@@ -165,7 +165,7 @@ public class BatteryPack_Assemble2Module : ConfirmTaskModule
     public override string ModuleId => "BatteryPack_Assemble2";
 }
 
-public class Connector_Cover_ReInstalModule : ConfirmTaskModule
+public class Connector_Cover_ReInstallModule : ConfirmTaskModule
 {
     public override string ModuleId => "Connector_Cover_Reinstall";
 }
@@ -214,7 +214,7 @@ public static class EVModules
         registry.Register(new Gasket_ReplaceModule());
         registry.Register(new BatteryPack_Assemble1Module());
         registry.Register(new BatteryPack_Assemble2Module());
-        registry.Register(new Connector_Cover_ReInstalModule());
+        registry.Register(new Connector_Cover_ReInstallModule());
         registry.Register(new MSD_ReinstallModule());
         registry.Register(new FinalDiagnosisModule());
 
@@ -222,6 +222,9 @@ public static class EVModules
         registry.Register(new LOTO_SmartKeyModule());      // 시나리오 2번째 단계
         registry.Register(new LOTO_FaceShieldModule());    // 시나리오 3번째 단계
         registry.Register(new LOTO_ShoesModule());        // 시나리오 4번째 단계
+        registry.Register(new Front_Cover_RemovalModule());
+        registry.Register(new Rear_Cover_RemovalModule());
+        registry.Register(new Battery_Cover_RemovalModule());
         registry.Register(new Connector_Cover_RemovalModule());
         registry.Register(new HV_Front_DisconnectModule());
         registry.Register(new HV_Front_ConnectModule());
@@ -247,6 +250,19 @@ public static class EVModules
 //  v2 시나리오 추가 모듈 (9개)
 //  모두 ConfirmTaskModule 상속 — 타겟 GO 클릭 or TaskCompleteSignal로 완료
 // ──────────────────────────────────────────────────────────────
+
+public class Front_Cover_RemovalModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Front_Cover_Removal";
+}
+public class Rear_Cover_RemovalModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Rear_Cover_Removal";
+}
+public class Battery_Cover_RemovalModule : ConfirmTaskModule
+{
+    public override string ModuleId => "Battery_Cover_Removal";
+}
 
 public class Connector_Cover_RemovalModule : ConfirmTaskModule
 {

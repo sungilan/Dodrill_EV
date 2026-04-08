@@ -1,148 +1,10 @@
-//using UnityEngine;
-
-//public class BatteryLiftController : LiftControllerBase
-//{
-//    [Header("── TransformBased 전용 ──")]
-//    public Transform liftPlate;
-//    public float maxHeight = 0.5f;
-
-//    [Header("── 배터리팩 연동 ──")]
-//    public Transform batteryPackTransform;
-//    public Transform animBatteryPackTransform;
-//    public float contactHeight = 0.08f;
-
-//    [Header("배터리 상태 (읽기 전용)")]
-//    [SerializeField] private bool _isBatteryAttached = false;
-
-//    private Vector3 _plateOrigin;
-//    private Vector3 _batteryOrigin;
-//    private Vector3 _animBatteryOffset;
-
-//    protected override float GetMaxHeight() => maxHeight;
-
-//    protected override void OnLiftStart()
-//    {
-//        if(liftMode == LiftMode.TransformBased)
-//        {
-//            // 배터리 리프트도 Animator가 뼈대를 잡고 있을 수 있으므로 꺼줌
-//            if(liftAnimator != null) liftAnimator.enabled = false;
-//            else
-//            {
-//                var anim = GetComponent<Animator>();
-//                if(anim != null) anim.enabled = false;
-//            }
-
-//            if(liftPlate != null) _plateOrigin = liftPlate.localPosition;
-//            if(batteryPackTransform != null) _batteryOrigin = batteryPackTransform.position;
-//        }
-//        else
-//        {
-//            if(platformBone != null && animBatteryPackTransform != null)
-//                _animBatteryOffset = animBatteryPackTransform.position - platformBone.position;
-//        }
-//    }
-
-//    protected override void ApplyHeightTransform(float h)
-//    {
-//        // ★ 실제 직속 부모 기준으로 월드 좌표 변환
-//        if(liftPlate != null)
-//        {
-//            Vector3 targetLocalPos = _plateOrigin + Vector3.up * h;
-//            Vector3 targetWorldPos = liftPlate.parent != null ? liftPlate.parent.TransformPoint(targetLocalPos) : targetLocalPos;
-//            UpdateTargetPositionViaLNT(liftPlate, targetWorldPos);
-//        }
-
-//        if(_isBatteryAttached && batteryPackTransform != null)
-//        {
-//            UpdateTargetPositionViaLNT(batteryPackTransform, _batteryOrigin + Vector3.up * h);
-//        }
-//    }
-
-//    protected override void SyncPayloadLateUpdate()
-//    {
-//        if(!_isBatteryAttached || !_isInitialized) return;
-//        if(platformBone == null || animBatteryPackTransform == null) return;
-
-//        Vector3 targetWorldPos = platformBone.position + _animBatteryOffset;
-//        UpdateTargetPositionViaLNT(animBatteryPackTransform, targetWorldPos);
-//    }
-
-//    protected override void OnHeightChanged(float newHeight, float prevHeight)
-//    {
-//        if(NetworkObject == null || !IsServerInitialized) return;
-
-//        if(_isBatteryAttached) return;
-//        if(_direction != 1) return;
-//        if(newHeight < contactHeight) return;
-
-//        AttachBattery();
-//    }
-
-//    protected override void OnReachedBottom()
-//    {
-//        if(NetworkObject == null || !IsServerInitialized) return;
-//        if(_isBatteryAttached) DetachBattery();
-//    }
-
-//    private void AttachBattery()
-//    {
-//        _isBatteryAttached = true;
-
-//        if(liftMode == LiftMode.TransformBased && batteryPackTransform != null)
-//            _batteryOrigin = batteryPackTransform.position - Vector3.up * _currentHeight;
-
-//        if(liftMode == LiftMode.AnimatorBased && platformBone != null && animBatteryPackTransform != null)
-//            _animBatteryOffset = animBatteryPackTransform.position - platformBone.position;
-
-//        Debug.Log("[BatteryLift] 배터리팩 연결됨");
-//        InteractionEvents.FireZoneActivated("BatteryJack_Contact", "BatteryJack");
-//    }
-
-//    private void DetachBattery()
-//    {
-//        _isBatteryAttached = false;
-//        Debug.Log("[BatteryLift] 배터리팩 분리됨");
-//        InteractionEvents.FireZoneActivated("BatteryPack_BoltGroup", "BatteryJack");
-//    }
-
-//    protected override string GetHeightDisplayText()
-//    {
-//        string state = _isMoving
-//            ? (_direction > 0 ? "▲ 상승 중" : "▼ 하강 중")
-//            : (_isBatteryAttached ? "■ 배터리 지지 중" : "■ 대기");
-
-//        string heightStr = liftMode == LiftMode.TransformBased
-//            ? $"{_currentHeight * 100:F0}cm"
-//            : $"{_currentHeight * 100:F0}%";
-
-//        return $"{state}\n{heightStr}";
-//    }
-
-//    public bool IsBatteryAttached => _isBatteryAttached;
-
-//    public void SetBatteryPack(Transform pack)
-//    {
-//        if(liftMode == LiftMode.TransformBased)
-//        {
-//            batteryPackTransform = pack;
-//            _batteryOrigin = pack.position;
-//        }
-//        else
-//        {
-//            animBatteryPackTransform = pack;
-//            if(platformBone != null)
-//                _animBatteryOffset = pack.position - platformBone.position;
-//        }
-//    }
-//}
-
-using UnityEngine;
+using DG.Tweening;
+using DoDrill;
 using FishNet.Object;
+using FishNet.Object.Synchronizing;
+using System.Collections;
+using UnityEngine;
 
-/// <summary>
-/// 배터리 리프트(배터리 잭) 컨트롤러.
-/// 차량 하부 정위치(Zone)에 있고 특정 높이에 도달했을 때 배터리 팩을 논리적으로 연결함.
-/// </summary>
 public class BatteryLiftController : LiftControllerBase
 {
     [Header("── TransformBased 전용 ──")]
@@ -150,29 +12,97 @@ public class BatteryLiftController : LiftControllerBase
     public float maxHeight = 0.5f;
 
     [Header("── 배터리팩 연동 ──")]
+    [Tooltip("수동 지정 (비우면 자동 탐색)")]
     public Transform batteryPackTransform;
     public Transform animBatteryPackTransform;
 
-    [Tooltip("부착을 시도할 최소 높이 (Animator모드면 0~1 사이 정규화된 값)")]
+    [Tooltip("부착을 시도할 최소 높이")]
     public float contactHeight = 0.08f;
 
-    [Header("배터리 상태 (읽기 전용)")]
-    [SerializeField] private bool _isBatteryAttached = false;
+    [Header("── ★ 차량 정위치 배치 ──")]
+    [Tooltip("차량 정위치 트리거")]
+    public Collider vehiclePositionTrigger;
+    [Tooltip("차량 정위치 진입 시 이동할 목표 위치")]
+    public Transform vehiclePositionTarget;
+    [Tooltip("목표 위치로 이동하는 시간 (초)")]
+    public float moveToPositionDuration = 0.5f;
+    [Tooltip("목표 위치로 이동할 때의 Ease")]
+    public Ease moveToPositionEase = Ease.InOutQuad;
 
-    // 존 방식 판정을 위한 내부 상태
-    private bool _isInPosition = false;
+    [Header("── ★ 정위치 도달 시 회전 오프셋 ──")]
+    [Tooltip("정위치에 도달했을 때 적용할 회전 오프셋 (X, Y, Z)")]
+    public Vector3 positionReachedRotationOffset = new Vector3(-90f, 0f, 0f);
 
+    //[Header("── ★ 배터리 감지 방식 ──")]
+    [Tooltip("배터리 감지 방식: Height = 높이만 / Collider = 콜라이더 접촉")]
+    public enum BatteryDetectionMode { Height, Collider }
+    public BatteryDetectionMode detectionMode = BatteryDetectionMode.Collider;
+    [Tooltip("배터리 감지 트리거 (자동 탐색됨, 수동 지정 가능)")]
+    public Collider batteryDetectionTrigger;
+
+    [Header("배터리 상태")]
+    private readonly SyncVar<bool> _syncBatteryAttached = new SyncVar<bool>();
+    private readonly SyncVar<bool> _syncIsInPosition = new SyncVar<bool>();
+
+    public bool IsBatteryAttached => _syncBatteryAttached.Value;
+    public bool IsInPosition => _syncIsInPosition.Value;
+
+    private bool _isLocallyInPosition = false;
+    private bool _isBatteryInContactZone = false;
     private Vector3 _plateOrigin;
     private Vector3 _batteryOrigin;
     private Vector3 _animBatteryOffset;
+    private Rigidbody _rigidbody;
+    private bool _isMovingToPosition = false;
+    private LocalNetworkTransform _lnt;
+    private Collider _liftCollider;
+
+    private SyncGrab _liftSyncGrab;
 
     protected override float GetMaxHeight() => maxHeight;
+
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        _syncBatteryAttached.OnChange += OnBatteryAttachmentChanged;
+        _syncIsInPosition.OnChange += OnIsInPositionChanged;
+    }
+
+    public override void OnStopClient()
+    {
+        base.OnStopClient();
+        _syncBatteryAttached.OnChange -= OnBatteryAttachmentChanged;
+        _syncIsInPosition.OnChange -= OnIsInPositionChanged;
+    }
+
+    private void OnBatteryAttachmentChanged(bool prev, bool next, bool asServer)
+    {
+        Debug.Log($"[BatteryLift] ★★★ 배터리 부착 상태 변경: {prev} → {next} ★★★");
+
+        if(next)
+        {
+            Debug.Log($"[BatteryLift] ✅ 배터리 팩이 잭에 부착되었습니다!");
+        }
+        else
+        {
+            Debug.Log($"[BatteryLift] ❌ 배터리 팩이 분리되었습니다.");
+        }
+
+        if(next && liftMode == LiftMode.AnimatorBased && platformBone != null && animBatteryPackTransform != null)
+        {
+            _animBatteryOffset = animBatteryPackTransform.position - platformBone.position;
+        }
+    }
+
+    private void OnIsInPositionChanged(bool prev, bool next, bool asServer)
+    {
+        Debug.Log($"[BatteryLift] 정위치 상태 변경: {prev} → {next}");
+    }
 
     protected override void OnLiftStart()
     {
         if(liftMode == LiftMode.TransformBased)
         {
-            // 애니메이터 간섭 차단
             if(liftAnimator != null) liftAnimator.enabled = false;
             else
             {
@@ -181,38 +111,198 @@ public class BatteryLiftController : LiftControllerBase
             }
 
             if(liftPlate != null) _plateOrigin = liftPlate.localPosition;
-            if(batteryPackTransform != null) _batteryOrigin = batteryPackTransform.position;
+        }
+
+        _rigidbody = GetComponent<Rigidbody>();
+        _lnt = GetComponent<LocalNetworkTransform>();
+        _liftSyncGrab = GetComponent<SyncGrab>();
+        _liftCollider = GetComponent<Collider>();
+
+        Debug.Log($"[BatteryLift] 시작 - 모드: {liftMode}, 감지 방식: {detectionMode}, 접촉 높이: {contactHeight}");
+
+        StartCoroutine(AutoSearchAndAttachBatteryPack());
+        if(vehiclePositionTrigger == null)
+            StartCoroutine(AutoSearchVehiclePositionTrigger());
+    }
+
+    private IEnumerator AutoSearchVehiclePositionTrigger()
+    {
+        var wait = new WaitForSeconds(0.5f);
+
+        while(vehiclePositionTrigger == null)
+        {
+            var allColliders = FindObjectsByType<Collider>(
+                FindObjectsInactive.Exclude,
+                FindObjectsSortMode.None);
+
+            foreach(var col in allColliders)
+            {
+                if(!col.isTrigger) continue;
+
+                string name = col.gameObject.name.ToLower();
+                if(name.Contains("battery_mount") || name.Contains("battery_zone"))
+                {
+                    vehiclePositionTrigger = col;
+                    Debug.Log($"🎉 [BatteryLift] 차량 정위치 트리거 자동 발견: {col.gameObject.name}");
+                    yield break;
+                }
+            }
+
+            yield return wait;
+        }
+    }
+
+    private IEnumerator AutoSearchAndAttachBatteryPack()
+    {
+        var wait = new WaitForSeconds(0.5f);
+
+        while(true)
+        {
+            bool isAttached = (liftMode == LiftMode.TransformBased && batteryPackTransform != null) ||
+                              (liftMode == LiftMode.AnimatorBased && animBatteryPackTransform != null);
+
+            if(isAttached)
+            {
+                Debug.Log($"🎉 [BatteryLift] 배터리팩 자동 탐색 완료");
+
+                // ★ [핵심] 배터리 발견 시 감지 트리거도 함께 탐색
+                if(detectionMode == BatteryDetectionMode.Collider && batteryDetectionTrigger == null)
+                {
+                    SearchBatteryDetectionTrigger();
+                }
+
+                yield break;
+            }
+
+            var allBatteries = FindObjectsByType<Battery>(
+                FindObjectsInactive.Exclude,
+                FindObjectsSortMode.None);
+
+            foreach(var battery in allBatteries)
+            {
+                var netObj = battery.GetComponent<NetworkObject>();
+                if(netObj == null) continue;
+
+                var lnt = battery.GetComponent<LocalNetworkTransform>();
+                if(lnt == null) continue;
+
+                var otherBatteryLift = FindObjectOfType<BatteryLiftController>();
+                if(otherBatteryLift != null && otherBatteryLift != this)
+                {
+                    if(otherBatteryLift.batteryPackTransform == battery.transform ||
+                       otherBatteryLift.animBatteryPackTransform == battery.transform)
+                        continue;
+                }
+
+                AttachBatteryPackTransform(battery.transform);
+                Debug.Log($"🎉 [BatteryLift] 배터리팩 자동 발견: {battery.gameObject.name}");
+
+                // ★ [핵심] 배터리 발견 시 감지 트리거도 함께 탐색
+                if(detectionMode == BatteryDetectionMode.Collider && batteryDetectionTrigger == null)
+                {
+                    SearchBatteryDetectionTrigger(battery.transform);
+                }
+
+                yield break;
+            }
+
+            yield return wait;
+        }
+    }
+
+    /// <summary>
+    /// ★ [핵심] 배터리의 자식에서 감지 트리거 찾기
+    /// Battery 컴포넌트가 있는 오브젝트의 자식 중 Trigger Collider를 찾습니다.
+    /// </summary>
+    private void SearchBatteryDetectionTrigger(Transform batteryTransform = null)
+    {
+        // 배터리 트랜스폼이 전달되지 않으면 현재 배터리팩 사용
+        if(batteryTransform == null)
+        {
+            if(batteryPackTransform == null)
+            {
+                Debug.LogWarning("[BatteryLift] 배터리팩을 찾을 수 없어 감지 트리거 탐색 실패");
+                return;
+            }
+            batteryTransform = batteryPackTransform;
+        }
+
+        Debug.Log($"[BatteryLift] 배터리({batteryTransform.name})의 자식에서 감지 트리거 탐색 시작...");
+
+        // ★ 배터리의 모든 자식 Collider 검사
+        var allChildColliders = batteryTransform.GetComponentsInChildren<Collider>();
+
+        foreach(var col in allChildColliders)
+        {
+            // Trigger이고 자식인 콜라이더만 선택
+            if(!col.isTrigger) continue;
+
+            string name = col.gameObject.name.ToLower();
+
+            // 감지 트리거 이름 패턴 확인
+            if(name.Contains("contact") || name.Contains("detect") ||
+               name.Contains("zone") || name.Contains("trigger"))
+            {
+                batteryDetectionTrigger = col;
+                Debug.Log($"🎉 [BatteryLift] 배터리 감지 트리거 자동 발견: {col.gameObject.name}");
+                return;
+            }
+        }
+
+        // 특정 이름 패턴이 없으면 첫 번째 Trigger Collider를 사용
+        if(allChildColliders.Length > 0)
+        {
+            foreach(var col in allChildColliders)
+            {
+                if(col.isTrigger && col.gameObject != batteryTransform.gameObject)
+                {
+                    batteryDetectionTrigger = col;
+                    Debug.Log($"🎉 [BatteryLift] 배터리 감지 트리거 자동 발견 (첫 번째): {col.gameObject.name}");
+                    return;
+                }
+            }
+        }
+
+        Debug.LogWarning($"[BatteryLift] 배터리({batteryTransform.name})의 자식에서 Trigger Collider를 찾을 수 없습니다!");
+    }
+
+    private void AttachBatteryPackTransform(Transform batteryPack)
+    {
+        if(liftMode == LiftMode.TransformBased)
+        {
+            batteryPackTransform = batteryPack;
+            _batteryOrigin = batteryPack.position;
         }
         else
         {
-            if(platformBone != null && animBatteryPackTransform != null)
-                _animBatteryOffset = animBatteryPackTransform.position - platformBone.position;
+            animBatteryPackTransform = batteryPack;
+            if(platformBone != null)
+                _animBatteryOffset = batteryPack.position - platformBone.position;
         }
-
-        Debug.Log($"[BatteryLift] 시작 - 모드: {liftMode}, 목표 접촉 높이: {contactHeight}");
     }
 
     protected override void ApplyHeightTransform(float h)
     {
-        // 리프트 판넬 이동 (LNT 동기화)
         if(liftPlate != null)
         {
             Vector3 targetLocalPos = _plateOrigin + Vector3.up * h;
-            Vector3 targetWorldPos = liftPlate.parent != null ? liftPlate.parent.TransformPoint(targetLocalPos) : targetLocalPos;
+            Vector3 targetWorldPos = liftPlate.parent != null
+                ? liftPlate.parent.TransformPoint(targetLocalPos)
+                : targetLocalPos;
             UpdateTargetPositionViaLNT(liftPlate, targetWorldPos);
         }
 
-        // 배터리가 부착된 상태라면 배터리도 함께 위로 이동
-        if(_isBatteryAttached && batteryPackTransform != null)
+        if(IsBatteryAttached && batteryPackTransform != null)
         {
-            UpdateTargetPositionViaLNT(batteryPackTransform, _batteryOrigin + Vector3.up * h);
+            Vector3 targetWorldPos = _batteryOrigin + Vector3.up * h;
+            UpdateTargetPositionViaLNT(batteryPackTransform, targetWorldPos);
         }
     }
 
     protected override void SyncPayloadLateUpdate()
     {
-        // AnimatorBased 모드에서 상판 본(Bone)의 위치에 배터리를 강제 정렬
-        if(!_isBatteryAttached || !_isInitialized) return;
+        if(!_isInitialized || liftMode != LiftMode.AnimatorBased) return;
+        if(!IsBatteryAttached) return;
         if(platformBone == null || animBatteryPackTransform == null) return;
 
         Vector3 targetWorldPos = platformBone.position + _animBatteryOffset;
@@ -221,65 +311,81 @@ public class BatteryLiftController : LiftControllerBase
 
     protected override void OnHeightChanged(float newHeight, float prevHeight)
     {
-        // 판정은 서버 권위로만 수행
-        //if(NetworkObject == null || !IsServerInitialized) return;
-
-        // 이미 붙어있거나 내려가는 중이면 체크 안 함
-        if(_isBatteryAttached) return;
+        if(!IsServerInitialized) return;
+        if(IsBatteryAttached) return;
         if(_direction != 1) return;
 
-        // 디버깅 로그: 높이 변화 실시간 출력 (image_9c28ba.jpg 기준 Animator 모드 값 확인용)
-        if(Mathf.Abs(newHeight - prevHeight) > 0.001f)
+        bool heightOk = newHeight >= contactHeight;
+        bool positionOk = _isLocallyInPosition;
+        bool batteryContactOk = (detectionMode == BatteryDetectionMode.Height)
+            ? true
+            : _isBatteryInContactZone;
+
+        if(!heightOk && prevHeight < contactHeight && newHeight >= contactHeight)
         {
-            Debug.Log($"[BatteryLift] 상승 중... 현재 높이: {newHeight:F3} (목표: {contactHeight}), 존 진입: {_isInPosition}");
+            Debug.Log($"[BatteryLift] ⬆️ 접촉 높이 도달: {newHeight:F3}m (목표: {contactHeight:F3}m)");
+            Debug.Log($"[BatteryLift] 정위치 상태: {(positionOk ? "✅ 진입함" : "❌ 미진입")}");
+            Debug.Log($"[BatteryLift] 배터리 감지 방식: {detectionMode}");
+            if(detectionMode == BatteryDetectionMode.Collider)
+                Debug.Log($"[BatteryLift] 배터리 콜라이더 접촉: {(batteryContactOk ? "✅ 접촉함" : "❌ 미접촉")}");
         }
 
-        // 1. 높이 조건 체크
-        if(newHeight < contactHeight) return;
-
-        // 2. 존 방식 체크 (차량 아래 정위치인지 확인)
-        if(!_isInPosition)
+        if(newHeight < contactHeight)
         {
-            // 높이는 도달했으나 위치가 틀렸을 때 경고 (매 프레임 방지 위해 가끔 출력)
-            if(Time.frameCount % 60 == 0)
-                Debug.LogWarning("[BatteryLift] 접촉 높이 도달! 하지만 차량 정위치(Zone)가 아닙니다.");
+            Debug.Log($"[BatteryLift] 높이 미달: {newHeight:F3}m < {contactHeight:F3}m");
             return;
         }
 
-        // 모든 조건 충족 시 부착
-        AttachBattery();
+        if(!positionOk)
+        {
+            if(Time.frameCount % 120 == 0)
+                Debug.LogWarning($"[BatteryLift] ⚠️ 높이는 도달({newHeight:F3}m)했으나 정위치(Zone)가 아닙니다!");
+            return;
+        }
+
+        if(detectionMode == BatteryDetectionMode.Collider && !batteryContactOk)
+        {
+            if(Time.frameCount % 120 == 0)
+                Debug.LogWarning($"[BatteryLift] ⚠️ 정위치 진입했으나 배터리 콜라이더가 감지 영역에 없습니다!");
+            return;
+        }
+
+        Debug.Log($"[BatteryLift] 🎯 배터리 부착 조건 충족! 부착 시도...");
+        ServerAttachBattery();
     }
 
     protected override void OnReachedBottom()
     {
-        if(NetworkObject == null || !IsServerInitialized) return;
-
-        Debug.Log("[BatteryLift] 하단 도달 - 배터리 분리 시도");
-        if(_isBatteryAttached) DetachBattery();
+        if(!IsServerInitialized) return;
+        if(IsBatteryAttached)
+        {
+            Debug.Log($"[BatteryLift] 🔴 최하단 도달 → 배터리 분리");
+            ServerDetachBattery();
+        }
     }
 
-    private void AttachBattery()
+    [ServerRpc(RequireOwnership = false)]
+    private void ServerAttachBattery()
     {
-        _isBatteryAttached = true;
+        Debug.Log("[BatteryLift] ★ 서버: 배터리 부착 RPC 수신 및 처리 중... ★");
 
         if(liftMode == LiftMode.TransformBased && batteryPackTransform != null)
+        {
             _batteryOrigin = batteryPackTransform.position - Vector3.up * _currentHeight;
-
-        if(liftMode == LiftMode.AnimatorBased && platformBone != null && animBatteryPackTransform != null)
+        }
+        else if(liftMode == LiftMode.AnimatorBased && platformBone != null && animBatteryPackTransform != null)
+        {
             _animBatteryOffset = animBatteryPackTransform.position - platformBone.position;
+        }
 
-        Debug.Log("[BatteryLift] ★ 배터리팩 부착 성공 ★");
-
-        // 시나리오 시스템에 상태 보고
+        _syncBatteryAttached.Value = true;
         InteractionEvents.FireZoneActivated("BatteryJack_Contact", "BatteryJack");
     }
 
-    private void DetachBattery()
+    [ServerRpc(RequireOwnership = false)]
+    private void ServerDetachBattery()
     {
-        _isBatteryAttached = false;
-        Debug.Log("[BatteryLift] ★ 배터리팩 분리(바닥 하강) 완료 ★");
-
-        // 다음 단계를 위한 이벤트 발행
+        _syncBatteryAttached.Value = false;
         InteractionEvents.FireZoneActivated("BatteryPack_BoltGroup", "BatteryJack");
     }
 
@@ -287,7 +393,7 @@ public class BatteryLiftController : LiftControllerBase
     {
         string state = _isMoving
             ? (_direction > 0 ? "▲ 상승 중" : "▼ 하강 중")
-            : (_isBatteryAttached ? "■ 배터리 지지 중" : "■ 대기");
+            : (IsBatteryAttached ? "■ 배터리 지지 중" : "■ 대기");
 
         string heightStr = liftMode == LiftMode.TransformBased
             ? $"{_currentHeight * 100:F0}cm"
@@ -296,41 +402,154 @@ public class BatteryLiftController : LiftControllerBase
         return $"{state}\n{heightStr}";
     }
 
-    public bool IsBatteryAttached => _isBatteryAttached;
-
     public void SetBatteryPack(Transform pack)
     {
-        if(liftMode == LiftMode.TransformBased)
+        AttachBatteryPackTransform(pack);
+
+        // ★ [추가] 수동으로 배터리팩을 설정할 때도 감지 트리거 탐색
+        if(detectionMode == BatteryDetectionMode.Collider && batteryDetectionTrigger == null)
         {
-            batteryPackTransform = pack;
-            _batteryOrigin = pack.position;
-        }
-        else
-        {
-            animBatteryPackTransform = pack;
-            if(platformBone != null)
-                _animBatteryOffset = pack.position - platformBone.position;
+            SearchBatteryDetectionTrigger(pack);
         }
     }
 
-    // ── 존(Zone) 판정 로직 ───────────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    // 차량 정위치 트리거 처리
+    // ═══════════════════════════════════════════════════════
 
     private void OnTriggerEnter(Collider other)
     {
-        // 씬의 배터리 안착 구역(Trigger) 식별
-        if(other.name.Contains("Battery_Mount") || other.CompareTag("BatteryZone"))
+        // 배터리 감지 트리거
+        if(detectionMode == BatteryDetectionMode.Collider &&
+           batteryDetectionTrigger != null &&
+           other == batteryDetectionTrigger)
         {
-            _isInPosition = true;
-            Debug.Log("[BatteryLift] 차량 하부 정위치 진입 완료");
+            _isBatteryInContactZone = true;
+            Debug.Log($"[BatteryLift] ✅ 배터리가 감지 영역에 진입!");
+            return;
+        }
+
+        // 차량 정위치 트리거
+        if(other == vehiclePositionTrigger ||
+           other.name.Contains("Battery_Mount") ||
+           other.CompareTag("BatteryZone"))
+        {
+            _isLocallyInPosition = true;
+            Debug.Log($"[BatteryLift] ✅ 차량 정위치 진입!");
+
+            if(IsServerInitialized)
+                ServerSetIsInPosition(true);
+            else
+                RequestIsInPositionServerRpc(true);
+
+            if(_liftSyncGrab != null && _liftSyncGrab.IsGrabbed)
+            {
+                Debug.Log($"[BatteryLift] 🔓 배터리 리프트가 잡혀있었으므로 내려놓기 요청");
+                _liftSyncGrab.RequestRelease();
+            }
+
+            if(vehiclePositionTarget != null && !_isMovingToPosition)
+            {
+                MoveToTargetPosition();
+            }
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if(other.name.Contains("Battery_Mount") || other.CompareTag("BatteryZone"))
+        // 배터리 감지 트리거
+        if(detectionMode == BatteryDetectionMode.Collider &&
+           batteryDetectionTrigger != null &&
+           other == batteryDetectionTrigger)
         {
-            _isInPosition = false;
-            Debug.Log("[BatteryLift] 차량 하부 정위치 이탈");
+            _isBatteryInContactZone = false;
+            Debug.Log($"[BatteryLift] ❌ 배터리가 감지 영역에서 빠짐!");
+            return;
         }
+
+        // 차량 정위치 트리거
+        if(other == vehiclePositionTrigger ||
+           other.name.Contains("Battery_Mount") ||
+           other.CompareTag("BatteryZone"))
+        {
+            _isLocallyInPosition = false;
+            Debug.Log($"[BatteryLift] ❌ 차량 정위치 이탈");
+
+            if(IsServerInitialized)
+                ServerSetIsInPosition(false);
+            else
+                RequestIsInPositionServerRpc(false);
+        }
+    }
+
+    private void MoveToTargetPosition()
+    {
+        if(_isMovingToPosition) return;
+        if(vehiclePositionTarget == null) return;
+
+        _isMovingToPosition = true;
+        Debug.Log($"[BatteryLift] 📍 목표 위치로 이동 시작 (LNT 일시 비활성화)");
+
+        if(_lnt != null)
+        {
+            _lnt.enabled = false;
+            Debug.Log($"[BatteryLift] 🔌 LNT 비활성화");
+        }
+
+        if(_liftCollider != null)
+        {
+            _liftCollider.enabled = false;
+            Debug.Log($"[BatteryLift] 🔌 박스 콜라이더 비활성화");
+        }
+
+        if(_rigidbody != null)
+        {
+            _rigidbody.isKinematic = true;
+        }
+
+        Quaternion targetRotation = vehiclePositionTarget.rotation * Quaternion.Euler(positionReachedRotationOffset);
+
+        Sequence seq = DOTween.Sequence();
+
+        seq.Join(transform.DOMove(vehiclePositionTarget.position, moveToPositionDuration)
+            .SetEase(moveToPositionEase));
+
+        seq.Join(transform.DORotateQuaternion(targetRotation, moveToPositionDuration)
+            .SetEase(moveToPositionEase));
+
+        seq.OnComplete(() =>
+        {
+            _isMovingToPosition = false;
+
+            if(_lnt != null)
+            {
+                _lnt.enabled = true;
+                Debug.Log($"[BatteryLift] ⚡ LNT 재활성화");
+            }
+
+            if(_liftCollider != null)
+            {
+                _liftCollider.enabled = true;
+                Debug.Log($"[BatteryLift] ⚡ 박스 콜라이더 재활성화");
+            }
+
+            if(_rigidbody != null)
+            {
+                _rigidbody.isKinematic = false;
+            }
+
+            Debug.Log($"[BatteryLift] 📍 목표 위치 도달 및 고정 (회전 오프셋 적용: {positionReachedRotationOffset})");
+        });
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestIsInPositionServerRpc(bool inPosition)
+    {
+        ServerSetIsInPosition(inPosition);
+    }
+
+    private void ServerSetIsInPosition(bool inPosition)
+    {
+        _syncIsInPosition.Value = inPosition;
     }
 }

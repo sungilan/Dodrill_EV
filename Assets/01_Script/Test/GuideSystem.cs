@@ -1,8 +1,10 @@
+using DG.Tweening;
+using DoDrill;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using DG.Tweening;
 
 // ============================================================
 //  GuideSystem.cs  — 통합 가이드 매니저 (완전 자동화)
@@ -59,6 +61,7 @@ public class GuideSystem : MonoBehaviour
     private List<GameObject> _clickTargets = new();
     private float _idleTimer;
     private Coroutine _hintCoroutine;
+    private bool _completed = false; // ★ 추가: Task 완료 상태
 
     // 스폰포인트 마커 추적: prefabId → 마커 GO
     private Dictionary<string, GameObject> _spawnMarkers = new();
@@ -114,9 +117,10 @@ public class GuideSystem : MonoBehaviour
 
         if(_currentTask.status == TaskStatus.Running)
         {
+            _completed = false; // ★ Task 시작 시 완료 상태 초기화
             if(_scenarioData == null)
             {
-
+                Debug.LogWarning("[GuideSystem] 시나리오 데이터가 없음");
             }
             ShowGuideForCurrentTask();
         }
@@ -131,7 +135,11 @@ public class GuideSystem : MonoBehaviour
         _scenarioData = broadcast.scenarioData;
         _currentTask = broadcast.currentTask;
         _totalTasks = broadcast.totalTaskCount;
-        if(_currentTask.status == TaskStatus.Running) ShowGuideForCurrentTask();
+        if(_currentTask.status == TaskStatus.Running)
+        {
+            _completed = false; // ★ Task 시작 시 완료 상태 초기화
+            ShowGuideForCurrentTask();
+        }
     }
 
     // ScenarioReceiver.OnScenarioReceived — 시나리오 최초 로드 시 데이터 확보
@@ -140,7 +148,7 @@ public class GuideSystem : MonoBehaviour
         _scenarioData = data;
         Debug.Log($"[GuideSystem] ScenarioData 수신: {data?.scenarioId}");
         // TaskStateBroadcast가 이미 도착해서 ShowGuide를 대기 중이었으면 재시도
-        if(_currentTask.status == TaskStatus.Running)
+        if(_currentTask.status == TaskStatus.Running && !_completed)
             ShowGuideForCurrentTask();
     }
 
@@ -199,7 +207,7 @@ public class GuideSystem : MonoBehaviour
     {
         if(taskDef.spawnObjects == null) return;
 
-        var allSP = Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var allSP = UnityEngine.Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         var spCache = new Dictionary<string, SpawnPoint>();
         foreach(var sp in allSP)
             if(!string.IsNullOrEmpty(sp.pointId)) spCache[sp.pointId] = sp;
@@ -208,62 +216,65 @@ public class GuideSystem : MonoBehaviour
         {
             if(string.IsNullOrEmpty(bundle.prefabId)) continue;
 
-            // ── 진입 로그 ──────────────────────────────────────
-            Debug.Log($"[Guide] 번들 처리: prefabId={bundle.prefabId} " +
-                      $"spawnPointId={bundle.spawnPointId} " +
-                      $"targetGuideId={bundle.guideId} " +
-                      $"showGuide={bundle.showGuide}");
+            // showGuide = false면 가이드 생성 전체 스킵
+            if(!bundle.showGuide) continue;
 
-            // showGuide = false면 가이드 생성 스킵
-            if(!bundle.showGuide)
+            // --- [STEP 1] 아이템 탐색 및 상태 확인 ---
+            var existingItem = FindSpawnedItem(bundle.prefabId);
+            bool isGrabbed = false;
+
+            if(existingItem != null)
             {
-                Debug.Log($"[Guide] {bundle.prefabId} → showGuide=false, 스킵");
-                continue;
+                var sg = existingItem.GetComponent<SyncGrab>();
+                isGrabbed = (sg != null && sg.IsGrabbed);
             }
 
-            // ① 스폰포인트 마커 (하늘색)
-            if(!string.IsNullOrEmpty(bundle.spawnPointId))
+            // --- [STEP 2] ① 스폰포인트 마커 (하늘색) 처리 ---
+            // 플레이어가 도구를 이미 들고 있다면 스폰 마커(하늘색 원)를 생성하지 않음
+            if(isGrabbed)
+            {
+                Debug.Log($"[Guide] {bundle.prefabId}를 이미 들고 있음. 스폰 가이드 생략 및 아웃라인 유지.");
+                SetOutline(existingItem, true); // 들고 있는 물체 강조 유지
+            }
+            else if(!string.IsNullOrEmpty(bundle.spawnPointId))
             {
                 if(spCache.TryGetValue(bundle.spawnPointId, out var spPt))
                 {
-                    var itemGO = FindSpawnedItem(bundle.prefabId);
-                    Vector3 pos = itemGO != null
-                        ? GetBoundsCenter(itemGO)
-                        : spPt.transform.position;
-                    Debug.Log($"[Guide] 스폰마커 생성: {bundle.prefabId} @ {pos} (item={itemGO?.name ?? "null"})");
-                    string label = GetDisplayName(bundle.prefabId);
-                    var markerGO = SpawnMarker(pos, label, spawnGuideColor, isTarget: false);
-                    if(markerGO != null)
-                        _spawnMarkers[bundle.prefabId] = markerGO.gameObject;
-                }
-                else
-                {
-                    Debug.LogWarning($"[Guide] SpawnPoint '{bundle.spawnPointId}' 캐시에 없음 — 씬에 SpawnPoint 컴포넌트 있는지 확인");
+                    // 아이템이 씬에 있지만 놓여진 상태면 그 위치에, 없으면 스폰포인트에 생성
+                    Vector3 pos = (existingItem != null) ? GetBoundsCenter(existingItem) : spPt.transform.position;
+
+                    // NoneHighlight 컴포넌트 체크 (특정 물체 가이드 제외 로직)
+                    bool isNoneHighlight = existingItem != null && existingItem.GetComponent<NoneHighlight>() != null;
+
+                    if(!isNoneHighlight)
+                    {
+                        string label = GetDisplayName(bundle.prefabId);
+                        var markerGO = SpawnMarker(pos, label, spawnGuideColor, isTarget: false);
+                        if(markerGO != null) _spawnMarkers[bundle.prefabId] = markerGO.gameObject;
+                    }
                 }
             }
 
-            // ② 타겟 존 마커 (황금색) + 고스트
-            Debug.Log($"[Guide] GuideId 체크: '{bundle.guideId}' (비어있음={string.IsNullOrEmpty(bundle.guideId)})");
+            // --- [STEP 3] ② 타겟 존 마커 (황금색) + 고스트 + 볼트 아웃라인 처리 ---
+            // ★ 중요: 위에서 continue를 하지 않으므로 볼트 아웃라인 로직이 항상 실행됨
             if(!string.IsNullOrEmpty(bundle.guideId))
             {
-                //var targetGO = GameObject.Find(bundle.guideId);
                 var targetGO = FindSpawnedItem(bundle.guideId);
-                Debug.Log($"[Guide] targetGO 탐색: '{bundle.guideId}' → {(targetGO != null ? targetGO.name : "null — 씬에 없음")}");
 
                 if(targetGO != null)
                 {
-                    // ── 볼트 그룹 여부 확인 ──
+                    // 볼트 그룹 및 커넥터 여부 확인
                     var boltGroup = targetGO.GetComponent<BoltGroupCounter>();
                     bool isBoltTask = boltGroup != null || targetGO.name.Contains("Bolt");
-                    bool shouldShowCircle = !isBoltTask;
+                    bool isConnecterTask = targetGO.GetComponent<NoneHighlight>() != null;
 
-                    // 1. 라벨 텍스트 결정 (볼트인 경우 전용 텍스트 사용)
+                    bool shouldShowCircle = !isBoltTask && !isConnecterTask;
+
+                    // 라벨 및 진행도 설정
                     string label;
-                    if(isBoltTask)
+                    if(isBoltTask && boltGroup != null)
                     {
-                        // 현재 작업이 조립 모드인지 확인 (BoltGroupCounter의 변수명에 따라 수정 필요)
-                        bool isAssemble = boltGroup != null && boltGroup.assembleMode;
-                        string actionStr = isAssemble ? "체결" : "제거";
+                        string actionStr = boltGroup.assembleMode ? "체결" : "제거";
                         label = $"볼트를 임팩트 렌치로 {actionStr}하세요.";
                     }
                     else
@@ -271,37 +282,66 @@ public class GuideSystem : MonoBehaviour
                         label = $"{GetDisplayName(bundle.prefabId)}을(를) 여기로 이동하세요";
                     }
 
-                    // 2. 마커 생성 (볼트 그룹이면 바운드 중앙에 생성)
+                    // 마커 생성
                     Vector3 markerPos = isBoltTask ? GetBoundsCenter(targetGO) : targetGO.transform.position;
                     var marker = SpawnMarker(markerPos, label, targetGuideColor, isTarget: true);
+
                     if(marker != null)
                     {
                         marker.Setup(label, targetGuideColor, shouldShowCircle);
                         _targetMarker = marker;
-                    }  
 
-                    // 3. 아웃라인 강제 적용 (자식 볼트들까지)
+                        // 볼트 진행도 업데이트 코루틴 시작
+                        if(isBoltTask && boltGroup != null)
+                        {
+                            StartCoroutine(UpdateBoltProgressRoutine(marker, boltGroup));
+                        }
+                    }
+
+                    // 타겟 오브젝트(볼트들) 아웃라인 강제 적용
                     SetOutline(targetGO, true);
 
-                    // 4. 고스트 생성 (볼트 미션이 아닐 때만 생성하거나, 필요시 유지)
-                    var itemGO = FindSpawnedItem(bundle.prefabId);
-                    if(itemGO != null && ghostMaterial != null)
+                    // 고스트 생성 (볼트 작업이 아닐 때만)
+                    if(existingItem != null && ghostMaterial != null && !isBoltTask)
                     {
-                        // 볼트 그룹 자체가 타겟일 때는 고스트를 생성하지 않는 것이 시야 확보에 좋습니다.
-                        if(!isBoltTask)
-                            _ghostObject = SpawnGhost(itemGO, targetGO.transform.position);
+                        _ghostObject = SpawnGhost(existingItem, targetGO.transform.position);
                     }
                 }
                 else
                 {
-                    Debug.LogWarning($"[Guide] targetGuideId GO '{bundle.guideId}' 씬에 없음");
+                    Debug.LogWarning($"[Guide] targetGuideId '{bundle.guideId}' 씬에 없음");
                 }
             }
         }
-        Debug.Log($"[Guide] BuildSpawnGuides 완료 — 마커:{_spawnMarkers.Count}, 고스트:{(_ghostObject != null ? "있음" : "없음")}, 타겟마커:{(_targetMarker != null ? "있음" : "없음")}");
     }
 
+    /// <summary>
+    /// 볼트 진행도를 실시간으로 업데이트
+    /// </summary>
+    private IEnumerator UpdateBoltProgressRoutine(GuideMarker marker, BoltGroupCounter boltGroup)
+    {
+        int lastProgress = -1;
 
+        while(marker != null && boltGroup != null && !_completed)
+        {
+            int currentProgress = boltGroup.RemovedCount;
+            int totalBolts = boltGroup.TotalCount;
+
+            // 진행도가 변경되었을 때만 업데이트
+            if(currentProgress != lastProgress)
+            {
+                string progressText = $"{totalBolts - currentProgress}/{totalBolts}";
+                marker.UpdateProgressText(progressText);
+                lastProgress = currentProgress;
+
+                Debug.Log($"[Guide] 볼트 진행도 업데이트: {progressText}");
+            }
+
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        Debug.Log($"[Guide] 볼트 진행도 업데이트 완료");
+    }
 
     // ── 마커 스폰 ────────────────────────────────────────
 
@@ -359,6 +399,7 @@ public class GuideSystem : MonoBehaviour
             {
                 _tempGuides.Remove(markerGO);
                 Destroy(markerGO);
+                Debug.Log($"[Guide] 스폰 마커 제거: {prefabId}");
             }
             _spawnMarkers.Remove(prefabId);
         }
@@ -433,10 +474,12 @@ public class GuideSystem : MonoBehaviour
 
     private void OnTaskCompleted()
     {
+        _completed = true; // ★ Task 완료 상태 설정
         ClearVisualGuides();
         TTSManager.Instance?.Stop();
         if(currentLevel != GuideLevel.Hard)
             TTSManager.Instance?.Speak("잘 하셨습니다! 다음 단계로 넘어갑니다.");
+        Debug.Log($"[Guide] Task 완료");
     }
 
     // ═══════════════════════════════════════════════════════
@@ -509,8 +552,8 @@ public class GuideSystem : MonoBehaviour
                 o.OutlineColor = outlineColor;
                 o.OutlineWidth = outlineWidth;
                 o.OutlineMode = MikeNspired.XRIStarterKit.ChrisNolet.Outline.Mode.OutlineAll;
-                o.enabled = true; // 강제로 켬
-                o.needsUpdate = true; // 셰이더 업데이트 플래그 (중요)
+                o.enabled = true;
+                o.needsUpdate = true;
 
                 // 가끔 Renderer가 꺼져있어서 안 보일 수 있음
                 if(!r.enabled) r.enabled = true;
@@ -582,12 +625,12 @@ public class GuideSystem : MonoBehaviour
             var go = FindByNameOrClickableId(config.targetObjName);
             if(go != null)
             {
-                Debug.Log($"[Guide] targetObjName 찾음: {go.name}"); // ★ 로그 확인
+                Debug.Log($"[Guide] targetObjName 찾음: {go.name}");
                 result.Add(go);
             }
             else
             {
-                Debug.LogWarning($"[Guide] targetObjName 못 찾음: {config.targetObjName}"); // ★ 로그 확인
+                Debug.LogWarning($"[Guide] targetObjName 못 찾음: {config.targetObjName}");
             }
         }
         return result;
@@ -603,7 +646,7 @@ public class GuideSystem : MonoBehaviour
         if(go != null) return go;
 
         // 2. ClickableAnimator.uniqueId로 탐색
-        foreach(var ca in Object.FindObjectsByType<ClickableAnimator>(
+        foreach(var ca in UnityEngine.Object.FindObjectsByType<ClickableAnimator>(
             FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if(ca.uniqueId == id) return ca.gameObject;
@@ -627,13 +670,26 @@ public class GuideSystem : MonoBehaviour
 
     private GameObject FindSpawnedItem(string prefabId)
     {
+        // 1. 이름이 완전히 일치하거나 (Clone)인 것 찾기
         var go = GameObject.Find(prefabId);
         if(go != null) return go;
+
         go = GameObject.Find(prefabId + "(Clone)");
         if(go != null) return go;
-        foreach(var obj in Object.FindObjectsByType<GameObject>(
-            FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-            if(obj.name.StartsWith(prefabId)) return obj;
+
+        // 2. [추가] 프리팹 ID를 포함하는 모든 오브젝트 검색 (손에 들려있는 경우 대비)
+        var allObjects = UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach(var obj in allObjects)
+        {
+            if(obj.name.Contains(prefabId))
+            {
+                // SyncGrab이 붙어있고 이미 누군가 잡고 있다면 우선순위로 반환
+                var sg = obj.GetComponent<SyncGrab>();
+                if(sg != null && sg.IsGrabbed) return obj;
+
+                return obj; // 일단 발견된 것 반환
+            }
+        }
         return null;
     }
 

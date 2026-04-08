@@ -269,10 +269,34 @@ MonoBehaviour:
       m_Calls: []
   onSqueeze:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1981831815227425690}
+        m_TargetAssemblyTypeName: ImpactWrench, Assembly-CSharp
+        m_MethodName: VRPress
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   onUnsqueeze:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1981831815227425690}
+        m_TargetAssemblyTypeName: ImpactWrench, Assembly-CSharp
+        m_MethodName: VRRelease
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   onHighlight:
     m_PersistentCalls:
       m_Calls: []
@@ -322,6 +346,8 @@ MonoBehaviour:
   unscrewColor: {r: 1, g: 0, b: 0, a: 1}
   screwColor: {r: 0, g: 1, b: 0, a: 1}
   wrenchAnimator: {fileID: 4149966975364610757}
+  targetOutlineColor: {r: 1, g: 1, b: 0, a: 1}
+  restoreOutlineColor: {r: 0, g: 1, b: 1, a: 1}
   workAudio: {fileID: 6881486310345852208}
   workKey: 102
 --- !u!114 &5134680040401784347
@@ -331,7 +357,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4910085193603353779}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5143e42808965614a9bb64f4880aaf33, type: 3}
   m_Name: 
@@ -1231,5 +1257,5 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.057774067
-  m_Center: {x: 0.10614729, y: 0.15963438, z: -0.0026238635}
+  m_Radius: 0.08499217
+  m_Center: {x: 0.078929186, y: 0.15963438, z: -0.0026238635}

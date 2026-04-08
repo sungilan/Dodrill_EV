@@ -1,18 +1,9 @@
 using UnityEngine;
 
 // ============================================================
-//  ImpactWrench.cs  — VR + PC 통합
-//
-//  PC 동작:
-//    - F키 누르는 동안 → 애니메이션/사운드 재생 (볼트 유무 무관)
-//    - F키 누르는 동안 볼트에 닿아 있으면 → 볼트 제거 진행
-//    - F키 떼면 → 즉시 중단
-//
-//  VR 동작:
-//    - Squeeze(AutoHand) → VRPress() 호출 → PC F키와 동일 흐름
-//    - Squeeze 해제 → VRRelease()
-//
-//  FireItemUsed 사용 안 함 — ImpactWrench 자체에서 입력 처리
+//  ImpactWrench.cs  — VR + PC 통합 + 아웃라인 색상 변경 (개선)
+//  
+//  ★ [수정] 변경할 색상과 복구할 색상을 모두 Inspector에서 설정
 // ============================================================
 public class ImpactWrench : MonoBehaviour
 {
@@ -28,6 +19,13 @@ public class ImpactWrench : MonoBehaviour
     public Color screwColor = Color.green;
     public Animator wrenchAnimator;
 
+    [Header("── ★ 아웃라인 색상 설정 ──")]
+    [Tooltip("볼트 감지 시 변경할 아웃라인 색상")]
+    public Color targetOutlineColor = new Color(1f, 1f, 0f, 1f);  // 노란색
+
+    [Tooltip("아웃라인 복구 시 설정할 색상 (기본값: 흰색)")]
+    public Color restoreOutlineColor = Color.white;  // ★ 복구 색상
+
     [Header("오디오")]
     public AudioSource workAudio;
 
@@ -36,13 +34,11 @@ public class ImpactWrench : MonoBehaviour
 
     private static readonly int IsWorkingHash = Animator.StringToHash("isWorking");
 
-    // 볼트 접촉 여부
     private Bolt _targetBolt;
+    private GameObject _currentBoltGameObject;
+    private MikeNspired.XRIStarterKit.ChrisNolet.Outline _currentOutline;
 
-    // 실제 "버튼 누름" 상태 (PC: GetKey, VR: Squeeze)
     private bool _buttonHeld;
-
-    // 이전 프레임 작동 상태 (변화 감지용)
     private bool _wasWorking;
 
     // ── 생명주기 ───────────────────────────────────────────
@@ -56,26 +52,19 @@ public class ImpactWrench : MonoBehaviour
     {
         _buttonHeld = false;
         ApplyEffects(false);
+        RestoreBoltOutlineForced();
     }
 
     private void Update()
     {
-        // PC: F키 상태를 매 프레임 반영
-        // VR: _buttonHeld는 VRPress/VRRelease로 외부에서 세팅
-#if !UNITY_EDITOR
-        // 빌드에서는 VR 입력만 사용 → PC 키 무시하려면 아래 주석 처리
-#endif
         if(Input.GetKey(workKey)) _buttonHeld = true;
         if(Input.GetKeyUp(workKey)) _buttonHeld = false;
 
-        // 효과: 버튼 누르는 동안 항상 재생
         bool working = _buttonHeld;
         ApplyEffects(working);
 
-        // 볼트 작업: 버튼 누르는 동안 + 볼트 접촉 시
         if(working && _targetBolt != null)
         {
-            // 이미 다 풀린 볼트 — 애니메이션 트리거하고 스킵
             if(_targetBolt.isloosened)
             {
                 TriggerBoltAnimation(_targetBolt.gameObject);
@@ -85,13 +74,12 @@ public class ImpactWrench : MonoBehaviour
             float dir = (currentMode == WrenchMode.Unscrew) ? 1f : -1f;
             _targetBolt.InteractWithTool(dir * rotationSpeed * Time.deltaTime);
 
-            // 방금 다 풀린 순간 감지 → 애니메이션 실행
             if(_targetBolt.isloosened)
                 TriggerBoltAnimation(_targetBolt.gameObject);
         }
     }
 
-    // ── 효과 적용 (애니메이션 + 사운드) ───────────────────
+    // ── 효과 적용 ───────────────────────────────────────────
 
     private void ApplyEffects(bool working)
     {
@@ -110,34 +98,106 @@ public class ImpactWrench : MonoBehaviour
         Debug.Log($"[ImpactWrench] {(working ? "ON" : "OFF")} | 볼트: {(_targetBolt != null ? _targetBolt.name : "없음")}");
     }
 
-    // ── 볼트 감지 ──────────────────────────────────────────
+    // ── 볼트 감지 (OnTriggerEnter/Exit) ────────────────────
 
     private void OnTriggerEnter(Collider other)
     {
         if(!other.CompareTag("Bolt")) return;
+
         _targetBolt = other.GetComponent<Bolt>();
+        _currentBoltGameObject = other.gameObject;
+
         Debug.Log($"[ImpactWrench] 볼트 감지: {other.name}");
+
+        if(_currentOutline != null)
+        {
+            RestoreBoltOutline();
+        }
+
+        ChangeBoltOutlineColor();
     }
 
     private void OnTriggerExit(Collider other)
     {
         if(!other.CompareTag("Bolt")) return;
-        if(_targetBolt != null && _targetBolt.gameObject == other.gameObject)
+
+        if(_currentBoltGameObject != null && _currentBoltGameObject == other.gameObject)
         {
+            Debug.Log($"[ImpactWrench] 볼트 이탈: {other.name}");
+
+            RestoreBoltOutline();
+
             _targetBolt = null;
-            Debug.Log("[ImpactWrench] 볼트 이탈");
+            _currentBoltGameObject = null;
         }
     }
 
-    // ── VR 연동 (AutoHand Squeeze) ─────────────────────────
+    /// <summary>
+    /// ★ 볼트의 아웃라인 색상을 targetOutlineColor로 변경
+    /// </summary>
+    private void ChangeBoltOutlineColor()
+    {
+        if(_targetBolt == null || _currentBoltGameObject == null) return;
 
-    /// <summary>AutoHand Squeeze 시작 시 호출 (Grabbable.onSqueeze 이벤트에 연결)</summary>
+        _currentOutline = _currentBoltGameObject.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+
+        if(_currentOutline == null)
+        {
+            _currentOutline = _currentBoltGameObject.GetComponentInParent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+        }
+
+        if(_currentOutline == null)
+        {
+            Debug.LogWarning($"[ImpactWrench] 볼트 '{_currentBoltGameObject.name}'에 Outline 컴포넌트가 없습니다!");
+            return;
+        }
+
+        // ★ [수정] 미리 할당된 targetOutlineColor로 변경
+        _currentOutline.OutlineColor = targetOutlineColor;
+        Debug.Log($"[ImpactWrench] ✅ 아웃라인 색상 변경: {targetOutlineColor}");
+    }
+
+    /// <summary>
+    /// ★ [수정] 볼트의 아웃라인 색상을 restoreOutlineColor로 복구
+    /// </summary>
+    private void RestoreBoltOutline()
+    {
+        if(_currentOutline == null)
+        {
+            Debug.LogWarning("[ImpactWrench] 복구할 아웃라인이 없습니다!");
+            return;
+        }
+
+        // ★ [수정] 미리 할당된 restoreOutlineColor로 복구
+        _currentOutline.OutlineColor = restoreOutlineColor;
+        Debug.Log($"[ImpactWrench] ✅ 아웃라인 색상 복구: {restoreOutlineColor}");
+
+        _currentOutline = null;
+    }
+
+    /// <summary>
+    /// ★ 강제로 아웃라인 복구 (OnDisable 등에서)
+    /// </summary>
+    private void RestoreBoltOutlineForced()
+    {
+        if(_currentOutline != null)
+        {
+            Debug.LogWarning($"[ImpactWrench] 강제 복구 실행! 색상: {restoreOutlineColor}");
+            _currentOutline.OutlineColor = restoreOutlineColor;
+            _currentOutline = null;
+        }
+
+        _targetBolt = null;
+        _currentBoltGameObject = null;
+    }
+
+    // ── VR 연동 ─────────────────────────────────────────────
+
     public void VRPress()
     {
         _buttonHeld = true;
     }
 
-    /// <summary>AutoHand Squeeze 해제 시 호출 (Grabbable.onUnsqueeze 이벤트에 연결)</summary>
     public void VRRelease()
     {
         _buttonHeld = false;
@@ -161,18 +221,18 @@ public class ImpactWrench : MonoBehaviour
 
     // ── 볼트 애니메이션 트리거 ────────────────────────────────
 
-    /// <summary>
-    /// progress >= 1 이 된 순간 호출.
-    /// 같은 GO의 ClickableAnimator.Open()으로 볼트 풀리는 애니메이션 실행.
-    /// ClickableAnimator가 FishNet Broadcast로 전체 클라 동기화 처리.
-    /// </summary>
     private void TriggerBoltAnimation(GameObject boltGO)
     {
         var ca = boltGO.GetComponent<ClickableAnimator>();
         if(ca == null) return;
-        if(ca.IsOpen) return;   // 이미 실행됨
+        if(ca.IsOpen) return;
 
         ca.Open();
+
+        RestoreBoltOutline();
+        _targetBolt = null;
+        _currentBoltGameObject = null;
+
         Debug.Log($"[ImpactWrench] 볼트 애니메이션 실행: {boltGO.name}");
     }
 

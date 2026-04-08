@@ -1,231 +1,107 @@
-﻿//using FishNet.Object;
-//using PinePie.SimpleJoystick;
-//using UnityEngine;
-
-//public class FreeLockControllerMobile : NetworkBehaviour
-//{
-//    public float moveSpeed = 5f;
-//    public float lookSensitivity = 5f;
-//    public float maxLookX = 80f;
-//    public float minLookX = -80f;
-
-//    [Header("Smooth")]
-//    public float moveSmoothTime = 0.12f;
-//    public float verticalSmoothTime = 0.12f;
-//    private Vector3 currentVelocity = Vector3.zero;
-//    private Vector3 desiredMove = Vector3.zero;
-//    private float desiredVertical = 0f;
-//    private float currentVerticalVelocity = 0f;
-
-//    private float rotX;
-//    private float rotY;
-
-//    [Header("Joystick/Touch")]
-//    public JoystickController moveJoyStick;
-
-//    private int lookTouchId = -1;
-//    private Vector2 lastLookTouchPos;
-
-//    [Header("State")]
-//    public bool isInteracting = false;
-//    private bool isMoving = false;
-//    private bool isLooking = false;
-
-//    public override void OnStartClient()
-//    {
-//        base.OnStartClient();
-//        if (IsOwner == false)
-//            Destroy(this);
-
-//        if(moveJoyStick == null)
-//        {
-//            // 씬에서 JoystickController 컴포넌트를 가진 UI를 찾아 자동으로 연결합니다.
-//            moveJoyStick = Object.FindFirstObjectByType<JoystickController>();
-
-//            if(moveJoyStick != null)
-//            {
-//                Debug.Log($"[MobileController] 조이스틱 자동 연결 성공: {moveJoyStick.name}");
-//            }
-//            else
-//            {
-//                Debug.LogError("[MobileController] 씬에서 조이스틱을 찾을 수 없습니다! UI가 켜져 있는지 확인하세요.");
-//            }
-//        }
-//    }
-
-//    void Update()
-//    {
-//        Move();
-//        CameraLookTouch();
-
-//        // 이동 중이거나 회전 중이면 true
-//        isInteracting = isMoving || isLooking;
-//    }
-
-//    void Move()
-//    {
-//        Vector2 moveInput = Vector2.zero;
-//        if (moveJoyStick != null)
-//            moveInput = moveJoyStick.InputDirection;
-
-//        // 입력이 거의 없으면 이동 아님
-//        isMoving = moveInput.sqrMagnitude > 0.01f || Mathf.Abs(desiredVertical) > 0.01f;
-
-//        Vector3 moveDir = transform.right * moveInput.x + transform.forward * moveInput.y;
-//        desiredMove = moveDir * moveSpeed;
-
-//        currentVelocity = Vector3.Lerp(currentVelocity, desiredMove, Time.deltaTime / Mathf.Max(0.0001f, moveSmoothTime));
-
-//        float targetVerticalVel = desiredVertical * moveSpeed;
-//        currentVerticalVelocity = Mathf.Lerp(currentVerticalVelocity, targetVerticalVel, Time.deltaTime / Mathf.Max(0.0001f, verticalSmoothTime));
-
-//        Vector3 delta = (currentVelocity + Vector3.up * currentVerticalVelocity) * Time.deltaTime;
-//        transform.position += delta;
-//    }
-
-//    public void MoveUp() => desiredVertical = 0.5f;
-//    public void MoveDown() => desiredVertical = -0.5f;
-//    public void StopMove() => desiredVertical = 0f;
-
-//    void CameraLookTouch()
-//    {
-//        isLooking = false; // 기본값 초기화
-
-//        if (Input.touchCount == 0)
-//        {
-//            lookTouchId = -1;
-//            return;
-//        }
-
-//        for (int i = 0; i < Input.touchCount; i++)
-//        {
-//            Touch t = Input.GetTouch(i);
-
-//            if (lookTouchId == -1 && t.phase == TouchPhase.Began && t.position.x > Screen.width * 0.5f)
-//            {
-//                lookTouchId = t.fingerId;
-//                lastLookTouchPos = t.position;
-//            }
-
-//            if (t.fingerId == lookTouchId)
-//            {
-//                if (t.phase == TouchPhase.Moved)
-//                {
-//                    Vector2 delta = t.position - lastLookTouchPos;
-//                    rotY += delta.x * lookSensitivity * 0.02f;
-//                    rotX += delta.y * lookSensitivity * -0.02f;
-//                    rotX = Mathf.Clamp(rotX, minLookX, maxLookX);
-//                    transform.rotation = Quaternion.Euler(rotX, rotY, 0f);
-//                    lastLookTouchPos = t.position;
-
-//                    // 터치로 회전 중
-//                    isLooking = true;
-//                }
-
-//                if (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled)
-//                {
-//                    lookTouchId = -1;
-//                }
-//            }
-//        }
-//    }
-//}
-
-using FishNet.Object;
+﻿using FishNet.Object;
 using PinePie.SimpleJoystick;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 
 public class FreeLookControllerMobile : NetworkBehaviour
 {
     // ═══════════════════════════════════════════════════════
-    // 기본 이동/회전
+    // 이동 / 회전 설정
     // ═══════════════════════════════════════════════════════
-
+    [Header("Movement")]
     public float moveSpeed = 5f;
     public float lookSensitivity = 5f;
     public float maxLookX = 80f;
     public float minLookX = -80f;
 
-    [Header("Smooth")]
+    [Header("Smooth Settings")]
     public float moveSmoothTime = 0.12f;
     public float verticalSmoothTime = 0.12f;
     private Vector3 currentVelocity = Vector3.zero;
-    private Vector3 desiredMove = Vector3.zero;
-    private float desiredVertical = 0f;
     private float currentVerticalVelocity = 0f;
+    private float desiredVertical = 0f;
 
     private float rotX;
     private float rotY;
 
     [Header("Joystick/Touch")]
     public JoystickController moveJoyStick;
-
     private int lookTouchId = -1;
     private Vector2 lastLookTouchPos;
 
     // ═══════════════════════════════════════════════════════
-    // 클릭/상호작용
+    // 상호작용 설정
     // ═══════════════════════════════════════════════════════
-
-    [Header("클릭 설정")]
+    [Header("Interaction Settings")]
     public LayerMask clickLayers;
     public float raycastMaxDistance = 20f;
-    public KeyCode dropKey = KeyCode.G;
-    public KeyCode useKey = KeyCode.E;
 
-    [Header("호버 가이드 UI")]
+    [Header("Drop 설정 (모바일)")]
+    [Tooltip("더블 탭 감지 시간 제한 (초)")]
+    public float doubleTapTimeWindow = 0.3f;
+    [Tooltip("더블 탭 판정 거리 (픽셀)")]
+    public float doubleTapMaxDistance = 100f;
+    [Tooltip("Drop 버튼을 자동으로 표시할지 여부")]
+    public bool showDropButton = true;
+    [Tooltip("Drop 버튼 프리팹 (Button 컴포넌트 필수)")]
+    public GameObject dropButtonPrefab;
+
+    [Header("UI/Visual References")]
     public TMPro.TextMeshProUGUI hoverGuideText;
     public GameObject hoverGuidePanel;
     public GameObject worldLabelPrefab;
+    public GameObject touchEffectPrefab;
     public float labelHeightOffset = 0.3f;
-
-    [Header("사운드 설정")]
-    public string clickSound = "UI_Click";
-    public string grabSound = "Item_Grab";
-    public string dropSound = "Item_Drop";
-    public string useSound = "Item_Use";
-
-    [Header("호버 아웃라인")]
     public Color outlineHoverColor = new Color(0.3f, 0.85f, 1f);
-    [Range(0f, 10f)]
     public float outlineWidth = 4f;
 
-    [Header("디버그")]
-    [SerializeField] private bool showDebugLog = true;
-    [SerializeField] private bool showDebugRay = true;
+    [Header("Sound")]
+    public string grabSound = "Item_Grab";
+    public string dropSound = "Item_Drop";
+    public string touchSound = "UI_Click";
+
+    // ═══════════════════════════════════════════════════════
+    // 레이저 라인
+    // ═══════════════════════════════════════════════════════
+    [Header("Laser Grab (Mobile)")]
+    public LineRenderer laserLine;
+    public int laserVertexCount = 20;
+    public Color laserColorStart = new Color(0.3f, 0.8f, 1f, 1f);
+    public Color laserColorEnd = new Color(0.3f, 0.8f, 1f, 0f);
+    public float laserStartWidth = 0.006f;
+    public float laserEndWidth = 0.002f;
 
     // ═══════════════════════════════════════════════════════
     // 내부 상태
     // ═══════════════════════════════════════════════════════
-
-    [Header("State")]
-    public bool isInteracting = false;
-    private bool isMoving = false;
-    private bool isLooking = false;
-
     private Camera _mainCamera = null;
     private bool _cameraReady = false;
-    private bool _isVR = false;
 
-    /// <summary>현재 들고 있는 오브젝트</summary>
     private SyncGrab _heldObject = null;
     private Vector3 _heldOriginalScale = Vector3.one;
     private bool _isFlying = false;
 
-    // 호버 상태 추적
     private GameObject _outlinedObject = null;
     private Collider _lastHoveredCol = null;
     private GameObject _worldLabel = null;
-    private string _hoverGuideMsg = string.Empty;
 
-    // UI 레이캐스트 결과 재사용용
+    private int _interactionTouchId = -1;
     private static readonly List<RaycastResult> _uiRaycastResults = new();
 
-    // 터치 ID 추적 (여러 터치 동시 처리)
-    private int _interactionTouchId = -1;
+    // ★ 더블 탭 감지용
+    private float _lastTapTime = 0f;
+    private Vector2 _lastTapPos = Vector2.zero;
+    private int _tapCount = 0;
+
+    // ★ Drop 버튼
+    private GameObject _dropButtonInstance = null;
+    private Button _dropButton = null;
+
+    [SerializeField] private bool showDebugLog = true;
 
     // ═══════════════════════════════════════════════════════
     // 생명주기
@@ -234,204 +110,417 @@ public class FreeLookControllerMobile : NetworkBehaviour
     public override void OnStartClient()
     {
         base.OnStartClient();
-        if(IsOwner == false)
-            Destroy(this);
-
-        _isVR = IsVRDevice();
+        if(!IsOwner) { Destroy(this); return; }
 
         if(moveJoyStick == null)
-        {
             moveJoyStick = Object.FindFirstObjectByType<JoystickController>();
-            if(moveJoyStick != null)
-            {
-                Debug.Log($"[MobileController] 조이스틱 자동 감지: {moveJoyStick.name}");
-            }
-            else
-            {
-                Debug.LogError("[MobileController] 조이스틱을 찾을 수 없습니다! UI에 있는지 확인하세요.");
-            }
-        }
 
         StartCoroutine(InitCamera());
     }
 
-    public override void OnStopClient()
-    {
-        base.OnStopClient();
-        if(!IsOwner) return;
-        StopAllCoroutines();
-        _cameraReady = false;
-        _heldObject = null;
-    }
-
-    private void OnDisable()
-    {
-        if(!IsOwner) return;
-        StopAllCoroutines();
-        _heldObject = null;
-        _cameraReady = false;
-    }
-
-    private void OnApplicationFocus(bool hasFocus)
-    {
-        if(!IsOwner || hasFocus) return;
-        _heldObject = null;
-    }
-
-    private void OnApplicationPause(bool isPaused)
-    {
-        if(!IsOwner || !isPaused) return;
-        _heldObject = null;
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // 카메라 초기화
-    // ═══════════════════════════════════════════════════════
-
     private IEnumerator InitCamera()
     {
-        Camera found = GetComponentInChildren<Camera>(includeInactive: true);
-        if(found == null)
+        _mainCamera = GetComponentInChildren<Camera>(true);
+        if(_mainCamera != null)
         {
-            Log("자식 카메라 없음");
-            yield break;
+            _mainCamera.gameObject.SetActive(true);
+            _mainCamera.tag = "MainCamera";
+            _cameraReady = true;
+            Log("카메라 준비 완료");
         }
-
-        found.gameObject.SetActive(true);
-        found.tag = "MainCamera";
-        _mainCamera = found;
-        _cameraReady = true;
-
-        Log($"카메라 준비 완료: {found.name}");
         yield break;
     }
 
-    private bool IsVRDevice()
+    private void Update()
     {
-#if ENABLE_VR || UNITY_XR_MANAGEMENT
-        if(UnityEngine.XR.XRSettings.isDeviceActive) return true;
-        var d = UnityEngine.XR.XRSettings.loadedDeviceName;
-        if(!string.IsNullOrEmpty(d) && d != "None") return true;
-#endif
-        return false;
-    }
+        if(!IsOwner || !IsClientInitialized || !_cameraReady) return;
 
-    // ═══════════════════════════════════════════════════════
-    // Update
-    // ═══════════════════════════════════════════════════════
-
-    void Update()
-    {
-        if(!IsOwner || !IsClientInitialized) return;
+        // 인벤토리 열림 체크
+        if(EVInventoryUI.Instance != null && EVInventoryUI.Instance.panel.activeInHierarchy)
+        {
+            ClearHoverVisuals();
+            HideDropButton();  // ★ 인벤토리 열리면 Drop 버튼 숨기기
+            return;
+        }
 
         Move();
         CameraLookTouch();
-
-        if(_isVR || !_cameraReady) return;
-
-        if(_mainCamera == null)
-        {
-            _mainCamera = GetComponentInChildren<Camera>() ?? Camera.main;
-            if(_mainCamera == null) return;
-        }
-
-        // ★ 인벤토리 확인
-        bool isInventoryOpen = EVInventoryUI.Instance != null &&
-                               EVInventoryUI.Instance.panel != null &&
-                               EVInventoryUI.Instance.panel.activeInHierarchy;
-
-        if(isInventoryOpen)
-        {
-            SetGuideUI(string.Empty);
-            if(_worldLabel != null)
-            {
-                var fader = _worldLabel.GetComponent<UIHoverFader>();
-                if(fader != null) fader.FadeOut();
-                else Destroy(_worldLabel);
-                _worldLabel = null;
-            }
-            return;
-        }
-
-        // 정상 상호작용
-        CheckHoldScaleReady();
         HandleHover();
         HandleTouchInteraction();
-        HandleDropKey();
+        HandleDoubleTapDrop();  // ★ 더블 탭 감지
+        CheckHoldScaleReady();
+        UpdateLaserLine();
+        UpdateDropButton();  // ★ Drop 버튼 표시/숨김
     }
 
     // ═══════════════════════════════════════════════════════
-    // 이동 / 회전
+    // 이동 및 회전
     // ═══════════════════════════════════════════════════════
 
-    void Move()
+    private void Move()
     {
-        Vector2 moveInput = Vector2.zero;
-        if(moveJoyStick != null)
-            moveInput = moveJoyStick.InputDirection;
-
-        isMoving = moveInput.sqrMagnitude > 0.01f || Mathf.Abs(desiredVertical) > 0.01f;
-
+        Vector2 moveInput = (moveJoyStick != null) ? moveJoyStick.InputDirection : Vector2.zero;
         Vector3 moveDir = transform.right * moveInput.x + transform.forward * moveInput.y;
-        desiredMove = moveDir * moveSpeed;
-
-        currentVelocity = Vector3.Lerp(currentVelocity, desiredMove, Time.deltaTime / Mathf.Max(0.0001f, moveSmoothTime));
+        Vector3 desiredMove = moveDir * moveSpeed;
+        currentVelocity = Vector3.Lerp(currentVelocity, desiredMove, Time.deltaTime / moveSmoothTime);
 
         float targetVerticalVel = desiredVertical * moveSpeed;
-        currentVerticalVelocity = Mathf.Lerp(currentVerticalVelocity, targetVerticalVel, Time.deltaTime / Mathf.Max(0.0001f, verticalSmoothTime));
+        currentVerticalVelocity = Mathf.Lerp(currentVerticalVelocity, targetVerticalVel, Time.deltaTime / verticalSmoothTime);
 
-        Vector3 delta = (currentVelocity + Vector3.up * currentVerticalVelocity) * Time.deltaTime;
-        transform.position += delta;
+        transform.position += (currentVelocity + Vector3.up * currentVerticalVelocity) * Time.deltaTime;
     }
 
-    public void MoveUp() => desiredVertical = 0.5f;
-    public void MoveDown() => desiredVertical = -0.5f;
-    public void StopMove() => desiredVertical = 0f;
-
-    void CameraLookTouch()
+    private void CameraLookTouch()
     {
-        isLooking = false;
+        if(Input.touchCount == 0) { lookTouchId = -1; return; }
 
-        if(Input.touchCount == 0)
+        foreach(Touch t in Input.touches)
         {
-            lookTouchId = -1;
-            return;
-        }
-
-        for(int i = 0; i < Input.touchCount; i++)
-        {
-            Touch t = Input.GetTouch(i);
-
-            // 화면 오른쪽(카메라 회전용) + 인터랙션 터치와 다른 손가락
-            if(lookTouchId == -1 && t.phase == TouchPhase.Began && t.position.x > Screen.width * 0.5f
-                && t.fingerId != _interactionTouchId)
+            if(lookTouchId == -1 && t.phase == TouchPhase.Began && t.position.x > Screen.width * 0.5f)
             {
                 lookTouchId = t.fingerId;
                 lastLookTouchPos = t.position;
             }
 
-            if(t.fingerId == lookTouchId)
+            if(t.fingerId == lookTouchId && t.phase == TouchPhase.Moved)
             {
-                if(t.phase == TouchPhase.Moved)
-                {
-                    Vector2 delta = t.position - lastLookTouchPos;
-                    rotY += delta.x * lookSensitivity * 0.02f;
-                    rotX += delta.y * lookSensitivity * -0.02f;
-                    rotX = Mathf.Clamp(rotX, minLookX, maxLookX);
-                    transform.rotation = Quaternion.Euler(rotX, rotY, 0f);
-                    lastLookTouchPos = t.position;
+                Vector2 delta = t.position - lastLookTouchPos;
+                rotY += delta.x * lookSensitivity * 0.02f;
+                rotX = Mathf.Clamp(rotX + (delta.y * lookSensitivity * -0.02f), minLookX, maxLookX);
+                transform.rotation = Quaternion.Euler(rotX, rotY, 0f);
+                lastLookTouchPos = t.position;
+            }
+        }
+    }
 
-                    isLooking = true;
-                }
+    // ═══════════════════════════════════════════════════════
+    // 터치 상호작용
+    // ═══════════════════════════════════════════════════════
 
-                if(t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled)
-                {
-                    lookTouchId = -1;
-                }
+    private void HandleTouchInteraction()
+    {
+        if(Input.touchCount == 0) { _interactionTouchId = -1; return; }
+
+        for(int i = 0; i < Input.touchCount; i++)
+        {
+            Touch t = Input.GetTouch(i);
+
+            if(_interactionTouchId == -1 && t.phase == TouchPhase.Began &&
+                t.position.x < Screen.width * 0.5f && t.fingerId != lookTouchId)
+            {
+                _interactionTouchId = t.fingerId;
+
+                // ★ 더블 탭 카운트 증가
+                DetectDoubleTap(t.position);
+
+                SpawnTouchVisual(t.position);
+                Managers.Sound.Play(touchSound);
+                ProcessInteraction(t.position);
+            }
+
+            if(t.fingerId == _interactionTouchId && (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled))
+            {
+                _interactionTouchId = -1;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 더블 탭 감지 로직.
+    /// 첫 번째 탭: 카운트=1, 타이머 시작
+    /// 두 번째 탭 (0.3초 이내, 거리 100픽셀 이내): 더블 탭 실행
+    /// 시간 초과 또는 거리 초과: 리셋
+    /// </summary>
+    private void DetectDoubleTap(Vector2 tapPos)
+    {
+        float timeSinceLastTap = Time.time - _lastTapTime;
+        float distanceSinceLastTap = Vector2.Distance(tapPos, _lastTapPos);
+
+        // ★ 첫 번째 탭
+        if(_tapCount == 0)
+        {
+            _tapCount = 1;
+            _lastTapTime = Time.time;
+            _lastTapPos = tapPos;
+            Log($"[DoubleTap] 첫 번째 탭 @ {tapPos}");
+            return;
+        }
+
+        // ★ 두 번째 탭 (조건 확인)
+        if(_tapCount == 1)
+        {
+            // 시간 초과: 리셋
+            if(timeSinceLastTap > doubleTapTimeWindow)
+            {
+                _tapCount = 1;
+                _lastTapTime = Time.time;
+                _lastTapPos = tapPos;
+                Log($"[DoubleTap] 시간 초과, 리셋");
+                return;
+            }
+
+            // 거리 초과: 리셋
+            if(distanceSinceLastTap > doubleTapMaxDistance)
+            {
+                _tapCount = 1;
+                _lastTapTime = Time.time;
+                _lastTapPos = tapPos;
+                Log($"[DoubleTap] 거리 초과, 리셋");
+                return;
+            }
+
+            // ★ 성공: 더블 탭!
+            _tapCount = 0;
+            Log($"[DoubleTap] 더블 탭 감지! 내려놓기 실행");
+            DropHeldObject();
+        }
+    }
+
+    /// <summary>
+    /// 매 프레임 더블 탭 타임아웃 체크.
+    /// </summary>
+    private void HandleDoubleTapDrop()
+    {
+        if(_tapCount == 0) return;
+
+        float timeSinceLastTap = Time.time - _lastTapTime;
+        if(timeSinceLastTap > doubleTapTimeWindow)
+        {
+            _tapCount = 0;
+            Log("[DoubleTap] 타임아웃");
+        }
+    }
+
+    private void SpawnTouchVisual(Vector2 screenPos)
+    {
+        if(touchEffectPrefab == null) return;
+
+        Canvas canvas = GetComponentInParent<Canvas>() ?? Object.FindFirstObjectByType<Canvas>();
+        if(canvas == null) return;
+
+        GameObject effect = Instantiate(touchEffectPrefab, canvas.transform);
+        RectTransform rectTrans = effect.GetComponent<RectTransform>();
+        if(rectTrans != null)
+        {
+            rectTrans.position = screenPos;
+        }
+        else
+        {
+            effect.transform.position = screenPos;
+        }
+
+        Image img = effect.GetComponent<Image>();
+        if(img != null)
+        {
+            effect.transform.localScale = Vector3.one * 0.5f;
+            Sequence seq = DOTween.Sequence();
+            seq.Join(effect.transform.DOScale(1.5f, 0.4f));
+            seq.Join(img.DOFade(0, 0.4f));
+            seq.OnComplete(() => Destroy(effect));
+        }
+        else
+        {
+            Destroy(effect, 0.5f);
+        }
+
+        Log($"[Touch] 잔상 생성 @ {screenPos}");
+    }
+
+    private void ProcessInteraction(Vector2 screenPos)
+    {
+        if(IsPointerOverUI(screenPos))
+        {
+            Log($"[Touch] UI 위 터치 — 무시");
+            return;
+        }
+
+        Ray ray = _mainCamera.ScreenPointToRay(screenPos);
+        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
+        {
+            if(!Physics.Raycast(ray, out hit, raycastMaxDistance))
+            {
+                Log("[Touch] 히트 없음");
+                return;
             }
         }
 
-        isInteracting = isMoving || isLooking;
+        Log($"[Touch] 레이캐스트 히트: {hit.collider.name}");
+
+        if(HandleSpecialInteractions(hit.collider)) return;
+
+        SyncGrab target = hit.collider.GetComponent<SyncGrab>()
+                       ?? hit.collider.GetComponentInParent<SyncGrab>();
+
+        if(target != null && !target.IsGrabbed)
+        {
+            Log($"[Touch] 레이저 그랩 시작: {target.name}");
+            StartLaserPull(target, hit.point);
+            return;
+        }
+
+        if(target != null && target.IsGrabbed)
+        {
+            Log($"[Touch] 다른 플레이어가 사용 중: {target.name}");
+            return;
+        }
+    }
+
+    private bool HandleSpecialInteractions(Collider col)
+    {
+        var part = col.GetComponent<InteractablePart>() ?? col.GetComponentInParent<InteractablePart>();
+        if(part != null && !part.CheckSafetyAndTriggerAccident())
+        {
+            Log($"[Interaction] 사고 발생! {part.name}");
+            return true;
+        }
+
+        var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
+        if(anim != null)
+        {
+            Log($"[Interaction] 애니메이션: {anim.uniqueId}");
+            anim.OnPCClick();
+            return true;
+        }
+
+        var zone = col.GetComponent<TaskInteractionZone>() ?? col.GetComponentInParent<TaskInteractionZone>();
+        if(zone != null && zone.gameObject.activeInHierarchy)
+        {
+            Log($"[Interaction] 존 활성화: {zone.zoneId}");
+            InteractionEvents.FireZoneActivated(zone.zoneId, string.Empty);
+            return true;
+        }
+
+        return false;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Drop 버튼 UI 관리
+    // ═══════════════════════════════════════════════════════
+
+    /// <summary>
+    /// 집고 있을 때만 Drop 버튼을 표시합니다.
+    /// </summary>
+    private void UpdateDropButton()
+    {
+        if(_heldObject == null)
+        {
+            HideDropButton();
+            return;
+        }
+
+        if(showDropButton)
+        {
+            ShowDropButton();
+        }
+        else
+        {
+            HideDropButton();
+        }
+    }
+
+    /// <summary>
+    /// Drop 버튼을 화면에 표시합니다.
+    /// </summary>
+    private void ShowDropButton()
+    {
+        if(_dropButtonInstance != null) return;
+
+        if(dropButtonPrefab == null)
+        {
+            Log("[Drop Button] 프리팹 없음 — 자동 생성");
+            CreateDefaultDropButton();
+            return;
+        }
+
+        Canvas canvas = GetComponentInParent<Canvas>() ?? Object.FindFirstObjectByType<Canvas>();
+        if(canvas == null)
+        {
+            Log("[Drop Button] Canvas 없음");
+            return;
+        }
+
+        _dropButtonInstance = Instantiate(dropButtonPrefab, canvas.transform);
+        _dropButton = _dropButtonInstance.GetComponent<Button>();
+        if(_dropButton != null)
+        {
+            _dropButton.onClick.AddListener(OnDropButtonClicked);
+            Log("[Drop Button] 표시");
+        }
+    }
+
+    /// <summary>
+    /// 기본 Drop 버튼을 자동 생성합니다.
+    /// </summary>
+    private void CreateDefaultDropButton()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>() ?? Object.FindFirstObjectByType<Canvas>();
+        if(canvas == null)
+        {
+            Log("[Drop Button] Canvas 없음 — 생성 불가");
+            return;
+        }
+
+        // ★ 버튼 게임오브젝트 생성
+        GameObject btnGO = new GameObject("DropButton");
+        RectTransform btnRect = btnGO.AddComponent<RectTransform>();
+        btnRect.SetParent(canvas.transform, false);
+
+        // ★ 위치: 우측 하단
+        btnRect.anchorMin = new Vector2(1f, 0f);
+        btnRect.anchorMax = new Vector2(1f, 0f);
+        btnRect.offsetMin = new Vector2(-120f, 20f);
+        btnRect.offsetMax = new Vector2(-20f, 100f);
+
+        // ★ 배경 이미지
+        Image btnImage = btnGO.AddComponent<Image>();
+        btnImage.color = new Color(1f, 0.3f, 0.3f, 0.8f);  // 반투명 빨강
+
+        // ★ 버튼 컴포넌트
+        Button btn = btnGO.AddComponent<Button>();
+        btn.onClick.AddListener(OnDropButtonClicked);
+
+        // ★ 텍스트 레이블
+        GameObject txtGO = new GameObject("Text");
+        txtGO.transform.SetParent(btnGO.transform, false);
+        RectTransform txtRect = txtGO.AddComponent<RectTransform>();
+        txtRect.anchorMin = Vector2.zero;
+        txtRect.anchorMax = Vector2.one;
+        txtRect.offsetMin = Vector2.zero;
+        txtRect.offsetMax = Vector2.zero;
+
+        TMPro.TextMeshProUGUI txt = txtGO.AddComponent<TMPro.TextMeshProUGUI>();
+        txt.text = "DROP";
+        txt.fontSize = 36;
+        txt.alignment = TMPro.TextAlignmentOptions.Center;
+        txt.color = Color.white;
+
+        _dropButtonInstance = btnGO;
+        _dropButton = btn;
+
+        Log("[Drop Button] 자동 생성 및 표시");
+    }
+
+    /// <summary>
+    /// Drop 버튼을 숨깁니다.
+    /// </summary>
+    private void HideDropButton()
+    {
+        if(_dropButtonInstance == null) return;
+
+        Destroy(_dropButtonInstance);
+        _dropButtonInstance = null;
+        _dropButton = null;
+
+        Log("[Drop Button] 숨김");
+    }
+
+    /// <summary>
+    /// Drop 버튼 클릭 콜백.
+    /// </summary>
+    private void OnDropButtonClicked()
+    {
+        Log("[Drop Button] 클릭됨");
+        DropHeldObject();
     }
 
     // ═══════════════════════════════════════════════════════
@@ -440,22 +529,18 @@ public class FreeLookControllerMobile : NetworkBehaviour
 
     private void HandleHover()
     {
-        bool hit = false;
-        RaycastHit hitInfo = default;
+        if(_heldObject != null) return;
 
-        // ★ 화면 중앙을 향해 레이캐스트 (모바일은 마우스 좌표 없음)
-        if(_heldObject == null && _mainCamera != null)
-        {
-            Ray ray = _mainCamera.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f));
+        Vector2 screenPoint = (Input.touchCount > 0) ?
+                              Input.GetTouch(0).position :
+                              new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
 
-            hit = Physics.Raycast(ray, out hitInfo, raycastMaxDistance, clickLayers);
-            if(!hit)
-                hit = Physics.Raycast(ray, out hitInfo, raycastMaxDistance);
-        }
+        Ray ray = _mainCamera.ScreenPointToRay(screenPoint);
+        bool hit = Physics.Raycast(ray, out RaycastHit hitInfo, raycastMaxDistance, clickLayers);
+        if(!hit) hit = Physics.Raycast(ray, out hitInfo, raycastMaxDistance);
 
         Collider hoveredCol = hit ? hitInfo.collider : null;
 
-        // 같은 대상 계속 호버
         if(hoveredCol == _lastHoveredCol)
         {
             if(_worldLabel != null && hit)
@@ -467,38 +552,60 @@ public class FreeLookControllerMobile : NetworkBehaviour
         }
 
         _lastHoveredCol = hoveredCol;
+        ClearHoverVisuals();
 
-        // 기존 라벨 페이드 아웃
-        if(_worldLabel != null)
-        {
-            var fader = _worldLabel.GetComponent<UIHoverFader>();
-            if(fader != null) fader.FadeOut();
-            else Destroy(_worldLabel);
-            _worldLabel = null;
-        }
+        if(hoveredCol == null) return;
 
-        if(hoveredCol == null)
-        {
-            SetGuideUI(string.Empty);
-            return;
-        }
+        string msg = GetHoverActionMsg(hoveredCol);
+        if(string.IsNullOrEmpty(msg)) return;
 
         string objName = GetHoverTargetName(hoveredCol);
-        string msg = GetHoverActionMsg(hoveredCol);
-
-        Log($"호버: {objName} — {msg}");
         SetGuideUI(msg);
-
         SpawnWorldLabel(hitInfo.point, objName, msg);
+        SetOutline(hoveredCol.gameObject);
+    }
+
+    private string GetHoverTargetName(Collider col)
+    {
+        var item = col.GetComponent<TaskItem>() ?? col.GetComponentInParent<TaskItem>();
+        if(item != null) return item.prefabId;
+
+        var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
+        if(anim != null) return anim.uniqueId;
+
+        var zone = col.GetComponent<TaskInteractionZone>() ?? col.GetComponentInParent<TaskInteractionZone>();
+        if(zone != null) return zone.zoneId;
+
+        return col.gameObject.name;
+    }
+
+    private string GetHoverActionMsg(Collider col)
+    {
+        if(col == null) return string.Empty;
+        if(_heldObject != null) return "더블 탭 또는 DROP 버튼으로 내려놓기";
+
+        var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
+        if(anim != null) return anim.IsOpen ? "터치하여 닫기" : "터치하여 열기";
+
+        var item = col.GetComponent<TaskItem>() ?? col.GetComponentInParent<TaskItem>();
+        if(item != null)
+        {
+            var sg = item.GetComponent<SyncGrab>() ?? item.GetComponentInParent<SyncGrab>();
+            if(sg != null) return sg.IsGrabbed ? "다른 플레이어가 사용 중" : "터치하여 집기";
+            return "터치";
+        }
+
+        var zone = col.GetComponent<TaskInteractionZone>() ?? col.GetComponentInParent<TaskInteractionZone>();
+        if(zone != null && zone.gameObject.activeInHierarchy) return "터치하여 상호작용";
+
+        return string.Empty;
     }
 
     private void SpawnWorldLabel(Vector3 worldPos, string objName, string actionMsg)
     {
         if(worldLabelPrefab == null) return;
-
         Vector3 pos = worldPos + Vector3.up * labelHeightOffset;
         _worldLabel = Instantiate(worldLabelPrefab, pos, Quaternion.identity);
-
         SetLayerRecursively(_worldLabel, 2);
 
         var label = _worldLabel.GetComponent<WorldHoverLabel>();
@@ -513,12 +620,6 @@ public class FreeLookControllerMobile : NetworkBehaviour
             {
                 tmpUGUI.text = $"<b>{objName}</b>\n<size=80%><color=#AAFFAA>{actionMsg}</color></size>";
             }
-            else
-            {
-                var tmp3D = _worldLabel.GetComponentInChildren<TMPro.TextMeshPro>();
-                if(tmp3D != null)
-                    tmp3D.text = $"<b>{objName}</b>\n<size=80%><color=#AAFFAA>{actionMsg}</color></size>";
-            }
         }
 
         _worldLabel.AddComponent<UIHoverFader>();
@@ -528,296 +629,33 @@ public class FreeLookControllerMobile : NetworkBehaviour
     {
         obj.layer = layer;
         foreach(Transform child in obj.transform)
-        {
             SetLayerRecursively(child.gameObject, layer);
-        }
     }
 
     private void SetGuideUI(string msg)
     {
-        bool hasMsg = !string.IsNullOrEmpty(msg);
-        _hoverGuideMsg = msg;
-
-        if(hoverGuideText != null)
-            hoverGuideText.text = hasMsg ? msg : string.Empty;
-
-        if(hoverGuidePanel != null)
-            hoverGuidePanel.SetActive(hasMsg);
+        if(hoverGuideText != null) hoverGuideText.text = msg;
+        if(hoverGuidePanel != null) hoverGuidePanel.SetActive(!string.IsNullOrEmpty(msg));
     }
 
-    private string GetHoverTargetName(Collider col)
+    private void ClearHoverVisuals()
     {
-        var item = col.GetComponent<TaskItem>() ?? col.GetComponentInParent<TaskItem>();
-        if(item != null) return item.prefabId;
-
-        var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
-        if(anim != null) return anim.gameObject.name;
-
-        var zone = col.GetComponent<TaskInteractionZone>() ?? col.GetComponentInParent<TaskInteractionZone>();
-        if(zone != null) return zone.zoneId;
-
-        var part = col.GetComponent<InteractablePart>() ?? col.GetComponentInParent<InteractablePart>();
-        if(part != null) return col.gameObject.name;
-
-        return col.gameObject.name;
-    }
-
-    private string GetHoverActionMsg(Collider col)
-    {
-        if(col == null) return string.Empty;
-
-        if(_heldObject != null) return "클릭하여 내려놓기";
-
-        var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
-        if(anim != null) return anim.IsOpen ? "클릭하여 닫기" : "클릭하여 열기";
-
-        var item = col.GetComponent<TaskItem>() ?? col.GetComponentInParent<TaskItem>();
-        if(item != null)
+        SetGuideUI(string.Empty);
+        if(_worldLabel != null)
         {
-            var sg = item.GetComponent<SyncGrab>() ?? item.GetComponentInParent<SyncGrab>();
-            if(sg != null) return sg.IsGrabbed ? "다른 플레이어가 사용 중" : "클릭하여 집기";
-            return "클릭";
+            var fader = _worldLabel.GetComponent<UIHoverFader>();
+            if(fader != null) fader.FadeOut();
+            else Destroy(_worldLabel);
+            _worldLabel = null;
         }
-
-        var zone = col.GetComponent<TaskInteractionZone>() ?? col.GetComponentInParent<TaskInteractionZone>();
-        if(zone != null && zone.gameObject.activeInHierarchy) return "클릭하여 상호작용";
-
-        var part = col.GetComponent<InteractablePart>() ?? col.GetComponentInParent<InteractablePart>();
-        if(part != null) return "클릭하여 조작";
-
-        return string.Empty;
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // 터치 상호작용
-    // ═══════════════════════════════════════════════════════
-
-    private void HandleTouchInteraction()
-    {
-        if(Input.touchCount == 0)
-        {
-            _interactionTouchId = -1;
-            return;
-        }
-
-        for(int i = 0; i < Input.touchCount; i++)
-        {
-            Touch t = Input.GetTouch(i);
-
-            // 카메라 회전(오른쪽)이 아닌, 왼쪽 터치만 상호작용
-            if(_interactionTouchId == -1 && t.phase == TouchPhase.Began
-                && t.position.x < Screen.width * 0.5f
-                && t.fingerId != lookTouchId)
-            {
-                _interactionTouchId = t.fingerId;
-                HandleInteractionTouch(t.position);
-            }
-
-            if(t.fingerId == _interactionTouchId && t.phase == TouchPhase.Ended)
-            {
-                _interactionTouchId = -1;
-            }
-        }
-    }
-
-    private void HandleInteractionTouch(Vector2 touchPos)
-    {
-        // UI 블로킹 체크
-        if(IsPointerOverUI(touchPos))
-        {
-            Log($"UI 위 터치 — 무시 ({GetUIObjectName(touchPos)})");
-            return;
-        }
-
-        // ClickableAnimator (문/후드)
-        if(HandleTaskClick(touchPos)) return;
-
-        // SyncGrab 집기
-        SyncGrab target = RaycastSyncGrab(touchPos);
-        if(target == null || target.IsGrabbed) return;
-
-        Log($"집기: {target.name}");
-        _heldObject = target;
-        target.OnPCClick();
-
-        Managers.Sound.Play(grabSound);
-        HeldItemUI.Instance?.UpdateUI(target.gameObject);
-
-        _heldObject.OnReleased += OnHeldObjectReleased;
-    }
-
-    private bool HandleTaskClick(Vector2 screenPos)
-    {
-        Ray ray = _mainCamera.ScreenPointToRay(new Vector3(screenPos.x, screenPos.y, 0f));
-
-        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
-            return false;
-
-        Log($"[Raycast] 클릭 감지됨: {hit.collider.name}");
-
-        // 사고 감지
-        var part = hit.collider.GetComponent<InteractablePart>()
-                   ?? hit.collider.GetComponentInParent<InteractablePart>();
-
-        if(part != null)
-        {
-            Log($"InteractablePart 발견: {part.name}. 사고 체크 시작.");
-            if(!part.CheckSafetyAndTriggerAccident())
-            {
-                Log("사고 발생! 상호작용을 중단합니다.");
-                return true;
-            }
-        }
-
-        // ClickableAnimator (문, 후드 등)
-        var clickableAnim = hit.collider.GetComponent<ClickableAnimator>()
-                          ?? hit.collider.GetComponentInParent<ClickableAnimator>();
-
-        if(clickableAnim != null)
-        {
-            Log($"[애니메이션] {clickableAnim.uniqueId} 작동");
-            clickableAnim.OnPCClick();
-            return true;
-        }
-
-        // TaskItem / SyncGrab (아이템 집기)
-        var item = hit.collider.GetComponent<TaskItem>()
-                ?? hit.collider.GetComponentInParent<TaskItem>();
-
-        if(item != null)
-        {
-            Log($"TaskItem 클릭: {item.prefabId}");
-
-            var syncGrab = item.GetComponent<SyncGrab>()
-                        ?? item.GetComponentInParent<SyncGrab>();
-
-            if(syncGrab != null)
-            {
-                if(syncGrab.IsGrabbed) return true;
-
-                Log($"SyncGrab 레이저 그랩 시작: {item.prefabId}");
-                StartLaserPull(syncGrab);
-                return true;
-            }
-
-            InteractionEvents.FireItemGrabbed(item.prefabId);
-            InteractionEvents.FireItemUsed(item.prefabId);
-            return true;
-        }
-
-        // TaskInteractionZone (빈손 터치)
-        var zone = hit.collider.GetComponent<TaskInteractionZone>()
-                ?? hit.collider.GetComponentInParent<TaskInteractionZone>();
-
-        if(zone != null && zone.gameObject.activeInHierarchy)
-        {
-            InteractionEvents.FireZoneActivated(zone.zoneId, string.Empty);
-            return true;
-        }
-
-        return false;
-    }
-
-    private SyncGrab RaycastSyncGrab(Vector2 screenPos)
-    {
-        Ray ray = _mainCamera.ScreenPointToRay(new Vector3(screenPos.x, screenPos.y, 0f));
-
-        if(showDebugRay)
-            Debug.DrawRay(ray.origin, ray.direction * raycastMaxDistance, Color.red, 0.3f);
-
-        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
-        {
-            Log("레이캐스트 히트 없음");
-            return null;
-        }
-
-        Log($"히트: {hit.collider.gameObject.name}");
-
-        SyncGrab sg = hit.collider.GetComponentInParent<SyncGrab>();
-        if(sg != null) return sg;
-
-        var anim = hit.collider.GetComponent<ClickableAnimator>()
-                ?? hit.collider.GetComponentInParent<ClickableAnimator>();
-        if(anim != null)
-        {
-            Log($"ClickableAnimator 클릭 (clickLayers 경로): {anim.gameObject.name}");
-            anim.OnPCClick();
-            return null;
-        }
-
-        var part = hit.collider.GetComponent<InteractablePart>()
-                ?? hit.collider.GetComponentInParent<InteractablePart>();
-        if(part != null)
-        {
-            Log($"InteractablePart 클릭: {hit.collider.gameObject.name}");
-            part.OnPCClick();
-            return null;
-        }
-
-        Log("SyncGrab 없음");
-        return null;
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // UI 블로킹
-    // ═══════════════════════════════════════════════════════
-
-    private bool IsPointerOverUI(Vector2 screenPos)
-    {
-        if(EventSystem.current == null) return false;
-
-        var pointerData = new PointerEventData(EventSystem.current) { position = screenPos };
-        _uiRaycastResults.Clear();
-        EventSystem.current.RaycastAll(pointerData, _uiRaycastResults);
-
-        foreach(var result in _uiRaycastResults)
-        {
-            var canvas = result.gameObject.GetComponentInParent<Canvas>();
-            if(canvas == null) continue;
-
-            if(canvas.renderMode == RenderMode.WorldSpace) continue;
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private string GetUIObjectName(Vector2 screenPos)
-    {
-        if(EventSystem.current == null) return "EventSystem 없음";
-
-        var pointerData = new PointerEventData(EventSystem.current) { position = screenPos };
-        _uiRaycastResults.Clear();
-        EventSystem.current.RaycastAll(pointerData, _uiRaycastResults);
-
-        foreach(var result in _uiRaycastResults)
-        {
-            var canvas = result.gameObject.GetComponentInParent<Canvas>();
-            if(canvas != null && canvas.renderMode != RenderMode.WorldSpace)
-            {
-                return GetGameObjectPath(result.gameObject);
-            }
-        }
-        return "없음";
-    }
-
-    private string GetGameObjectPath(GameObject obj)
-    {
-        string path = obj.name;
-        while(obj.transform.parent != null)
-        {
-            obj = obj.transform.parent.gameObject;
-            path = obj.name + "/" + path;
-        }
-        return path;
+        SetOutline(null);
     }
 
     // ═══════════════════════════════════════════════════════
     // 레이저 그랩
     // ═══════════════════════════════════════════════════════
 
-    private void StartLaserPull(SyncGrab target)
+    private void StartLaserPull(SyncGrab target, Vector3 hitPoint)
     {
         if(_heldObject != null) return;
 
@@ -825,26 +663,102 @@ public class FreeLookControllerMobile : NetworkBehaviour
         _isFlying = true;
         _heldObject = target;
 
+        Managers.Sound.Play(grabSound);
         HeldItemUI.Instance?.UpdateUI(target.gameObject);
-        SetOutline(null);
 
         target.OnReleased += OnHeldObjectReleased;
         target.OnPCClick();
-        Log($"[LaserGrab] 집기: {target.name}");
+
+        Log($"[LaserGrab] 시작: {target.name}");
     }
 
     private void OnHeldObjectReleased()
     {
         if(_heldObject == null) return;
         _heldObject.OnReleased -= OnHeldObjectReleased;
-        if(_heldObject != null)
-            _heldObject.transform.localScale = _heldOriginalScale;
+        _heldObject.transform.localScale = _heldOriginalScale;
         _heldObject = null;
         _isFlying = false;
-        _heldOriginalScale = Vector3.one;
-        Log("[LaserGrab] 외부 릴리즈 감지 → _heldObject 정리");
-
         HeldItemUI.Instance?.ClearUI();
+        Log("[LaserGrab] 외부 릴리즈");
+    }
+
+    private void UpdateLaserLine()
+    {
+        EnsureLaserLine();
+
+        if(_heldObject != null)
+        {
+            laserLine.enabled = false;
+            SetOutline(null);
+            return;
+        }
+
+        Vector2 screenPoint = (Input.touchCount > 0) ?
+                              Input.GetTouch(0).position :
+                              new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+
+        Ray ray = _mainCamera.ScreenPointToRay(screenPoint);
+        bool hit = Physics.Raycast(ray, out RaycastHit hitInfo, raycastMaxDistance, clickLayers);
+        if(!hit) hit = Physics.Raycast(ray, out hitInfo, raycastMaxDistance);
+
+        if(!hit)
+        {
+            laserLine.enabled = false;
+            SetOutline(null);
+            return;
+        }
+
+        SyncGrab syncGrab = hitInfo.collider.GetComponent<SyncGrab>()
+                         ?? hitInfo.collider.GetComponentInParent<SyncGrab>();
+        var part = hitInfo.collider.GetComponent<InteractablePart>()
+                ?? hitInfo.collider.GetComponentInParent<InteractablePart>();
+
+        GameObject targetGO = null;
+        if(syncGrab != null && !syncGrab.IsGrabbed)
+        {
+            targetGO = syncGrab.gameObject;
+        }
+        else if(part != null && part.currentState != InteractablePart.PartState.Assembled)
+        {
+            targetGO = part.gameObject;
+        }
+
+        SetOutline(targetGO);
+
+        if(targetGO != null)
+        {
+            laserLine.enabled = true;
+            DrawCurvedLaser(_mainCamera.transform, hitInfo.point);
+        }
+        else
+        {
+            laserLine.enabled = false;
+        }
+    }
+
+    private void DrawCurvedLaser(Transform origin, Vector3 targetPoint)
+    {
+        int count = Mathf.Max(laserVertexCount, 2);
+        laserLine.positionCount = count;
+
+        Vector3 start = origin.position + origin.forward * 0.05f;
+        Vector3 end = targetPoint;
+
+        Vector3 forwardPoint = start + origin.forward * 0.4f;
+        Vector3 itemNormal = (start - end).normalized;
+        Vector3 v = forwardPoint - end;
+        Vector3 projected = forwardPoint - Vector3.Project(v, itemNormal);
+        Vector3 midPoint = projected;
+
+        for(int i = 0; i < count; i++)
+        {
+            float t = i / (float)(count - 1);
+            Vector3 p = (1 - t) * (1 - t) * start
+                      + 2 * (1 - t) * t * midPoint
+                      + t * t * end;
+            laserLine.SetPosition(i, p);
+        }
     }
 
     private void CheckHoldScaleReady()
@@ -872,18 +786,7 @@ public class FreeLookControllerMobile : NetworkBehaviour
 
         float ratio = Mathf.Clamp(maxAllowed / maxDim, 0.05f, 1f);
         t.localScale = _heldOriginalScale * ratio;
-        Log($"[LaserGrab] 스케일 {maxDim:F2}m → {ratio:F2}배");
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // 내려놓기
-    // ═══════════════════════════════════════════════════════
-
-    private void HandleDropKey()
-    {
-        if(_heldObject == null) return;
-        if(Input.GetKeyDown(dropKey))
-            DropHeldObject();
+        Log($"[LaserGrab] 스케일 축소: {maxDim:F2}m → {ratio:F2}배");
     }
 
     private void DropHeldObject()
@@ -893,38 +796,22 @@ public class FreeLookControllerMobile : NetworkBehaviour
         Managers.Sound.Play(dropSound);
 
         var dropping = _heldObject;
-        var part = dropping.GetComponent<InteractablePart>();
-        var data = dropping.GetComponent<FreeModePartAttachment>()?.partData;
-
         dropping.OnReleased -= OnHeldObjectReleased;
+
         _heldObject = null;
         _isFlying = false;
         SetOutline(null);
-
         HeldItemUI.Instance?.ClearUI();
 
-        dropping.transform.localScale = Vector3.one;
-
-        bool isInsideSnapZone = part != null && part.currentState == InteractablePart.PartState.Detached && part._isInsideSnapZone;
-
+        dropping.transform.localScale = _heldOriginalScale;
         dropping.StopPCHold();
         dropping.RequestRelease();
 
-        if(isInsideSnapZone)
-        {
-            Log($"[LaserGrab] {dropping.name} 조립 위치에서 놓음 -> 조립 시도");
-            return;
-        }
-        else
-        {
-            Log("[LaserGrab] 허공에서 놓음 -> 바닥으로 추락");
-        }
-
-        Log("[LaserGrab] 일반 내려놓기 완료");
+        Log("[LaserGrab] 내려놓기 완료");
     }
 
     // ═══════════════════════════════════════════════════════
-    // 아웃라인
+    // 유틸
     // ═══════════════════════════════════════════════════════
 
     private void SetOutline(GameObject targetGO)
@@ -933,47 +820,74 @@ public class FreeLookControllerMobile : NetworkBehaviour
 
         if(_outlinedObject != null)
         {
-            var old = _outlinedObject.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
-            if(old != null) old.enabled = false;
-            _outlinedObject = null;
+            var outline = _outlinedObject.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+            if(outline != null) outline.enabled = false;
         }
 
-        if(targetGO == null) return;
+        if(targetGO == null) { _outlinedObject = null; return; }
 
-        var outline = targetGO.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
-        if(outline == null)
-            outline = targetGO.AddComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+        var outlineComp = targetGO.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+        if(outlineComp == null) outlineComp = targetGO.AddComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
 
-        outline.OutlineColor = outlineHoverColor;
-        outline.OutlineWidth = outlineWidth;
-        outline.OutlineMode = MikeNspired.XRIStarterKit.ChrisNolet.Outline.Mode.OutlineAll;
-        outline.enabled = true;
-
+        outlineComp.OutlineColor = outlineHoverColor;
+        outlineComp.OutlineWidth = outlineWidth;
+        outlineComp.enabled = true;
         _outlinedObject = targetGO;
     }
 
-    // ═══════════════════════════════════════════════════════
-    // 유틸
-    // ═══════════════════════════════════════════════════════
+    private void EnsureLaserLine()
+    {
+        if(laserLine != null) return;
+
+        var go = new GameObject("Mobile_LaserLine");
+        go.transform.SetParent(transform);
+        laserLine = go.AddComponent<LineRenderer>();
+        laserLine.positionCount = laserVertexCount;
+        laserLine.startWidth = laserStartWidth;
+        laserLine.endWidth = laserEndWidth;
+        laserLine.useWorldSpace = true;
+        laserLine.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        laserLine.receiveShadows = false;
+
+        Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                     ?? Shader.Find("Particles/Standard Unlit")
+                     ?? Shader.Find("Sprites/Default");
+
+        var mat = new Material(shader);
+        mat.SetInt("_ZWrite", 0);
+        mat.renderQueue = 3000;
+        laserLine.material = mat;
+        laserLine.colorGradient = MakeGradient(laserColorStart, laserColorEnd);
+        laserLine.enabled = false;
+
+        Log("레이저 라인 자동 생성");
+    }
+
+    private static Gradient MakeGradient(Color start, Color end)
+    {
+        var g = new Gradient();
+        g.SetKeys(
+            new[] { new GradientColorKey(start, 0f), new GradientColorKey(end, 1f) },
+            new[] { new GradientAlphaKey(start.a, 0f), new GradientAlphaKey(end.a, 1f) });
+        return g;
+    }
+
+    private bool IsPointerOverUI(Vector2 pos)
+    {
+        if(EventSystem.current == null) return false;
+        PointerEventData data = new PointerEventData(EventSystem.current) { position = pos };
+        _uiRaycastResults.Clear();
+        EventSystem.current.RaycastAll(data, _uiRaycastResults);
+        foreach(var r in _uiRaycastResults)
+        {
+            Canvas c = r.gameObject.GetComponentInParent<Canvas>();
+            if(c != null && c.renderMode != RenderMode.WorldSpace) return true;
+        }
+        return false;
+    }
 
     private void Log(string msg)
     {
-        if(showDebugLog) Debug.Log($"[FreeLookMobile] {msg}");
-    }
-
-    public void ForceGrabFromInventory(SyncGrab target)
-    {
-        if(_heldObject != null) return;
-
-        _heldOriginalScale = target.transform.localScale;
-        _isFlying = true;
-        _heldObject = target;
-
-        HeldItemUI.Instance?.UpdateUI(target.gameObject);
-        SetOutline(null);
-
-        target.OnReleased += OnHeldObjectReleased;
-        target.OnPCClick();
-        Log($"[LaserGrab] 인벤토리에서 꺼내 자동 집기: {target.name}");
+        if(showDebugLog) Debug.Log($"[Mobile] {msg}");
     }
 }
