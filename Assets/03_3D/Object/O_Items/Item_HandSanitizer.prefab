@@ -460,6 +460,8 @@ MonoBehaviour:
   flyDuration: 0.5
   flyEase: 9
   arcHeight: 0.5
+  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!114 &2846420316950875023
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -496,6 +498,7 @@ MonoBehaviour:
   rotationThreshold: 0.5
   teleportDistanceThreshold: 2
   sendAuthorityInServer: 1
+  ownerSendOnly: 0
 --- !u!4 &4037092995414389562 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 32dc5676bc3218b4c9cd044cb9276202, type: 3}

@@ -498,6 +498,8 @@ MonoBehaviour:
   flyDuration: 0.5
   flyEase: 9
   arcHeight: 0.5
+  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!114 &4025819312087690953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -534,3 +536,4 @@ MonoBehaviour:
   rotationThreshold: 0.5
   teleportDistanceThreshold: 2
   sendAuthorityInServer: 1
+  ownerSendOnly: 0
