@@ -115,6 +115,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c5e689e1bece78640b22d0e70e5df16e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 263866705496441295}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c5e689e1bece78640b22d0e70e5df16e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -748361311210212220}
   m_SourcePrefab: {fileID: 100100000, guid: c5e689e1bece78640b22d0e70e5df16e, type: 3}
 --- !u!1 &5605421591520351476 stripped
 GameObject:
@@ -139,7 +142,8 @@ MonoBehaviour:
   <ComponentIndex>k__BackingField: 0
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
-  NetworkBehaviours: []
+  NetworkBehaviours:
+  - {fileID: -748361311210212220}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -164,12 +168,27 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 65535
+  <PrefabId>k__BackingField: 32
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 4919049771330267759
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 0}
-    Scale: {x: 0, y: 0, z: 0}
-    IsValid: 0
+    Position: {x: -3.834, y: 0.642, z: 3.5}
+    Rotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+    Scale: {x: 1, y: 1, z: 1}
+    IsValid: 1
+--- !u!114 &-748361311210212220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5605421591520351476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: 0}
+  _networkObjectCache: {fileID: 263866705496441295}
