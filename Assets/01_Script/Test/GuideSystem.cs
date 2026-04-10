@@ -1,10 +1,12 @@
 using DG.Tweening;
 using DoDrill;
+using EPOOutline;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using EPOOutline;
 
 // ============================================================
 //  GuideSystem.cs  — 통합 가이드 매니저 (완전 자동화)
@@ -41,13 +43,16 @@ public class GuideSystem : MonoBehaviour
     [Tooltip("반투명 홀로그램 머테리얼 (Rendering Mode: Transparent)")]
     public Material ghostMaterial;
 
-    [Header("아웃라인 (requiredItems 오브젝트)")]
-    public Color outlineColor = new Color(0f, 1f, 1f);
-    public float outlineWidth = 6f;
-
     [Header("힌트 / 넛지")]
     public float hintDuration = 4f;
     public float nudgeIdleTime = 12f;
+
+    [Header("아웃라인 설정 (EPOOutline)")]
+    public Color outlineColor = new Color(0f, 1f, 1f);
+    [Range(0, 10)]
+    public float outlineWidth = 4f; // EPO의 Blur 혹은 Dilate 값으로 활용
+    [Tooltip("EPOOutline의 RenderStyle 설정")]
+    public RenderStyle renderStyle = RenderStyle.Single;
 
     // ── 내부 상태 ─────────────────────────────────────────
     private ScenarioData _scenarioData;
@@ -534,34 +539,45 @@ public class GuideSystem : MonoBehaviour
     {
         if(target == null) return;
 
-        // 모든 자식 렌더러를 찾음
-        var renderers = target.GetComponentsInChildren<Renderer>(true);
+        // 1. 타겟 혹은 부모에 Outlinable 컴포넌트가 있는지 확인
+        var outlinable = target.GetComponent<Outlinable>();
 
-        foreach(var r in renderers)
+        if(on)
         {
-            // 이미 Outline 컴포넌트가 있는지 확인
-            var o = r.gameObject.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
-
-            if(on)
+            // 컴포넌트가 없으면 추가
+            if(outlinable == null)
             {
-                // 없으면 새로 추가
-                if(o == null)
-                    o = r.gameObject.AddComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+                outlinable = target.AddComponent<Outlinable>();
 
-                // 프로퍼티 설정 및 강제 활성화
-                o.OutlineColor = outlineColor;
-                o.OutlineWidth = outlineWidth;
-                o.OutlineMode = MikeNspired.XRIStarterKit.ChrisNolet.Outline.Mode.OutlineAll;
-                o.enabled = true;
-                o.needsUpdate = true;
-
-                // 가끔 Renderer가 꺼져있어서 안 보일 수 있음
-                if(!r.enabled) r.enabled = true;
+                // 해당 오브젝트와 모든 자식의 Renderer를 아웃라인 대상으로 자동 등록
+                outlinable.AddAllChildRenderersToRenderingList();
             }
-            else
+
+            // 아웃라인 스타일 설정
+            outlinable.RenderStyle = renderStyle;
+            outlinable.enabled = true;
+
+            // 색상 및 파라미터 적용 (Single 모드 기준)
+            var properties = outlinable.OutlineParameters;
+            properties.Color = outlineColor;
+            properties.BlurShift = outlineWidth; // 선의 굵기 느낌 조절
+            properties.Enabled = true;
+
+            // 만약 FrontBack 모드라면 양쪽 다 적용
+            if(renderStyle == RenderStyle.FrontBack)
             {
-                // 끌 때는 컴포넌트 비활성화
-                if(o != null) o.enabled = false;
+                outlinable.FrontParameters.Color = outlineColor;
+                outlinable.FrontParameters.Enabled = true;
+                outlinable.BackParameters.Color = outlineColor;
+                outlinable.BackParameters.Enabled = true;
+            }
+        }
+        else
+        {
+            // 끌 때는 컴포넌트만 비활성화 (나중에 재사용 가능하게 Destroy는 하지 않음)
+            if(outlinable != null)
+            {
+                outlinable.enabled = false;
             }
         }
     }

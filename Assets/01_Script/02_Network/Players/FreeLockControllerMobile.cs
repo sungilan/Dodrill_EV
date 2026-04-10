@@ -1,11 +1,12 @@
-﻿using FishNet.Object;
+﻿using DG.Tweening;
+using EPOOutline;
+using FishNet.Object;
 using PinePie.SimpleJoystick;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using System.Collections;
-using System.Collections.Generic;
-using DG.Tweening;
 
 public class FreeLookControllerMobile : NetworkBehaviour
 {
@@ -818,20 +819,30 @@ public class FreeLookControllerMobile : NetworkBehaviour
     {
         if(targetGO == _outlinedObject) return;
 
+        // 이전 대상 아웃라인 OFF
         if(_outlinedObject != null)
         {
-            var outline = _outlinedObject.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
-            if(outline != null) outline.enabled = false;
+            var old = _outlinedObject.GetComponent<Outlinable>();
+            if(old != null) old.enabled = false;
+            _outlinedObject = null;
         }
 
-        if(targetGO == null) { _outlinedObject = null; return; }
+        if(targetGO == null) return;
 
-        var outlineComp = targetGO.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
-        if(outlineComp == null) outlineComp = targetGO.AddComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+        // 새 아웃라인 ON
+        var outlinable = targetGO.GetComponent<Outlinable>();
+        if(outlinable == null)
+        {
+            outlinable = targetGO.AddComponent<Outlinable>();
+            outlinable.AddAllChildRenderersToRenderingList();
+        }
 
-        outlineComp.OutlineColor = outlineHoverColor;
-        outlineComp.OutlineWidth = outlineWidth;
-        outlineComp.enabled = true;
+        outlinable.RenderStyle = RenderStyle.Single;
+        outlinable.OutlineParameters.Color = outlineHoverColor;
+        outlinable.OutlineParameters.BlurShift = outlineWidth; // EPO의 두께 조절 필드
+        outlinable.OutlineParameters.Enabled = true;
+        outlinable.enabled = true;
+
         _outlinedObject = targetGO;
     }
 

@@ -49,6 +49,7 @@ public class GameScenePlatformManager : MonoBehaviour
         Instance = this;
 
         CurrentPlatform = Utils.GetPlatformType();
+        UserInfo.PlatformType = CurrentPlatform;
         _isVR = (CurrentPlatform == PlatformType.VR);
         Apply();
 

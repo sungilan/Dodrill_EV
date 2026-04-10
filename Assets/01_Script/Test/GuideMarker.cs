@@ -1,6 +1,7 @@
 ﻿using TMPro;
 using UnityEngine;
 using DG.Tweening;
+using EPOOutline;
 
 // ============================================================
 //  GuideMarker.cs
@@ -34,25 +35,27 @@ public class GuideMarker : MonoBehaviour
     /// </summary>
     public void Setup(string description, Color color, bool showHighlight = true)
     {
-        // 자식에서 자동 탐색 (Inspector 연결 생략 가능)
-        if (highlightCircle == null)
-            highlightCircle = FindChild("HighlightCircle");
-        if (descriptionText == null)
-            descriptionText = GetComponentInChildren<TextMeshProUGUI>();
-        if (arrow == null)
-            arrow = FindChild("Arrow");
+        if(highlightCircle == null) highlightCircle = FindChild("HighlightCircle");
+        if(descriptionText == null) descriptionText = GetComponentInChildren<TextMeshProUGUI>();
+        if(arrow == null) arrow = FindChild("Arrow");
 
-        // ① HighlightCircle — Renderer 색상
-        if (highlightCircle != null)
+        // ① HighlightCircle — EPOOutline 적용
+        if(highlightCircle != null)
         {
             highlightCircle.SetActive(showHighlight);
-            // 자식들을 포함하여 모든 Outline 컴포넌트를 찾아 색상 적용
-            var outlines = highlightCircle.GetComponentsInChildren<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
-            foreach (var outline in outlines)
+
+            // Outlinable 컴포넌트 확보
+            var outlinable = highlightCircle.GetComponent<Outlinable>();
+            if(outlinable == null)
             {
-                // 직접 프로퍼티 setter를 호출해야 내부 needsUpdate가 true가 되어 셰이더에 반영됩니다.
-                outline.OutlineColor = color;
+                outlinable = highlightCircle.AddComponent<Outlinable>();
+                outlinable.AddAllChildRenderersToRenderingList();
             }
+
+            outlinable.RenderStyle = RenderStyle.Single;
+            outlinable.OutlineParameters.Color = color;
+            outlinable.OutlineParameters.Enabled = true;
+            outlinable.enabled = true;
         }
 
         // ② DescriptionText — TMP 색상 + 텍스트

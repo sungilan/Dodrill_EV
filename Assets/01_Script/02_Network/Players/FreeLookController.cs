@@ -1,8 +1,9 @@
-﻿using System.Collections;
+﻿using EPOOutline;
+using FishNet.Object;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using FishNet.Object;
 
 /// <summary>
 /// ╔══════════════════════════════════════════════════════════════════╗
@@ -1336,28 +1337,31 @@ public class FreeLookController : NetworkBehaviour
     /// </summary>
     private void SetOutline(GameObject targetGO)
     {
-        //대상이 바뀌지 않았으면 스킵
         if(targetGO == _outlinedObject) return;
 
-        // 이전 아웃라인 OFF
+        // 이전 대상 아웃라인 OFF
         if(_outlinedObject != null)
         {
-            var old = _outlinedObject.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+            var old = _outlinedObject.GetComponent<Outlinable>();
             if(old != null) old.enabled = false;
             _outlinedObject = null;
         }
 
         if(targetGO == null) return;
 
-        // 새 아웃라인 ON — 없으면 동적 추가
-        var outline = targetGO.GetComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
-        if(outline == null)
-            outline = targetGO.AddComponent<MikeNspired.XRIStarterKit.ChrisNolet.Outline>();
+        // 새 아웃라인 ON
+        var outlinable = targetGO.GetComponent<Outlinable>();
+        if(outlinable == null)
+        {
+            outlinable = targetGO.AddComponent<Outlinable>();
+            outlinable.AddAllChildRenderersToRenderingList();
+        }
 
-        outline.OutlineColor = outlineHoverColor;
-        outline.OutlineWidth = outlineWidth;
-        outline.OutlineMode = MikeNspired.XRIStarterKit.ChrisNolet.Outline.Mode.OutlineAll;
-        outline.enabled = true;
+        outlinable.RenderStyle = RenderStyle.Single;
+        outlinable.OutlineParameters.Color = outlineHoverColor;
+        outlinable.OutlineParameters.BlurShift = outlineWidth; // EPO의 두께 조절 필드
+        outlinable.OutlineParameters.Enabled = true;
+        outlinable.enabled = true;
 
         _outlinedObject = targetGO;
     }

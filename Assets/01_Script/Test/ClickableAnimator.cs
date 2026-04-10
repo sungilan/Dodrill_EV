@@ -415,17 +415,20 @@ public class ClickableAnimator : MonoBehaviour
     {
         ClickableAnimatorManager.Register(uniqueId, this);
 
-        Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 연결)");
-        _grabbable.onGrab.AddListener(OnVRGrab);
-        if(GameScenePlatformManager.IsVR)
+        if(_grabbable != null)
         {
-            // VR 플랫폼인 경우: Auto Hand의 Grab 이벤트에 연결
-            if(_grabbable != null)
-            {
-                Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 연결)");
-                _grabbable.onGrab.AddListener(OnVRGrab);
-            }
+            Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 연결)");
+            _grabbable.onGrab.AddListener(OnVRGrab);
         }
+        //if(GameScenePlatformManager.IsVR)
+        //{
+        //    // VR 플랫폼인 경우: Auto Hand의 Grab 이벤트에 연결
+        //    if(_grabbable != null)
+        //    {
+        //        Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 연결)");
+        //        _grabbable.onGrab.AddListener(OnVRGrab);
+        //    }
+        //}
     }
 
     private void OnDestroy()

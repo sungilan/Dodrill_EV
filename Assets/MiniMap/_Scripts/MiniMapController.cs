@@ -21,6 +21,9 @@ public class MiniMapController : MonoBehaviour {
 	[HideInInspector]
 	public Camera mapCamera;
 
+    [Tooltip("미니맵이 타겟을 따라갈지 여부 (체크 해제 시 고정)")]
+    public bool followTarget = true;
+    
 	[Tooltip("The target which the minimap will be following")]
 	public Transform target;
 	//UI related variables
@@ -89,7 +92,7 @@ public class MiniMapController : MonoBehaviour {
 		SetupRenderTexture();
 
         StopAllCoroutines();
-		StartCoroutine(WaitForPlayerRoutine());
+		//StartCoroutine(WaitForPlayerRoutine());
     }
 
     private IEnumerator WaitForPlayerRoutine()
@@ -183,6 +186,7 @@ public class MiniMapController : MonoBehaviour {
 	void SetCam(){
 		mapCamera.orthographicSize = camSize;
 		mapCamera.farClipPlane = camFarClip;
+
 		if (target == null) {
 			#if UNITY_EDITOR
 			//Debug.Log ("Please assign the target");
