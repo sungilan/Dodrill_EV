@@ -464,7 +464,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dbf9db670c1df4bb2843b82560ce5409, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
-  icon: {fileID: 21300000, guid: 6ba41ca124c05d741a9e1b27ab798884, type: 3}
+  icon: {fileID: 21300000, guid: 5fd97691aee36104fa07ef2e855ed90b, type: 3}
   size: {x: 20, y: 20}
   rotateWithObject: 0
   upAxis: {x: 0, y: 1, z: 0}
@@ -4601,6 +4601,8 @@ GameObject:
   - component: {fileID: 712478923303288335}
   - component: {fileID: 4082367375310990420}
   - component: {fileID: 3504731594359328589}
+  - component: {fileID: 982443731660777000}
+  - component: {fileID: 2250000649616751098}
   m_Layer: 0
   m_Name: Helper Scripts
   m_TagString: Untagged
@@ -4663,6 +4665,41 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.15
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!135 &982443731660777000
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1197016255655809374}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.001046923
+  m_Center: {x: -0.0009711836, y: 1.1826595e-10, z: -1.3353267e-10}
+--- !u!114 &2250000649616751098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1197016255655809374}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1da379afe8fcde428379fc5af3f8ada, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TaskInteractionZone
+  zoneId: Player_Hand_Zone
+  startDisabled: 1
 --- !u!1 &1231630287010571003
 GameObject:
   m_ObjectHideFlags: 0
@@ -6079,7 +6116,7 @@ MonoBehaviour:
   usingHighlight: 1
   highlightLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 32768
   defaultHighlight: {fileID: 0}
   showAdvanced: 0
   noHandFriction: 1
@@ -8324,7 +8361,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.012, y: 0.012, z: 0.012}
+  m_LocalScale: {x: 0.0001, y: 0.0001, z: 0.0001}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7036894188977108851}
@@ -10952,7 +10989,7 @@ MonoBehaviour:
   usingHighlight: 1
   highlightLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 32768
   defaultHighlight: {fileID: 0}
   showAdvanced: 0
   noHandFriction: 1
@@ -15322,6 +15359,8 @@ GameObject:
   - component: {fileID: 4874043173988978074}
   - component: {fileID: 7229659930786758316}
   - component: {fileID: 8543302021850009530}
+  - component: {fileID: 227904562529321129}
+  - component: {fileID: 2519302049893902368}
   m_Layer: 0
   m_Name: Helper Scripts
   m_TagString: Untagged
@@ -15384,6 +15423,41 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.15
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!135 &227904562529321129
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4307484924008625556}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.0010104378
+  m_Center: {x: 0.00094866706, y: 7.9130265e-11, z: 2.2922251e-11}
+--- !u!114 &2519302049893902368
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4307484924008625556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1da379afe8fcde428379fc5af3f8ada, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TaskInteractionZone
+  zoneId: Player_Hand_Zone
+  startDisabled: 1
 --- !u!1 &4358000757157916068
 GameObject:
   m_ObjectHideFlags: 0
@@ -25919,6 +25993,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d619012772bc7049b46e7220feee5a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentAnchor: {fileID: 0}
 --- !u!1 &6823756768971634918
 GameObject:
   m_ObjectHideFlags: 0
@@ -26426,7 +26501,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.012, y: 0.012, z: 0.012}
+  m_LocalScale: {x: 0.0001, y: 0.0001, z: 0.0001}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 565235659693378819}
@@ -30212,7 +30287,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &2673952244855317542
 Transform:
   m_ObjectHideFlags: 0

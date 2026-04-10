@@ -59,7 +59,7 @@ public class TTSManager : MonoBehaviour
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"[TTS] API 오류: {req.error}");
+                //Debug.LogError($"[TTS] API 오류: {req.error}");
                 yield break;
             }
 

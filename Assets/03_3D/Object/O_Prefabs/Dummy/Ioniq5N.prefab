@@ -145,7 +145,8 @@ GameObject:
   - component: {fileID: 6400803808829392676}
   - component: {fileID: 6734833350783879572}
   - component: {fileID: 8969680340549745379}
-  m_Layer: 0
+  - component: {fileID: 8634537278096463505}
+  m_Layer: 15
   m_Name: SM_Ioniq_DoorFrontRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -346,7 +347,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 0.019115232, y: 0.012550594, z: 0.013111544}
   m_Center: {x: 0.00043880206, y: -4.9999773e-17, z: 0.003547673}
@@ -396,6 +397,74 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
+--- !u!114 &8634537278096463505
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 78266690876763788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 822bc9090447b9c40833509c4a32e597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AutoHandAssembly::Autohand.Grabbable
+  ignoreMe: 0
+  body: {fileID: 0}
+  hightlightMaterial: {fileID: 0}
+  isGrabbable: 1
+  CopySettings: {fileID: 0}
+  grabType: 0
+  grabPoseType: 0
+  handType: 0
+  singleHandOnly: 0
+  instantGrab: 0
+  useGentleGrab: 0
+  maintainGrabOffset: 0
+  parentOnGrab: 1
+  heldNoFriction: 1
+  ignoreWeight: 0
+  allowHeldSwapping: 1
+  throwPower: 1
+  jointBreakForce: 3500
+  showAdvancedSettings: 1
+  makeChildrenGrabbable: 1
+  grabPriorityWeight: 1
+  ignoreReleaseTime: 0.5
+  minHeldDrag: 1.5
+  minHeldAngleDrag: 3
+  minHeldMass: 0.1
+  maxHeldVelocity: 10
+  heldPositionOffset: {x: 0, y: 0, z: 0}
+  heldRotationOffset: {x: 0, y: 0, z: 0}
+  customGrabJoint: {fileID: 0}
+  jointedBodies: []
+  heldIgnoreColliders: []
+  pullApartBreakOnly: 1
+  showEvents: 1
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onRelease:
+    m_PersistentCalls:
+      m_Calls: []
+  onSqueeze:
+    m_PersistentCalls:
+      m_Calls: []
+  onUnsqueeze:
+    m_PersistentCalls:
+      m_Calls: []
+  onHighlight:
+    m_PersistentCalls:
+      m_Calls: []
+  onUnhighlight:
+    m_PersistentCalls:
+      m_Calls: []
+  OnJointBreak:
+    m_PersistentCalls:
+      m_Calls: []
+  lockHandOnGrab: 0
 --- !u!1 &83889118601266767
 GameObject:
   m_ObjectHideFlags: 0
@@ -596,6 +665,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &1597024824454219250
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1017,7 +1087,8 @@ GameObject:
   - component: {fileID: 8589070938208890699}
   - component: {fileID: 7943400469456646801}
   - component: {fileID: 1573250607486731207}
-  m_Layer: 0
+  - component: {fileID: 8948505135122503589}
+  m_Layer: 15
   m_Name: SM_Ioniq_DoorRearLeft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1268,6 +1339,74 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
+--- !u!114 &8948505135122503589
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 230967440760357500}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 822bc9090447b9c40833509c4a32e597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AutoHandAssembly::Autohand.Grabbable
+  ignoreMe: 0
+  body: {fileID: 0}
+  hightlightMaterial: {fileID: 0}
+  isGrabbable: 1
+  CopySettings: {fileID: 0}
+  grabType: 0
+  grabPoseType: 0
+  handType: 0
+  singleHandOnly: 0
+  instantGrab: 0
+  useGentleGrab: 0
+  maintainGrabOffset: 0
+  parentOnGrab: 1
+  heldNoFriction: 1
+  ignoreWeight: 0
+  allowHeldSwapping: 1
+  throwPower: 1
+  jointBreakForce: 3500
+  showAdvancedSettings: 1
+  makeChildrenGrabbable: 1
+  grabPriorityWeight: 1
+  ignoreReleaseTime: 0.5
+  minHeldDrag: 1.5
+  minHeldAngleDrag: 3
+  minHeldMass: 0.1
+  maxHeldVelocity: 10
+  heldPositionOffset: {x: 0, y: 0, z: 0}
+  heldRotationOffset: {x: 0, y: 0, z: 0}
+  customGrabJoint: {fileID: 0}
+  jointedBodies: []
+  heldIgnoreColliders: []
+  pullApartBreakOnly: 1
+  showEvents: 1
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onRelease:
+    m_PersistentCalls:
+      m_Calls: []
+  onSqueeze:
+    m_PersistentCalls:
+      m_Calls: []
+  onUnsqueeze:
+    m_PersistentCalls:
+      m_Calls: []
+  onHighlight:
+    m_PersistentCalls:
+      m_Calls: []
+  onUnhighlight:
+    m_PersistentCalls:
+      m_Calls: []
+  OnJointBreak:
+    m_PersistentCalls:
+      m_Calls: []
+  lockHandOnGrab: 0
 --- !u!1 &246919728880022791
 GameObject:
   m_ObjectHideFlags: 0
@@ -1573,6 +1712,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &7545520896408949391
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1888,6 +2028,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &5981064677873890706
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2177,6 +2318,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6201357070066453715
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2775,6 +2917,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &1252061077414308652
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3123,6 +3266,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6061002223413837703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3904,6 +4048,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
 --- !u!114 &1579477613547722086
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4860,6 +5005,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &5767819311384520770
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5546,6 +5692,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &1705116889486038030
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5835,6 +5982,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &889303265052491950
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6150,6 +6298,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &5810175863790442835
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6831,6 +6980,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6684655164488392932
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7146,6 +7296,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6916565078203172840
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7515,6 +7666,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 7991502709257615077}
 --- !u!95 &3763343312368050055
 Animator:
   serializedVersion: 7
@@ -7804,6 +7956,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &1378212211189597004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8470,6 +8623,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &3530940251806009004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8887,6 +9041,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6200528952611756595
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9521,6 +9676,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &712542193161939763
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10310,6 +10466,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 2612883547809718286}
 --- !u!114 &2612883547809718286
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10761,6 +10918,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
 --- !u!114 &5862566756304995658
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11078,6 +11236,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &9016008733095517944
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11541,6 +11700,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &1983257481160891193
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12822,6 +12982,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &9206894935340885119
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13484,6 +13645,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &7598571971170409281
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13864,6 +14026,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &3107210164932321856
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14394,6 +14557,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &579389240315543848
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15315,6 +15479,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
 --- !u!114 &1119739677343035747
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15943,6 +16108,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &1087009862943245609
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16963,6 +17129,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &4148413635803625689
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17374,6 +17541,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &5148292542901245544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18343,6 +18511,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &8604730610221683822
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18813,6 +18982,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &7154244437387828512
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19315,6 +19485,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &3831120358205973890
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20406,6 +20577,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &5231240986072800540
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20726,6 +20898,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &8118503426630470682
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21104,6 +21277,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &4634282246329583818
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21242,6 +21416,7 @@ GameObject:
   - component: {fileID: 3962858159205151477}
   - component: {fileID: 4718407173942808007}
   - component: {fileID: 8466185531587501327}
+  - component: {fileID: 6985098572997010614}
   m_Layer: 15
   m_Name: SM_Ioniq_DoorFrontLeft
   m_TagString: Untagged
@@ -21493,6 +21668,74 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 6985098572997010614}
+--- !u!114 &6985098572997010614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4589968485052793243}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 822bc9090447b9c40833509c4a32e597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AutoHandAssembly::Autohand.Grabbable
+  ignoreMe: 0
+  body: {fileID: 0}
+  hightlightMaterial: {fileID: 0}
+  isGrabbable: 1
+  CopySettings: {fileID: 0}
+  grabType: 0
+  grabPoseType: 0
+  handType: 0
+  singleHandOnly: 0
+  instantGrab: 0
+  useGentleGrab: 0
+  maintainGrabOffset: 0
+  parentOnGrab: 1
+  heldNoFriction: 1
+  ignoreWeight: 0
+  allowHeldSwapping: 1
+  throwPower: 1
+  jointBreakForce: 3500
+  showAdvancedSettings: 1
+  makeChildrenGrabbable: 1
+  grabPriorityWeight: 1
+  ignoreReleaseTime: 0.5
+  minHeldDrag: 1.5
+  minHeldAngleDrag: 3
+  minHeldMass: 0.1
+  maxHeldVelocity: 10
+  heldPositionOffset: {x: 0, y: 0, z: 0}
+  heldRotationOffset: {x: 0, y: 0, z: 0}
+  customGrabJoint: {fileID: 0}
+  jointedBodies: []
+  heldIgnoreColliders: []
+  pullApartBreakOnly: 1
+  showEvents: 1
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onRelease:
+    m_PersistentCalls:
+      m_Calls: []
+  onSqueeze:
+    m_PersistentCalls:
+      m_Calls: []
+  onUnsqueeze:
+    m_PersistentCalls:
+      m_Calls: []
+  onHighlight:
+    m_PersistentCalls:
+      m_Calls: []
+  onUnhighlight:
+    m_PersistentCalls:
+      m_Calls: []
+  OnJointBreak:
+    m_PersistentCalls:
+      m_Calls: []
+  lockHandOnGrab: 0
 --- !u!1 &4595042257536126468
 GameObject:
   m_ObjectHideFlags: 0
@@ -22128,6 +22371,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &3727633381178566578
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23051,6 +23295,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &8715385211564895538
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23717,6 +23962,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &2650793432379040882
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24251,6 +24497,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &3711135368353421355
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24695,6 +24942,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 8654319693167590790}
 --- !u!114 &2292015375058740571
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25087,6 +25335,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &3742268188074235879
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25626,6 +25875,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &1153653776531705589
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25914,6 +26164,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &2808067267337953864
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26403,6 +26654,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &713474810564172358
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -27487,6 +27739,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &3571120710468631669
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -27903,6 +28156,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &5703375063772258064
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -28770,6 +29024,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &295208724885895825
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29059,6 +29314,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &9210977063500430301
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29374,6 +29630,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &7936807250253493294
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29906,6 +30163,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &4886086432394647675
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -30194,6 +30452,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &7179796111793950485
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -30574,6 +30833,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
 --- !u!114 &1258307509044400334
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -32081,6 +32341,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
 --- !u!114 &4296407640427188044
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -32796,6 +33057,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6823588162439371768
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -33931,6 +34193,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &2375077168103795460
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -34844,6 +35107,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6193329023651185395
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -35228,6 +35492,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6451140842677487751
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -35517,6 +35782,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &483367073561410800
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -36049,6 +36315,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &4492358932229782917
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -36741,6 +37008,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
 --- !u!114 &4478776340551997176
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -37185,6 +37453,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &181833992038879158
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -37815,6 +38084,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6793521397240188163
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -38161,6 +38431,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &1907530756125885950
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -38725,6 +38996,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &7557485377374655084
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -39078,6 +39350,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &4137754827912025007
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -39339,7 +39612,8 @@ GameObject:
   - component: {fileID: 1726680442565104651}
   - component: {fileID: 8126580523217334152}
   - component: {fileID: 4079278338096280923}
-  m_Layer: 0
+  - component: {fileID: 1076516664475958050}
+  m_Layer: 15
   m_Name: SM_Ioniq_DoorRearRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -39590,6 +39864,74 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
+--- !u!114 &1076516664475958050
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8212997757334711663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 822bc9090447b9c40833509c4a32e597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AutoHandAssembly::Autohand.Grabbable
+  ignoreMe: 0
+  body: {fileID: 0}
+  hightlightMaterial: {fileID: 0}
+  isGrabbable: 1
+  CopySettings: {fileID: 0}
+  grabType: 0
+  grabPoseType: 0
+  handType: 0
+  singleHandOnly: 0
+  instantGrab: 0
+  useGentleGrab: 0
+  maintainGrabOffset: 0
+  parentOnGrab: 1
+  heldNoFriction: 1
+  ignoreWeight: 0
+  allowHeldSwapping: 1
+  throwPower: 1
+  jointBreakForce: 3500
+  showAdvancedSettings: 1
+  makeChildrenGrabbable: 1
+  grabPriorityWeight: 1
+  ignoreReleaseTime: 0.5
+  minHeldDrag: 1.5
+  minHeldAngleDrag: 3
+  minHeldMass: 0.1
+  maxHeldVelocity: 10
+  heldPositionOffset: {x: 0, y: 0, z: 0}
+  heldRotationOffset: {x: 0, y: 0, z: 0}
+  customGrabJoint: {fileID: 0}
+  jointedBodies: []
+  heldIgnoreColliders: []
+  pullApartBreakOnly: 1
+  showEvents: 1
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onRelease:
+    m_PersistentCalls:
+      m_Calls: []
+  onSqueeze:
+    m_PersistentCalls:
+      m_Calls: []
+  onUnsqueeze:
+    m_PersistentCalls:
+      m_Calls: []
+  onHighlight:
+    m_PersistentCalls:
+      m_Calls: []
+  onUnhighlight:
+    m_PersistentCalls:
+      m_Calls: []
+  OnJointBreak:
+    m_PersistentCalls:
+      m_Calls: []
+  lockHandOnGrab: 0
 --- !u!1 &8223897973598148912
 GameObject:
   m_ObjectHideFlags: 0
@@ -39855,6 +40197,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 1
+  _grabbable: {fileID: 0}
 --- !u!114 &7416544467081896086
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -40422,6 +40765,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &5457673231446800088
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -40827,6 +41171,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &164762325718350642
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -41178,6 +41523,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &3281854674180218714
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -41557,6 +41903,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &6672573709203304710
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -42278,6 +42625,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &3275700207797676135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -42567,6 +42915,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &4506926470227783429
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -42914,6 +43263,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &7489529354116879326
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -43696,6 +44046,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &5404752593486542109
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -44255,6 +44606,7 @@ MonoBehaviour:
   closeSound: Door_Close
   soundVolume: 1
   sendScenarioSignal: 0
+  _grabbable: {fileID: 0}
 --- !u!114 &2077091687883387501
 MonoBehaviour:
   m_ObjectHideFlags: 0

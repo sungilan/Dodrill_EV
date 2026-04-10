@@ -39,6 +39,13 @@ public class MiniMapComponent : MonoBehaviour {
 
 	void OnEnable(){
         miniMapController = Object.FindFirstObjectByType<MiniMapController>();
+
+        if(miniMapController == null)
+        {
+            Debug.LogWarning($"[MiniMap] {gameObject.name}의 컨트롤러를 찾을 수 없어 등록을 생략합니다.");
+            return;
+        }
+
         mme = new MiniMapEntity ();
 		mme.icon = icon;
 		mme.rotation = initialIconRotation;
@@ -68,11 +75,16 @@ public class MiniMapComponent : MonoBehaviour {
 	}
 
 	void OnDisable(){
-		miniMapController.UnregisterMapObject (mmo,this.gameObject);
+        if(miniMapController != null)
+        {
+            miniMapController.UnregisterMapObject(mmo, this.gameObject);
+        }
 	}
 
 	void OnDestroy(){
-		miniMapController.UnregisterMapObject (mmo,this.gameObject);
+        if(miniMapController != null)
+        {
+            miniMapController.UnregisterMapObject(mmo, this.gameObject);
+        }
 	}
-
 }

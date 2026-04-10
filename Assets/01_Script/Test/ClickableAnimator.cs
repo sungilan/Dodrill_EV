@@ -393,7 +393,7 @@ public class ClickableAnimator : MonoBehaviour
     public bool sendScenarioSignal = true;
 
     private Coroutine _autoCloseCoroutine;
-    private Grabbable _grabbable;
+    [SerializeField]private Grabbable _grabbable;
 
     private void Awake()
     {
@@ -415,11 +415,14 @@ public class ClickableAnimator : MonoBehaviour
     {
         ClickableAnimatorManager.Register(uniqueId, this);
 
+        Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 연결)");
+        _grabbable.onGrab.AddListener(OnVRGrab);
         if(GameScenePlatformManager.IsVR)
         {
             // VR 플랫폼인 경우: Auto Hand의 Grab 이벤트에 연결
             if(_grabbable != null)
             {
+                Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 연결)");
                 _grabbable.onGrab.AddListener(OnVRGrab);
             }
         }
@@ -440,6 +443,7 @@ public class ClickableAnimator : MonoBehaviour
 
     private void OnVRGrab(Hand hand, Grabbable grabbable)
     {
+        Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 상태 변경 요청");
         StartCoroutine(ReleaseAndActivate(hand));
     }
 

@@ -280,10 +280,10 @@ namespace MikeNspired.XRIStarterKit.ChrisNolet
             }
 
             // Skip if submesh count exceeds material count
-            if (mesh.subMeshCount > materials.Length)
-            {
-                return;
-            }
+            //if (mesh.subMeshCount > materials.Length)
+            //{
+            //    return;
+            //}
 
             // Append combined submesh
             mesh.subMeshCount++;
