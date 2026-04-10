@@ -12742,7 +12742,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &203347464
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14852,11 +14852,11 @@ MonoBehaviour:
   duration: 0.4
   showEase: 27
   hideEase: 5
-  hiddenPosX: -831
+  hiddenPosX: -1100
   visiblePosX: 0
-  targetButtonTransform: {fileID: 0}
-  offsetAboveButton: {x: 0, y: 0.3, z: 0}
-  vrPanelScale: 0.001
+  vrParentTransform: {fileID: 0}
+  vrHiddenPos: {x: 0, y: -500}
+  vrVisiblePos: {x: 0, y: 0}
 --- !u!225 &231118697
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -33005,11 +33005,11 @@ MonoBehaviour:
   duration: 0.5
   showEase: 27
   hideEase: 5
-  hiddenPosX: 1260
-  visiblePosX: 647
-  targetButtonTransform: {fileID: 0}
-  offsetAboveButton: {x: 0, y: 0.3, z: 0}
-  vrPanelScale: 0.001
+  hiddenPosX: -1100
+  visiblePosX: 0
+  vrParentTransform: {fileID: 0}
+  vrHiddenPos: {x: 0, y: -500}
+  vrVisiblePos: {x: 0, y: 0}
 --- !u!225 &563789291
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -57525,6 +57525,43 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 15fcc2d20dae6d040af885107220bcd4, type: 3}
   m_PrefabInstance: {fileID: 949683255}
   m_PrefabAsset: {fileID: 0}
+--- !u!84 &951056576
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 460
+  m_Height: 260
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 94
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1001 &951672996
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -58462,9 +58499,9 @@ MonoBehaviour:
   hideEase: 5
   hiddenPosX: -1100
   visiblePosX: 0
-  targetButtonTransform: {fileID: 67876234}
-  offsetAboveButton: {x: 0, y: 0.3, z: 0}
-  vrPanelScale: 0.001
+  vrParentTransform: {fileID: 1597954813}
+  vrHiddenPos: {x: -186.5001, y: -211}
+  vrVisiblePos: {x: -186.5001, y: 375}
 --- !u!225 &964171914
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -84233,7 +84270,7 @@ Camera:
     serializedVersion: 2
     m_Bits: 1073802999
   m_RenderingPath: -1
-  m_TargetTexture: {fileID: 1529265575}
+  m_TargetTexture: {fileID: 951056576}
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 0
@@ -85204,7 +85241,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   shapeColliderGO: {fileID: 0}
-  renderTex: {fileID: 1529265575}
+  renderTex: {fileID: 951056576}
   mapMaterial: {fileID: 2100000, guid: 65bbe9e0008384c5997f0cf300c3cb81, type: 2}
   iconPref: {fileID: 100164, guid: d392edba23dec4ef38924695a920a568, type: 3}
   mapCamera: {fileID: 1399562020}
@@ -85237,11 +85274,11 @@ MonoBehaviour:
   duration: 0.5
   showEase: 27
   hideEase: 5
-  hiddenPosX: -500
+  hiddenPosX: -1100
   visiblePosX: 0
-  targetButtonTransform: {fileID: 0}
-  offsetAboveButton: {x: 0, y: 0.3, z: 0}
-  vrPanelScale: 0.001
+  vrParentTransform: {fileID: 0}
+  vrHiddenPos: {x: 0, y: -500}
+  vrVisiblePos: {x: 0, y: 0}
 --- !u!225 &1406907566
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -93499,43 +93536,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1527993023}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!84 &1529265575
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 460
-  m_Height: 260
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 94
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &1531644026
 GameObject:
   m_ObjectHideFlags: 0
@@ -97829,7 +97829,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: -728, y: 587.49994}
+  m_AnchoredPosition: {x: -728, y: 574}
   m_SizeDelta: {x: 560, y: 800}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1593996932
@@ -97847,11 +97847,11 @@ MonoBehaviour:
   duration: 0.5
   showEase: 27
   hideEase: 5
-  hiddenPosX: 1251
-  visiblePosX: 647
-  targetButtonTransform: {fileID: 89235796}
-  offsetAboveButton: {x: 0, y: 0.3, z: 0}
-  vrPanelScale: 0.001
+  hiddenPosX: -1100
+  visiblePosX: 0
+  vrParentTransform: {fileID: 1597954813}
+  vrHiddenPos: {x: -728, y: -66}
+  vrVisiblePos: {x: -728, y: 574}
 --- !u!225 &1593996933
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -123199,11 +123199,11 @@ MonoBehaviour:
   duration: 0.5
   showEase: 27
   hideEase: 5
-  hiddenPosX: 616
+  hiddenPosX: -1100
   visiblePosX: 0
-  targetButtonTransform: {fileID: 0}
-  offsetAboveButton: {x: 0, y: 0.3, z: 0}
-  vrPanelScale: 0.001
+  vrParentTransform: {fileID: 0}
+  vrHiddenPos: {x: 0, y: -500}
+  vrVisiblePos: {x: 0, y: 0}
 --- !u!225 &2007110798
 CanvasGroup:
   m_ObjectHideFlags: 0

@@ -1,10 +1,6 @@
 using UnityEngine;
 using DG.Tweening;
 
-/// <summary>
-/// PC/Mobile (Screen Space Overlay) + VR (World Space) 모두 지원하는 슬라이딩 패널.
-/// 버튼이 자식으로 포함되어도 버튼은 항상 보이도록 설계됨.
-/// </summary>
 [RequireComponent(typeof(CanvasGroup))]
 public class SlidingPanel : MonoBehaviour
 {
@@ -16,19 +12,21 @@ public class SlidingPanel : MonoBehaviour
     public Ease showEase = Ease.OutBack;
     public Ease hideEase = Ease.InQuad;
 
-    [Header("PC/Mobile 설정")]
+    [Header("PC/Mobile (Screen Space Overlay) 설정")]
     public float hiddenPosX = -1100f;
     public float visiblePosX = 0f;
 
-    [Header("VR (World Space) 설정")]
-    public Transform targetButtonTransform;
-    public Vector3 offsetAboveButton = new Vector3(0, 0.3f, 0);
-    public float vrPanelScale = 0.001f;
+    [Header("VR (World Space / 부모 기준) 설정")]
+    [Tooltip("VR에서 이 패널의 기준이 될 부모 패널")]
+    public Transform vrParentTransform;
+    [Tooltip("VR 숨김 위치 (부모 기준 로컬 좌표)")]
+    public Vector2 vrHiddenPos = new Vector2(0, -500f);
+    [Tooltip("VR 노출 위치 (부모 기준 로컬 좌표)")]
+    public Vector2 vrVisiblePos = Vector2.zero;
 
     private bool _isShown = false;
-    // 실제 환경에 맞게 GameScenePlatformManager.IsVR 등으로 수정해서 사용하세요.
-    private bool _isVR => false;
-    private Tweener _positionTweener;
+    // 기존 설정된 플랫폼 매니저의 IsVR을 참조하세요.
+    private bool _isVR => GameScenePlatformManager.IsVR;
 
     private void Awake()
     {
@@ -40,8 +38,6 @@ public class SlidingPanel : MonoBehaviour
 
     private void InitState()
     {
-        // 핵심: SetActive(false)를 하지 않습니다. 
-        // 대신 알파를 0으로 만들고 상호작용만 끕니다.
         _isShown = false;
         _canvasGroup.alpha = 0f;
         _canvasGroup.blocksRaycasts = false;
@@ -49,10 +45,16 @@ public class SlidingPanel : MonoBehaviour
 
         if(_isVR)
         {
-            transform.localScale = Vector3.zero;
+            // VR: 지정된 부모가 있다면 자식으로 설정
+            if(vrParentTransform != null)
+            {
+                transform.SetParent(vrParentTransform, false);
+            }
+            _rect.anchoredPosition = vrHiddenPos;
         }
         else
         {
+            // PC: 기존 왼쪽 밖 위치
             _rect.anchoredPosition = new Vector2(hiddenPosX, _rect.anchoredPosition.y);
         }
     }
@@ -68,81 +70,53 @@ public class SlidingPanel : MonoBehaviour
         _isShown = true;
         KillTweens();
 
-        // 패널 상호작용 활성화
         _canvasGroup.blocksRaycasts = true;
         _canvasGroup.interactable = true;
 
-        if(_isVR) ShowInVR();
-        else ShowInPC();
+        if(_isVR)
+        {
+            // VR: 부모 내 로컬 슬라이딩
+            _rect.DOAnchorPos(vrVisiblePos, duration).SetEase(showEase);
+            _canvasGroup.DOFade(1f, duration);
+        }
+        else
+        {
+            // PC: 기존 X축 슬라이딩
+            _rect.DOAnchorPosX(visiblePosX, duration).SetEase(showEase);
+            _canvasGroup.DOFade(1f, duration);
+        }
 
         Log("패널 표시");
     }
 
-    private void ShowInVR()
-    {
-        transform.position = GetTargetWorldPosition();
-
-        // 스케일과 알파 동시 진행
-        transform.DOScale(vrPanelScale, duration).SetEase(showEase);
-        _canvasGroup.DOFade(1f, duration);
-
-        _positionTweener = DOVirtual.Float(0, 1, duration, _ =>
-        {
-            if(_isShown && targetButtonTransform != null)
-                transform.position = GetTargetWorldPosition();
-        }).SetLoops(-1); // 패널이 켜져 있는 동안 계속 추적
-    }
-
-    private void ShowInPC()
-    {
-        _rect.DOAnchorPosX(visiblePosX, duration).SetEase(showEase);
-        _canvasGroup.DOFade(1f, duration);
-    }
-
     public void Hide()
     {
-        _isShown = true; // 애니메이션 도중 중복 클릭 방지 등을 위해 내부 플래그는 미리 변경
         _isShown = false;
-
         KillTweens();
 
-        // 패널 상호작용 비활성화 (투명해지는 동안 클릭 방지)
         _canvasGroup.blocksRaycasts = false;
         _canvasGroup.interactable = false;
 
-        if(_isVR) HideInVR();
-        else HideInPC();
+        if(_isVR)
+        {
+            // VR: 부모 내 로컬 숨김
+            _rect.DOAnchorPos(vrHiddenPos, duration).SetEase(hideEase);
+            _canvasGroup.DOFade(0f, duration);
+        }
+        else
+        {
+            // PC: 기존 X축 숨김
+            _rect.DOAnchorPosX(hiddenPosX, duration).SetEase(hideEase);
+            _canvasGroup.DOFade(0f, duration);
+        }
 
         Log("패널 숨김");
     }
 
-    private void HideInVR()
-    {
-        transform.DOScale(0f, duration).SetEase(hideEase);
-        _canvasGroup.DOFade(0f, duration);
-    }
-
-    private void HideInPC()
-    {
-        _rect.DOAnchorPosX(hiddenPosX, duration).SetEase(hideEase);
-        _canvasGroup.DOFade(0f, duration);
-    }
-
     private void KillTweens()
     {
-        DOTween.Kill(_rect);
-        DOTween.Kill(_canvasGroup);
-        if(_positionTweener != null)
-        {
-            _positionTweener.Kill();
-            _positionTweener = null;
-        }
-    }
-
-    private Vector3 GetTargetWorldPosition()
-    {
-        if(targetButtonTransform == null) return transform.position;
-        return targetButtonTransform.position + offsetAboveButton;
+        _rect.DOKill();
+        _canvasGroup.DOKill();
     }
 
     private void Log(string msg) => Debug.Log($"[SlidingPanel] {msg}");
