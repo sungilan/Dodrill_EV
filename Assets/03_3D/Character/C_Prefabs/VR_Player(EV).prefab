@@ -17056,7 +17056,6 @@ GameObject:
   - component: {fileID: 1827790025597485040}
   - component: {fileID: 7859847028043570914}
   - component: {fileID: 8804718731973760832}
-  - component: {fileID: 9020505215370494394}
   m_Layer: 0
   m_Name: Mechanic
   m_TagString: Untagged
@@ -17232,7 +17231,7 @@ MonoBehaviour:
       rotationWeight: 0
       bendGoal: {fileID: 0}
       bendGoalWeight: 0
-      swivelOffset: 100
+      swivelOffset: 0
       bendToTargetWeight: 0.5
       legLengthMlp: 1
       stretchCurve:
@@ -17249,7 +17248,7 @@ MonoBehaviour:
       rotationWeight: 0
       bendGoal: {fileID: 0}
       bendGoalWeight: 0
-      swivelOffset: -100
+      swivelOffset: 0
       bendToTargetWeight: 0.5
       legLengthMlp: 1
       stretchCurve:
@@ -17369,26 +17368,6 @@ MonoBehaviour:
       onRightFootstep:
         m_PersistentCalls:
           m_Calls: []
---- !u!114 &9020505215370494394
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4942359006426956131}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 550477788ad312b4c9f8616f9b8eb215, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Autohand.AutoHandVRIK
-  rightHand: {fileID: 4954820980416001493}
-  leftHand: {fileID: 1857694345714961547}
-  rightTrackedController: {fileID: 8590008193333962310}
-  leftTrackedController: {fileID: 7051021279096869518}
-  rightIKTarget: {fileID: 0}
-  leftIKTarget: {fileID: 0}
-  rightHandFollowTarget: {fileID: 0}
-  leftHandFollowTarget: {fileID: 0}
 --- !u!1 &4992844141401707528
 GameObject:
   m_ObjectHideFlags: 0
