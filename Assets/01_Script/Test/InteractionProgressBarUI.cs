@@ -7,40 +7,36 @@ public class InteractionProgressBarUI : MonoBehaviour
     public static InteractionProgressBarUI Instance;
 
     [Header("UI 참조")]
-    public GameObject rootPanel;      // 최상위 패널
-    public Slider progressBar;        // 슬라이더
-    public TextMeshProUGUI taskText;  // "볼트 해제 중..." 등
-    public TextMeshProUGUI targetNameText; // "대상: 배터리팩 볼트 #1"
+    public GameObject rootPanel;
+    public Slider progressBar;
+    public TextMeshProUGUI taskText;
+    public TextMeshProUGUI targetNameText;
 
     private void Awake()
     {
         Instance = this;
-        if(rootPanel != null) rootPanel.SetActive(false);
+        if (rootPanel != null) rootPanel.SetActive(false);
     }
 
-    /// <summary>
-    /// 진행도 업데이트 및 표시
-    /// </summary>
-    /// <param name="value">0~1</param>
-    /// <param name="taskName">작업 종류</param>
-    /// <param name="objName">작업 대상 이름</param>
     public void ShowProgress(float value, string taskName, string objName)
     {
-        if(rootPanel == null) return;
+        if (rootPanel == null) return;
 
-        // 진행 중일 때만 표시
-        if(value > 0.01f && value < 0.99f)
-        {
-            if(!rootPanel.activeSelf) rootPanel.SetActive(true);
+        // 1. 패널이 꺼져있다면 켬
+        if (!rootPanel.activeSelf) rootPanel.SetActive(true);
 
-            progressBar.value = value;
-            if(taskText != null) taskText.text = taskName;
-            if(targetNameText != null) targetNameText.text = $"대상: {objName}";
-        }
-        else
-        {
-            // 완료되거나 중단되면 숨김
-            if(rootPanel.activeSelf) rootPanel.SetActive(false);
-        }
+        // 2. 값 업데이트 (범위 제한 없이 1.0까지 표시)
+        progressBar.value = value;
+        if (taskText != null) taskText.text = taskName;
+        if (targetNameText != null) targetNameText.text = $"대상: {objName}";
+
+        // 3. 만약 100% 완료되었다면 약간의 연출 후 꺼지게 하고 싶다면 여기서 제어 가능
+        // 현재는 렌치를 떼는 시점에 끄는 것이 가장 정확하므로 아래 Hide함수를 렌치에서 호출합니다.
+    }
+
+    public void HideProgress()
+    {
+        if (rootPanel != null && rootPanel.activeSelf)
+            rootPanel.SetActive(false);
     }
 }

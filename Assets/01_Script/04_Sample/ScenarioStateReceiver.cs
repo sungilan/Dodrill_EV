@@ -15,6 +15,9 @@ using Debug = UnityEngine.Debug;
 
 public class ScenarioStateReceiver : MonoBehaviour
 {
+    public static ScenarioStateReceiver Instance { get; private set; }
+    private void Awake() { Instance = this; }
+
     // ── UI 구독용 이벤트 ──────────────────
     public static event System.Action<TaskStateBroadcast> OnTaskStateUpdated;
     public static event System.Action<ScenarioSnapshotBroadcast> OnSnapshotReceived;

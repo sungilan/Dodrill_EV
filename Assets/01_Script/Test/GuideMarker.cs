@@ -133,3 +133,16 @@ public class GuideMarker : MonoBehaviour
         }
     }
 }
+
+public class GuideLabelBillboard : MonoBehaviour
+{
+    private Camera _cam;
+    private void Start() => _cam = Camera.main;
+    private void LateUpdate()
+    {
+        if (_cam == null) _cam = Camera.main;
+        if (_cam == null) return;
+        transform.LookAt(transform.position + _cam.transform.rotation * Vector3.forward,
+                         _cam.transform.rotation * Vector3.up);
+    }
+}

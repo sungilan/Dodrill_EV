@@ -276,8 +276,9 @@ public class SyncGrab : NetworkBehaviour
         if(_isDespawning.Value)
         {
             hand.ForceReleaseGrab();
-            return;
             OnGrabbed?.Invoke();
+            InteractionEvents.FireItemGrabbed(GetPrefabId());
+            return;
         }
 
         DOTween.Kill(transform);
@@ -380,6 +381,7 @@ public class SyncGrab : NetworkBehaviour
             _isTweening = false;
             _isPCHolding = true;
             OnGrabbed?.Invoke();
+            InteractionEvents.FireItemGrabbed(GetPrefabId());
         });
     }
 

@@ -43,7 +43,7 @@ public class InsulationFaultCheckModule : GrabZoneTaskModule
 //  InsulatedGloves → Player_Hand_Zone 에 가져오면 완료
 //  (장갑 착용 = GloveItem.OnEquipped 가 InteractionEvents 발행)
 // ──────────────────────────────────────────────────────────────
-public class LOTO_GlovesModule : GrabZoneTaskModule
+public class LOTO_GlovesModule : GrabAllItemsModule
 {
     public override string ModuleId => "LOTO_Gloves";
 }
@@ -342,12 +342,12 @@ public class LOTO_SmartKeyModule : GrabZoneTaskModule
     public override string ModuleId => "LOTO_SmartKey";
 }
 
-public class LOTO_FaceShieldModule : GrabZoneTaskModule
+public class LOTO_FaceShieldModule : GrabAllItemsModule
 {
     public override string ModuleId => "LOTO_FaceShield";
 }
 
-public class LOTO_ShoesModule : GrabZoneTaskModule
+public class LOTO_ShoesModule : GrabAllItemsModule
 {
     public override string ModuleId => "LOTO_Shoes";
 }

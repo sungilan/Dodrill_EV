@@ -29,30 +29,23 @@ public class Bolt : MonoBehaviour
 
     public void InteractWithTool(float deltaProgress)
     {
-        if(isBroken) return;
+        if (isBroken) return;
 
         float prevProgress = _progress;
 
-        if(isAssembleMode)
-        {
-            // 조립: 0(풀림) -> 1(체결)
-            _progress += deltaProgress;
-        }
-        else
-        {
-            // 분해: 0(체결) -> 1(탈거)
-            _progress += deltaProgress;
-        }
-
+        // 분해/조립 로직에 따른 progress 가감
+        _progress += deltaProgress;
         _progress = Mathf.Clamp01(_progress);
 
-        // UI 표시 (조립/분해 문구만 변경)
+        // UI 표시 (값이 1.0이어도 ShowProgress를 호출하여 슬라이더가 꽉 차게 함)
         string msg = isAssembleMode ? "볼트 체결 중..." : "볼트 해제 중...";
+        if (_progress >= 1.0f) msg = isAssembleMode ? "체결 완료" : "해제 완료";
+
         InteractionProgressBarUI.Instance?.ShowProgress(_progress, msg, gameObject.name);
 
-        if(prevProgress < 1.0f && _progress >= 1.0f)
+        if (prevProgress < 1.0f && _progress >= 1.0f)
         {
-            OnBoltLoosened?.Invoke(this); // 이벤트명은 유지하되 완료 의미로 사용
+            OnBoltLoosened?.Invoke(this);
         }
     }
 

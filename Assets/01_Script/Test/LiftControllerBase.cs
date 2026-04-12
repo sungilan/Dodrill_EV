@@ -499,7 +499,6 @@ public abstract class LiftControllerBase : NetworkBehaviour, ILiftController
 
         // 리프트가 멈춰있는데 로그가 안 찍힌다면 _syncDirection이 0인 상태입니다.
         if(!_isMoving) return;
-        Debug.Log($"[LiftBase] 1");
         float prevHeight = _currentHeight;
         float speed = CalculateSpeed();
 

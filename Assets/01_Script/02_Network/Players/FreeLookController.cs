@@ -106,7 +106,7 @@ public class FreeLookController : NetworkBehaviour
     // ═══════════════════════════════════════════════════════
 
     /// <summary>현재 들고 있는 오브젝트</summary>
-    private SyncGrab _heldObject = null;
+    [SerializeField]private SyncGrab _heldObject = null;
 
     // ── PC 레이저 그랩 설정 ──────────────────────────────────
     [Header("PC 레이저 그랩")]
@@ -804,8 +804,8 @@ public class FreeLookController : NetworkBehaviour
                 return true;
             }
 
-            InteractionEvents.FireItemGrabbed(item.prefabId);
-            InteractionEvents.FireItemUsed(item.prefabId);
+            //InteractionEvents.FireItemGrabbed(item.prefabId);
+            //InteractionEvents.FireItemUsed(item.prefabId);
             return true;
         }
 

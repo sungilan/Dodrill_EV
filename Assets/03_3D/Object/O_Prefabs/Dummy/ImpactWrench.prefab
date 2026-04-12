@@ -329,7 +329,7 @@ MonoBehaviour:
   flyDuration: 0.5
   flyEase: 9
   arcHeight: 0.5
-  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdPositionOffset: {x: 0.21, y: 0, z: 0}
   holdRotationOffset: {x: 0, y: -90, z: 0}
 --- !u!114 &1981831815227425690
 MonoBehaviour:
@@ -351,6 +351,7 @@ MonoBehaviour:
   wrenchAnimator: {fileID: 4149966975364610757}
   targetOutlineColor: {r: 1, g: 1, b: 0, a: 1}
   restoreOutlineColor: {r: 0, g: 1, b: 1, a: 1}
+  outlineWidth: 4
   workAudio: {fileID: 6881486310345852208}
   workKey: 102
 --- !u!114 &5134680040401784347
