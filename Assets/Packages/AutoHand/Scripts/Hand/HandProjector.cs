@@ -139,6 +139,9 @@ namespace Autohand {
         }
 
         void LateUpdate() {
+            // 추가: hand가 파괴되었거나 null이면 업데이트 중단
+            if(hand == null) return;
+
             if(tryingGrab && hand.GetTriggerAxis() < 0.35f)
                 tryingGrab = false;
 

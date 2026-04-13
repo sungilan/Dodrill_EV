@@ -454,10 +454,25 @@ public class ClickableAnimator : MonoBehaviour
     {
         if(!CanInteract())
         {
-            hand.ForceReleaseGrab();
+            StartCoroutine(SafeForceRelease(hand));
             return;
         }
         StartCoroutine(ReleaseAndActivate(hand));
+    }
+
+    /// <summary>
+    /// 상호작용이 차단되었을 때 핸드를 안전하게 풀어주는 루틴
+    /// </summary>
+    private IEnumerator SafeForceRelease(Hand hand)
+    {
+        // AutoHand의 Grab 로직이 이번 프레임에서 완전히 끝날 때까지 대기
+        yield return new WaitForFixedUpdate();
+
+        if(hand != null)
+        {
+            hand.ForceReleaseGrab();
+            Debug.Log($"<color=red>[Clickable]</color> {uniqueId} 상호작용 차단으로 인한 강제 해제");
+        }
     }
 
     private IEnumerator ReleaseAndActivate(Hand hand)

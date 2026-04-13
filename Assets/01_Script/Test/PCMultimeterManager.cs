@@ -1,64 +1,54 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using FishNet.Object;
+using Autohand; // Autohand ì°¸ì¡° í•„ìˆ˜
 
 public class PCMultimeterManager : MonoBehaviour
 {
-    [Header("ÂüÁ¶")]
-    public MultimeterMaster master;
+    [Header("í•„ìˆ˜ í• ë‹¹ (Inspector)")]
+    public SyncGrab bodySyncGrab;
     public MultimeterProbeSync blackProbeSync;
     public MultimeterProbeSync redProbeSync;
+    public Grabbable multimeterGrabbable; // Grabbable ì»´í¬ë„ŒíŠ¸ ì°¸ì¡° ì¶”ê°€
 
-    [Header("·¹ÀÌ¾î ¼³Á¤")]
+    [Header("ë ˆì´ì–´ ì„¤ì •")]
     public LayerMask terminalLayer;
 
-    private SyncGrab _bodySyncGrab;
     private int _clickCount = 0;
 
-    void Update()
-    {
-        // 1. º»Ã¼°¡ ¾ÆÁ÷ ¿¬°áµÇÁö ¾Ê¾Ò´Ù¸é ÀÚµ¿ Å½»ö ½Ãµµ
-        if(master == null || _bodySyncGrab == null)
-        {
-            FindSpawnedMultimeter();
-            return; // Ã£À» ¶§±îÁö ·ÎÁ÷ Áß´Ü
-        }
-
-        // 2. ¸ÖÆ¼¹ÌÅÍ º»Ã¼¸¦ ³»°¡ µé°í ÀÖÀ» ¶§¸¸ ÀÛµ¿
-        if(!_bodySyncGrab.IsGrabbed || !_bodySyncGrab.IsOwner)
-        {
-            if(_clickCount > 0) ResetProbes();
-            return;
-        }
-
-        // 3. ÀÔ·Â Ã³¸®
-        if(Input.GetMouseButtonDown(0)) HandleClick();
-        if(Input.GetMouseButtonDown(1)) ResetProbes();
-    }
+    // â”€â”€ ì™¸ë¶€ ì´ë²¤íŠ¸ìš© (ì¸ì ì—†ëŠ” ë²„ì „) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// <summary>
-    /// ¾À¿¡ ½ºÆùµÈ ¸ÖÆ¼¹ÌÅÍ º»Ã¼¸¦ Ã£¾Æ ÄÄÆ÷³ÍÆ®¸¦ ¿¬°áÇÕ´Ï´Ù.
+    /// AutoHandì˜ ì¸ì ì—†ëŠ” ì´ë²¤íŠ¸ì— ì—°ê²°í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+    /// í˜„ì¬ ì¡ê³  ìˆëŠ” ì† ì¤‘ ì²« ë²ˆì§¸ ì†ì˜ ë°©í–¥ìœ¼ë¡œ ë°œì‚¬í•©ë‹ˆë‹¤.
     /// </summary>
-    private void FindSpawnedMultimeter()
+    public void FireProbeFromCurrentHand()
     {
-        // ¾À¿¡¼­ MultimeterMaster¸¦ °¡Áø ¿ÀºêÁ§Æ® °Ë»ö
-        var foundMaster = Object.FindFirstObjectByType<MultimeterMaster>();
+        // 1. ìƒíƒœ ì²´í¬
+        if(multimeterGrabbable == null || !multimeterGrabbable.IsHeld()) return;
+        if(bodySyncGrab == null || !bodySyncGrab.IsOwner) return;
 
-        if(foundMaster != null)
+        // 2. í˜„ì¬ ì¡ê³  ìˆëŠ” ì† ë¦¬ìŠ¤íŠ¸ ê°€ì ¸ì˜¤ê¸°
+        var heldByHands = multimeterGrabbable.GetHeldBy();
+        if(heldByHands.Count > 0)
         {
-            master = foundMaster;
-            _bodySyncGrab = master.GetComponent<SyncGrab>(); //
+            // ë³´í†µ í•œ ì†ìœ¼ë¡œ ì¡ìœ¼ë¯€ë¡œ ì²« ë²ˆì§¸ ì†(0ë²ˆ)ì„ ì‚¬ìš©
+            Hand currentHand = heldByHands[0];
 
-            // º»Ã¼ ÀÚ½ÄÀ¸·Î ºÙ¾îÀÖ´Â ÇÁ·Îºê µ¿±âÈ­ ÄÄÆ÷³ÍÆ®µéµµ ÀÚµ¿ ¿¬°á
-            blackProbeSync = master.blackProbe.GetComponent<MultimeterProbeSync>();
-            redProbeSync = master.redProbe.GetComponent<MultimeterProbeSync>();
-
-            Debug.Log($"[PC-Multimeter] ½ºÆùµÈ ¸ÖÆ¼¹ÌÅÍ °¨Áö ¹× ¿¬°á ¿Ï·á: {master.name}");
+            if(currentHand != null)
+            {
+                // ì†ë°”ë‹¥ ì •ë©´ ë°©í–¥ìœ¼ë¡œ ë ˆì´ ìƒì„±
+                Ray ray = new Ray(currentHand.palmTransform.position, currentHand.palmTransform.forward);
+                ExecuteProbeLogic(ray);
+            }
         }
     }
 
-    private void HandleClick()
+    public void RequestResetProbes() => ResetProbes();
+
+    // â”€â”€ ë‚´ë¶€ í•µì‹¬ ë¡œì§ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    private void ExecuteProbeLogic(Ray ray)
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         if(Physics.Raycast(ray, out RaycastHit hit, 10f, terminalLayer))
         {
             var point = hit.collider.GetComponent<MeasurementPoint>();
@@ -68,13 +58,11 @@ public class PCMultimeterManager : MonoBehaviour
             {
                 blackProbeSync.FlyToTerminal(point, hit.point, hit.normal);
                 _clickCount = 1;
-                Debug.Log($"[PC-Multimeter] °ËÀº»ö ÇÁ·Îºê ¹ß»ç: {point.terminalId}");
             }
             else if(_clickCount == 1)
             {
                 redProbeSync.FlyToTerminal(point, hit.point, hit.normal);
                 _clickCount = 2;
-                Debug.Log($"[PC-Multimeter] »¡°£»ö ÇÁ·Îºê ¹ß»ç: {point.terminalId}");
             }
         }
     }
@@ -82,11 +70,8 @@ public class PCMultimeterManager : MonoBehaviour
     private void ResetProbes()
     {
         if(_clickCount == 0) return;
-
         _clickCount = 0;
         if(blackProbeSync != null) blackProbeSync.ReturnToSocket();
         if(redProbeSync != null) redProbeSync.ReturnToSocket();
-
-        Debug.Log("[PC-Multimeter] ¸ğµç ÇÁ·Îºê È¸¼ö ½ÃÄö½º ½ÃÀÛ");
     }
 }

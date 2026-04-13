@@ -50,6 +50,13 @@ public class MultimeterMaster : MonoBehaviour
     [Tooltip("true 면 아무 단자에나 대도 측정 가능 (모드 체크 건너뜀)")]
     public bool bypassModeCheck = false;
 
+    [Header("결함 상태 연출 (추가)")]
+    [Tooltip("결함 발생 시 활성화될 빨간색 배경 오브젝트")]
+    public GameObject faultyLcdObject;
+
+    [Tooltip("기기 자체의 결함 여부 (외부 시나리오에서 제어 가능)")]
+    public bool isFaulty = false;
+
     // 내부 상태
     private Coroutine _fluctuateCoroutine;
     private float _lastMeasuredValue;
@@ -87,47 +94,69 @@ public class MultimeterMaster : MonoBehaviour
     /// </summary>
     public void EvaluateConnection()
     {
-        if (lcdDisplay == null) return;
+        if(lcdDisplay == null) return;
 
+        // 1. 프로브 접촉 상태 확인
         string red = redProbe != null ? redProbe.currentTerminalId : "";
         string black = blackProbe != null ? blackProbe.currentTerminalId : "";
 
-        // 양쪽 프로브가 모두 접촉 중이어야 측정
-        if (string.IsNullOrEmpty(red) || string.IsNullOrEmpty(black))
+        // 접촉 안 됨 -> 모든 디스플레이 초기화
+        if(string.IsNullOrEmpty(red) || string.IsNullOrEmpty(black))
         {
             StopFluctuation();
-            lcdDisplay.text = "----";
+            ResetDisplay();
             return;
         }
 
-        // 잘못된 모드 체크
-        if (!bypassModeCheck && currentMode == MultimeterMode.OFF)
+        // 2. 결함 상태(isFaulty) 체크 (핵심 로직)
+        if(isFaulty)
+        {
+            ShowFaultyUI(true);
+            return;
+        }
+
+        // 3. 정상 측정 로직
+        ShowFaultyUI(false); // 정상일 땐 빨간 화면 끄기
+
+        if(!bypassModeCheck && currentMode == MultimeterMode.OFF)
         {
             StopFluctuation();
             lcdDisplay.text = "OFF";
             return;
         }
 
-        // 단자 조합에서 값 가져오기
         float baseValue = MeasurementPoint.GetValue(red, black, currentMode);
         _lastMeasuredValue = baseValue;
 
-        // 표시 업데이트
         DisplayValue(baseValue);
-
-        // 진동(소수점 흔들림) 시작
         StartFluctuation(baseValue);
 
-        // ── 시나리오 시스템 연동 수정 ──
-        // 단순 ZoneActivated가 아니라, 측정값을 포함하여 이벤트를 보냅니다.
-        string primaryTarget = red; // 빨간 프로브가 닿은 단자 ID
-
-        // InteractionEvents에 측정값(baseValue)을 함께 보낼 수 있는 함수가 있다면 사용
-        // 만약 FireZoneActivated만 있다면, 내부적으로 해당 값을 체크하는 로직이 필요함
-        InteractionEvents.FireZoneActivated(primaryTarget, gameObject.name);  // 기존 유지
+        // 시나리오 이벤트 발신
+        string primaryTarget = red;
+        InteractionEvents.FireZoneActivated(primaryTarget, gameObject.name);
         InteractionEvents.FireValueMeasured(primaryTarget, baseValue);
+    }
 
-        Debug.Log($"[Multimeter] {red}↔{black} | 모드:{currentMode} | 값:{baseValue}");
+    /// <summary>결함 UI(빨간 화면)와 일반 LCD 텍스트 교체</summary>
+    private void ShowFaultyUI(bool show)
+    {
+        if(faultyLcdObject != null)
+            faultyLcdObject.SetActive(show);
+
+        //if(lcdDisplay != null)
+        //    lcdDisplay.gameObject.SetActive(!show);
+
+        if(show)
+        {
+            StopFluctuation();
+            Debug.Log("<color=red>[Multimeter]</color> 결함 상태 감지됨!");
+        }
+    }
+
+    private void ResetDisplay()
+    {
+        ShowFaultyUI(false);
+        if(lcdDisplay != null) lcdDisplay.text = "----";
     }
 
     // ── 내부 유틸 ────────────────────────────

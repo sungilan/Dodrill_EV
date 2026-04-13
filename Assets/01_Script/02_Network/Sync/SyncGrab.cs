@@ -151,7 +151,7 @@ public class SyncGrab : NetworkBehaviour
         // 현재 서버 상태 즉시 적용
         ApplyKinematic(_isKinematic.Value);
 
-        _grab = GetComponent<Grabbable>();
+        _grab = GetComponentInChildren<Grabbable>();
         if(_grab != null)
         {
             _grab.OnBeforeGrabEvent += OnBeforeGrab;

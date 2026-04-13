@@ -210,7 +210,8 @@ public class GuideSystem : MonoBehaviour
             _currentGuideSequence.Append(centerGuideGroup.DOFade(1f, 1.0f));
             _currentGuideSequence.AppendInterval(autoHideDelay);
             _currentGuideSequence.Append(centerGuideGroup.DOFade(0f, 1.5f));
-            _currentGuideSequence.OnComplete(() => {
+            _currentGuideSequence.OnComplete(() =>
+            {
                 _currentGuideSequence = null;
                 //if(!_completed) centerGuideGroup.gameObject.SetActive(false);
             });
@@ -290,22 +291,319 @@ public class GuideSystem : MonoBehaviour
         }
     }
 
-    // ── 물리 가이드 로직 (유지) ──
-    private void BuildSpawnGuides(TaskDef taskDef) { if(taskDef.spawnObjects == null) return; var allSP = FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None); var spCache = new Dictionary<string, SpawnPoint>(); foreach(var sp in allSP) if(!string.IsNullOrEmpty(sp.pointId)) spCache[sp.pointId] = sp; foreach(var bundle in taskDef.spawnObjects) { if(string.IsNullOrEmpty(bundle.prefabId) || !bundle.showGuide) continue; var existingItem = FindSpawnedItem(bundle.prefabId); bool isGrabbed = (existingItem?.GetComponent<SyncGrab>()?.IsGrabbed ?? false); if(!isGrabbed && !string.IsNullOrEmpty(bundle.spawnPointId)) { if(spCache.TryGetValue(bundle.spawnPointId, out var spPt)) { Vector3 pos = (existingItem != null) ? GetBoundsCenter(existingItem) : spPt.transform.position; if(existingItem?.GetComponent<NoneHighlight>() == null) { string label = GetDisplayName(bundle.prefabId); var markerGO = SpawnMarker(pos, label, spawnGuideColor, isTarget: false); if(markerGO != null) _spawnMarkers[bundle.prefabId] = markerGO.gameObject; } } } if(!string.IsNullOrEmpty(bundle.guideId)) { var targetGO = FindSpawnedItem(bundle.guideId); if(targetGO != null) { var boltGroup = targetGO.GetComponent<BoltGroupCounter>(); bool isBoltTask = boltGroup != null || targetGO.name.Contains("Bolt"); string label = isBoltTask && boltGroup != null ? $"볼트를 임팩트 렌치로 {(boltGroup.assembleMode ? "체결" : "제거")}하세요." : $"{GetDisplayName(bundle.prefabId)}을(를) 여기로 이동하세요"; Vector3 markerPos = isBoltTask ? GetBoundsCenter(targetGO) : targetGO.transform.position; var marker = SpawnMarker(markerPos, label, targetGuideColor, isTarget: true); if(marker != null) { marker.Setup(label, targetGuideColor, !isBoltTask && targetGO.GetComponent<NoneHighlight>() == null); _targetMarker = marker; if(isBoltTask && boltGroup != null) StartCoroutine(UpdateBoltProgressRoutine(marker, boltGroup)); } SetOutline(targetGO, true); if(existingItem != null && ghostMaterial != null && !isBoltTask) _ghostObject = SpawnGhost(existingItem, targetGO.transform.position); } } } }
-    private IEnumerator UpdateBoltProgressRoutine(GuideMarker marker, BoltGroupCounter boltGroup) { int lastProgress = -1; while(marker != null && boltGroup != null && !_completed) { if(boltGroup.RemovedCount != lastProgress) { marker.UpdateProgressText($"{boltGroup.TotalCount - boltGroup.RemovedCount}/{boltGroup.TotalCount}"); lastProgress = boltGroup.RemovedCount; } yield return new WaitForSeconds(0.1f); } }
-    private GuideMarker SpawnMarker(Vector3 worldPos, string description, Color color, bool isTarget) { if(guidePrefab == null) return null; var go = Instantiate(guidePrefab, worldPos, Quaternion.identity); var marker = go.GetComponent<GuideMarker>(); if(marker != null) { marker.Setup(description, color); _tempGuides.Add(go); return marker; } Destroy(go); return null; }
-    public void OnItemGrabbed(string prefabId) { if(_spawnMarkers.TryGetValue(prefabId, out var markerGO)) { if(markerGO != null) { _tempGuides.Remove(markerGO); Destroy(markerGO); } _spawnMarkers.Remove(prefabId); } }
-    private GameObject SpawnGhost(GameObject sourceItem, Vector3 ghostPos) { var ghost = Instantiate(sourceItem, ghostPos, sourceItem.transform.rotation); foreach(var col in ghost.GetComponentsInChildren<Collider>()) Destroy(col); foreach(var rb in ghost.GetComponentsInChildren<Rigidbody>()) Destroy(rb); foreach(var mono in ghost.GetComponentsInChildren<MonoBehaviour>()) Destroy(mono); foreach(var r in ghost.GetComponentsInChildren<Renderer>()) { var mats = new Material[r.sharedMaterials.Length]; for(int i = 0; i < mats.Length; i++) mats[i] = ghostMaterial; r.materials = mats; } _tempGuides.Add(ghost); ghost.transform.DOLocalMoveY(0.05f, 1.5f).SetLoops(-1, LoopType.Yoyo).SetRelative(); return ghost; }
-    private void TriggerNudge() { _targetMarker?.Nudge(); if(_ghostObject != null) _ghostObject.transform.DOShakePosition(1.5f, 0.06f, 12, 90f); }
-    public void ShowHint() { if(_hintCoroutine != null) StopCoroutine(_hintCoroutine); _hintCoroutine = StartCoroutine(ShowHintRoutine()); }
-    private IEnumerator ShowHintRoutine() { foreach(var item in _requiredItemObjects) SetOutline(item, true); TTSManager.Instance?.Speak("목표 위치와 도구를 확인하세요."); yield return new WaitForSeconds(hintDuration); foreach(var item in _requiredItemObjects) SetOutline(item, false); }
-    private void SetOutline(GameObject target, bool on) { if(target == null) return; var outlinable = target.GetComponent<Outlinable>() ?? target.AddComponent<Outlinable>(); if(on) { outlinable.AddAllChildRenderersToRenderingList(); outlinable.RenderStyle = renderStyle; outlinable.enabled = true; outlinable.OutlineParameters.Color = outlineColor; outlinable.OutlineParameters.BlurShift = outlineWidth; } else outlinable.enabled = false; }
-    private Vector3 GetBoundsCenter(GameObject go) { var renderers = go.GetComponentsInChildren<Renderer>(); if(renderers == null || renderers.Length == 0) return go.transform.position; var bounds = renderers[0].bounds; for(int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds); return bounds.center; }
-    private List<GameObject> FindClickTargets(ModuleConfig config) { var result = new List<GameObject>(); if(config == null || string.IsNullOrEmpty(config.targetObjName)) return result; var go = GameObject.Find(config.targetObjName); if(go == null) { foreach(var ca in FindObjectsByType<ClickableAnimator>(FindObjectsInactive.Include, FindObjectsSortMode.None)) if(ca.uniqueId == config.targetObjName) go = ca.gameObject; } if(go != null) result.Add(go); return result; }
-    private List<GameObject> FindRequiredItems(ModuleConfig config) { var result = new List<GameObject>(); if(config?.requiredItems == null) return result; foreach(var id in config.requiredItems) { var go = FindSpawnedItem(id); if(go != null) result.Add(go); } return result; }
-    private GameObject FindSpawnedItem(string prefabId) { var go = GameObject.Find(prefabId) ?? GameObject.Find(prefabId + "(Clone)"); if(go != null) return go; foreach(var obj in FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None)) if(obj.name.Contains(prefabId)) return obj; return null; }
-    private string GetExtraValue(ModuleConfig config, string key, string fallback) { if(config?.extra == null) return fallback; foreach(var kv in config.extra) if(kv.key == key) return kv.GetLocalized(); return fallback; }
-    private void SpeakGuide(ModuleConfig config) { string text = GetExtraValue(config, "description", ""); if(!string.IsNullOrEmpty(text)) TTSManager.Instance?.Speak(text); }
-    private void ClearVisualGuides() { foreach(var g in _tempGuides) if(g) Destroy(g); _tempGuides.Clear(); _spawnMarkers.Clear(); foreach(var item in _requiredItemObjects) SetOutline(item, false); _requiredItemObjects.Clear(); foreach(var t in _clickTargets) SetOutline(t, false); _clickTargets.Clear(); _ghostObject = null; _targetMarker = null; }
-    private string GetDisplayName(string id) => id switch { "GDS_Tablet" => "GDS 진단기", "InsulatedGloves" => "절연 장갑", "InsulatedShoes" => "절연화", "FaceShield" => "안면보호구", "SmartKey" => "스마트키", "LockBox" => "잠금박스", "ImpactWrench" => "임팩트 렌치", "BatteryJack" => "배터리 잭", "Multimeter" => "멀티미터", "InsulationTester" => "절연 저항 측정기", _ => id };
+    private void SetOutline(GameObject target, bool on)
+    {
+        if(target == null) return;
+
+        var outlinable = target.GetComponent<Outlinable>();
+
+        if(on)
+        {
+            if(outlinable == null) outlinable = target.AddComponent<Outlinable>();
+
+            // 1. 기존 타겟 리스트를 리플렉션으로 안전하게 비우기
+            // (Internal 리스트를 직접 건드려야 Interested 에러를 피할 수 있습니다)
+            var field = typeof(Outlinable).GetField("outlineTargets",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            if(field != null)
+            {
+                var list = field.GetValue(outlinable) as System.Collections.IList;
+                list?.Clear();
+            }
+
+            // 2. Mesh가 확실히 있는 렌더러만 수동 등록
+            var allRenderers = target.GetComponentsInChildren<Renderer>(true);
+            foreach(var r in allRenderers)
+            {
+                // CanvasRenderer가 붙어있거나 MeshFilter가 없는 것은 무조건 제외
+                if(r is CanvasRenderer || r.GetComponent<MeshFilter>() == null && r is not SkinnedMeshRenderer)
+                    continue;
+
+                // 정상적인 메쉬 렌더러만 추가
+                outlinable.AddRenderer(r);
+            }
+
+            outlinable.RenderStyle = renderStyle;
+            outlinable.OutlineParameters.Color = outlineColor;
+            outlinable.OutlineParameters.BlurShift = outlineWidth;
+            outlinable.enabled = true;
+        }
+        else
+        {
+            if(outlinable != null) outlinable.enabled = false;
+        }
+    }
+
+    private void BuildSpawnGuides(TaskDef taskDef)
+    {
+        if(taskDef.spawnObjects == null) return;
+
+        var allSP = FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var spCache = new Dictionary<string, SpawnPoint>();
+        foreach(var sp in allSP)
+            if(!string.IsNullOrEmpty(sp.pointId))
+                spCache[sp.pointId] = sp;
+
+        foreach(var bundle in taskDef.spawnObjects)
+        {
+            if(string.IsNullOrEmpty(bundle.prefabId) || !bundle.showGuide) continue;
+
+            var existingItem = FindSpawnedItem(bundle.prefabId);
+            bool isGrabbed = (existingItem?.GetComponent<SyncGrab>()?.IsGrabbed ?? false);
+
+            if(!isGrabbed && !string.IsNullOrEmpty(bundle.spawnPointId))
+            {
+                if(spCache.TryGetValue(bundle.spawnPointId, out var spPt))
+                {
+                    Vector3 pos = (existingItem != null) ? GetBoundsCenter(existingItem) : spPt.transform.position;
+                    if(existingItem?.GetComponent<NoneHighlight>() == null)
+                    {
+                        string label = GetDisplayName(bundle.prefabId);
+                        var markerGO = SpawnMarker(pos, label, spawnGuideColor, isTarget: false);
+                        if(markerGO != null)
+                            _spawnMarkers[bundle.prefabId] = markerGO.gameObject;
+                    }
+                }
+            }
+
+            if(!string.IsNullOrEmpty(bundle.guideId))
+            {
+                var targetGO = FindSpawnedItem(bundle.guideId);
+                if(targetGO != null)
+                {
+                    var boltGroup = targetGO.GetComponent<BoltGroupCounter>();
+                    bool isBoltTask = boltGroup != null || targetGO.name.Contains("Bolt");
+                    string label = isBoltTask && boltGroup != null
+                        ? $"볼트를 임팩트 렌치로 {(boltGroup.assembleMode ? "체결" : "제거")}하세요."
+                        : $"{GetDisplayName(bundle.prefabId)}을(를) 여기로 이동하세요";
+
+                    Vector3 markerPos = isBoltTask ? GetBoundsCenter(targetGO) : targetGO.transform.position;
+                    var marker = SpawnMarker(markerPos, label, targetGuideColor, isTarget: true);
+
+                    if(marker != null)
+                    {
+                        marker.Setup(label, targetGuideColor, !isBoltTask && targetGO.GetComponent<NoneHighlight>() == null);
+                        _targetMarker = marker;
+                        if(isBoltTask && boltGroup != null)
+                            StartCoroutine(UpdateBoltProgressRoutine(marker, boltGroup));
+                    }
+
+                    SetOutline(targetGO, true);
+                    if(existingItem != null && ghostMaterial != null && !isBoltTask)
+                        _ghostObject = SpawnGhost(existingItem, targetGO.transform.position);
+                }
+            }
+        }
+    }
+
+    private IEnumerator UpdateBoltProgressRoutine(GuideMarker marker, BoltGroupCounter boltGroup)
+    {
+        int lastProgress = -1;
+        while(marker != null && boltGroup != null && !_completed)
+        {
+            if(boltGroup.RemovedCount != lastProgress)
+            {
+                marker.UpdateProgressText($"{boltGroup.TotalCount - boltGroup.RemovedCount}/{boltGroup.TotalCount}");
+                lastProgress = boltGroup.RemovedCount;
+            }
+            yield return new WaitForSeconds(0.1f);
+        }
+    }
+
+    private GuideMarker SpawnMarker(Vector3 worldPos, string description, Color color, bool isTarget)
+    {
+        if(guidePrefab == null) return null;
+
+        var go = Instantiate(guidePrefab, worldPos, Quaternion.identity);
+        var marker = go.GetComponent<GuideMarker>();
+        if(marker != null)
+        {
+            marker.Setup(description, color);
+            _tempGuides.Add(go);
+            return marker;
+        }
+
+        Destroy(go);
+        return null;
+    }
+
+    public void OnItemGrabbed(string prefabId)
+    {
+        if(_spawnMarkers.TryGetValue(prefabId, out var markerGO))
+        {
+            if(markerGO != null)
+            {
+                _tempGuides.Remove(markerGO);
+                Destroy(markerGO);
+            }
+            _spawnMarkers.Remove(prefabId);
+        }
+    }
+
+    private GameObject SpawnGhost(GameObject sourceItem, Vector3 ghostPos)
+    {
+        var ghost = Instantiate(sourceItem, ghostPos, sourceItem.transform.rotation);
+
+        foreach(var col in ghost.GetComponentsInChildren<Collider>())
+            Destroy(col);
+
+        foreach(var rb in ghost.GetComponentsInChildren<Rigidbody>())
+            Destroy(rb);
+
+        foreach(var mono in ghost.GetComponentsInChildren<MonoBehaviour>())
+            Destroy(mono);
+
+        foreach(var r in ghost.GetComponentsInChildren<Renderer>())
+        {
+            var mats = new Material[r.sharedMaterials.Length];
+            for(int i = 0; i < mats.Length; i++)
+                mats[i] = ghostMaterial;
+            r.materials = mats;
+        }
+
+        _tempGuides.Add(ghost);
+        ghost.transform.DOLocalMoveY(0.05f, 1.5f).SetLoops(-1, LoopType.Yoyo).SetRelative();
+        return ghost;
+    }
+
+    private void TriggerNudge()
+    {
+        _targetMarker?.Nudge();
+        if(_ghostObject != null)
+            _ghostObject.transform.DOShakePosition(1.5f, 0.06f, 12, 90f);
+    }
+
+    public void ShowHint()
+    {
+        if(_hintCoroutine != null)
+            StopCoroutine(_hintCoroutine);
+        _hintCoroutine = StartCoroutine(ShowHintRoutine());
+    }
+
+    private IEnumerator ShowHintRoutine()
+    {
+        foreach(var item in _requiredItemObjects)
+            SetOutline(item, true);
+
+        TTSManager.Instance?.Speak("목표 위치와 도구를 확인하세요.");
+        yield return new WaitForSeconds(hintDuration);
+
+        foreach(var item in _requiredItemObjects)
+            SetOutline(item, false);
+    }
+
+    private Vector3 GetBoundsCenter(GameObject go)
+    {
+        var renderers = go.GetComponentsInChildren<Renderer>();
+        if(renderers == null || renderers.Length == 0)
+            return go.transform.position;
+
+        var bounds = renderers[0].bounds;
+        for(int i = 1; i < renderers.Length; i++)
+            bounds.Encapsulate(renderers[i].bounds);
+
+        return bounds.center;
+    }
+
+    private List<GameObject> FindClickTargets(ModuleConfig config)
+    {
+        var result = new List<GameObject>();
+        if(config == null || string.IsNullOrEmpty(config.targetObjName))
+            return result;
+
+        var go = GameObject.Find(config.targetObjName);
+        if(go == null)
+        {
+            foreach(var ca in FindObjectsByType<ClickableAnimator>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if(ca.uniqueId == config.targetObjName)
+                    go = ca.gameObject;
+        }
+
+        if(go != null)
+            result.Add(go);
+
+        return result;
+    }
+
+    private List<GameObject> FindRequiredItems(ModuleConfig config)
+    {
+        var result = new List<GameObject>();
+        if(config?.requiredItems == null)
+            return result;
+
+        foreach(var id in config.requiredItems)
+        {
+            var go = FindSpawnedItem(id);
+            if(go != null)
+                result.Add(go);
+        }
+
+        return result;
+    }
+
+    private GameObject FindSpawnedItem(string prefabId)
+    {
+        var go = GameObject.Find(prefabId) ?? GameObject.Find(prefabId + "(Clone)");
+        if(go != null) return go;
+
+        foreach(var obj in FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if(obj.name.Contains(prefabId))
+                return obj;
+
+        return null;
+    }
+
+    private string GetExtraValue(ModuleConfig config, string key, string fallback)
+    {
+        if(config?.extra == null)
+            return fallback;
+
+        foreach(var kv in config.extra)
+            if(kv.key == key)
+                return kv.GetLocalized();
+
+        return fallback;
+    }
+
+    private void SpeakGuide(ModuleConfig config)
+    {
+        string text = GetExtraValue(config, "description", "");
+        if(!string.IsNullOrEmpty(text))
+            TTSManager.Instance?.Speak(text);
+    }
+
+    private void ClearVisualGuides()
+    {
+        foreach(var g in _tempGuides)
+            if(g) Destroy(g);
+        _tempGuides.Clear();
+        _spawnMarkers.Clear();
+
+        foreach(var item in _requiredItemObjects)
+            SetOutline(item, false);
+        _requiredItemObjects.Clear();
+
+        foreach(var t in _clickTargets)
+            SetOutline(t, false);
+        _clickTargets.Clear();
+
+        _ghostObject = null;
+        _targetMarker = null;
+    }
+
+    private string GetDisplayName(string id) => id switch
+    {
+        "GDS_Tablet" => "GDS 진단기",
+        "InsulatedGloves" => "절연 장갑",
+        "InsulatedShoes" => "절연화",
+        "FaceShield" => "안면보호구",
+        "SmartKey" => "스마트키",
+        "LockBox" => "잠금박스",
+        "ImpactWrench" => "임팩트 렌치",
+        "BatteryJack" => "배터리 잭",
+        "Multimeter" => "멀티미터",
+        "InsulationTester" => "절연 저항 측정기",
+        _ => id
+    };
 }

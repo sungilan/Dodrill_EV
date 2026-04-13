@@ -147,7 +147,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Front_Cover_Bolts"
+            "guideId": ""
           }
         ]
       },
@@ -159,7 +159,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Rear_Cover_Bolts"
+            "guideId": ""
           }
         ]
       },
@@ -171,7 +171,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Battery_Cover_Bolts"
+            "guideId": ""
           }
         ]
       },
@@ -183,7 +183,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "BatteryPack_Front_Cover_Bolts"
+            "guideId": ""
           }
         ]
       },
@@ -220,18 +220,6 @@
             "prefabId": "Multimeter",
             "spawnPointId": "SP_Cart_Top",
             "guideId": "Guide_HV_Rear_Cable_Term"
-          }
-        ]
-      },
-      {
-        "moduleId": "Insulation_Resistance_Test",
-        "timeout": 180,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "Megger",
-            "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_Battery_Main_Terminal"
           }
         ]
       },
@@ -286,6 +274,18 @@
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
             "guideId": "BatteryPack_Bolts2"
+          }
+        ]
+      },
+      {
+        "moduleId": "Insulation_Resistance_Test",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Megger",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_Battery_Main_Terminal"
           }
         ]
       },
@@ -801,7 +801,7 @@
         "requiredItems": [
           "ImpactWrench"
         ],
-        "targetObjName": "Front_Cover_Bolts",
+        "targetObjName": "Rear_Cover_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -1360,6 +1360,40 @@
       }
     },
     {
+      "moduleId": "BatteryJack_Lift_Up",
+      "config": {
+        "actionType": "ZoneAndUse",
+        "targetZoneId": "BatteryJack_Attached",
+        "spawnObjects": [
+          {
+            "prefabId": "BatteryJack",
+            "spawnPointId": "SP_Battery_Under_Default",
+            "showGuide": true
+          }
+        ],
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 리프트 상승 및 지지",
+            "en": "Battery Lift Up & Support",
+            "vi": "Nâng kích pin và đỡ"
+          },
+          {
+            "key": "description",
+            "ko": "배터리 리프트를 상승시켜 배터리 팩에 밀착시키세요.",
+            "en": "Raise the battery lift until it firmly contacts the battery pack.",
+            "vi": "Nâng kích pin cho đến khi nó tiếp xúc chặt chẽ với bộ pin."
+          },
+          {
+            "key": "guideText",
+            "ko": "리프트의 상승 버튼을 눌러 상판이 배터리에 닿을 때까지 올리세요. 접촉 시 배터리가 리프트에 자동으로 고정됩니다.",
+            "en": "Press the lift up button until the plate touches the battery. The pack will auto-attach upon contact.",
+            "vi": "Nhấn nút nâng kích cho đến khi tấm trên cùng chạm vào pin. Bộ pin sẽ tự động cố định khi tiếp xúc."
+          }
+        ]
+      }
+    },
+    {
       "moduleId": "BatteryPack_Disassemble2",
       "config": {
         "actionType": "ConfirmTask",
@@ -1406,6 +1440,33 @@
             "key": "boltTorque",
             "ko": "45 Nm",
             "en": "45 Nm"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_Lowering",
+      "config": {
+        "actionType": "ZoneAndUse",
+        "targetZoneId": "BatteryJack_Detached",
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 팩 하강 및 분리",
+            "en": "Battery Pack Lowering & Separation",
+            "vi": "Hạ bộ pin và tách rời"
+          },
+          {
+            "key": "description",
+            "ko": "리프트를 천천히 하강시켜 배터리 팩을 차량에서 완전히 분리하세요.",
+            "en": "Slowly lower the lift to fully separate the battery pack from the vehicle.",
+            "vi": "Từ từ hạ kích để tách hoàn toàn bộ pin ra khỏi xe."
+          },
+          {
+            "key": "guideText",
+            "ko": "하강 버튼을 눌러 리프트를 끝까지 내리세요. 바닥까지 완전히 하강하면 배터리 팩 분리 작업이 완료됩니다.",
+            "en": "Press the down button to lower the lift completely. The separation is complete once it reaches the bottom.",
+            "vi": "Nhấn nút hạ để hạ kích hoàn toàn. Việc tách rời hoàn tất khi nó chạm đáy."
           }
         ]
       }
