@@ -289,9 +289,11 @@ using FishNet;
 using FishNet.Broadcast;
 using FishNet.Connection;
 using FishNet.Transporting;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq; // 추가
 
 // ============================================================
 //  ClickableAnimator.cs
@@ -362,11 +364,18 @@ public static class ClickableAnimatorManager
 }
 
 //[RequireComponent(typeof(Animator))]
+
 public class ClickableAnimator : MonoBehaviour
 {
     [Header("식별")]
-    [Tooltip("씬 내 고유 ID. JSON의 targetObjName과 일치해야 재활용이 가능합니다.")]
     public string uniqueId = "Obj_Default";
+
+    [Header("시나리오 연동 설정")]
+    [Tooltip("이 오브젝트가 작동해야 하는 Task Index 리스트 (0부터 시작)")]
+    public List<int> targetTaskIndices = new List<int>(); // string에서 int로 변경
+
+    [Tooltip("체크 시 클릭하자마자 시나리오 단계 완료 신호를 보냅니다.")]
+    public bool sendScenarioSignal = true;
 
     [Header("Animator 파라미터")]
     public string animParamName = "IsOpen";
@@ -376,102 +385,96 @@ public class ClickableAnimator : MonoBehaviour
 
     [Header("참조")]
     [SerializeField] private Animator _animator;
-
-    [Header("설정")]
-    public float autoCloseDelay = 0f;
+    [SerializeField] private Grabbable _grabbable;
 
     [Header("상태 (읽기 전용)")]
     [SerializeField] private bool _isOpen = false;
 
-    [Header("사운드 설정")]
+    [Header("사운드 및 연출")]
+    public float autoCloseDelay = 0f;
     public string openSound = "Door_Open";
     public string closeSound = "Door_Close";
     [Range(0f, 1f)] public float soundVolume = 1.0f;
 
-    [Header("시나리오 설정")]
-    [Tooltip("체크 시 클릭하자마자 시나리오 단계를 완료 신호를 보냅니다. (단순 클릭 태스크용)")]
-    public bool sendScenarioSignal = true;
-
     private Coroutine _autoCloseCoroutine;
-    [SerializeField]private Grabbable _grabbable;
+    private string _currentModuleId = "";
+    public bool IsOpen => _isOpen;
+    public void Open() => RequestSetState(true);
+    public void Close() => RequestSetState(false);
+    public void Toggle() => RequestSetState(!_isOpen);
 
     private void Awake()
     {
-        // 1. 이미 인스펙터에서 할당했다면 그것을 사용
-        if(_animator != null) return;
-
-        // 2. 할당이 안 되어 있다면 자기 자신에게서 찾음
-        _animator = GetComponent<Animator>();
-
-        // 3. 그래도 없다면 부모에게서 찾음
-        if(_animator == null)
-        {
-            _animator = GetComponentInParent<Animator>();
-        }
-        _grabbable = GetComponent<Grabbable>();
+        if(_animator == null) _animator = GetComponent<Animator>() ?? GetComponentInParent<Animator>();
+        if(_grabbable == null) _grabbable = GetComponent<Grabbable>();
     }
 
     private void Start()
     {
         ClickableAnimatorManager.Register(uniqueId, this);
-
-        if(_grabbable != null)
-        {
-            Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 연결)");
-            _grabbable.onGrab.AddListener(OnVRGrab);
-        }
-        //if(GameScenePlatformManager.IsVR)
-        //{
-        //    // VR 플랫폼인 경우: Auto Hand의 Grab 이벤트에 연결
-        //    if(_grabbable != null)
-        //    {
-        //        Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 연결)");
-        //        _grabbable.onGrab.AddListener(OnVRGrab);
-        //    }
-        //}
+        if(_grabbable != null) _grabbable.onGrab.AddListener(OnVRGrab);
     }
 
     private void OnDestroy()
     {
         ClickableAnimatorManager.Unregister(uniqueId);
-
-        if(_grabbable != null)
-        {
-            _grabbable.onGrab.RemoveListener(OnVRGrab);
-        }
+        if(_grabbable != null) _grabbable.onGrab.RemoveListener(OnVRGrab);
     }
 
-    /// <summary>FreeLookController 등에서 레이캐스트 클릭 시 호출</summary>
-    public void OnPCClick() => RequestSetState(!_isOpen);
+    /// <summary>현재 시나리오 단계가 리스트에 포함되어 있는지 확인</summary>
+    private bool CanInteract()
+    {
+        // 1. 리스트가 비어있으면 상시 허용
+        if(targetTaskIndices == null || targetTaskIndices.Count == 0) return true;
+
+        var sr = ScenarioStateReceiver.Instance;
+        if(sr == null) return false;
+
+        // 2. 서버에서 받은 현재 인덱스 확인
+        int currentIdx = sr.CurrentTaskState.taskIndex;
+
+        // 3. 현재 인덱스가 허용 리스트에 있는지 확인
+        bool isAllowed = targetTaskIndices.Contains(currentIdx);
+
+        if(!isAllowed)
+        {
+            Debug.Log($"<color=orange>[Clickable]</color> {uniqueId} 차단: 현재 Index({currentIdx})는 허용되지 않음.");
+        }
+
+        return isAllowed;
+    }
+
+    public void OnPCClick()
+    {
+        if(!CanInteract()) return;
+        RequestSetState(!_isOpen);
+    }
 
     private void OnVRGrab(Hand hand, Grabbable grabbable)
     {
-        Debug.Log($"[Clickable] {uniqueId} VR Grab 감지 → 상태 변경 요청");
+        if(!CanInteract())
+        {
+            hand.ForceReleaseGrab();
+            return;
+        }
         StartCoroutine(ReleaseAndActivate(hand));
     }
 
     private IEnumerator ReleaseAndActivate(Hand hand)
     {
-        yield return null;           // ← 한 프레임 대기
-        hand.ForceReleaseGrab();     //    AutoHand 내부 상태 세팅 완료 후 해제
-        RequestSetState(!_isOpen);   //    손이 자유로운 상태에서 상태 변경
+        yield return null;
+        hand.ForceReleaseGrab();
+        RequestSetState(!_isOpen);
     }
 
     public void RequestSetState(bool open)
     {
-        Debug.Log($"[Clickable] {uniqueId} 상태 변경 요청 (열림: {open})");
         var broadcast = new AnimatorStateBroadcast { id = uniqueId, isOpen = open };
 
         if(InstanceFinder.IsServerStarted)
         {
             ApplyAnimState(open);
             InstanceFinder.ServerManager.Broadcast(broadcast);
-
-            if(open && autoCloseDelay > 0f)
-            {
-                if(_autoCloseCoroutine != null) StopCoroutine(_autoCloseCoroutine);
-                _autoCloseCoroutine = StartCoroutine(AutoCloseRoutine());
-            }
         }
         else if(InstanceFinder.IsClientStarted)
         {
@@ -479,53 +482,36 @@ public class ClickableAnimator : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 애니메이션을 실행하고 시나리오 시스템에 상호작용 신호를 보냅니다.
-    /// </summary>
     public void ApplyAnimState(bool open)
     {
-        _isOpen = open;
-        //if(_animator == null) return;
-
-        // 1. 애니메이션 적용
-        if(useTrigger)
-            _animator.SetTrigger(open ? openTrigger : closeTrigger);
-        else
-            _animator.SetBool(animParamName, open);
-
-        // 2. 사운드 재생
-        string soundToPlay = open ? openSound : closeSound;
-        if(!string.IsNullOrEmpty(soundToPlay))
+        // [중요] 애니메이션 적용 전에 한 번 더 CanInteract 체크 (네트워크 수신 시점 보안)
+        // 단, 서버에서 브로드캐스트된 것을 클라이언트가 실행할 때는 통과해야 함
+        if(InstanceFinder.IsClientStarted && !InstanceFinder.IsServerStarted)
         {
-            Managers.Sound.Play(soundToPlay, Define.Sound.Effect, 1.0f, soundVolume);
+            // 클라이언트 수신 시에는 강제 적용 (CanInteract 체크 스킵)
+        }
+        else if(!CanInteract()) return;
+
+        _isOpen = open;
+        if(_animator != null)
+        {
+            if(useTrigger) _animator.SetTrigger(open ? openTrigger : closeTrigger);
+            else _animator.SetBool(animParamName, open);
         }
 
+        string sound = open ? openSound : closeSound;
+        if(!string.IsNullOrEmpty(sound)) Managers.Sound.Play(sound, Define.Sound.Effect, 1.0f, soundVolume);
+
         // 3. ★ 시나리오 시스템 연동 (핵심) ★
-        // "나(uniqueId) 클릭됐어!"라고 신호를 보냅니다.
-        // ConfirmTaskModule이 이 uniqueId를 보고 자신의 targetObjName과 일치하면 단계를 완료합니다.
-        if(sendScenarioSignal)
+        // "나(uniqueId) 클릭됐어!"라고 신호를 보냅니다.
+        // ConfirmTaskModule이 이 uniqueId를 보고 자신의 targetObjName과 일치하면 단계를 완료합니다.
+        if(sendScenarioSignal)
         {
             InteractionEvents.FireZoneActivated(uniqueId, string.Empty);
             Debug.Log($"[Clickable] {uniqueId} 시나리오 신호 발신");
         }
 
         Debug.Log($"[Clickable] {uniqueId} 상호작용 발신 (상태: {(open ? "열림/연결" : "닫힘/분리")})");
+
     }
-
-    private IEnumerator AutoCloseRoutine()
-    {
-        yield return new WaitForSeconds(autoCloseDelay);
-        RequestSetState(false);
-    }
-
-    /// <summary>기존 코드(BoltGroupCounter 등)와의 호환성을 위한 래퍼 메서드</summary>
-    public void Open() => RequestSetState(true);
-
-    /// <summary>기존 코드와의 호환성을 위한 래퍼 메서드</summary>
-    public void Close() => RequestSetState(false);
-
-    /// <summary>상태 반전</summary>
-    public void Toggle() => RequestSetState(!_isOpen);
-
-    public bool IsOpen => _isOpen;
 }

@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections;
-using DG.Tweening;
 using FishNet.Object;
 
 public class VehicleLiftController : LiftControllerBase
@@ -23,30 +22,40 @@ public class VehicleLiftController : LiftControllerBase
 
     protected override void OnLiftStart()
     {
-        Debug.Log($"<color=cyan>[VehicleLift]</color> OnLiftStart 호출됨 (Mode: {liftMode})");
+        Debug.Log($"<color=cyan>[VehicleLift]</color> ✓ OnLiftStart 호출됨! (Mode: {liftMode})");
 
-        if (liftMode == LiftMode.TransformBased)
+        if(liftMode == LiftMode.TransformBased)
         {
-            if (liftAnimator != null) liftAnimator.enabled = false;
+            if(liftAnimator != null)
+                liftAnimator.enabled = false;
 
-            if (leftArm != null)
+            if(leftArm != null)
             {
                 _leftArmOrigin = leftArm.localPosition;
-                Debug.Log($"<color=white>[VehicleLift]</color> LeftArm 원본 위치 캐시: {_leftArmOrigin}");
+                Debug.Log($"<color=lime>✓ LeftArm 캐시: {_leftArmOrigin}</color>");
             }
-            if (rightArm != null)
+            else
+                Debug.LogError("<color=red>✗ LeftArm이 null!</color>");
+
+            if(rightArm != null)
             {
                 _rightArmOrigin = rightArm.localPosition;
-                Debug.Log($"<color=white>[VehicleLift]</color> RightArm 원본 위치 캐시: {_rightArmOrigin}");
+                Debug.Log($"<color=lime>✓ RightArm 캐시: {_rightArmOrigin}</color>");
             }
-            if (vehicleTransform != null)
+            else
+                Debug.LogError("<color=red>✗ RightArm이 null!</color>");
+
+            if(vehicleTransform != null)
             {
                 _vehicleOrigin = vehicleTransform.position;
-                Debug.Log($"<color=white>[VehicleLift]</color> 수동 할당된 차량 위치 캐시: {_vehicleOrigin}");
+                Debug.Log($"<color=lime>✓ 차량 위치 캐시: {_vehicleOrigin}</color>");
             }
+            else
+                Debug.LogWarning("<color=yellow>⚠ 차량이 아직 할당되지 않음</color>");
         }
         else
         {
+            Debug.Log("<color=cyan>[VehicleLift]</color> AnimatorBased 모드 초기화");
             StartCoroutine(InitOffsetNextFrame());
         }
 
@@ -59,32 +68,31 @@ public class VehicleLiftController : LiftControllerBase
         var wait = new WaitForSeconds(0.5f);
         Debug.Log("<color=yellow>[VehicleLift]</color> 차량 본체 자동 탐색 코루틴 시작...");
 
-        while (true)
+        int attemptCount = 0;
+        while(true)
         {
+            attemptCount++;
+
             // 이미 차량이 연결되어 있다면 탐색을 즉시 종료
             bool isAttached = (liftMode == LiftMode.TransformBased && vehicleTransform != null) ||
                               (liftMode == LiftMode.AnimatorBased && animVehicleTransform != null);
 
-            if (isAttached)
+            if(isAttached)
             {
                 Debug.Log("<color=lime>[VehicleLift]</color> 차량 연결 감지됨. 탐색 코루틴을 종료합니다.");
                 yield break;
             }
 
             var allNetObjs = FindObjectsByType<NetworkObject>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            Debug.Log($"<color=yellow>[VehicleLift]</color> 차량 탐색 시도 #{attemptCount}: 찾은 NetworkObject 개수 = {allNetObjs.Length}");
 
-            foreach (var netObj in allNetObjs)
+            foreach(var netObj in allNetObjs)
             {
                 string objName = netObj.gameObject.name;
-
-                // ★ [개선된 필터링]
-                // 1. 이름에 'Ioniq5N'이 포함되어야 함
-                // 2. 반드시 최상위 부모(root)여야 함 (자식 부품들은 부모가 있으므로 걸러짐)
-                // 3. 'Clone' 이름 패턴 확인 (생성된 객체 위주)
                 bool isTargetName = objName.Contains("Ioniq5N") || objName.Contains("Vehicle_Root");
                 bool isRoot = netObj.transform.parent == null;
 
-                if (isTargetName && isRoot)
+                if(isTargetName && isRoot)
                 {
                     Debug.Log($"<color=lime>[VehicleLift]</color> 최상위 차량 본체 발견: <b>{objName}</b>. 연결을 시도합니다.");
                     AttachVehicle(netObj.transform);
@@ -105,41 +113,65 @@ public class VehicleLiftController : LiftControllerBase
 
     private void RecalculateOffset()
     {
-        if (platformBone != null && animVehicleTransform != null)
+        if(platformBone != null && animVehicleTransform != null)
             _animVehicleOffset = animVehicleTransform.position - platformBone.position;
     }
 
     protected override void ApplyHeightTransform(float h)
     {
-        // 이 로그가 찍히면 서버에서 높이 값이 계산되어 내려오고 있는 것입니다.
-        // Debug.Log($"<color=white>[VehicleLift]</color> ApplyHeightTransform 실행 중 (h: {h:F3})");
+        if(h == 0f) return;
+
+        Debug.Log($"<color=white>[VehicleLift]</color> ApplyHeightTransform(h={h:F3}) | " +
+                  $"LeftArm: {(leftArm != null ? "O" : "X")} | " +
+                  $"RightArm: {(rightArm != null ? "O" : "X")} | " +
+                  $"Vehicle: {(vehicleTransform != null ? "O" : "X")}");
 
         Vector3 localOffset = Vector3.up * h;
 
-        if (leftArm != null)
+        if(leftArm != null)
         {
             Vector3 targetLocalPos = _leftArmOrigin + localOffset;
-            Vector3 targetWorldPos = leftArm.parent != null ? leftArm.parent.TransformPoint(targetLocalPos) : targetLocalPos;
+            Vector3 targetWorldPos = leftArm.parent != null
+                ? leftArm.parent.TransformPoint(targetLocalPos)
+                : targetLocalPos;
+
+            Debug.Log($"<color=green>✓ LeftArm 이동 시도: {leftArm.name} | 로컬: {targetLocalPos} -> 월드: {targetWorldPos}</color>");
             UpdateTargetPositionViaLNT(leftArm, targetWorldPos);
+
+            // 이동 후 실제 위치 확인
+            Debug.Log($"<color=green>✓ LeftArm 실제 위치 (이동 후): {leftArm.position}</color>");
         }
 
-        if (rightArm != null)
+        if(rightArm != null)
         {
             Vector3 targetLocalPos = _rightArmOrigin + localOffset;
-            Vector3 targetWorldPos = rightArm.parent != null ? rightArm.parent.TransformPoint(targetLocalPos) : targetLocalPos;
+            Vector3 targetWorldPos = rightArm.parent != null
+                ? rightArm.parent.TransformPoint(targetLocalPos)
+                : targetLocalPos;
+
+            Debug.Log($"<color=green>✓ RightArm 이동 시도: {rightArm.name} | 로컬: {targetLocalPos} -> 월드: {targetWorldPos}</color>");
             UpdateTargetPositionViaLNT(rightArm, targetWorldPos);
+
+            Debug.Log($"<color=green>✓ RightArm 실제 위치 (이동 후): {rightArm.position}</color>");
         }
 
-        if (vehicleTransform != null)
+        if(vehicleTransform != null)
         {
             Vector3 targetWorldPos = _vehicleOrigin + Vector3.up * h;
+            Debug.Log($"<color=green>✓ Vehicle 이동 시도: {vehicleTransform.name} | {_vehicleOrigin} -> {targetWorldPos}</color>");
             UpdateTargetPositionViaLNT(vehicleTransform, targetWorldPos);
+
+            Debug.Log($"<color=green>✓ Vehicle 실제 위치 (이동 후): {vehicleTransform.position}</color>");
+        }
+        else
+        {
+            Debug.LogWarning($"<color=red>✗ Vehicle이 할당되지 않아 이동할 수 없습니다!</color>");
         }
     }
 
     protected override void SyncPayloadLateUpdate()
     {
-        if (!_isInitialized || platformBone == null || animVehicleTransform == null) return;
+        if(!_isInitialized || platformBone == null || animVehicleTransform == null) return;
 
         Vector3 targetWorldPos = platformBone.position + _animVehicleOffset;
         UpdateTargetPositionViaLNT(animVehicleTransform, targetWorldPos);
@@ -147,20 +179,23 @@ public class VehicleLiftController : LiftControllerBase
 
     public void AttachVehicle(Transform vehicle)
     {
-        if (vehicle == null) return;
+        if(vehicle == null)
+        {
+            Debug.LogError("[VehicleLift] AttachVehicle: 전달된 vehicle이 null입니다!");
+            return;
+        }
 
-        if (liftMode == LiftMode.TransformBased)
+        if(liftMode == LiftMode.TransformBased)
         {
             vehicleTransform = vehicle;
-            // 현재 리프트 높이가 0이 아닐 경우를 대비해 원본 위치 역산
             _vehicleOrigin = vehicle.position - Vector3.up * CurrentHeight;
-            Debug.Log($"<color=lime>[VehicleLift]</color> Transform 기반 차량 연결 완료: {vehicle.name} (Origin: {_vehicleOrigin})");
+            Debug.Log($"<color=lime>[VehicleLift]</color> ✓ Transform 기반 차량 연결 완료: {vehicle.name} (Origin: {_vehicleOrigin})");
         }
         else
         {
             animVehicleTransform = vehicle;
             RecalculateOffset();
-            Debug.Log($"<color=lime>[VehicleLift]</color> Animator 기반 차량 연결 완료: {vehicle.name}");
+            Debug.Log($"<color=lime>[VehicleLift]</color> ✓ Animator 기반 차량 연결 완료: {vehicle.name}");
         }
     }
 }

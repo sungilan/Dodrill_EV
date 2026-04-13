@@ -104,6 +104,12 @@ public class HV_RearVoltageModule : ZoneAndMeasureModule
     protected override string GetTargetObjName() => "HV_Rear_Cable_Term";
 }
 
+public class InsulationResistanceTestModule : ZoneAndMeasureModule
+{
+    public override string ModuleId => "Insulation_Resistance_Test";
+    protected override string GetTargetObjName() => "Battery_Main_Terminal";
+}
+
 // ──────────────────────────────────────────────────────────────
 //  Task[05] BatteryPack_Disassemble
 //  spawnObjects: ImpactWrench, BatteryJack
@@ -241,7 +247,7 @@ public static class EVModules
         registry.Register(new Coolant_Hose_OutModule());
         registry.Register(new Coolant_Hose_Out_ConnectModule());
         registry.Register(new BatteryPack_LoweringModule());
-
+        registry.Register(new InsulationResistanceTestModule()); 
         Debug.Log($"[EVModules] P0AA6 시나리오 전체 모듈 등록 완료 (v2 포함)");
     }
 }

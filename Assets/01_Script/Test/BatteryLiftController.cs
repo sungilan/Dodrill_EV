@@ -289,13 +289,13 @@ public class BatteryLiftController : LiftControllerBase
             Vector3 targetWorldPos = liftPlate.parent != null
                 ? liftPlate.parent.TransformPoint(targetLocalPos)
                 : targetLocalPos;
-            UpdateTargetPositionViaLNT(liftPlate, targetWorldPos);
+            //UpdateTargetPosition(liftPlate, targetWorldPos);
         }
 
         if(IsBatteryAttached && batteryPackTransform != null)
         {
             Vector3 targetWorldPos = _batteryOrigin + Vector3.up * h;
-            UpdateTargetPositionViaLNT(batteryPackTransform, targetWorldPos);
+            //UpdateTargetPosition(liftPlate, targetWorldPos);
         }
     }
 
@@ -306,7 +306,7 @@ public class BatteryLiftController : LiftControllerBase
         if(platformBone == null || animBatteryPackTransform == null) return;
 
         Vector3 targetWorldPos = platformBone.position + _animBatteryOffset;
-        UpdateTargetPositionViaLNT(animBatteryPackTransform, targetWorldPos);
+        //UpdateTargetPosition(liftPlate, targetWorldPos);
     }
 
     protected override void OnHeightChanged(float newHeight, float prevHeight)

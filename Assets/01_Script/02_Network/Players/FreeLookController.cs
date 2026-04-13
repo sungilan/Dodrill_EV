@@ -487,7 +487,7 @@ public class FreeLookController : NetworkBehaviour
             return; // 여기서 중단하여 새 라벨 생성을 막음
         }
 
-        Log($"호버: {objName} — {msg}");
+        //Log($"호버: {objName} — {msg}");
         SetGuideUI(msg);
 
         // 새 라벨 생성

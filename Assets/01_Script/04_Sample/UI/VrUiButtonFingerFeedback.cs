@@ -12,6 +12,8 @@ public static class VrUiButtonFingerFeedback
         if (button == null)
             return;
 
+        VrUiFingerBindings.NotifyFingerDrivenClick(button);
+
         var go = button.gameObject;
         var click = go.GetComponent<ClickButton>();
         if (click != null)

@@ -45,6 +45,9 @@ public class ScenarioRunner : MonoBehaviour
     [Tooltip("Fail 후 재시작 전 대기 시간 (초) — UI에서 실패 상태를 보여주는 시간")]
     [SerializeField] private float _failRetryDelay = 1.5f;
 
+    // [추가] 현재 태스크를 진행 중인 클라이언트 ID
+    private int _activePlayerId = -1;
+
     // ── 내부 상태 ─────────────────────────
     private ScenarioData _data;
     private TaskState _currentTaskState;
@@ -167,6 +170,7 @@ public class ScenarioRunner : MonoBehaviour
         var taskDef = _data.scenario.tasks[index];
         var config = _data.GetModuleConfig(taskDef.moduleId);
         var module = _bootstrapper.Registry.Get(taskDef.moduleId);
+        var moduleId = taskDef.moduleId;
 
         if (module == null)
         {
@@ -183,6 +187,7 @@ public class ScenarioRunner : MonoBehaviour
 
         _completedClients.Clear();
         _taskLocked = false;
+        _activePlayerId = -1;  // [추가] 새 태스크마다 초기화
         _currentModule = module;
 
         _currentTaskState = new TaskState
@@ -287,6 +292,13 @@ public class ScenarioRunner : MonoBehaviour
         _completedClients.Add(signal.clientId);
         _currentTaskState.completedClientIds.Add(signal.clientId);
 
+        // [추가] 첫 인터랙션 → 진행자 등록
+        if(_activePlayerId < 0)
+        {
+            _activePlayerId = signal.clientId;
+            Debug.Log($"[ScenarioRunner] 진행자 등록 — clientId={_activePlayerId}");
+        }
+
         var taskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
         if (EvaluateCompletion(taskDef.completionMode))
             CompleteCurrentTask();
@@ -331,46 +343,54 @@ public class ScenarioRunner : MonoBehaviour
 
     private void OnReceiveZoneSignal(NetworkConnection conn, ZoneInteractionSignal signal, Channel channel)
     {
-        if (_taskLocked || !_isRunning) return;
-        if (signal.taskIndex != _currentTaskState.taskIndex) return;
+        if(_taskLocked || !_isRunning) return;
+        if(signal.taskIndex != _currentTaskState.taskIndex) return;
+
+        // 진행자 등록
+        if(_activePlayerId < 0)
+        {
+            _activePlayerId = signal.clientId;
+            Debug.Log($"[ScenarioRunner] 진행자 등록 (Zone) — clientId={_activePlayerId}");
+        }
 
         var taskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
+        var config = _data.GetModuleConfig(taskDef.moduleId);
+
+        // ── [공통] 타겟 ID 결정 로직 ─────────────────
+        // JSON에 targetZoneId가 적혀있으면 그것을 쓰고, 비어있으면 targetObjName을 정답으로 간주합니다.
+        string officialTargetId = string.IsNullOrEmpty(config?.targetZoneId) ? config?.targetObjName : config?.targetZoneId;
 
         // ── IStepAwareModule 경로 (다단계 Task) ─────────────────
-        if (_currentModule is IStepAwareModule stepModule && stepModule.IsCurrentStepGrabZone)
+        if(_currentModule is IStepAwareModule stepModule && stepModule.IsCurrentStepGrabZone)
         {
             string stepZoneId = stepModule.CurrentStepZoneId;
-            if (!string.IsNullOrEmpty(stepZoneId) && stepZoneId != signal.zoneId) return;
+            // 다단계 모듈에서도 필요시 officialTargetId 로직을 적용할 수 있으나, 
+            // 보통 stepModule은 내부 데이터가 우선이므로 우선 기존 유지 후 필요시 수정
+            if(!string.IsNullOrEmpty(stepZoneId) && stepZoneId != signal.zoneId) return;
 
             var stepItems = stepModule.CurrentStepRequiredItems;
             bool validStep = stepItems.Count == 0 || stepItems.Contains(signal.itemId);
-            if (!validStep) return;
+            if(!validStep) return;
 
             _taskLocked = true;
 
-            float  snapDuration = stepModule.CurrentStepSnapDuration;
-            float  snapDelay    = stepModule.CurrentStepSnapDelay;
-            string guideId      = stepModule.CurrentStepGuideId;
-            if (string.IsNullOrEmpty(guideId)) guideId = signal.zoneId;
+            float snapDuration = stepModule.CurrentStepSnapDuration;
+            float snapDelay = stepModule.CurrentStepSnapDelay;
+            string guideId = string.IsNullOrEmpty(stepModule.CurrentStepGuideId) ? signal.zoneId : stepModule.CurrentStepGuideId;
 
-            if (!string.IsNullOrEmpty(guideId) && InstanceFinder.IsServerStarted)
+            if(InstanceFinder.IsServerStarted)
             {
                 InstanceFinder.ServerManager.Broadcast(new PlaySnapAnimBroadcast
                 {
-                    taskIndex    = signal.taskIndex,
-                    itemId       = signal.itemId,
-                    guideId      = guideId,
+                    taskIndex = signal.taskIndex,
+                    itemId = signal.itemId,
+                    guideId = guideId,
                     snapDuration = snapDuration,
                 });
             }
 
-            // 스텝 진행 (AdvanceZoneStep 내부에서 FireStepAdvanced → OnStepAdvanced → BroadcastState)
             bool isLastStep = stepModule.AdvanceZoneStep();
-
-            Debug.Log($"[ScenarioRunner] Step ZoneSignal: zone={signal.zoneId}, item={signal.itemId}, " +
-                      $"마지막={isLastStep}");
-
-            if (isLastStep)
+            if(isLastStep)
                 StartCoroutine(CompleteAfterSnapDelay(snapDuration + snapDelay));
             else
                 StartCoroutine(UnlockAfterStepDelay(snapDuration + snapDelay));
@@ -378,27 +398,32 @@ public class ScenarioRunner : MonoBehaviour
             return;
         }
 
-        // ── 기존 단일 스텝 경로 ──────────────────────────────────
-        var config = _data.GetModuleConfig(taskDef.moduleId);
+        // ── 기존 단일 스텝 경로 (수정 핵심 지점) ─────────────────────
 
-        if (!string.IsNullOrEmpty(config?.targetZoneId) && config.targetZoneId != signal.zoneId)
+        // [수정된 비교 로직] config.targetZoneId 직접 비교 대신 officialTargetId 사용
+        if(!string.IsNullOrEmpty(officialTargetId) && officialTargetId != signal.zoneId)
+        {
+            Debug.LogWarning($"[ScenarioRunner] ID 불일치 무시: 서버기다림({officialTargetId}) vs 클라보냄({signal.zoneId})");
             return;
+        }
 
         var required = config?.requiredItems;
         bool validItem = required == null || required.Count == 0 || required.Contains(signal.itemId);
-        if (!validItem) return;
+        if(!validItem) return;
 
         _taskLocked = true;
 
-        if (!string.IsNullOrEmpty(config?.targetZoneId))
+        // 존 비활성화 처리 (targetZoneId가 있을 때만)
+        if(!string.IsNullOrEmpty(config?.targetZoneId))
             TaskInteractionZone.Find(config.targetZoneId)?.Deactivate();
 
+        // 스냅 가이드 찾기
         string guideIdSingle = string.Empty;
-        if (taskDef.spawnObjects != null)
+        if(taskDef.spawnObjects != null)
         {
-            foreach (var bundle in taskDef.spawnObjects)
+            foreach(var bundle in taskDef.spawnObjects)
             {
-                if (bundle.prefabId == signal.itemId && !string.IsNullOrEmpty(bundle.guideId))
+                if(bundle.prefabId == signal.itemId && !string.IsNullOrEmpty(bundle.guideId))
                 {
                     guideIdSingle = bundle.guideId;
                     break;
@@ -407,60 +432,100 @@ public class ScenarioRunner : MonoBehaviour
         }
 
         float snapDurationSingle = ParseExtraFloat(config, "snapDuration", 0.5f);
-        float snapDelaySingle    = ParseExtraFloat(config, "snapDelay",    1.5f);
+        float snapDelaySingle = ParseExtraFloat(config, "snapDelay", 1.5f);
 
-        if (string.IsNullOrEmpty(guideIdSingle))
+        if(string.IsNullOrEmpty(guideIdSingle))
             guideIdSingle = signal.zoneId;
 
-        if (!string.IsNullOrEmpty(guideIdSingle) && InstanceFinder.IsServerStarted)
+        if(InstanceFinder.IsServerStarted)
         {
             InstanceFinder.ServerManager.Broadcast(new PlaySnapAnimBroadcast
             {
-                taskIndex    = signal.taskIndex,
-                itemId       = signal.itemId,
-                guideId      = guideIdSingle,
+                taskIndex = signal.taskIndex,
+                itemId = signal.itemId,
+                guideId = guideIdSingle,
                 snapDuration = snapDurationSingle,
             });
         }
 
         StartCoroutine(CompleteAfterSnapDelay(snapDurationSingle + snapDelaySingle));
 
-        Debug.Log($"[ScenarioRunner] ZoneSignal: zone={signal.zoneId}, item={signal.itemId}, " +
-                  $"guide={guideIdSingle}, snapDur={snapDurationSingle}s, delay={snapDelaySingle}s");
+        Debug.Log($"<color=lime>[ScenarioRunner] 단계 완료 승인</color>: zone={signal.zoneId}, task={_currentTaskState.taskIndex}");
     }
 
-   private void OnReceiveValueMeasured(NetworkConnection conn, ValueMeasuredSignal signal, Channel channel)
-{
-    // 1. 중복 진입 차단: 이미 락이 걸렸거나 실행 중이 아니면 즉시 리턴
-    if (_taskLocked || !_isRunning || _currentModule == null) return;
-    
-    // 2. 현재 활성화된 태스크와 일치하는 신호인지 검증
-    if (signal.taskIndex != _currentTaskState.taskIndex) return;
-
-    if (_currentModule is ZoneAndMeasureModule measureModule)
+    private void OnReceiveValueMeasured(NetworkConnection conn, ValueMeasuredSignal signal, Channel channel)
     {
-        // 3. 모듈에서 측정값 판정 수행
-        measureModule.HandleValueMeasured(signal.terminalId, signal.value);
-
-        // 4. 판정 결과가 성공(IsCompleted)인 경우에만 후속 처리 실행
-        if (measureModule.IsCompleted)
+        Debug.Log($"<color=white>[Runner-Check]</color> 서버에 신호 도착함! Task:{signal.taskIndex}");
+        // ── [1단계] 서버 상태 확인 ──
+        if(!_isRunning)
         {
-            // 5. 서버 락 활성화: 코루틴 대기 중 추가 신호 처리 방지
-            _taskLocked = true;
+            Debug.LogWarning($"<color=red>[Runner-Measure]</color> 신호 무시: 서버가 실행 중이 아님.");
+            //return;
+        }
 
-            // 6. JSON의 extra 설정에서 지연 시간(snapDelay) 추출 (기본값 1.5초)
-            var config = _data.GetModuleConfig(_currentTaskState.taskIndex < _data.scenario.tasks.Count ? 
-                         _data.scenario.tasks[_currentTaskState.taskIndex].moduleId : "");
-            float delay = ParseExtraFloat(config, "snapDelay", 1.5f);
+        if(_taskLocked)
+        {
+            Debug.LogWarning($"<color=orange>[Runner-Measure]</color> 신호 무시: 현재 태스크가 잠금(Lock) 상태임 (이전 연출 진행 중 가능성).");
+            //return;
+        }
 
-            // 7. 기존 로직의 CompleteAfterSnapDelay를 활용하여 지연 후 완료
-            StartCoroutine(CompleteAfterSnapDelay(delay));
+        if(_currentModule == null)
+        {
+            Debug.LogError($"<color=red>[Runner-Measure]</color> 신호 에러: 현재 실행 중인 모듈이 없음.");
+            //return;
+        }
 
-            Debug.Log($"[ScenarioRunner] 측정 성공: {signal.terminalId}={signal.value:F2}. " +
-                      $"{delay}초 대기 후 다음 단계로 이동합니다.");
+        // ── [2단계] 인덱스 일치 확인 ──
+        if(signal.taskIndex != _currentTaskState.taskIndex)
+        {
+            Debug.LogWarning($"<color=yellow>[Runner-Measure]</color> 인덱스 불일치: 신호Index({signal.taskIndex}) vs 서버Index({_currentTaskState.taskIndex})");
+            //return;
+        }
+
+        // ── [3단계] 모듈 타입 캐스팅 확인 ──
+        // ITaskModule을 ZoneAndMeasureModule로 변환할 수 있는지 확인
+        if(_currentModule is ZoneAndMeasureModule measureModule)
+        {
+            Debug.Log($"<color=cyan>[Runner-Measure]</color> <b>검증 시작</b>: 단자={signal.terminalId}, 값={signal.value:F2}");
+
+            // 모듈 내부의 판정 로직 실행
+            measureModule.HandleValueMeasured(signal.terminalId, signal.value);
+
+            // ── [4단계] 완료 여부 확인 ──
+            if(measureModule.IsCompleted)
+            {
+                Debug.Log($"<color=lime>[Runner-Measure]</color> <b>✅ 판정 성공</b>: 다음 단계로 전이 시작.");
+
+                _taskLocked = true;
+
+                // JSON 설정 로드
+                var config = _data.GetModuleConfig(_currentTaskState.taskIndex < _data.scenario.tasks.Count ?
+                             _data.scenario.tasks[_currentTaskState.taskIndex].moduleId : "");
+
+                float delay = ParseExtraFloat(config, "snapDelay", 1.5f);
+
+                // [추가] 첫 인터랙션 진행자 등록 (세션 관리용)
+                if(_activePlayerId < 0)
+                {
+                    _activePlayerId = signal.clientId;
+                    Debug.Log($"[Runner-Measure] 진행자 등록: ClientId={_activePlayerId}");
+                }
+
+                StartCoroutine(CompleteAfterSnapDelay(delay));
+            }
+            else
+            {
+                // 이 로그가 찍힌다면 ID가 틀렸거나 값이 오차 범위를 벗어난 것입니다.
+                Debug.LogWarning($"<color=white>[Runner-Measure]</color> 모듈 전달 완료했으나 <b>조건 미충족</b> (ID 불일치 혹은 값 범위 초과)");
+            }
+        }
+        else
+        {
+            // ★ 가장 중요한 체크 포인트: 현재 모듈의 실제 클래스 타입을 출력
+            Debug.LogError($"<color=red>[Runner-Measure]</color> 타입 불일치 에러: " +
+                           $"현재 모듈은 <b>{_currentModule.GetType().Name}</b>이며, ZoneAndMeasureModule이 아닙니다.");
         }
     }
-}
 
     private IEnumerator UnlockAfterStepDelay(float delay)
     {
@@ -570,6 +635,7 @@ public class ScenarioRunner : MonoBehaviour
         };
 
         InstanceFinder.ServerManager.Broadcast(broadcast);
+        SessionPlayerServer.NotifyActivePlayer(_activePlayerId);
     }
 
     // ── 디버그 커맨드용 public API ─────────

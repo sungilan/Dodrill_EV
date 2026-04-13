@@ -1042,6 +1042,7 @@ using FishNet;
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Transporting;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -1205,16 +1206,17 @@ namespace DoDrill.Training
 
                 if (config != null)
                 {
+                    bool isConfirmAction = config.actionType.Equals("ConfirmTask", StringComparison.OrdinalIgnoreCase);
                     // 1. Disassemble 타입이면 자동 완료 차단
                     if (config.actionType.Equals("Disassemble", System.StringComparison.OrdinalIgnoreCase))
                     {
                         Debug.Log($"<color=cyan>[Bridge]</color> {zoneId} 접촉: 'Disassemble' 단계이므로 직접 해제 대기.");
-                        return;
+                        //return;
                     }
 
                     // 2. Touch 액션 여부 판단
                     bool isTouchAction = config.actionType.Equals("Touch", System.StringComparison.OrdinalIgnoreCase);
-                    if (string.IsNullOrEmpty(itemId) && !isTouchAction) return;
+                    //if (string.IsNullOrEmpty(itemId) && !isTouchAction) return;
                 }
             }
             else
@@ -1300,7 +1302,15 @@ namespace DoDrill.Training
 
         private void HandleValueMeasured(string terminalId, float value)
         {
-            if (!InstanceFinder.IsClientStarted || _currentTaskIndex < 0) return;
+            if(!InstanceFinder.IsClientStarted || _currentTaskIndex < 0)
+            {
+                Debug.LogWarning($"<color=red>[Bridge]</color> 측정 신호 무시됨: ClientStarted={InstanceFinder.IsClientStarted}, TaskIndex={_currentTaskIndex}");
+                return;
+            }
+
+            // ★ 이 로그가 찍혀야 Bridge가 정상 작동하는 것입니다.
+            Debug.Log($"<color=orange>[Bridge]</color> 측정 신호 수신 및 서버 전송 시도: 단자={terminalId}, 값={value:F2}");
+
             InstanceFinder.ClientManager.Broadcast(new ValueMeasuredSignal
             {
                 taskIndex = _currentTaskIndex,

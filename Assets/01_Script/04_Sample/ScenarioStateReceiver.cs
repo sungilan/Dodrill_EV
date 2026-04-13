@@ -49,6 +49,7 @@ public class ScenarioStateReceiver : MonoBehaviour
     {
         CurrentTaskState = broadcast.currentTask;
         TotalTaskCount = broadcast.totalTaskCount;
+        Debug.Log($"[Receiver] 모듈 전환: {broadcast.currentTask.moduleId} (Index: {broadcast.currentTask.taskIndex})");
 
 #if UNITY_EDITOR
         Debug.Log($"[ScenarioStateReceiver] Task[{broadcast.currentTask.taskIndex}] 상태: {broadcast.currentTask.status}");

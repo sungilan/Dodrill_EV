@@ -46,36 +46,52 @@ namespace DoDrill
 
         public void ReturnToTitle()
         {
-            StartCoroutine(ReturnToTitleCoroutine());
+            if (gameObject.activeInHierarchy && enabled)
+                StartCoroutine(ReturnToTitleCoroutine());
+            else
+                ScenarioExitCoroutineHost.Run(ReturnToTitleCoroutine());
+        }
+
+        /// <summary>비활성 오브젝트에 붙은 핸들러까지 포함해 씬에서 하나 찾습니다.</summary>
+        public static ScenarioExitHandler FindAnyInScene()
+        {
+            var found = Object.FindObjectsByType<ScenarioExitHandler>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            return found != null && found.Length > 0 ? found[0] : null;
+        }
+
+        /// <summary>인스펙터에 핸들러가 없을 때 타이틀 복귀만 수행합니다(앱 종료 대신).</summary>
+        public static void ReturnToTitleWithoutHandler(string titleSceneName = null)
+        {
+            string title = string.IsNullOrEmpty(titleSceneName) ? "Title" : titleSceneName;
+            ScenarioExitCoroutineHost.Run(ReturnToTitleCore(title, 0.5f));
         }
 
         private System.Collections.IEnumerator ReturnToTitleCoroutine()
         {
+            yield return ReturnToTitleCore(_titleSceneName, _exitDelay);
+        }
+
+        private static System.Collections.IEnumerator ReturnToTitleCore(string titleSceneName, float exitDelay)
+        {
             Debug.Log("[ScenarioExitHandler] 타이틀 복귀 시작");
 
-            // 1. RoomClientManager 오프라인 씬을 타이틀로 변경
-            // FishNet 연결 해제 시 자동으로 타이틀 씬으로 이동
             var roomClient = Object.FindFirstObjectByType<MasterServerToolkit.Bridges.FishNetworking.RoomClientManager>();
             if (roomClient != null)
             {
-                roomClient.SetOfflineScene(_titleSceneName);
-                Debug.Log($"[ScenarioExitHandler] OfflineScene → {_titleSceneName}");
+                roomClient.SetOfflineScene(titleSceneName);
+                Debug.Log($"[ScenarioExitHandler] OfflineScene → {titleSceneName}");
             }
 
-            // 2. 로비 정적 상태 초기화 (타이틀 씬에서 로비 UI 자동 표시 방지)
-            // static 메서드라 씬에 오브젝트 없어도 호출 가능
             LobbyPanel.ResetStaticState();
 
-            // 3. FishNet 연결 해제 (RoomClientManager가 씬 전환 처리)
             if (InstanceFinder.IsClientStarted)
             {
                 InstanceFinder.ClientManager.StopConnection();
-                yield return new WaitForSeconds(_exitDelay);
+                yield return new WaitForSeconds(exitDelay);
             }
             else
             {
-                // FishNet 연결 없으면 직접 씬 전환
-                SceneManager.LoadScene(_titleSceneName);
+                SceneManager.LoadScene(titleSceneName);
             }
         }
     }
@@ -92,5 +108,29 @@ namespace DoDrill
         // 게임 도중 홈 버튼으로 나갈 때 팝업 (Popup_ScenarioEndPanel)
         public const string ShowExitPopup = "showScenarioExitPopup";
         public const string HideExitPopup = "hideScenarioExitPopup";
+    }
+
+    /// <summary>
+    /// <see cref="ScenarioExitHandler"/>가 비활성 오브젝트(예: ScenarioEndSystem)에 붙어 있을 때
+    /// <see cref="MonoBehaviour.StartCoroutine(System.Collections.IEnumerator)"/>가 실패하지 않도록
+    /// 항상 활성인 숨김 호스트에서 코루틴을 실행합니다.
+    /// </summary>
+    internal static class ScenarioExitCoroutineHost
+    {
+        private static Host _host;
+
+        public static void Run(System.Collections.IEnumerator routine)
+        {
+            if (_host == null)
+            {
+                var go = new GameObject("[DoDrill] ScenarioExitCoroutineHost");
+                Object.DontDestroyOnLoad(go);
+                _host = go.AddComponent<Host>();
+            }
+
+            _host.StartCoroutine(routine);
+        }
+
+        private sealed class Host : MonoBehaviour { }
     }
 }

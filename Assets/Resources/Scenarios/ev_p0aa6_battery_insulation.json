@@ -229,7 +229,7 @@
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
-            "prefabId": "InsulationTester",
+            "prefabId": "Megger",
             "spawnPointId": "SP_Cart_Top",
             "guideId": "Guide_Battery_Main_Terminal"
           }
@@ -667,11 +667,9 @@
       "moduleId": "MSD_Removal",
       "config": {
         "actionType": "ConfirmTask",
-        "requiredItems": [
-          "MSD_Lever"
-        ],
+        "requiredItems": [],
         "targetObjName": "MSD_Lever",
-        "targetZoneId": "MSD_Port_Zone",
+        "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
         "requiresSafetyCheck": false,
@@ -1804,7 +1802,7 @@
         "actionType": "ConfirmTask",
         "requiredItems": [],
         "targetObjName": "MSD_Lever",
-        "targetZoneId": "MSD_Port_Zone",
+        "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
         "requiresSafetyCheck": false,
@@ -1901,7 +1899,7 @@
       "config": {
         "actionType": "MeasureResistance",
         "requiredItems": [
-          "InsulationTester"
+          "Megger"
         ],
         "targetObjName": "Battery_Main_Terminal",
         "targetZoneId": "Battery_Main_Terminal_Zone",
