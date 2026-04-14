@@ -30,7 +30,8 @@ public struct TaskState
     public int retryCount;             // 현재 Task 재도전 횟수
     public int currentStepIndex;       // 다단계 Task: 현재 스텝 인덱스 (0-based)
     public int totalSteps;             // 다단계 Task: 전체 스텝 수 (0 = 단일 인터랙션)
-    public string moduleId;
+    public int moduleId;
+    public int activePlayerId;
 }
 
 // ──────────────────────────────────────────

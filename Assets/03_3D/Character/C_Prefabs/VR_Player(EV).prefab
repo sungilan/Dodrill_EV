@@ -400,11 +400,10 @@ MonoBehaviour:
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
   - {fileID: 9056061958045091482}
-  - {fileID: 0}
+  - {fileID: 7950039927442058359}
   - {fileID: 7035637184922196988}
   InitializedParentNetworkBehaviour: {fileID: 0}
-  InitializedNestedNetworkObjects:
-  - {fileID: 0}
+  InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
   RuntimeChildNetworkBehaviours: []
   _isNetworked: 1
@@ -427,7 +426,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 9
+  <PrefabId>k__BackingField: 42
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 17454267585387823863
   <SceneId>k__BackingField: 0
@@ -448,9 +447,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bdf84c95dfa2ff94db2cec4e04bcb52a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoDrill.PlayerUISetup
-  _componentIndexCache: 255
+  _componentIndexCache: 1
   _addedNetworkObject: {fileID: 5392141778661552114}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5392141778661552114}
   _uiCamera: {fileID: 3601804879763561468}
   _nameTagCanvas: {fileID: 5108148438515906391}
   _nameText: {fileID: 2192371399232552030}
@@ -467,7 +466,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
   icon: {fileID: 21300000, guid: 5fd97691aee36104fa07ef2e855ed90b, type: 3}
-  size: {x: 20, y: 20}
+  size: {x: 40, y: 40}
   rotateWithObject: 0
   upAxis: {x: 0, y: 1, z: 0}
   initialIconRotation: 0

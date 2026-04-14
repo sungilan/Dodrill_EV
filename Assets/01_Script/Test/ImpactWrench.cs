@@ -1,5 +1,6 @@
-using UnityEngine;
 using EPOOutline; // ★ EPO Outline 네임스페이스 추가
+using UnityEngine;
+using XRAirpotrSecurity;
 
 // ============================================================
 //  ImpactWrench.cs  — EPO Outline 기반 아웃라인 색상 제어
@@ -59,32 +60,52 @@ public class ImpactWrench : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKey(workKey)) _buttonHeld = true;
-        if (Input.GetKeyUp(workKey)) _buttonHeld = false;
+        // 입력 상태 확인
+        // PC일 때만 키보드 입력을 체크하도록 조건 추가
+        if(Utils.GetPlatformType() == PlatformType.PC)
+        {
+            _buttonHeld = Input.GetKey(workKey);
+        }
 
-        bool working = _buttonHeld;
+        bool working = _buttonHeld; // VR은 VRPress/VRRelease를 통해 값이 유지됨
         ApplyEffects(working);
 
-        if (working && _targetBolt != null)
+        if(_targetBolt != null)
         {
-            if (_targetBolt.isloosened)
+            string actionName = (currentMode == WrenchMode.Unscrew) ? "볼트 분해" : "볼트 체결";
+
+            if(working)
             {
-                TriggerBoltAnimation(_targetBolt.gameObject);
-                return;
+                if(_targetBolt.isloosened)
+                {
+                    TriggerBoltAnimation(_targetBolt.gameObject);
+                    return;
+                }
+
+                float dir = (currentMode == WrenchMode.Unscrew) ? 1f : -1f;
+                _targetBolt.InteractWithTool(dir * rotationSpeed * Time.deltaTime);
+
+                // [작업 중] 진행도와 함께 플랫폼 맞춤 문구 표시
+                InteractionProgressBarUI.Instance?.ShowBoltProgress(
+                    _targetBolt.Progress,
+                    $"{actionName} 중...",
+                    _currentBoltGameObject.name,
+                    GetPlatformInstruction(actionName, true)
+                );
             }
-
-            // 회전 속도 보정 (timeToComplete 반영을 원하시면 Bolt 내부 로직을 따름)
-            float dir = (currentMode == WrenchMode.Unscrew) ? 1f : -1f;
-            _targetBolt.InteractWithTool(dir * rotationSpeed * Time.deltaTime);
-
-            if (_targetBolt.isloosened)
-                TriggerBoltAnimation(_targetBolt.gameObject);
-        }
-        else if (!working) // 버튼을 뗐을 때 UI 숨김
-        {
-            InteractionProgressBarUI.Instance?.HideProgress();
+            else
+            {
+                // [대기 중] 안내 문구 표시
+                InteractionProgressBarUI.Instance?.ShowBoltProgress(
+                    _targetBolt.Progress,
+                    actionName,
+                    _currentBoltGameObject.name,
+                    GetPlatformInstruction(actionName, false)
+                );
+            }
         }
     }
+
     // ── 효과 적용 ───────────────────────────────────────────
 
     private void ApplyEffects(bool working)
@@ -106,34 +127,34 @@ public class ImpactWrench : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (!other.CompareTag("Bolt")) return;
+        if(!other.CompareTag("Bolt")) return;
 
         _targetBolt = other.GetComponent<Bolt>();
         _currentBoltGameObject = other.gameObject;
 
-        Debug.Log($"[ImpactWrench] 볼트 감지: {other.name}");
-
-        // 기존에 잡고 있던 아웃라인이 있다면 복구
-        if (_currentOutlinable != null)
-        {
-            RestoreBoltOutline();
-        }
-
+        if(_currentOutlinable != null) RestoreBoltOutline();
         ChangeBoltOutlineColor();
+
+        // 진입 시 즉시 플랫폼별 안내 표시
+        string actionName = (currentMode == WrenchMode.Unscrew) ? "볼트 분해" : "볼트 체결";
+        InteractionProgressBarUI.Instance?.ShowBoltProgress(
+            _targetBolt != null ? _targetBolt.Progress : 0,
+            actionName,
+            other.name,
+            GetPlatformInstruction(actionName, false)
+        );
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (!other.CompareTag("Bolt")) return;
+        if(!other.CompareTag("Bolt")) return;
 
-        if (_currentBoltGameObject != null && _currentBoltGameObject == other.gameObject)
+        if(_currentBoltGameObject != null && _currentBoltGameObject == other.gameObject)
         {
-            Debug.Log($"[ImpactWrench] 볼트 이탈: {other.name}");
-
             RestoreBoltOutline();
 
-            // ★ 추가: 볼트에서 멀어지면 프로그레스바 즉시 숨김
-            InteractionProgressBarUI.Instance?.HideProgress();
+            // [이탈] 볼트에서 멀어지면 즉시 모든 가이드 패널 숨김
+            InteractionProgressBarUI.Instance?.HideBoltProgress();
 
             _targetBolt = null;
             _currentBoltGameObject = null;
@@ -219,7 +240,7 @@ public class ImpactWrench : MonoBehaviour
         RestoreBoltOutline();
 
         // ★ 추가: 애니메이션 시작 시 UI 숨김
-        InteractionProgressBarUI.Instance?.HideProgress();
+        InteractionProgressBarUI.Instance?.HideBoltProgress();
 
         _targetBolt = null;
         _currentBoltGameObject = null;
@@ -227,4 +248,31 @@ public class ImpactWrench : MonoBehaviour
 
     public bool IsWorking => _wasWorking;
     public Bolt TargetBolt => _targetBolt;
+
+    // --- 플랫폼별 문구 생성 헬퍼 ---
+    private string GetPlatformInstruction(string actionName, bool isWorking)
+    {
+        PlatformType platform = Utils.GetPlatformType();
+
+        if(isWorking)
+        {
+            return platform switch
+            {
+                PlatformType.VR => "트리거를 계속 당겨 작업을 완료하세요.",
+                PlatformType.PC => $"{workKey} 키를 계속 눌러 작업을 완료하세요.",
+                PlatformType.Mobile => "버튼을 계속 터치하여 작업을 완료하세요.",
+                _ => "작업을 완료할 때까지 유지하세요."
+            };
+        }
+        else
+        {
+            return platform switch
+            {
+                PlatformType.VR => $"트리거를 당겨 {actionName}를 시작하세요.",
+                PlatformType.PC => $"{workKey} 키를 눌러 {actionName}를 시작하세요.",
+                PlatformType.Mobile => $"터치하여 {actionName}를 시작하세요.",
+                _ => $"{actionName}를 시작하세요."
+            };
+        }
+    }
 }

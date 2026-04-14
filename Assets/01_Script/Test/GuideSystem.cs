@@ -1,4 +1,5 @@
 using DG.Tweening;
+using DG.Tweening;
 using DoDrill;
 using EPOOutline;
 using System;
@@ -6,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Localization.Components;
 using XRAirpotrSecurity;
 
 // ============================================================
@@ -23,6 +25,9 @@ public class GuideSystem : MonoBehaviour
         public TextMeshProUGUI titleText;
         public TextMeshProUGUI mainText;
         public TextMeshProUGUI subText;
+        // --- [추가] 시각적 보조 요소 ---
+        public UnityEngine.UI.Image guideImage;      // 타겟 이미지 표시용
+        public TextMeshProUGUI guideObjectNameText; // 타겟 이름 표시용
     }
 
     [Header("난이도")]
@@ -38,6 +43,8 @@ public class GuideSystem : MonoBehaviour
     private TextMeshProUGUI activeTitleText;
     private TextMeshProUGUI mainGuideText;
     private TextMeshProUGUI subGuideText;
+    private UnityEngine.UI.Image activeGuideImage;
+    private TextMeshProUGUI activeGuideObjectNameText;
 
     [Header("설정")]
     public float autoHideDelay = 8f;
@@ -57,6 +64,8 @@ public class GuideSystem : MonoBehaviour
     [Header("힌트 / 넛지")]
     public float hintDuration = 4f;
     public float nudgeIdleTime = 12f;
+
+    private Dictionary<int, Tween> _activeBlinkTweens = new Dictionary<int, Tween>();
 
     // ── 내부 상태 ─────────────────────────────────────────
     private ScenarioData _scenarioData;
@@ -205,6 +214,8 @@ public class GuideSystem : MonoBehaviour
 
             SetCenterAlpha(0f, $"ShowGuide - Task[{idx}] Started");
             centerGuideGroup.gameObject.SetActive(true);
+            centerGuideGroup.interactable = true;
+            centerGuideGroup.blocksRaycasts = true;
 
             _currentGuideSequence = DOTween.Sequence().SetId("CenterGuideFadeLogic");
             _currentGuideSequence.Append(centerGuideGroup.DOFade(1f, 1.0f));
@@ -212,6 +223,9 @@ public class GuideSystem : MonoBehaviour
             _currentGuideSequence.Append(centerGuideGroup.DOFade(0f, 1.5f));
             _currentGuideSequence.OnComplete(() =>
             {
+                // 페이드 아웃 완료 후 클릭 방해 금지 설정
+                centerGuideGroup.interactable = false;
+                centerGuideGroup.blocksRaycasts = false;
                 _currentGuideSequence = null;
                 //if(!_completed) centerGuideGroup.gameObject.SetActive(false);
             });
@@ -291,18 +305,28 @@ public class GuideSystem : MonoBehaviour
         }
     }
 
+    // ── 아웃라인 및 깜박임(Blink) 제어 ──────────────────────────────────
+
     private void SetOutline(GameObject target, bool on)
     {
         if(target == null) return;
 
         var outlinable = target.GetComponent<Outlinable>();
+        int targetId = target.GetInstanceID();
+
+        // 1. 기존 이 오브젝트에 실행 중인 깜박임 트윈이 있다면 즉시 종료 및 제거
+        if(_activeBlinkTweens.TryGetValue(targetId, out Tween existingTween))
+        {
+            existingTween.Kill();
+            _activeBlinkTweens.Remove(targetId);
+        }
 
         if(on)
         {
+            // Outlinable 컴포넌트 확보
             if(outlinable == null) outlinable = target.AddComponent<Outlinable>();
 
-            // 1. 기존 타겟 리스트를 리플렉션으로 안전하게 비우기
-            // (Internal 리스트를 직접 건드려야 Interested 에러를 피할 수 있습니다)
+            // [리플렉션] 내부 타겟 리스트를 강제로 비워 중복 등록 방지 (Interested 에러 방어)
             var field = typeof(Outlinable).GetField("outlineTargets",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
@@ -312,38 +336,94 @@ public class GuideSystem : MonoBehaviour
                 list?.Clear();
             }
 
-            // 2. Mesh가 확실히 있는 렌더러만 수동 등록
+            // Mesh가 있는 렌더러만 선별하여 등록
             var allRenderers = target.GetComponentsInChildren<Renderer>(true);
             foreach(var r in allRenderers)
             {
-                // CanvasRenderer가 붙어있거나 MeshFilter가 없는 것은 무조건 제외
-                if(r is CanvasRenderer || r.GetComponent<MeshFilter>() == null && r is not SkinnedMeshRenderer)
+                if(r is CanvasRenderer || (r.GetComponent<MeshFilter>() == null && r is not SkinnedMeshRenderer))
                     continue;
 
-                // 정상적인 메쉬 렌더러만 추가
                 outlinable.AddRenderer(r);
             }
 
+            // 아웃라인 비주얼 설정
             outlinable.RenderStyle = renderStyle;
             outlinable.OutlineParameters.Color = outlineColor;
             outlinable.OutlineParameters.BlurShift = outlineWidth;
             outlinable.enabled = true;
+
+            // ★ [추가] DOTween 기반 아웃라인 알파 깜박임 효과
+            // 기본색에서 알파값이 낮아진 상태까지 0.6초간 왕복 반복
+            Color targetColor = outlineColor;
+            targetColor.a = 0.15f;
+
+            Tween blinkTween = DOTween.To(() => outlinable.OutlineParameters.Color,
+                x => outlinable.OutlineParameters.Color = x,
+                targetColor, 0.6f)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetEase(Ease.InOutSine)
+                .SetId(targetId); // 오브젝트 ID를 트윈 ID로 지정하여 관리 용이성 증대
+
+            _activeBlinkTweens[targetId] = blinkTween;
         }
         else
         {
-            if(outlinable != null) outlinable.enabled = false;
+            // 아웃라인 해제 시
+            if(outlinable != null)
+            {
+                outlinable.enabled = false;
+                // 알파값이 변한 상태로 꺼질 수 있으므로 기본색으로 초기화
+                outlinable.OutlineParameters.Color = outlineColor;
+            }
         }
+    }
+
+    // ── 가이드 자원 정리 ──────────────────────────────────────────────
+
+    private void ClearVisualGuides()
+    {
+        // 1. 모든 실행 중인 깜박임 트윈(DOTween) 정리
+        foreach(var kvp in _activeBlinkTweens)
+        {
+            if(kvp.Value != null) kvp.Value.Kill();
+        }
+        _activeBlinkTweens.Clear();
+
+        // 2. 생성된 고스트 및 마커 오브젝트 삭제
+        foreach(var g in _tempGuides)
+        {
+            if(g != null) Destroy(g);
+        }
+        _tempGuides.Clear();
+        _spawnMarkers.Clear();
+
+        // 3. 요구 아이템들에 적용된 아웃라인 해제
+        foreach(var item in _requiredItemObjects)
+        {
+            SetOutline(item, false);
+        }
+        _requiredItemObjects.Clear();
+
+        // 4. 클릭 타겟들에 적용된 아웃라인 해제
+        foreach(var t in _clickTargets)
+        {
+            SetOutline(t, false);
+        }
+        _clickTargets.Clear();
+
+        // 5. 참조 변수 초기화
+        _ghostObject = null;
+        _targetMarker = null;
     }
 
     private void BuildSpawnGuides(TaskDef taskDef)
     {
         if(taskDef.spawnObjects == null) return;
 
+        // 스폰 포인트 캐싱 로직 생략 (기존과 동일)
         var allSP = FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         var spCache = new Dictionary<string, SpawnPoint>();
-        foreach(var sp in allSP)
-            if(!string.IsNullOrEmpty(sp.pointId))
-                spCache[sp.pointId] = sp;
+        foreach(var sp in allSP) if(!string.IsNullOrEmpty(sp.pointId)) spCache[sp.pointId] = sp;
 
         foreach(var bundle in taskDef.spawnObjects)
         {
@@ -352,6 +432,7 @@ public class GuideSystem : MonoBehaviour
             var existingItem = FindSpawnedItem(bundle.prefabId);
             bool isGrabbed = (existingItem?.GetComponent<SyncGrab>()?.IsGrabbed ?? false);
 
+            // [도구 스폰 위치 가이드 생성]
             if(!isGrabbed && !string.IsNullOrEmpty(bundle.spawnPointId))
             {
                 if(spCache.TryGetValue(bundle.spawnPointId, out var spPt))
@@ -361,32 +442,88 @@ public class GuideSystem : MonoBehaviour
                     {
                         string label = GetDisplayName(bundle.prefabId);
                         var markerGO = SpawnMarker(pos, label, spawnGuideColor, isTarget: false);
-                        if(markerGO != null)
-                            _spawnMarkers[bundle.prefabId] = markerGO.gameObject;
+                        if(markerGO != null) _spawnMarkers[bundle.prefabId] = markerGO.gameObject;
                     }
                 }
             }
 
+            // [목표 지점(GuideId) 가이드 생성]
             if(!string.IsNullOrEmpty(bundle.guideId))
             {
                 var targetGO = FindSpawnedItem(bundle.guideId);
                 if(targetGO != null)
                 {
+                    var zoneData = targetGO.GetComponent<GuideZoneData>();
                     var boltGroup = targetGO.GetComponent<BoltGroupCounter>();
-                    bool isBoltTask = boltGroup != null || targetGO.name.Contains("Bolt");
-                    string label = isBoltTask && boltGroup != null
-                        ? $"볼트를 임팩트 렌치로 {(boltGroup.assembleMode ? "체결" : "제거")}하세요."
-                        : $"{GetDisplayName(bundle.prefabId)}을(를) 여기로 이동하세요";
 
+                    // ── 팝업 이미지 및 텍스트 갱신 ──
+                    if(zoneData != null)
+                    {
+                        // 현재 활성화된 플랫폼 UI 그룹의 요소들을 갱신
+                        if(activeGuideImage != null)
+                        {
+                            activeGuideImage.sprite = zoneData.targetImage;
+                            activeGuideImage.gameObject.SetActive(zoneData.targetImage != null);
+                        }
+                        // 2. Localize String Event를 통한 이름 갱신
+                        if(activeGuideObjectNameText != null)
+                        {
+                            var nameEvent = activeGuideObjectNameText.GetComponent<LocalizeStringEvent>();
+                            if(nameEvent != null)
+                            {
+                                // StringReference를 통째로 교체하면 즉시 해당 언어로 업데이트됩니다.
+                                nameEvent.StringReference = zoneData.targetName;
+                                activeGuideObjectNameText.gameObject.SetActive(true);
+                            }
+                        }
+
+                        // 상세 설명은 subText 등으로 전달 가능
+                        // 3. Localize String Event를 통한 설명 갱신
+                        if(subGuideText != null)
+                        {
+                            var descEvent = subGuideText.GetComponent<LocalizeStringEvent>();
+                            if(descEvent != null)
+                            {
+                                descEvent.StringReference = zoneData.guideDescription;
+                                subGuideText.gameObject.SetActive(true);
+                            }
+                        }
+                    }
+
+                    // ── 3D 마커 텍스트 결정 ──
+                    string label = "";
+
+                    if(zoneData != null)
+                    {
+                        // LocalizedString 객체에서 현재 설정된 언어의 문자열을 추출합니다.
+                        label = zoneData.guideDescription.GetLocalizedString();
+                    }
+                    else if(boltGroup != null)
+                    {
+                        // zoneData가 없을 때 BoltGroupCounter가 있다면 기존 로직 수행
+                        label = $"볼트를 {(boltGroup.assembleMode ? "체결" : "제거")}하세요.";
+                    }
+                    else
+                    {
+                        // 둘 다 없을 경우 기본 이동 안내 문구 사용
+                        label = $"{GetDisplayName(bundle.prefabId)}을(를) 여기로 이동하세요";
+                    }
+
+                    bool isBoltTask = boltGroup != null || targetGO.name.Contains("Bolt");
                     Vector3 markerPos = isBoltTask ? GetBoundsCenter(targetGO) : targetGO.transform.position;
+
                     var marker = SpawnMarker(markerPos, label, targetGuideColor, isTarget: true);
 
                     if(marker != null)
                     {
                         marker.Setup(label, targetGuideColor, !isBoltTask && targetGO.GetComponent<NoneHighlight>() == null);
                         _targetMarker = marker;
-                        if(isBoltTask && boltGroup != null)
+
+                        // 진행도 표시 (ZoneData에서 체크했거나 볼트 그룹일 경우)
+                        if((zoneData != null && zoneData.showProgress && boltGroup != null) || (isBoltTask && boltGroup != null))
+                        {
                             StartCoroutine(UpdateBoltProgressRoutine(marker, boltGroup));
+                        }
                     }
 
                     SetOutline(targetGO, true);
@@ -572,26 +709,6 @@ public class GuideSystem : MonoBehaviour
         if(!string.IsNullOrEmpty(text))
             TTSManager.Instance?.Speak(text);
     }
-
-    private void ClearVisualGuides()
-    {
-        foreach(var g in _tempGuides)
-            if(g) Destroy(g);
-        _tempGuides.Clear();
-        _spawnMarkers.Clear();
-
-        foreach(var item in _requiredItemObjects)
-            SetOutline(item, false);
-        _requiredItemObjects.Clear();
-
-        foreach(var t in _clickTargets)
-            SetOutline(t, false);
-        _clickTargets.Clear();
-
-        _ghostObject = null;
-        _targetMarker = null;
-    }
-
     private string GetDisplayName(string id) => id switch
     {
         "GDS_Tablet" => "GDS 진단기",

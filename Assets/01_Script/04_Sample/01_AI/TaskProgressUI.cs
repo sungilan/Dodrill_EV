@@ -1,8 +1,10 @@
+using DG.Tweening;
 using FishNet;
 using Newtonsoft.Json;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
+using static ScenarioRunner;
 
 namespace DoDrill.Training
 {
@@ -35,12 +37,28 @@ namespace DoDrill.Training
         [SerializeField] private TMP_Text   _confirmBtnLabel; // 버튼 텍스트
         [SerializeField] private TMP_Text _boltProgressText;
 
+        [Header("Notification UI (New)")]
+        [SerializeField] private CanvasGroup _notifCanvasGroup; // 알림 패널의 CanvasGroup
+        [SerializeField] private TMP_Text _notifText;          // 알림 텍스트 메쉬
+        [SerializeField] private float _displayDuration = 3f;  // 표시 시간
+
         private ScenarioData _scenarioData;
         private int          _currentTaskIndex = -1;
         private int          _totalCount;
         private string       _currentModuleId  = string.Empty;
 
         // ── 생명주기 ──────────────────────────────────────────────
+
+        private void Awake()
+        {
+            // 시작 시 알림창을 확실히 숨김
+            if(_notifCanvasGroup != null)
+            {
+                _notifCanvasGroup.alpha = 0f;
+                _notifCanvasGroup.interactable = false;
+                _notifCanvasGroup.blocksRaycasts = false;
+            }
+        }
 
         private void Start()
         {
@@ -66,6 +84,7 @@ namespace DoDrill.Training
             ScenarioStateReceiver.OnSnapshotReceived += OnSnapshotReceived;
             ScenarioReceiver.OnScenarioReceived      += OnScenarioReceived;
             InstanceFinder.ClientManager?.RegisterBroadcast<BoltProgressBroadcast>(OnBoltProgressReceived);
+            InstanceFinder.ClientManager?.RegisterBroadcast<TaskNotificationBroadcast>(OnTaskNotificationReceived);
 
             if (_confirmButton != null)
                 _confirmButton.onClick.AddListener(OnConfirmClicked);
@@ -77,6 +96,7 @@ namespace DoDrill.Training
             ScenarioStateReceiver.OnSnapshotReceived -= OnSnapshotReceived;
             ScenarioReceiver.OnScenarioReceived      -= OnScenarioReceived;
             InstanceFinder.ClientManager?.RegisterBroadcast<BoltProgressBroadcast>(OnBoltProgressReceived);
+            InstanceFinder.ClientManager?.UnregisterBroadcast<TaskNotificationBroadcast>(OnTaskNotificationReceived);
 
             if (_confirmButton != null)
                 _confirmButton.onClick.RemoveListener(OnConfirmClicked);
@@ -139,6 +159,23 @@ namespace DoDrill.Training
             {
                 _boltProgressText.gameObject.SetActive(false);
             }
+        }
+
+        private void OnTaskNotificationReceived(TaskNotificationBroadcast msg, FishNet.Transporting.Channel channel)
+        {
+            if(_notifCanvasGroup == null || _notifText == null) return;
+
+            // 텍스트 구성 (요청하신 색상 적용)
+            string pColor = "#00f800";
+            _notifText.text = $"<color={pColor}>{msg.clientName}</color>(이)가\n{msg.taskName}를 완료하였습니다.";
+
+            // DOTween 연출
+            _notifCanvasGroup.DOKill(); // 기존 연출 중단
+
+            Sequence seq = DOTween.Sequence();
+            seq.Append(_notifCanvasGroup.DOFade(1f, 0.5f)); // 나타나기
+            seq.AppendInterval(_displayDuration);           // 대기
+            seq.Append(_notifCanvasGroup.DOFade(0f, 0.5f)); // 사라지기
         }
         private void Refresh(TaskState state)
         {

@@ -6,16 +6,16 @@ using TMPro; // 텍스트 표시를 위해 추가
 
 public class MapObject : MonoBehaviour
 {
-    MiniMapEntity linkedMiniMapEntity;
-    MiniMapController mmc;
-    GameObject owner;
-    Camera mapCamera;
-    Image spr;
-    GameObject panelGO;
+    public MiniMapEntity linkedMiniMapEntity;
+    public MiniMapController mmc;
+    public GameObject owner;
+    public Camera mapCamera;
+    public Image spr;
+    public GameObject panelGO;
 
     // --- [추가] 텍스트 관련 변수 ---
-    private TextMeshProUGUI labelText;
-    private RectTransform labelRect;
+    public TextMeshProUGUI labelText;
+    public RectTransform labelRect;
 
     Vector3 viewPortPos;
     RectTransform rt;

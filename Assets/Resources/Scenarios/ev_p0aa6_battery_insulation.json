@@ -147,7 +147,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": ""
+            "guideId": "Guide_Lift"
           }
         ]
       },
@@ -262,6 +262,12 @@
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
             "guideId": "BatteryPack_Bolts1"
+          },
+          {
+            "prefabId": "Batteryjack",
+            "spawnPointId": "SP_Battery_Under_Default",
+            "guideId": "",
+            "targetGuideId": ""
           }
         ]
       },
@@ -274,6 +280,12 @@
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
             "guideId": "BatteryPack_Bolts2"
+          },
+          {
+            "prefabId": "Batteryjack",
+            "spawnPointId": "SP_Battery_Under_Default",
+            "guideId": "",
+            "targetGuideId": ""
           }
         ]
       },
@@ -295,9 +307,14 @@
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Top",
+            "prefabId": "Battery",
+            "spawnPointId": "SP_Battery",
             "guideId": "Guide_PRA_Location"
+          },
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "BatteryPack_Bolts2"
           }
         ]
       },
@@ -688,7 +705,7 @@
           },
           {
             "key": "guideText",
-            "ko": "MSD 탈거는 고전압 회로를 물리적으로 차단하는 핵심 안전 조치입니다. 탈거 후 잠금박스에 보관하여 재삽입을 방지하고, 커패시터 방전을 위해 최소 5분 대기하세요.",
+            "ko": "MSD 탈거는 고전압 회로를 물리적으로 차단하는 핵심 안전 조치입니다. 탈거 후 방전이 될 때까지 10초 대기하세요. 실제 정비환경에서는 캐패시터 방전을 위해 최소 5분을 대기해야 합니다.",
             "en": "MSD removal physically disconnects the HV circuit — the most critical safety action. Store in lock box after removal, then wait at least 5 minutes for capacitor discharge.",
             "vi": "Tháo MSD ngắt kết nối vật lý mạch HV — hành động an toàn quan trọng nhất. Cất vào hộp khóa, sau đó chờ ít nhất 5 phút để phóng điện tụ."
           },
@@ -725,13 +742,13 @@
           },
           {
             "key": "description",
-            "ko": "커패시터 잔류 전압이 방전될 때까지 대기하세요.",
+            "ko": "캐패시터 잔류 전압이 방전될 때까지 대기하세요.",
             "en": "Wait for capacitor residual voltage to fully discharge.",
             "vi": "Chờ điện áp dư của tụ điện phóng hết."
           },
           {
             "key": "guideText",
-            "ko": "MSD 탈거 후에도 인버터 커패시터에 수백 볼트가 남습니다. 전압이 완전히 방전될 때까지 절대 작업을 진행하지 마세요. 최소 5분 이상 대기 필수입니다.",
+            "ko": "MSD 탈거 후에도 인버터 커패시터에 수백 볼트가 남습니다. 전압이 완전히 방전될 때까지 절대 작업을 진행하지 마세요. 실제 정비환경에서는 캐패시터 방전을 위해 최소 5분을 대기해야 합니다.",
             "en": "Even after MSD removal, inverter capacitors retain hundreds of volts. Never proceed until fully discharged. Waiting at least 5 minutes is mandatory.",
             "vi": "Ngay cả sau khi tháo MSD, tụ điện biến tần vẫn giữ hàng trăm volt. Không bao giờ tiến hành cho đến khi phóng hết. Phải chờ ít nhất 5 phút."
           },
@@ -748,8 +765,8 @@
           },
           {
             "key": "resultNote",
-            "ko": "커패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 최소 5분 이상 대기 권장.",
-            "en": "커패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 최소 5분 이상 대기 권장."
+            "ko": "캐패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 최소 5분 이상 대기 권장.",
+            "en": "캐패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 최소 5분 이상 대기 권장."
           }
         ]
       }
@@ -1970,7 +1987,7 @@
         "extra": [
           {
             "key": "title",
-            "ko": "절연 저항 측정 (고장 부위 특정)",
+            "ko": "절연 저항 측정",
             "en": "Insulation Resistance Test",
             "vi": "Kiểm tra điện trở cách điện"
           },
@@ -2083,7 +2100,7 @@
         "extra": [
           {
             "key": "title",
-            "ko": "신품 PRA 장착 (핵심 정비)",
+            "ko": "신품 PRA 장착",
             "en": "New PRA Installation (Core Repair)",
             "vi": "Lắp PRA mới (Sửa chữa cốt lõi)"
           },
@@ -2132,7 +2149,7 @@
         "extra": [
           {
             "key": "title",
-            "ko": "절연 저항 재측정 (정비 완료 확인)",
+            "ko": "절연 저항 재측정",
             "en": "Insulation Re-Test (Verify Repair)",
             "vi": "Kiểm tra lại cách điện (Xác nhận sửa chữa)"
           },

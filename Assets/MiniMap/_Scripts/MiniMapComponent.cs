@@ -16,75 +16,99 @@ public class MiniMapEntity{
     public string objectName;
 }
 
-public class MiniMapComponent : MonoBehaviour {
-	[Tooltip("Set the icon of this gameobject")]
-	public Sprite icon;
-	[Tooltip("Set size of the icon")]
-	public Vector2 size = new Vector2(20,20);
-	[Tooltip("Set true if the icon rotates with the gameobject")]
-	public bool rotateWithObject = false;
-	[Tooltip("Adjust the rotation axis according to your gameobject. Values of each axis can be either -1,0 or 1")]
-	public Vector3 upAxis = new Vector3(0,1,0);
-	[Tooltip("Adjust initial rotation of the icon")]
-	public float initialIconRotation;
-	[Tooltip("If true the icons will be clamped in the border")]
-	public bool clampIconInBorder = true;
-	[Tooltip("Set the distance from target after which the icon will not be shown. Setting it 0 will always show the icon.")]
-	public float clampDistance = 100;
+public class MiniMapComponent : MonoBehaviour
+{
+    [Header("아이콘 설정")]
+    public Sprite icon;
+    public Vector2 size = new Vector2(20, 20);
+    [Tooltip("텍스트와 아이콘이 오브젝트를 따라 회전할지 여부")]
+    public bool rotateWithObject = false;
+    public Vector3 upAxis = new Vector3(0, 1, 0);
+    public float initialIconRotation;
+
+    [Header("클램프 설정")]
+    public bool clampIconInBorder = true;
+    public float clampDistance = 100;
     public string myMapName = "이름 입력";
 
-    MiniMapController miniMapController;
-	MiniMapEntity mme;
-	MapObject mmo;
+    private MiniMapController miniMapController;
+    private MiniMapEntity mme;
+    private MapObject mmo;
+    private bool _isRegistered = false;
 
-	void OnEnable(){
+    private void OnEnable()
+    {
         miniMapController = Object.FindFirstObjectByType<MiniMapController>();
+    }
 
-        if(miniMapController == null)
-        {
-            Debug.LogWarning($"[MiniMap] {gameObject.name}의 컨트롤러를 찾을 수 없어 등록을 생략합니다.");
-            return;
-        }
+    private IEnumerator Start()
+    {
+        if(miniMapController == null) yield break;
 
-        mme = new MiniMapEntity ();
-		mme.icon = icon;
-		mme.rotation = initialIconRotation;
-		mme.size = size;
-		mme.upAxis = upAxis;
-		mme.rotateWithObject = rotateWithObject;
-		mme.clampInBorder = clampIconInBorder;
-		mme.clampDist = clampDistance;
-
-        // 1. 플레이어라면 플랫폼 정보를 확인하여 아이콘 결정
+        // 1. 플레이어 이름 로딩 대기
         if(gameObject.CompareTag("Player"))
         {
-            // UserName 반영 로직 (이전 작업 내용)
-            if(!string.IsNullOrEmpty(UserInfo.UserName))
+            float timeout = 3.0f;
+            while(string.IsNullOrEmpty(UserInfo.UserName) && timeout > 0)
             {
-                myMapName = UserInfo.UserName;
+                timeout -= Time.deltaTime;
+                yield return null;
             }
-        }
-        else
-        {
-            // 플레이어가 아닌 경우 기존처럼 단일 아이콘 사용 (기존 변수 활용 시)
-            mme.icon = icon;
+            if(!string.IsNullOrEmpty(UserInfo.UserName)) myMapName = UserInfo.UserName;
         }
 
+        RegisterToMap();
+    }
+
+    private void RegisterToMap()
+    {
+        if(_isRegistered) return;
+
+        mme = new MiniMapEntity();
+        mme.icon = icon;
+        mme.rotation = initialIconRotation;
+        mme.size = size;
+        mme.upAxis = upAxis;
+        mme.rotateWithObject = rotateWithObject;
+        mme.clampInBorder = clampIconInBorder;
+        mme.clampDist = clampDistance;
         mme.objectName = myMapName;
+
         mmo = miniMapController.RegisterMapObject(this.gameObject, mme);
-	}
+        _isRegistered = true;
+    }
 
-	void OnDisable(){
-        if(miniMapController != null)
+    // ── 텍스트 및 아이콘 강제 고정 로직 ──────────────────────────────
+
+    private void LateUpdate()
+    {
+        // 회전 고정 옵션이 꺼져있을 때만 실행
+        if(!_isRegistered || rotateWithObject || mmo == null) return;
+
+        // MapObject의 spr(Image)이 아이콘 객체입니다.
+        if(mmo.spr != null)
+        {
+            // 부모의 회전 영향을 받지 않도록 월드 회전을 0으로 고정
+            mmo.spr.transform.rotation = Quaternion.identity;
+        }
+
+        // MapObject의 labelText(TMP)가 텍스트 객체입니다.
+        if(mmo.labelText != null)
+        {
+            // 텍스트도 항상 정방향을 유지하도록 고정
+            mmo.labelText.transform.rotation = Quaternion.identity;
+        }
+    }
+
+    private void OnDisable() { UnregisterFromMap(); }
+    private void OnDestroy() { UnregisterFromMap(); }
+
+    private void UnregisterFromMap()
+    {
+        if(_isRegistered && miniMapController != null)
         {
             miniMapController.UnregisterMapObject(mmo, this.gameObject);
+            _isRegistered = false;
         }
-	}
-
-	void OnDestroy(){
-        if(miniMapController != null)
-        {
-            miniMapController.UnregisterMapObject(mmo, this.gameObject);
-        }
-	}
+    }
 }

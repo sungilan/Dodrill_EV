@@ -1,6 +1,7 @@
 using FishNet;
 using FishNet.Transporting;
 using UnityEngine;
+using static ScenarioRunner;
 using Debug = UnityEngine.Debug;
 
 // ============================================================
@@ -34,8 +35,44 @@ public class ScenarioStateReceiver : MonoBehaviour
         if(InstanceFinder.ClientManager == null) return;
         InstanceFinder.ClientManager.RegisterBroadcast<TaskStateBroadcast>(OnReceiveTaskState);
         InstanceFinder.ClientManager.RegisterBroadcast<ScenarioSnapshotBroadcast>(OnReceiveSnapshot);
+        InstanceFinder.ClientManager.RegisterBroadcast<PlaySoundBroadcast>(OnReceiveSound);
     }
+    private void ApplyBroadcast(TaskStateBroadcast broadcast)
+    {
+        CurrentTaskState = broadcast.currentTask;
+        TotalTaskCount = broadcast.totalTaskCount;
 
+        RefreshTaskItemFilter(broadcast.currentTask.taskIndex);
+
+        NetworkedSessionUserList.InvokeActivePlayerChanged(broadcast.currentTask.activePlayerId, "");
+    }
+    private void RefreshTaskItemFilter(int taskIndex)
+    {
+        if(CurrentScenario == null) return;
+        if(taskIndex < 0 || taskIndex >= CurrentScenario.scenario.tasks.Count) return;
+
+        var taskDef = CurrentScenario.scenario.tasks[taskIndex];
+        var config = CurrentScenario.GetModuleConfig(taskDef.moduleId);
+
+        if(config == null || config.requiredItems == null || config.requiredItems.Count == 0)
+        {
+            //TaskItemFilter.Clear();
+            return;
+        }
+
+        var state = CurrentTaskState;
+        if(state.status == TaskStatus.Running
+            && state.totalSteps > 0
+            && config.requiredItems.Count == state.totalSteps
+            && state.currentStepIndex >= 0
+            && state.currentStepIndex < config.requiredItems.Count)
+        {
+            //TaskItemFilter.SetCurrentTaskItems(new[] { config.requiredItems[state.currentStepIndex] });
+            return;
+        }
+
+        //TaskItemFilter.SetCurrentTaskItems(config.requiredItems);
+    }
     private void OnDisable()
     {
         if(InstanceFinder.ClientManager == null) return;
@@ -69,6 +106,15 @@ public class ScenarioStateReceiver : MonoBehaviour
         OnSnapshotReceived?.Invoke(broadcast);
     }
 
+    private void OnReceiveSound(PlaySoundBroadcast msg, Channel channel)
+    {
+        // ClickableAnimator에서 사용한 것과 동일한 사운드 매니저 호출
+        if(!string.IsNullOrEmpty(msg.soundName))
+        {
+            Managers.Sound.Play(msg.soundName, Define.Sound.Effect, 1.0f, msg.volume);
+        }
+    }
+
     // ── 완료 신호 전송 ────────────────────
 
     /// <summary>
@@ -87,6 +133,21 @@ public class ScenarioStateReceiver : MonoBehaviour
 
         Debug.Log($"[ScenarioStateReceiver] 완료 신호 전송 — Task[{taskIndex}], Client#{clientId}");
     }
+
+    public static void MirrorServerTaskStateForLocalSubscribers(in TaskState currentTask, int totalTaskCount)
+    {
+        var broadcast = new TaskStateBroadcast { currentTask = currentTask, totalTaskCount = totalTaskCount };
+
+        foreach(var r in Object.FindObjectsByType<ScenarioStateReceiver>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if(r != null)
+                r.ApplyBroadcast(broadcast);
+        }
+
+        OnTaskStateUpdated?.Invoke(broadcast);
+    }
+
+
 }
 
 //using FishNet;

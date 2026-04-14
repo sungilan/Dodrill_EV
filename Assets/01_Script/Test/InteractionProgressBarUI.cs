@@ -1,42 +1,73 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 public class InteractionProgressBarUI : MonoBehaviour
 {
     public static InteractionProgressBarUI Instance;
 
-    [Header("UI 참조")]
-    public GameObject rootPanel;
-    public Slider progressBar;
-    public TextMeshProUGUI taskText;
-    public TextMeshProUGUI targetNameText;
+    [Header("볼트 가이드용 패널")]
+    public CanvasGroup boltPanelGroup;
+    public Slider boltProgressBar;
+    public TextMeshProUGUI boltTaskText;
+    public TextMeshProUGUI boltTargetText;
+    public TextMeshProUGUI boltInstructionText;
+
+    [Header("방전 타이머용 패널")]
+    public CanvasGroup timerPanelGroup;
+    public TextMeshProUGUI timerText;
 
     private void Awake()
     {
         Instance = this;
-        if (rootPanel != null) rootPanel.SetActive(false);
+        // 초기화: 둘 다 숨김
+        if(boltPanelGroup != null) boltPanelGroup.alpha = 0;
+        //if(timerPanelGroup != null) timerPanelGroup.alpha = 0;
     }
 
-    public void ShowProgress(float value, string taskName, string objName)
+    // --- 볼트 가이드 제어 ---
+    public void ShowBoltProgress(float value, string taskName, string objName, string instruction = "")
     {
-        if (rootPanel == null) return;
+        if(boltPanelGroup == null) return;
 
-        // 1. 패널이 꺼져있다면 켬
-        if (!rootPanel.activeSelf) rootPanel.SetActive(true);
+        // 현재 보이지 않는 상태라면 페이드 인 시작
+        if(boltPanelGroup.alpha < 0.1f)
+        {
+            boltPanelGroup.DOKill();
+            boltPanelGroup.DOFade(1f, 0.2f).SetEase(Ease.OutQuad);
+        }
 
-        // 2. 값 업데이트 (범위 제한 없이 1.0까지 표시)
-        progressBar.value = value;
-        if (taskText != null) taskText.text = taskName;
-        if (targetNameText != null) targetNameText.text = $"대상: {objName}";
-
-        // 3. 만약 100% 완료되었다면 약간의 연출 후 꺼지게 하고 싶다면 여기서 제어 가능
-        // 현재는 렌치를 떼는 시점에 끄는 것이 가장 정확하므로 아래 Hide함수를 렌치에서 호출합니다.
+        boltProgressBar.value = value;
+        if(boltTaskText != null) boltTaskText.text = taskName;
+        if(boltTargetText != null) boltTargetText.text = $"대상: {objName}";
+        if(boltInstructionText != null) boltInstructionText.text = instruction;
     }
 
-    public void HideProgress()
+    public void HideBoltProgress()
     {
-        if (rootPanel != null && rootPanel.activeSelf)
-            rootPanel.SetActive(false);
+        if(boltPanelGroup == null || boltPanelGroup.alpha <= 0) return;
+
+        boltPanelGroup.DOKill();
+        boltPanelGroup.DOFade(0f, 0.2f).SetEase(Ease.InQuad);
+    }
+
+    // --- 방전 타이머 제어 ---
+    public void ShowTimer(string timeStr)
+    {
+        if(timerPanelGroup == null) return;
+        if(timerPanelGroup.alpha < 0.9f && !DOTween.IsTweening(timerPanelGroup))
+        {
+            timerPanelGroup.DOKill();
+            timerPanelGroup.DOFade(1f, 0.3f);
+        }
+        if(timerText != null) timerText.text = timeStr;
+    }
+
+    public void HideTimer()
+    {
+        if(timerPanelGroup == null) return;
+        timerPanelGroup.DOKill();
+        timerPanelGroup.DOFade(0f, 0.3f);
     }
 }

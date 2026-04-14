@@ -426,6 +426,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7803150552523429256}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2270095378605902508}
     - targetCorrespondingSourceObject: {fileID: 7715686799810014430, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3755583893981128630}
@@ -1023,6 +1026,33 @@ MonoBehaviour:
   terminalLayer:
     serializedVersion: 2
     m_Bits: 131072
+--- !u!54 &2270095378605902508
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4682608404276513511}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!4 &5453902184948781149 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: dada2b13f9408324ca2992bf720471d2, type: 3}

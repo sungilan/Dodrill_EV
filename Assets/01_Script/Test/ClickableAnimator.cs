@@ -514,8 +514,31 @@ public class ClickableAnimator : MonoBehaviour
             else _animator.SetBool(animParamName, open);
         }
 
+        //string sound = open ? openSound : closeSound;
+        //if(!string.IsNullOrEmpty(sound)) Managers.Sound.Play(sound, Define.Sound.Effect, 1.0f, soundVolume);
+
+        // ── 사운드 재생 디버깅 ──
         string sound = open ? openSound : closeSound;
-        if(!string.IsNullOrEmpty(sound)) Managers.Sound.Play(sound, Define.Sound.Effect, 1.0f, soundVolume);
+
+        Debug.Log($"<color=cyan>[Clickable-Sound]</color> {uniqueId} 사운드 시도: {sound} (Volume: {soundVolume})");
+
+        if(!string.IsNullOrEmpty(sound))
+        {
+            // Managers.Sound.Play가 실행되는지 확인
+            try
+            {
+                Managers.Sound.Play(sound, Define.Sound.Effect, 1.0f, soundVolume);
+                Debug.Log($"<color=lime>[Clickable-Sound]</color> {uniqueId} Managers.Sound.Play 호출 완료");
+            }
+            catch(Exception e)
+            {
+                Debug.LogError($"<color=red>[Clickable-Sound]</color> {uniqueId} 사운드 재생 중 에러 발생: {e.Message}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"<color=yellow>[Clickable-Sound]</color> {uniqueId} 재생할 사운드 파일명이 비어있습니다.");
+        }
 
         // 3. ★ 시나리오 시스템 연동 (핵심) ★
         // "나(uniqueId) 클릭됐어!"라고 신호를 보냅니다.

@@ -4,10 +4,13 @@ using FishNet.Broadcast;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
 using FishNet.Transporting;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
+
 
 // ============================================================
 //  ScenarioRunner.cs
@@ -224,16 +227,68 @@ public class ScenarioRunner : MonoBehaviour
 
     private void CompleteCurrentTask()
     {
-        if (!_isRunning) return;
+        if(!_isRunning) return;
 
+        // 1. 완료된 태스크의 정보(Title) 가져오기
+        var taskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
+        var config = _data.GetModuleConfig(taskDef.moduleId);
+
+        string taskTitle = string.Empty;
+        if(config != null && config.extra != null)
+        {
+            foreach(var kv in config.extra)
+            {
+                if(kv.key == "title")
+                {
+                    taskTitle = kv.GetLocalized();
+                    break;
+                }
+            }
+        }
+        if(string.IsNullOrEmpty(taskTitle)) taskTitle = taskDef.moduleId;
+
+        // 2. SessionPlayerServer의 private _players 딕셔너리에서 이름 가져오기 (리플렉션 사용)
+        string activePlayerName = "알 수 없는 플레이어";
+
+        // 씬에 있는 SessionPlayerServer 인스턴스를 찾습니다.
+        var sessionServer = FindFirstObjectByType<SessionPlayerServer>();
+        if(sessionServer != null)
+        {
+            // 리플렉션을 통해 private 필드인 _players에 접근
+            var field = typeof(SessionPlayerServer).GetField("_players",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            if(field != null)
+            {
+                var playersDict = field.GetValue(sessionServer) as Dictionary<int, SessionPlayerEntry>;
+                if(playersDict != null && playersDict.TryGetValue(_activePlayerId, out var entry))
+                {
+                    activePlayerName = entry.displayName;
+                }
+            }
+        }
+
+        // 3. 모든 클라이언트에게 알림 브로드캐스트 전송
+        if(InstanceFinder.IsServerStarted)
+        {
+            InstanceFinder.ServerManager.Broadcast(new TaskNotificationBroadcast
+            {
+                clientId = _activePlayerId,
+                clientName = activePlayerName,
+                taskName = taskTitle
+            });
+        }
+
+        // --- 기존 로직 유지 ---
+        BroadcastSound("Task_Success", 1.0f);
         _currentModule?.OnComplete();
         _currentTaskState.status = TaskStatus.Completed;
         _retryCount = 0;
-        // 현재 Task 오브젝트 디스폰 (FishNet이 클라이언트에 자동 제거)
+
         _spawner?.DespawnCurrentTask();
         BroadcastState();
 
-        Debug.Log($"[ScenarioRunner] Task[{_currentTaskState.taskIndex}] 완료");
+        Debug.Log($"[ScenarioRunner] Task[{_currentTaskState.taskIndex}] 완료 - 진행자: {activePlayerName}");
 
         int next = _currentTaskState.taskIndex + 1;
         StartTask(next);
@@ -242,7 +297,7 @@ public class ScenarioRunner : MonoBehaviour
     private void FailCurrentTask()
     {
         if (!_isRunning) return;
-
+        BroadcastSound("Task_Fail", 1.0f);
         _currentModule?.OnFail();
         _currentTaskState.status = TaskStatus.Failed;
         _retryCount++;
@@ -289,15 +344,16 @@ public class ScenarioRunner : MonoBehaviour
         if (_taskLocked || !_isRunning) return;
         if (signal.taskIndex != _currentTaskState.taskIndex) return;
 
-        _completedClients.Add(signal.clientId);
-        _currentTaskState.completedClientIds.Add(signal.clientId);
+        // 클라이언트가 보낸 clientId는 신뢰하지 않음 — 데디케이티드 서버에서 연결의 ClientId만 사용
+        int id = conn.IsValid ? conn.ClientId : signal.clientId;
+        _completedClients.Add(id);
 
-        // [추가] 첫 인터랙션 → 진행자 등록
+        // 첫 인터랙션 → 진행자 등록 (아직 아무도 시작 안 했으면)
         if(_activePlayerId < 0)
-        {
-            _activePlayerId = signal.clientId;
-            Debug.Log($"[ScenarioRunner] 진행자 등록 — clientId={_activePlayerId}");
-        }
+            _activePlayerId = id;
+
+        // 완료자 목록을 즉시 동기화 (activePlayerId 갱신용)
+        BroadcastState();
 
         var taskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
         if (EvaluateCompletion(taskDef.completionMode))
@@ -312,13 +368,25 @@ public class ScenarioRunner : MonoBehaviour
     {
         if (!_isRunning) return;
         if (signal.taskIndex != _currentTaskState.taskIndex) return;
-        InteractionEvents.FireItemUsed(signal.itemId);
+
+        // [검증] 현재 태스크에서 요구하는 아이템인지 확인 (선택 사항이지만 권장)
+        var config = _data.GetModuleConfig(_data.scenario.tasks[signal.taskIndex].moduleId);
+        bool isValidItem = config?.requiredItems == null || config.requiredItems.Count == 0
+                           || config.requiredItems.Contains(signal.itemId);
+
+        if(isValidItem)
+        {
+            // 정답 아이템을 사용했을 때만 진행자 등록 및 UI 불 켜기
+            RegisterActivePlayer(conn, signal.clientId);
+            InteractionEvents.FireItemUsed(signal.itemId);
+        }
     }
 
     private void OnReceiveItemGrabbed(NetworkConnection conn, ItemGrabbedSignal signal, Channel channel)
     {
         if (!_isRunning) return;
         if (signal.taskIndex != _currentTaskState.taskIndex) return;
+        RegisterActivePlayer(conn, signal.clientId);
         InteractionEvents.FireItemGrabbed(signal.itemId);
     }
 
@@ -326,6 +394,16 @@ public class ScenarioRunner : MonoBehaviour
     {
         if (!_isRunning) return;
         if (signal.taskIndex != _currentTaskState.taskIndex) return;
+
+        // [검증] 요청된 moduleId가 현재 태스크와 일치하는지 확인
+        var taskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
+        if(!string.IsNullOrEmpty(signal.moduleId) && !signal.moduleId.Equals(taskDef.moduleId, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        // 올바른 확인(Confirm) 신호일 때만 진행자 등록 및 UI 불 켜기
+        RegisterActivePlayer(conn, signal.clientId);
         InteractionEvents.FireTaskConfirmed(signal.moduleId);
     }
 
@@ -343,34 +421,31 @@ public class ScenarioRunner : MonoBehaviour
 
     private void OnReceiveZoneSignal(NetworkConnection conn, ZoneInteractionSignal signal, Channel channel)
     {
+        // 1. 기본 상태 검증
         if(_taskLocked || !_isRunning) return;
         if(signal.taskIndex != _currentTaskState.taskIndex) return;
-
-        // 진행자 등록
-        if(_activePlayerId < 0)
-        {
-            _activePlayerId = signal.clientId;
-            Debug.Log($"[ScenarioRunner] 진행자 등록 (Zone) — clientId={_activePlayerId}");
-        }
 
         var taskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
         var config = _data.GetModuleConfig(taskDef.moduleId);
 
         // ── [공통] 타겟 ID 결정 로직 ─────────────────
-        // JSON에 targetZoneId가 적혀있으면 그것을 쓰고, 비어있으면 targetObjName을 정답으로 간주합니다.
+        // JSON에 targetZoneId가 적혀있으면 그것을 쓰고, 비어있으면 targetObjName을 정답으로 간주
         string officialTargetId = string.IsNullOrEmpty(config?.targetZoneId) ? config?.targetObjName : config?.targetZoneId;
 
         // ── IStepAwareModule 경로 (다단계 Task) ─────────────────
         if(_currentModule is IStepAwareModule stepModule && stepModule.IsCurrentStepGrabZone)
         {
+            // [검증] 단계별 존 ID 확인
             string stepZoneId = stepModule.CurrentStepZoneId;
-            // 다단계 모듈에서도 필요시 officialTargetId 로직을 적용할 수 있으나, 
-            // 보통 stepModule은 내부 데이터가 우선이므로 우선 기존 유지 후 필요시 수정
             if(!string.IsNullOrEmpty(stepZoneId) && stepZoneId != signal.zoneId) return;
 
+            // [검증] 단계별 요구 아이템 확인
             var stepItems = stepModule.CurrentStepRequiredItems;
             bool validStep = stepItems.Count == 0 || stepItems.Contains(signal.itemId);
             if(!validStep) return;
+
+            // [핵심 추가] 검증 통과 후 진행자 등록 및 UI 갱신
+            RegisterActivePlayer(conn, signal.clientId);
 
             _taskLocked = true;
 
@@ -398,26 +473,35 @@ public class ScenarioRunner : MonoBehaviour
             return;
         }
 
-        // ── 기존 단일 스텝 경로 (수정 핵심 지점) ─────────────────────
+        // ── 기존 단일 스텝 경로 ─────────────────────
 
-        // [수정된 비교 로직] config.targetZoneId 직접 비교 대신 officialTargetId 사용
+        // 1. [검증] 타겟 ID(Zone 또는 ObjName) 일치 여부 확인
         if(!string.IsNullOrEmpty(officialTargetId) && officialTargetId != signal.zoneId)
         {
-            Debug.LogWarning($"[ScenarioRunner] ID 불일치 무시: 서버기다림({officialTargetId}) vs 클라보냄({signal.zoneId})");
+            // 오답일 경우 로그만 남기고 조용히 리턴 (UI 불 안 켜짐)
+            Debug.LogWarning($"[ScenarioRunner] 오답 존 터치 무시: 서버기다림({officialTargetId}) vs 클라보냄({signal.zoneId})");
             return;
         }
 
+        // 2. [검증] 아이템 일치 여부 확인
         var required = config?.requiredItems;
         bool validItem = required == null || required.Count == 0 || required.Contains(signal.itemId);
-        if(!validItem) return;
+        if(!validItem)
+        {
+            Debug.LogWarning($"[ScenarioRunner] 잘못된 아이템 사용 무시: {signal.itemId}");
+            return;
+        }
+
+        // 3. [핵심 추가] 모든 검증 통과 시점에 진행자 등록 및 UI 갱신
+        RegisterActivePlayer(conn, signal.clientId);
 
         _taskLocked = true;
 
-        // 존 비활성화 처리 (targetZoneId가 있을 때만)
+        // 존 비활성화 처리
         if(!string.IsNullOrEmpty(config?.targetZoneId))
             TaskInteractionZone.Find(config.targetZoneId)?.Deactivate();
 
-        // 스냅 가이드 찾기
+        // 스냅 가이드 찾기 및 연출 브로드캐스트
         string guideIdSingle = string.Empty;
         if(taskDef.spawnObjects != null)
         {
@@ -453,25 +537,30 @@ public class ScenarioRunner : MonoBehaviour
         Debug.Log($"<color=lime>[ScenarioRunner] 단계 완료 승인</color>: zone={signal.zoneId}, task={_currentTaskState.taskIndex}");
     }
 
+    /// <summary>
+    /// 유효한 상호작용이 확인된 후 호출하여 진행자를 등록하고 상태를 알립니다.
+    /// </summary>
+    private void RegisterActivePlayer(NetworkConnection conn, int signalClientId)
+    {
+        if(_activePlayerId < 0)
+        {
+            int id = conn.IsValid ? conn.ClientId : signalClientId;
+            _activePlayerId = id;
+            Debug.Log($"<color=cyan>[ScenarioRunner]</color> 정답 확인됨. 진행자 등록: {id}");
+
+            // 진행자 정보가 포함된 상태를 즉시 브로드캐스트하여 UI 불을 켭니다.
+            BroadcastState();
+        }
+    }
+
     private void OnReceiveValueMeasured(NetworkConnection conn, ValueMeasuredSignal signal, Channel channel)
     {
         Debug.Log($"<color=white>[Runner-Check]</color> 서버에 신호 도착함! Task:{signal.taskIndex}");
+
         // ── [1단계] 서버 상태 확인 ──
-        if(!_isRunning)
+        if(!_isRunning || _taskLocked || _currentModule == null)
         {
-            Debug.LogWarning($"<color=red>[Runner-Measure]</color> 신호 무시: 서버가 실행 중이 아님.");
-            //return;
-        }
-
-        if(_taskLocked)
-        {
-            Debug.LogWarning($"<color=orange>[Runner-Measure]</color> 신호 무시: 현재 태스크가 잠금(Lock) 상태임 (이전 연출 진행 중 가능성).");
-            //return;
-        }
-
-        if(_currentModule == null)
-        {
-            Debug.LogError($"<color=red>[Runner-Measure]</color> 신호 에러: 현재 실행 중인 모듈이 없음.");
+            Debug.LogWarning($"<color=orange>[Runner-Measure]</color> 신호 무시: 서버 상태 비정상 (Running:{_isRunning}, Locked:{_taskLocked})");
             //return;
         }
 
@@ -483,7 +572,6 @@ public class ScenarioRunner : MonoBehaviour
         }
 
         // ── [3단계] 모듈 타입 캐스팅 확인 ──
-        // ITaskModule을 ZoneAndMeasureModule로 변환할 수 있는지 확인
         if(_currentModule is ZoneAndMeasureModule measureModule)
         {
             Debug.Log($"<color=cyan>[Runner-Measure]</color> <b>검증 시작</b>: 단자={signal.terminalId}, 값={signal.value:F2}");
@@ -496,6 +584,9 @@ public class ScenarioRunner : MonoBehaviour
             {
                 Debug.Log($"<color=lime>[Runner-Measure]</color> <b>✅ 판정 성공</b>: 다음 단계로 전이 시작.");
 
+                // [핵심 추가] 정답 확인 시점에 진행자 등록 및 UI 상태 알림
+                RegisterActivePlayer(conn, signal.clientId);
+
                 _taskLocked = true;
 
                 // JSON 설정 로드
@@ -504,24 +595,15 @@ public class ScenarioRunner : MonoBehaviour
 
                 float delay = ParseExtraFloat(config, "snapDelay", 1.5f);
 
-                // [추가] 첫 인터랙션 진행자 등록 (세션 관리용)
-                if(_activePlayerId < 0)
-                {
-                    _activePlayerId = signal.clientId;
-                    Debug.Log($"[Runner-Measure] 진행자 등록: ClientId={_activePlayerId}");
-                }
-
                 StartCoroutine(CompleteAfterSnapDelay(delay));
             }
             else
             {
-                // 이 로그가 찍힌다면 ID가 틀렸거나 값이 오차 범위를 벗어난 것입니다.
                 Debug.LogWarning($"<color=white>[Runner-Measure]</color> 모듈 전달 완료했으나 <b>조건 미충족</b> (ID 불일치 혹은 값 범위 초과)");
             }
         }
         else
         {
-            // ★ 가장 중요한 체크 포인트: 현재 모듈의 실제 클래스 타입을 출력
             Debug.LogError($"<color=red>[Runner-Measure]</color> 타입 불일치 에러: " +
                            $"현재 모듈은 <b>{_currentModule.GetType().Name}</b>이며, ZoneAndMeasureModule이 아닙니다.");
         }
@@ -624,18 +706,33 @@ public class ScenarioRunner : MonoBehaviour
 
     // ── Broadcast ─────────────────────────
 
+    //private void BroadcastState()
+    //{
+    //    if (!InstanceFinder.IsServerStarted) return;
+
+    //    var broadcast = new TaskStateBroadcast
+    //    {
+    //        currentTask = _currentTaskState,
+    //        totalTaskCount = _data?.scenario.tasks.Count ?? 0,
+    //    };
+
+    //    InstanceFinder.ServerManager.Broadcast(broadcast);
+    //    SessionPlayerServer.NotifyActivePlayer(_activePlayerId);
+    //}
+
     private void BroadcastState()
     {
-        if (!InstanceFinder.IsServerStarted) return;
-
-        var broadcast = new TaskStateBroadcast
-        {
-            currentTask = _currentTaskState,
-            totalTaskCount = _data?.scenario.tasks.Count ?? 0,
-        };
-
-        InstanceFinder.ServerManager.Broadcast(broadcast);
+        if(!InstanceFinder.IsServerStarted) return;
+        _currentTaskState.completedClientIds = _completedClients.ToList();
+        _currentTaskState.activePlayerId = _activePlayerId;
+        Debug.Log($"[Runner][BroadcastState] completedClients={string.Join(",", _completedClients)} activePlayerId={_activePlayerId}");
+        // TaskState와 동일한 진행자 ID로 세션 플레이어 목록 브로드캐스트 (User-State 패널 배경)
         SessionPlayerServer.NotifyActivePlayer(_activePlayerId);
+        InstanceFinder.ServerManager.Broadcast(new TaskStateBroadcast { currentTask = _currentTaskState, totalTaskCount = TotalCount });
+
+        // 데디케이티드 서버: 클라이언트로만 나가는 브로드캐스트를 로컬에서도 한 번 반영 (애니·존 동기화 등).
+        if(InstanceFinder.IsServerStarted && !InstanceFinder.IsClientStarted)
+            ScenarioStateReceiver.MirrorServerTaskStateForLocalSubscribers(_currentTaskState, TotalCount);
     }
 
     // ── 디버그 커맨드용 public API ─────────
@@ -677,5 +774,29 @@ public class ScenarioRunner : MonoBehaviour
     {
         public List<string> requiredItemIds;
         public string targetZoneId;
+    }
+
+    public struct PlaySoundBroadcast : IBroadcast
+    {
+        public string soundName;
+        public float volume;
+    }
+
+    public struct TaskNotificationBroadcast : FishNet.Broadcast.IBroadcast
+    {
+        public int clientId;      // 행동을 한 플레이어 ID
+        public string clientName;  // 플레이어 이름 (UserInfo.UserName 기반)
+        public string taskName;    // 완료한 단계 명칭
+    }
+
+    private void BroadcastSound(string soundName, float volume = 1.0f)
+    {
+        if(!InstanceFinder.IsServerStarted) return;
+
+        InstanceFinder.ServerManager.Broadcast(new PlaySoundBroadcast
+        {
+            soundName = soundName,
+            volume = volume
+        });
     }
 }

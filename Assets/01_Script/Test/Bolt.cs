@@ -29,21 +29,27 @@ public class Bolt : MonoBehaviour
 
     public void InteractWithTool(float deltaProgress)
     {
-        if (isBroken) return;
+        if(isBroken) return;
 
         float prevProgress = _progress;
-
-        // 분해/조립 로직에 따른 progress 가감
         _progress += deltaProgress;
         _progress = Mathf.Clamp01(_progress);
 
-        // UI 표시 (값이 1.0이어도 ShowProgress를 호출하여 슬라이더가 꽉 차게 함)
         string msg = isAssembleMode ? "볼트 체결 중..." : "볼트 해제 중...";
-        if (_progress >= 1.0f) msg = isAssembleMode ? "체결 완료" : "해제 완료";
+        string instruction = "작업을 완료할 때까지 키를 유지하세요.";
 
-        InteractionProgressBarUI.Instance?.ShowProgress(_progress, msg, gameObject.name);
+        if(_progress >= 1.0f)
+        {
+            // [완료] 완료되는 순간 UI를 즉시 숨기거나 완료 문구 표시
+            InteractionProgressBarUI.Instance?.HideBoltProgress();
+        }
+        else
+        {
+            // [진행] 실시간 UI 업데이트
+            InteractionProgressBarUI.Instance?.ShowBoltProgress(_progress, msg, gameObject.name, instruction);
+        }
 
-        if (prevProgress < 1.0f && _progress >= 1.0f)
+        if(prevProgress < 1.0f && _progress >= 1.0f)
         {
             OnBoltLoosened?.Invoke(this);
         }
