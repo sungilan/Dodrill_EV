@@ -201,21 +201,52 @@ public class MiniMapController : MonoBehaviour {
 		}
 	}
 
-	//Register's minimap objects here
-	public MapObject RegisterMapObject(GameObject owner, MiniMapEntity mme){
-		GameObject curMGO = Instantiate (iconPref);
-		MapObject curMO = curMGO.AddComponent<MapObject> ();
-		curMO.SetMiniMapEntityValues (this,mme,owner,mapCamera,miniMapPanel);
-		ownerIconMap.Add (owner, curMGO);
-		return owner.GetComponent<MapObject>();
-	}
+    // Register's minimap objects here
+    public MapObject RegisterMapObject(GameObject owner, MiniMapEntity mme)
+    {
+        if(owner == null || iconPref == null) return null;
 
-	//Unregister's minimap objects here
-	public void UnregisterMapObject(MapObject mmo, GameObject owner){
-		if (ownerIconMap.ContainsKey (owner)) {
-			Destroy (ownerIconMap [owner]);
-			ownerIconMap.Remove (owner);
-		}
-		Destroy (mmo);
-	}
+        // 1. 아이콘 생성
+        GameObject curMGO = Instantiate(iconPref);
+        curMGO.name = "Icon_" + owner.name; // 디버깅 용이성
+
+        // 2. MapObject 컴포넌트 추가 및 초기화
+        MapObject curMO = curMGO.AddComponent<MapObject>();
+
+        // 3. 내부 값 설정 (이 함수 내부에서 spr 이미지가 할당되어야 함)
+        curMO.SetMiniMapEntityValues(this, mme, owner, mapCamera, miniMapPanel);
+
+        // 4. 딕셔너리 관리 (이미 등록된 경우 예외처리)
+        if(ownerIconMap.ContainsKey(owner))
+        {
+            Destroy(ownerIconMap[owner]);
+            ownerIconMap.Remove(owner);
+        }
+        ownerIconMap.Add(owner, curMGO);
+
+        // ★ 수정: 생성된 curMO를 직접 리턴합니다.
+        return curMO;
+    }
+
+    // 아이콘 참조를 안전하게 다시 가져오는 헬퍼 메서드 추가
+    public MapObject GetMapObject(GameObject owner)
+    {
+        if(ownerIconMap.TryGetValue(owner, out GameObject iconGO))
+        {
+            return iconGO.GetComponent<MapObject>();
+        }
+        return null;
+    }
+
+    // Unregister's minimap objects here
+    public void UnregisterMapObject(MapObject mmo, GameObject owner)
+    {
+        if(owner != null && ownerIconMap.ContainsKey(owner))
+        {
+            Destroy(ownerIconMap[owner]);
+            ownerIconMap.Remove(owner);
+        }
+        // mmo가 curMGO에 붙어있으므로 위에서 Destroy될 것이지만, 안전을 위해 체크
+        if(mmo != null) Destroy(mmo);
+    }
 }

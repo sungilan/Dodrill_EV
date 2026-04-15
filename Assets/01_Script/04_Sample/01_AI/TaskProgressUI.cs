@@ -165,18 +165,38 @@ namespace DoDrill.Training
         {
             if(_notifCanvasGroup == null || _notifText == null) return;
 
-            // 텍스트 구성 (요청하신 색상 적용)
-            string pColor = "#00f800";
-            _notifText.text = $"<color={pColor}>{msg.clientName}</color>(이)가\n{msg.taskName}를 완료하였습니다.";
+            // ── 1. 이름 결정 로직 (ScenarioRunner가 보낸 이름을 우선 사용) ──
+            string activePlayerName = msg.clientName;
 
-            // DOTween 연출
-            _notifCanvasGroup.DOKill(); // 기존 연출 중단
+            // 만약 서버에서 이름을 못 찾아서 빈 값으로 왔을 경우의 폴백
+            if(string.IsNullOrEmpty(activePlayerName))
+            {
+                activePlayerName = $"플레이어 {msg.clientId}";
+            }
+
+            // ── 2. 텍스트 구성 및 색상 적용 ──
+            // 요청하신 형광 초록 계열 색상 (#00f800) 적용
+            string pColor = "#00f800";
+            _notifText.text = $"<color={pColor}><b>{activePlayerName}</b></color>(이)가\n<b>{msg.taskName}</b>를 완료하였습니다.";
+
+            // ── 3. DOTween 연출 (나타났다 사라지기) ──
+            _notifCanvasGroup.DOKill(); // 진행 중인 연출 즉시 중단
 
             Sequence seq = DOTween.Sequence();
-            seq.Append(_notifCanvasGroup.DOFade(1f, 0.5f)); // 나타나기
-            seq.AppendInterval(_displayDuration);           // 대기
-            seq.Append(_notifCanvasGroup.DOFade(0f, 0.5f)); // 사라지기
+
+            // UI 초기화
+            _notifCanvasGroup.alpha = 0f;
+            _notifCanvasGroup.gameObject.SetActive(true);
+
+            // 연출 시작
+            seq.Append(_notifCanvasGroup.DOFade(1f, 0.5f).SetEase(Ease.OutCubic)); // 부드럽게 나타남
+            seq.AppendInterval(_displayDuration);                                 // 설정된 시간만큼 대기
+            seq.Append(_notifCanvasGroup.DOFade(0f, 0.8f).SetEase(Ease.InSine));   // 천천히 사라짐
+            seq.OnComplete(() => {
+                _notifCanvasGroup.gameObject.SetActive(false);
+            });
         }
+
         private void Refresh(TaskState state)
         {
             if(_boltProgressText != null) _boltProgressText.gameObject.SetActive(false);

@@ -294,14 +294,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dbf9db670c1df4bb2843b82560ce5409, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MiniMapComponent
-  icon: {fileID: 21300000, guid: 3945e64e75cc0964aa1984cb083d0f77, type: 3}
+  icon: {fileID: 21300000, guid: de31bc3373f137d43b0626e6a46e71b9, type: 3}
   size: {x: 40, y: 40}
   rotateWithObject: 0
   upAxis: {x: 0, y: 1, z: 0}
   initialIconRotation: 0
-  clampIconInBorder: 1
-  clampDistance: 100
-  myMapName: "\uC808\uC5F0\uD654"
+  localizedName:
+    ko: "\uC808\uC5F0\uD654"
+    en: InsulatedShoes
+    vi: 
+  showNameOnMap: 1
+  blinkDuration: 0.6
+  outlineColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  outlineDistance: {x: 2, y: -2}
 --- !u!1001 &3778246483241396533
 PrefabInstance:
   m_ObjectHideFlags: 0

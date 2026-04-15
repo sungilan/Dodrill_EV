@@ -347,7 +347,7 @@ MonoBehaviour:
   screwColor: {r: 0, g: 1, b: 0, a: 1}
   wrenchAnimator: {fileID: 4149966975364610757}
   targetOutlineColor: {r: 1, g: 1, b: 0, a: 1}
-  restoreOutlineColor: {r: 0, g: 1, b: 1, a: 1}
+  restoreOutlineColor: {r: 0.8627451, g: 0.078431375, b: 0.23529412, a: 1}
   outlineWidth: 4
   workAudio: {fileID: 6881486310345852208}
   workKey: 102
@@ -521,6 +521,11 @@ MonoBehaviour:
   rotateWithObject: 0
   upAxis: {x: 0, y: 1, z: 0}
   initialIconRotation: 0
-  clampIconInBorder: 1
-  clampDistance: 100
-  myMapName: "\uC784\uD329\uD2B8\uB80C\uCE58"
+  localizedName:
+    ko: "\uC784\uD329\uD2B8 \uB80C\uCE58"
+    en: ImpactWrench
+    vi: 
+  showNameOnMap: 1
+  blinkDuration: 0.6
+  outlineColor: {r: 0.8627451, g: 0.078431375, b: 0.23529412, a: 1}
+  outlineDistance: {x: 2, y: -2}

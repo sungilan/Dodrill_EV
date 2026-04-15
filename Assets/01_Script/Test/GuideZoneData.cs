@@ -16,4 +16,5 @@ public class GuideZoneData : MonoBehaviour
 
     [Header("진행도 설정")]
     public bool showProgress = false;
+    public bool showGuide = false;
 }

@@ -79,13 +79,6 @@
             "spawnPointId": "SP_Driver_Seat",
             "guideId": "Guide_LockBox",
             "targetGuideId": ""
-          },
-          {
-            "prefabId": "GDS_Tablet_In",
-            "spawnPointId": "SP_GDS_Tablet_In",
-            "guideId": "",
-            "targetGuideId": "",
-            "showGuide": false
           }
         ]
       },
@@ -97,7 +90,7 @@
           {
             "prefabId": "FaceShield",
             "spawnPointId": "SP_Cart_Drawer",
-            "guideId": "",
+            "guideId": "Guide_FaceShield",
             "targetGuideId": ""
           }
         ]
@@ -110,7 +103,7 @@
           {
             "prefabId": "InsulatedShoes",
             "spawnPointId": "SP_Cart_Drawer",
-            "guideId": "",
+            "guideId": "Guide_Shoes",
             "targetGuideId": ""
           }
         ]
@@ -123,7 +116,7 @@
           {
             "prefabId": "InsulatedGloves",
             "spawnPointId": "SP_Cart_Drawer",
-            "guideId": ""
+            "guideId": "Guide_Gloves"
           }
         ]
       },
@@ -140,6 +133,19 @@
         "spawnObjects": []
       },
       {
+        "moduleId": "LOTO_WarringSign",
+        "timeout": 90,
+        "completionMode": "AllPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "WarringSign",
+            "spawnPointId": "SP_WarringSign",
+            "guideId": "Guide_WarringSign",
+            "targetGuideId": ""
+          }
+        ]
+      },
+      {
         "moduleId": "Front_Cover_Removal",
         "timeout": 120,
         "completionMode": "AnyPlayer",
@@ -147,7 +153,7 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Lift"
+            "guideId": ""
           }
         ]
       },
@@ -262,12 +268,6 @@
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
             "guideId": "BatteryPack_Bolts1"
-          },
-          {
-            "prefabId": "Batteryjack",
-            "spawnPointId": "SP_Battery_Under_Default",
-            "guideId": "",
-            "targetGuideId": ""
           }
         ]
       },
@@ -279,13 +279,75 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": "BatteryPack_Bolts2"
+            "guideId": ""
           },
           {
-            "prefabId": "Batteryjack",
-            "spawnPointId": "SP_Battery_Under_Default",
-            "guideId": "",
-            "targetGuideId": ""
+            "prefabId": "BatteryPack_Disassemble",
+            "spawnPointId": "SP_Battery",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "PRA_Removal",
+        "timeout": 300,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "BatteryPack_Open",
+            "spawnPointId": "SP_Battery",
+            "guideId": "Guide_PRA_Location"
+          }
+        ]
+      },
+      {
+        "moduleId": "PRA_Replace",
+        "timeout": 300,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "BatteryPack_Open",
+            "spawnPointId": "SP_Battery",
+            "guideId": ""
+          },
+          {
+            "prefabId": "New_PRA_Unit",
+            "spawnPointId": "SP_NewPRA",
+            "guideId": "Guide_PRA_Zone"
+          }
+        ]
+      },
+      {
+        "moduleId": "BatteryPackTopCover_Move",
+        "timeout": 600,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "BatteryPackTopCover",
+            "spawnPointId": "SP_NewPRA",
+            "guideId": ""
+          },
+          {
+            "prefabId": "BatteryPack_Open",
+            "spawnPointId": "SP_Battery",
+            "guideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "BatteryPackTopCover_Assemble",
+        "timeout": 600,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": ""
+          },
+          {
+            "prefabId": "BatteryPack_Assemble",
+            "spawnPointId": "SP_Battery",
+            "guideId": ""
           }
         ]
       },
@@ -298,35 +360,6 @@
             "prefabId": "Megger",
             "spawnPointId": "SP_Cart_Top",
             "guideId": "Guide_Battery_Main_Terminal"
-          }
-        ]
-      },
-      {
-        "moduleId": "PRA_Removal",
-        "timeout": 300,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "Battery",
-            "spawnPointId": "SP_Battery",
-            "guideId": "Guide_PRA_Location"
-          },
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": "BatteryPack_Bolts2"
-          }
-        ]
-      },
-      {
-        "moduleId": "PRA_Replace",
-        "timeout": 300,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "New_PRA_Unit",
-            "spawnPointId": "SP_Parts_Shelf",
-            "guideId": "Guide_PRA_Location"
           }
         ]
       },
@@ -513,7 +546,7 @@
         "requiredItems": [
           "SmartKey"
         ],
-        "targetObjName": "SmartKey",
+        "targetObjName": "Guide_LockBox",
         "targetZoneId": "LockBox_Zone",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -748,7 +781,7 @@
           },
           {
             "key": "guideText",
-            "ko": "MSD 탈거 후에도 인버터 커패시터에 수백 볼트가 남습니다. 전압이 완전히 방전될 때까지 절대 작업을 진행하지 마세요. 실제 정비환경에서는 캐패시터 방전을 위해 최소 5분을 대기해야 합니다.",
+            "ko": "MSD 탈거 후에도 인버터 캐패시터에 수백 볼트가 남습니다. 전압이 완전히 방전될 때까지 절대 작업을 진행하지 마세요. 실제 정비환경에서는 캐패시터 방전을 위해 최소 5분을 대기해야 합니다.",
             "en": "Even after MSD removal, inverter capacitors retain hundreds of volts. Never proceed until fully discharged. Waiting at least 5 minutes is mandatory.",
             "vi": "Ngay cả sau khi tháo MSD, tụ điện biến tần vẫn giữ hàng trăm volt. Không bao giờ tiến hành cho đến khi phóng hết. Phải chờ ít nhất 5 phút."
           },
@@ -767,6 +800,46 @@
             "key": "resultNote",
             "ko": "캐패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 최소 5분 이상 대기 권장.",
             "en": "캐패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 최소 5분 이상 대기 권장."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "LOTO_WarringSign",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "WarringSign"
+        ],
+        "targetObjName": "Guide_WarringSign",
+        "targetZoneId": "WarringSign_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "고전압 차단 표지판",
+            "en": "Smart Key Lock-Out",
+            "vi": "Khóa chìa khóa thông minh"
+          },
+          {
+            "key": "description",
+            "ko": "스마트키를 잠금박스에 넣어 차량 시동을 차단하세요.",
+            "en": "Place the smart key in the lock box to prevent vehicle start.",
+            "vi": "Đặt chìa khóa thông minh vào hộp khóa để ngăn khởi động xe."
+          },
+          {
+            "key": "guideText",
+            "ko": "LOTO 절차의 첫 단계입니다. 스마트키를 잠금박스에 보관하면 작업 중 제3자가 차량을 시동할 수 없어 고전압 회로 활성화를 원천 차단합니다.",
+            "en": "First LOTO step. Locking the smart key prevents anyone from starting the vehicle, blocking HV circuit activation during work.",
+            "vi": "Bước LOTO đầu tiên. Khóa chìa khóa ngăn người khác khởi động xe, ngăn kích hoạt mạch HV."
+          },
+          {
+            "key": "subguideText",
+            "ko": "스마트키 → 잠금박스 투입 → 박스 잠금",
+            "en": "Smart key → Lock box → Lock the box",
+            "vi": "Chìa khóa → Hộp khóa → Khóa hộp"
           }
         ]
       }
@@ -1489,6 +1562,46 @@
       }
     },
     {
+      "moduleId": "BatteryPackTopCover_Assemble",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [
+          "ImpactWrench"
+        ],
+        "targetObjName": "",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 팩 커버 재조립",
+            "en": "Battery Pack Install",
+            "vi": "Lắp bộ pin"
+          },
+          {
+            "key": "description",
+            "ko": "배터리 잭으로 팩을 차체에 밀착시키고 전면 볼트를 체결하세요.",
+            "en": "Raise pack with battery jack to chassis and install front bolts.",
+            "vi": "Nâng bộ pin bằng kích vào khung xe và lắp bu lông phía trước."
+          },
+          {
+            "key": "guideText",
+            "ko": "팩을 정확한 위치에 맞춘 후 볼트를 체결합니다. 위치 핀을 먼저 맞추고, 모든 볼트를 손으로 가체결한 뒤 대각선 순서로 규정 토크를 적용하세요.",
+            "en": "Align the pack precisely before tightening. Align guide pins first, hand-tighten all bolts, then apply spec torque in diagonal order.",
+            "vi": "Căn chỉnh bộ pin chính xác. Căn chỉnh chốt dẫn hướng trước, vặn tay tất cả bu lông, sau đó siết theo mô-men quy định theo đường chéo."
+          },
+          {
+            "key": "subguideText",
+            "ko": "위치 핀 맞춤 → 손 조임 → 대각선 순서 체결 (45Nm)",
+            "en": "Align guide pins → Hand-tighten → Diagonal torque (45Nm)",
+            "vi": "Căn chỉnh chốt → Vặn tay → Siết chéo (45Nm)"
+          }
+        ]
+      }
+    },
+    {
       "moduleId": "BatteryPack_Assemble1",
       "config": {
         "actionType": "ConfirmTask",
@@ -2039,11 +2152,11 @@
     {
       "moduleId": "PRA_Removal",
       "config": {
-        "actionType": "ConfirmTask",
+        "actionType": "Swap",
         "requiredItems": [
-          "ImpactWrench"
+          "Old_PRA_Unit"
         ],
-        "targetObjName": "PRA_Unit_Old",
+        "targetObjName": "Old_PRA_Unit",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -2092,8 +2205,57 @@
         "requiredItems": [
           "New_PRA_Unit"
         ],
-        "targetObjName": "PRA_Mount_Location",
+        "targetObjName": "PRA_Install_Zone",
         "targetZoneId": "PRA_Install_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "신품 PRA 장착",
+            "en": "New PRA Installation (Core Repair)",
+            "vi": "Lắp PRA mới (Sửa chữa cốt lõi)"
+          },
+          {
+            "key": "description",
+            "ko": "신품 PRA를 배터리 팩에 장착하세요.",
+            "en": "Install the new PRA onto the battery pack mount.",
+            "vi": "Lắp PRA mới vào giá đỡ của bộ pin."
+          },
+          {
+            "key": "guideText",
+            "ko": "이 단계가 P0AA6 고장의 근본 원인을 완전히 제거하는 핵심 정비입니다. 신품 PRA를 정확한 위치에 장착하고 규정 토크로 체결해야 재발을 방지할 수 있습니다.",
+            "en": "This step completely eliminates the root cause of P0AA6. Install the new PRA precisely and tighten to spec torque to prevent recurrence.",
+            "vi": "Bước này hoàn toàn loại bỏ nguyên nhân gốc rễ P0AA6. Lắp PRA mới chính xác và siết theo mô-men quy định để ngăn tái phát."
+          },
+          {
+            "key": "subguideText",
+            "ko": "PRA 거치 → HV 버스바 연결 (8Nm) → BMS 신호선 연결 → 고정 볼트 체결 (8Nm)",
+            "en": "Place PRA → Connect HV busbar (8Nm) → Connect BMS signal → Tighten bolts (8Nm)",
+            "vi": "Đặt PRA → Kết nối thanh dẫn HV (8Nm) → Kết nối tín hiệu BMS → Siết bu lông (8Nm)"
+          },
+          {
+            "key": "safetyNote",
+            "ko": "신품 PRA 장착 전 절연 저항을 측정하여 신품 PRA 자체의 이상 여부를 확인하세요.",
+            "en": "Verify the new PRA's own insulation before installation."
+          },
+          {
+            "key": "snapDelay",
+            "ko": "2.0"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "BatteryPackTopCover_Move",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "BatteryPackTopCover"
+        ],
+        "targetObjName": "BatteryPackTopCover_Zone",
+        "targetZoneId": "BatteryPackTopCover_Zone",
         "targetValue": 0,
         "toleranceRatio": 0,
         "requiresSafetyCheck": false,

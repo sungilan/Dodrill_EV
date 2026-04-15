@@ -36,8 +36,6 @@ public class InsulationFaultCheckModule : GrabZoneTaskModule
     public override string ModuleId => "InsulationFaultCheck";
 }
 
-
-
 // ──────────────────────────────────────────────────────────────
 //  Task[01] LOTO_Gloves
 //  InsulatedGloves → Player_Hand_Zone 에 가져오면 완료
@@ -46,6 +44,21 @@ public class InsulationFaultCheckModule : GrabZoneTaskModule
 public class LOTO_GlovesModule : GrabAllItemsModule
 {
     public override string ModuleId => "LOTO_Gloves";
+}
+
+public class PRA_RemovalModule : GrabAllItemsModule
+{
+    public override string ModuleId => "PRA_Removal";
+}
+
+public class PRA_ReplaceModule : GrabZoneTaskModule
+{
+    public override string ModuleId => "PRA_Replace";
+}
+
+public class LOTO_WarringSignModule : GrabZoneTaskModule
+{
+    public override string ModuleId => "LOTO_WarringSign";
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -157,203 +170,218 @@ public class Gasket_ReplaceModule : GrabZoneTaskModule
     public override string ModuleId => "Gasket_Replace";
 }
 
-// ──────────────────────────────────────────────────────────────
-//  Task[09] BatteryPack_Assemble
-//  BatteryPack_BoltGroup 재조립 (볼트 체결) 완료 시
-//  DisassemblyManager.onAllPartsAssembled → InteractionEvents.FireTaskConfirmed("BatteryPack_Assemble")
-// ──────────────────────────────────────────────────────────────
-public class BatteryPack_Assemble1Module : ConfirmTaskModule
+public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
 {
-    public override string ModuleId => "BatteryPack_Assemble1";
+    public override string ModuleId => "BatteryPackTopCover_Move";
 }
-public class BatteryPack_Assemble2Module : ConfirmTaskModule
-{
-    public override string ModuleId => "BatteryPack_Assemble2";
-}
-
-public class Connector_Cover_ReInstallModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Connector_Cover_Reinstall";
-}
-
-// ──────────────────────────────────────────────────────────────
-//  Task[10] MSD_Reinstall
-//  MSD_Lever 를 MSD_Port_Zone 에 꽂으면 완료
-// ──────────────────────────────────────────────────────────────
-public class MSD_ReinstallModule : ConfirmTaskModule
-{
-    public override string ModuleId => "MSD_Reinstall";
-}
-
-// ──────────────────────────────────────────────────────────────
-//  Task[11] FinalDiagnosis
-//  GDS_Tablet → OBD_Zone 재연결 + DTC 없음 확인 시 완료
-// ──────────────────────────────────────────────────────────────
-public class FinalDiagnosisModule : GrabZoneTaskModule
-{
-    public override string ModuleId => "FinalDiagnosis";
-}
-
-// ──────────────────────────────────────────────────────────────
-//  일괄 등록 헬퍼
-// ──────────────────────────────────────────────────────────────
-public static class EVModules
-{
-    /// <summary>
-    /// ScenarioBootstrapper.RegisterModules() 안에서 호출:
-    ///   EVModules.RegisterAll(Registry);
-    /// </summary>
-    public static void RegisterAll(ModuleRegistry registry)
+    // ──────────────────────────────────────────────────────────────
+    //  Task[09] BatteryPack_Assemble
+    //  BatteryPack_BoltGroup 재조립 (볼트 체결) 완료 시
+    //  DisassemblyManager.onAllPartsAssembled → InteractionEvents.FireTaskConfirmed("BatteryPack_Assemble")
+    // ──────────────────────────────────────────────────────────────
+    public class BatteryPackTopCover_AssembleModule : ConfirmTaskModule
     {
-        // 기존 등록 로직
-        registry.Register(new InitialDiagnosisModule());
-        registry.Register(new LOTO_GlovesModule());
-        registry.Register(new MSD_RemovalModule());
-        registry.Register(new DischargeWaitModule());
-        registry.Register(new Voltage_VerificationModule());
-        registry.Register(new HV_FrontVoltageModule());
-        registry.Register(new HV_RearVoltageModule());
-        registry.Register(new BatteryPack_Disassemble1Module());
-        registry.Register(new BatteryPack_Disassemble2Module());
-        registry.Register(new Insulation_MeasureModule());
-        registry.Register(new Contamination_CleanModule());
-        registry.Register(new Gasket_ReplaceModule());
-        registry.Register(new BatteryPack_Assemble1Module());
-        registry.Register(new BatteryPack_Assemble2Module());
-        registry.Register(new Connector_Cover_ReInstallModule());
-        registry.Register(new MSD_ReinstallModule());
-        registry.Register(new FinalDiagnosisModule());
-
-        // ★ [중요] 누락된 v2 시나리오 추가 모듈 9개 등록 ★
-        registry.Register(new LOTO_SmartKeyModule());      // 시나리오 2번째 단계
-        registry.Register(new LOTO_FaceShieldModule());    // 시나리오 3번째 단계
-        registry.Register(new LOTO_ShoesModule());        // 시나리오 4번째 단계
-        registry.Register(new Front_Cover_RemovalModule());
-        registry.Register(new Rear_Cover_RemovalModule());
-        registry.Register(new Battery_Cover_RemovalModule());
-        registry.Register(new Connector_Cover_RemovalModule());
-        registry.Register(new HV_Front_DisconnectModule());
-        registry.Register(new HV_Front_ConnectModule());
-        registry.Register(new HV_Rear_DisconnectModule());
-        registry.Register(new HV_Rear_ConnectModule());
-        registry.Register(new ICCU_DisconnectModule());
-        registry.Register(new ICCU_ConnectModule());
-        registry.Register(new BMU_DisconnectModule());
-        registry.Register(new BMU_ConnectModule());
-        registry.Register(new Ground_RemovalModule());
-        registry.Register(new Ground_ReinstallModule());
-        registry.Register(new Coolant_Hose_InModule());
-        registry.Register(new Coolant_Hose_In_ConnectModule());
-        registry.Register(new Coolant_Hose_OutModule());
-        registry.Register(new Coolant_Hose_Out_ConnectModule());
-        registry.Register(new BatteryPack_LoweringModule());
-        registry.Register(new InsulationResistanceTestModule()); 
-        Debug.Log($"[EVModules] P0AA6 시나리오 전체 모듈 등록 완료 (v2 포함)");
+        public override string ModuleId => "BatteryPackTopCover_Assemble";
     }
-}
 
-// ──────────────────────────────────────────────────────────────
-//  v2 시나리오 추가 모듈 (9개)
-//  모두 ConfirmTaskModule 상속 — 타겟 GO 클릭 or TaskCompleteSignal로 완료
-// ──────────────────────────────────────────────────────────────
+    public class BatteryPack_Assemble1Module : ConfirmTaskModule
+    {
+        public override string ModuleId => "BatteryPack_Assemble1";
+    }
+    public class BatteryPack_Assemble2Module : ConfirmTaskModule
+    {
+        public override string ModuleId => "BatteryPack_Assemble2";
+    }
 
-public class Front_Cover_RemovalModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Front_Cover_Removal";
-}
-public class Rear_Cover_RemovalModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Rear_Cover_Removal";
-}
-public class Battery_Cover_RemovalModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Battery_Cover_Removal";
-}
+    public class Connector_Cover_ReInstallModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Connector_Cover_Reinstall";
+    }
 
-public class Connector_Cover_RemovalModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Connector_Cover_Removal";
-}
+    // ──────────────────────────────────────────────────────────────
+    //  Task[10] MSD_Reinstall
+    //  MSD_Lever 를 MSD_Port_Zone 에 꽂으면 완료
+    // ──────────────────────────────────────────────────────────────
+    public class MSD_ReinstallModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "MSD_Reinstall";
+    }
 
-public class HV_Front_DisconnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "HV_Front_Disconnect";
-}
-public class HV_Front_ConnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "HV_Front_Connect";
-}
+    // ──────────────────────────────────────────────────────────────
+    //  Task[11] FinalDiagnosis
+    //  GDS_Tablet → OBD_Zone 재연결 + DTC 없음 확인 시 완료
+    // ──────────────────────────────────────────────────────────────
+    public class FinalDiagnosisModule : GrabZoneTaskModule
+    {
+        public override string ModuleId => "FinalDiagnosis";
+    }
 
-public class HV_Rear_DisconnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "HV_Rear_Disconnect";
-}
-public class HV_Rear_ConnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "HV_Rear_Connect";
-}
+    // ──────────────────────────────────────────────────────────────
+    //  일괄 등록 헬퍼
+    // ──────────────────────────────────────────────────────────────
+    public static class EVModules
+    {
+        /// <summary>
+        /// ScenarioBootstrapper.RegisterModules() 안에서 호출:
+        ///   EVModules.RegisterAll(Registry);
+        /// </summary>
+        public static void RegisterAll(ModuleRegistry registry)
+        {
+            // 기존 등록 로직
+            registry.Register(new InitialDiagnosisModule());
+            registry.Register(new LOTO_GlovesModule());
+            registry.Register(new MSD_RemovalModule());
+            registry.Register(new DischargeWaitModule());
+            registry.Register(new Voltage_VerificationModule());
+            registry.Register(new HV_FrontVoltageModule());
+            registry.Register(new HV_RearVoltageModule());
+            registry.Register(new BatteryPack_Disassemble1Module());
+            registry.Register(new BatteryPack_Disassemble2Module());
+            registry.Register(new Insulation_MeasureModule());
+            registry.Register(new Contamination_CleanModule());
+            registry.Register(new Gasket_ReplaceModule());
+            registry.Register(new BatteryPack_Assemble1Module());
+            registry.Register(new BatteryPack_Assemble2Module());
+            registry.Register(new Connector_Cover_ReInstallModule());
+            registry.Register(new MSD_ReinstallModule());
+            registry.Register(new FinalDiagnosisModule());
 
-public class ICCU_DisconnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "ICCU_Disconnect";
-}
-public class ICCU_ConnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "ICCU_Connect";
-}
+            // ★ [중요] 누락된 v2 시나리오 추가 모듈 9개 등록 ★
+            registry.Register(new LOTO_SmartKeyModule());      // 시나리오 2번째 단계
+            registry.Register(new LOTO_FaceShieldModule());    // 시나리오 3번째 단계
+            registry.Register(new LOTO_ShoesModule());        // 시나리오 4번째 단계
+            registry.Register(new Front_Cover_RemovalModule());
+            registry.Register(new Rear_Cover_RemovalModule());
+            registry.Register(new Battery_Cover_RemovalModule());
+            registry.Register(new Connector_Cover_RemovalModule());
+            registry.Register(new HV_Front_DisconnectModule());
+            registry.Register(new HV_Front_ConnectModule());
+            registry.Register(new HV_Rear_DisconnectModule());
+            registry.Register(new HV_Rear_ConnectModule());
+            registry.Register(new ICCU_DisconnectModule());
+            registry.Register(new ICCU_ConnectModule());
+            registry.Register(new BMU_DisconnectModule());
+            registry.Register(new BMU_ConnectModule());
+            registry.Register(new Ground_RemovalModule());
+            registry.Register(new Ground_ReinstallModule());
+            registry.Register(new Coolant_Hose_InModule());
+            registry.Register(new Coolant_Hose_In_ConnectModule());
+            registry.Register(new Coolant_Hose_OutModule());
+            registry.Register(new Coolant_Hose_Out_ConnectModule());
+            registry.Register(new BatteryPack_LoweringModule());
+            registry.Register(new InsulationResistanceTestModule());
+            registry.Register(new PRA_RemovalModule());
+            registry.Register(new PRA_ReplaceModule());
+            registry.Register(new BatteryPackTopCover_MoveModule());
+            registry.Register(new BatteryPackTopCover_AssembleModule());
+            registry.Register(new LOTO_WarringSignModule());
+        
+            Debug.Log($"[EVModules] P0AA6 시나리오 전체 모듈 등록 완료 (v2 포함)");
+        }
+    }
 
-public class BMU_DisconnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "BMU_Disconnect";
-}
-public class BMU_ConnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "BMU_Connect";
-}
+    // ──────────────────────────────────────────────────────────────
+    //  v2 시나리오 추가 모듈 (9개)
+    //  모두 ConfirmTaskModule 상속 — 타겟 GO 클릭 or TaskCompleteSignal로 완료
+    // ──────────────────────────────────────────────────────────────
 
-public class Ground_RemovalModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Ground_Removal";
-}
-public class Ground_ReinstallModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Ground_Reinstall";
-}
+    public class Front_Cover_RemovalModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Front_Cover_Removal";
+    }
+    public class Rear_Cover_RemovalModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Rear_Cover_Removal";
+    }
+    public class Battery_Cover_RemovalModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Battery_Cover_Removal";
+    }
 
-public class Coolant_Hose_InModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Coolant_Hose_In";
-}
-public class Coolant_Hose_In_ConnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Coolant_Hose_In_Connect";
-}
+    public class Connector_Cover_RemovalModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Connector_Cover_Removal";
+    }
 
-public class Coolant_Hose_OutModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Coolant_Hose_Out";
-}
-public class Coolant_Hose_Out_ConnectModule : ConfirmTaskModule
-{
-    public override string ModuleId => "Coolant_Hose_Out_Connect";
-}
+    public class HV_Front_DisconnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "HV_Front_Disconnect";
+    }
+    public class HV_Front_ConnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "HV_Front_Connect";
+    }
 
-public class BatteryPack_LoweringModule : ConfirmTaskModule
-{
-    public override string ModuleId => "BatteryPack_Lowering";
-}
+    public class HV_Rear_DisconnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "HV_Rear_Disconnect";
+    }
+    public class HV_Rear_ConnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "HV_Rear_Connect";
+    }
 
-public class LOTO_SmartKeyModule : GrabZoneTaskModule
-{
-    public override string ModuleId => "LOTO_SmartKey";
-}
+    public class ICCU_DisconnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "ICCU_Disconnect";
+    }
+    public class ICCU_ConnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "ICCU_Connect";
+    }
 
-public class LOTO_FaceShieldModule : GrabAllItemsModule
-{
-    public override string ModuleId => "LOTO_FaceShield";
-}
+    public class BMU_DisconnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "BMU_Disconnect";
+    }
+    public class BMU_ConnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "BMU_Connect";
+    }
 
-public class LOTO_ShoesModule : GrabAllItemsModule
-{
-    public override string ModuleId => "LOTO_Shoes";
-}
+    public class Ground_RemovalModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Ground_Removal";
+    }
+    public class Ground_ReinstallModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Ground_Reinstall";
+    }
+
+    public class Coolant_Hose_InModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Coolant_Hose_In";
+    }
+    public class Coolant_Hose_In_ConnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Coolant_Hose_In_Connect";
+    }
+
+    public class Coolant_Hose_OutModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Coolant_Hose_Out";
+    }
+    public class Coolant_Hose_Out_ConnectModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Coolant_Hose_Out_Connect";
+    }
+
+    public class BatteryPack_LoweringModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "BatteryPack_Lowering";
+    }
+
+    public class LOTO_SmartKeyModule : GrabZoneTaskModule
+    {
+        public override string ModuleId => "LOTO_SmartKey";
+    }
+
+    public class LOTO_FaceShieldModule : GrabAllItemsModule
+    {
+        public override string ModuleId => "LOTO_FaceShield";
+    }
+
+    public class LOTO_ShoesModule : GrabAllItemsModule
+    {
+        public override string ModuleId => "LOTO_Shoes";
+    }

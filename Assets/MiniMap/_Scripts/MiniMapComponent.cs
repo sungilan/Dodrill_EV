@@ -1,18 +1,24 @@
-﻿using System.Collections;
+﻿using DG.Tweening;
+using FishNet.Object;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Tables;
+using UnityEngine.UI;
 using XRAirpotrSecurity;
 
-public class MiniMapEntity{
-	public bool showDetails = false;
-	public Sprite icon;
-	public bool rotateWithObject = true;
-	public Vector3 upAxis;
-	public float rotation;
-	public Vector2 size;
-	public bool clampInBorder;
-	public float clampDist;
-	public List<GameObject> mapObjects;
+public class MiniMapEntity
+{
+    public bool showDetails = false;
+    public Sprite icon;
+    public bool rotateWithObject = true;
+    public Vector3 upAxis;
+    public float rotation;
+    public Vector2 size;
+    public bool clampInBorder;
+    public float clampDist;
+    public List<GameObject> mapObjects;
     public string objectName;
 }
 
@@ -21,94 +27,231 @@ public class MiniMapComponent : MonoBehaviour
     [Header("아이콘 설정")]
     public Sprite icon;
     public Vector2 size = new Vector2(20, 20);
-    [Tooltip("텍스트와 아이콘이 오브젝트를 따라 회전할지 여부")]
     public bool rotateWithObject = false;
     public Vector3 upAxis = new Vector3(0, 1, 0);
     public float initialIconRotation;
 
-    [Header("클램프 설정")]
-    public bool clampIconInBorder = true;
-    public float clampDistance = 100;
-    public string myMapName = "이름 입력";
+    [Header("로컬라이징 및 표시 설정")]
+    public LocalizedString localizedName;
+    public bool showNameOnMap = true;
+
+    [Header("하이라이트 설정 (UI Outline)")]
+    public float blinkDuration = 0.6f;
+    public Color outlineColor = new Color32(220, 20, 60, 255);
+    public Vector2 outlineDistance = new Vector2(2f, -2f);
 
     private MiniMapController miniMapController;
     private MiniMapEntity mme;
     private MapObject mmo;
     private bool _isRegistered = false;
+    private bool _blinkReserved = false;
+    private int _blinkRetryCount = 0;
+    private Tween _blinkTween;
+    private Outline _uiOutline;
+
+    private int _myClientId = -1;
+    private bool _isPlayer = false;
+
+    // 플레이어 여부를 판단하는 프로퍼티
+    private bool IsPlayerCheck => _isPlayer || gameObject.CompareTag("Player") || gameObject.name.Contains("Player");
+
+    private void Awake()
+    {
+        _isPlayer = gameObject.CompareTag("Player") || gameObject.name.Contains("Player");
+
+        var nob = GetComponentInParent<NetworkObject>();
+        if(nob != null) _myClientId = nob.OwnerId;
+    }
 
     private void OnEnable()
     {
         miniMapController = Object.FindFirstObjectByType<MiniMapController>();
+
+        if(IsPlayerCheck)
+        {
+            // [핵심] 리스트가 갱신될 때마다 이름을 다시 찾아서 업데이트하도록 이벤트 구독
+            NetworkedSessionUserList.OnPlayersBroadcastReceived += HandlePlayersBroadcast;
+
+            // 이미 등록된 상태에서 다시 활성화되었다면 세션 정보로 이름 갱신 시도
+            //if(_isRegistered) UpdateMapNameWithSession();
+        }
+    }
+
+    private void OnDisable()
+    {
+        if(IsPlayerCheck)
+        {
+            NetworkedSessionUserList.OnPlayersBroadcastReceived -= HandlePlayersBroadcast;
+        }
+        StopBlinking();
     }
 
     private IEnumerator Start()
     {
         if(miniMapController == null) yield break;
-
-        // 1. 플레이어 이름 로딩 대기
-        if(gameObject.CompareTag("Player"))
-        {
-            float timeout = 3.0f;
-            while(string.IsNullOrEmpty(UserInfo.UserName) && timeout > 0)
-            {
-                timeout -= Time.deltaTime;
-                yield return null;
-            }
-            if(!string.IsNullOrEmpty(UserInfo.UserName)) myMapName = UserInfo.UserName;
-        }
-
         RegisterToMap();
+    }
+
+    /// <summary>
+    /// 세션 리스트 브로드캐스트 수신 시 호출
+    /// </summary>
+    private void HandlePlayersBroadcast(SessionPlayersListBroadcast msg)
+    {
+       // UpdateMapNameWithSession();
+    }
+
+    /// <summary>
+    /// 현재 세션 리스트에서 내 ClientId에 맞는 이름을 찾아 업데이트
+    /// </summary>
+    //private void UpdateMapNameWithSession()
+    //{
+    //    var userList = Object.FindFirstObjectByType<NetworkedSessionUserList>();
+    //    if(userList != null)
+    //    {
+    //        string foundName = userList.GetDisplayName(_myClientId);
+    //        if(!string.IsNullOrEmpty(foundName))
+    //        {
+    //            UpdateMapName(foundName);
+    //        }
+    //    }
+    //}
+
+    public void UpdateMapName(string newName)
+    {
+        if(!_isRegistered || mmo == null) return;
+
+        if(mmo.labelText != null)
+            mmo.labelText.text = newName;
+
+        if(mme != null)
+            mme.objectName = newName;
+
+        Debug.Log($"<color=lime>[MiniMap-Name]</color> <b>{gameObject.name}</b> 이름 업데이트: {newName}");
     }
 
     private void RegisterToMap()
     {
         if(_isRegistered) return;
 
-        mme = new MiniMapEntity();
-        mme.icon = icon;
-        mme.rotation = initialIconRotation;
-        mme.size = size;
-        mme.upAxis = upAxis;
-        mme.rotateWithObject = rotateWithObject;
-        mme.clampInBorder = clampIconInBorder;
-        mme.clampDist = clampDistance;
-        mme.objectName = myMapName;
+        string finalName = "";
+
+        if(IsPlayerCheck)
+        {
+            // 1. 등록 시점에는 일단 폴백 이름(로컬 유저네임 혹은 기본값)으로 설정
+            finalName = !string.IsNullOrEmpty(UserInfo.UserName) ? UserInfo.UserName : $"Player {_myClientId}";
+
+            // 2. 만약 이미 세션 리스트가 도착해 있다면 즉시 이름 교체 시도
+            var userList = Object.FindFirstObjectByType<NetworkedSessionUserList>();
+            if(userList != null)
+            {
+                //string sessionName = userList.GetDisplayName(_myClientId);
+                //if(!string.IsNullOrEmpty(sessionName)) finalName = sessionName;
+            }
+        }
+        else if(showNameOnMap && localizedName != null)
+        {
+            finalName = localizedName.GetLocalized();
+        }
+        else
+        {
+            finalName = gameObject.name;
+        }
+
+        mme = new MiniMapEntity
+        {
+            icon = icon,
+            rotation = initialIconRotation,
+            size = size,
+            upAxis = upAxis,
+            rotateWithObject = rotateWithObject,
+            clampInBorder = true,
+            clampDist = 100,
+            objectName = finalName
+        };
 
         mmo = miniMapController.RegisterMapObject(this.gameObject, mme);
-        _isRegistered = true;
+
+        if(mmo != null)
+        {
+            _isRegistered = true;
+            bool isPlayerOrReserved = IsPlayerCheck || _blinkReserved;
+            SetIconActive(isPlayerOrReserved, isPlayerOrReserved ? "Player/Reserved" : "Initial Registration");
+            if(_blinkReserved) ExecuteBlink();
+        }
     }
 
-    // ── 텍스트 및 아이콘 강제 고정 로직 ──────────────────────────────
-
-    private void LateUpdate()
+    public void SetIconActive(bool active, string reason)
     {
-        // 회전 고정 옵션이 꺼져있을 때만 실행
-        if(!_isRegistered || rotateWithObject || mmo == null) return;
-
-        // MapObject의 spr(Image)이 아이콘 객체입니다.
-        if(mmo.spr != null)
+        if(mmo != null && mmo.spr != null)
         {
-            // 부모의 회전 영향을 받지 않도록 월드 회전을 0으로 고정
-            mmo.spr.transform.rotation = Quaternion.identity;
-        }
+            if(IsPlayerCheck && !active)
+            {
+                mmo.spr.gameObject.SetActive(true);
+                if(mmo.labelText != null) mmo.labelText.gameObject.SetActive(showNameOnMap);
+                return;
+            }
 
-        // MapObject의 labelText(TMP)가 텍스트 객체입니다.
-        if(mmo.labelText != null)
-        {
-            // 텍스트도 항상 정방향을 유지하도록 고정
-            mmo.labelText.transform.rotation = Quaternion.identity;
+            mmo.spr.gameObject.SetActive(active);
+            if(mmo.labelText != null)
+                mmo.labelText.gameObject.SetActive(active && showNameOnMap);
+
+            Debug.Log($"<color=cyan>[MiniMap-Visibility]</color> <b>{gameObject.name}</b> 가시성: {mmo.spr.gameObject.activeSelf} ({reason})");
         }
     }
 
-    private void OnDisable() { UnregisterFromMap(); }
-    private void OnDestroy() { UnregisterFromMap(); }
+    public void StartBlinking()
+    {
+        if(!_isRegistered || mmo == null)
+        {
+            _blinkReserved = true;
+            return;
+        }
+        SetIconActive(true, "StartBlinking Execution");
+        ExecuteBlink();
+    }
 
-    private void UnregisterFromMap()
+    private void ExecuteBlink()
+    {
+        if(mmo == null || mmo.spr == null)
+        {
+            _blinkRetryCount++;
+            if(_blinkRetryCount > 20) return;
+            Invoke(nameof(ExecuteBlink), 0.1f);
+            return;
+        }
+
+        _blinkRetryCount = 0;
+        _blinkReserved = false;
+        _blinkTween?.Kill();
+
+        if(_uiOutline == null) _uiOutline = mmo.spr.gameObject.GetComponent<Outline>() ?? mmo.spr.gameObject.AddComponent<Outline>();
+        _uiOutline.effectColor = outlineColor;
+        _uiOutline.effectDistance = outlineDistance;
+        _uiOutline.enabled = true;
+
+        _blinkTween = mmo.spr.DOFade(0.2f, blinkDuration).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine);
+    }
+
+    public void StopBlinking()
+    {
+        _blinkReserved = false;
+        CancelInvoke(nameof(ExecuteBlink));
+        _blinkTween?.Kill();
+
+        if(mmo != null && mmo.spr != null)
+        {
+            mmo.spr.DOKill();
+            Color c = mmo.spr.color; c.a = 1f; mmo.spr.color = c;
+            if(_uiOutline != null) _uiOutline.enabled = false;
+        }
+
+        if(IsPlayerCheck) SetIconActive(true, "StopBlinking (Player Stay On)");
+        else SetIconActive(false, "StopBlinking Called");
+    }
+
+    private void OnDestroy()
     {
         if(_isRegistered && miniMapController != null)
-        {
-            miniMapController.UnregisterMapObject(mmo, this.gameObject);
-            _isRegistered = false;
-        }
+            miniMapController.UnregisterMapObject(mmo, gameObject);
     }
 }
