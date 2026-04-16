@@ -24,13 +24,13 @@
       {
         "prefabId": "Ioniq5N",
         "position": {
-          "x": 2.075,
-          "y": -0.746,
-          "z": -1.223
+          "x": 0.781,
+          "y": 0,
+          "z": 0.08
         },
         "rotation": {
           "x": 0,
-          "y": 90,
+          "y": 180,
           "z": 0
         },
         "scale": {
@@ -121,6 +121,26 @@
         ]
       },
       {
+        "moduleId": "Vehicle_Hood_Open",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "config": {
+          "actionType": "ConfirmTask",
+          "targetObjName": "Hood_Latch_Point"
+        },
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Cover_Removal",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "config": {
+          "actionType": "ConfirmTask",
+          "targetObjName": "Battery_12V_Cover"
+        },
+        "spawnObjects": []
+      },
+      {
         "moduleId": "MSD_Removal",
         "timeout": 120,
         "completionMode": "AnyPlayer",
@@ -144,6 +164,16 @@
             "targetGuideId": ""
           }
         ]
+      },
+      {
+        "moduleId": "Car_Lift_Up",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "config": {
+          "targetValue": 1,
+          "targetObjName": "Lift_Button_Up"
+        },
+        "spawnObjects": []
       },
       {
         "moduleId": "Front_Cover_Removal",
@@ -260,16 +290,44 @@
         "spawnObjects": []
       },
       {
-        "moduleId": "BatteryPack_Disassemble1",
-        "timeout": 600,
+        "moduleId": "BatteryJack_Lift_Up",
+        "timeout": 120,
         "completionMode": "AnyPlayer",
+        "config": {
+          "targetValue": 1,
+          "targetObjName": "BatteryJack_Button_Up"
+        },
+        "spawnObjects": [
+          {
+            "prefabId": "BatteryJack",
+            "spawnPointId": "SP_Battery_Under_Default",
+            "persist": true
+          }
+        ]
+      },
+      {
+        "moduleId": "BatteryPack_Unbolt",
+        "timeout": 300,
+        "completionMode": "AnyPlayer",
+        "config": {
+          "actionType": "ConfirmTask",
+          "targetObjName": "Battery_Main_Bolts"
+        },
         "spawnObjects": [
           {
             "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": "BatteryPack_Bolts1"
+            "spawnPointId": "SP_Cart_Tool"
           }
         ]
+      },
+      {
+        "moduleId": "BatteryJack_Lowering",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "config": {
+          "targetValue": 0.1,
+          "targetObjName": "BatteryJack_Button_Down"
+        }
       },
       {
         "moduleId": "BatteryPack_Disassemble2",
@@ -840,6 +898,40 @@
             "ko": "스마트키 → 잠금박스 투입 → 박스 잠금",
             "en": "Smart key → Lock box → Lock the box",
             "vi": "Chìa khóa → Hộp khóa → Khóa hộp"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Car_Lift_Up",
+      "config": {
+        "actionType": "ConfirmTask",
+        "targetObjName": "Lift_Button_Up",
+        "targetValue": 1,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "차량 리프트 상승",
+            "en": "Vehicle Lift Up",
+            "vi": "Nâng xe lên"
+          },
+          {
+            "key": "description",
+            "ko": "리프트 조작 버튼을 눌러 차량을 작업 높이까지 올리세요.",
+            "en": "Press the lift button to raise the vehicle to working height.",
+            "vi": "Nhấn nút điều khiển để nâng xe lên độ cao làm việc."
+          },
+          {
+            "key": "guideText",
+            "ko": "하부 정비를 위해 차량을 상승시킵니다. 상승 중에는 차량 주변에 사람이 없는지 확인하고, 안전 고정 장치가 체결되는 소리를 확인하세요.",
+            "en": "Raise the vehicle for underbody maintenance. Ensure no one is near and listen for the safety lock engagement.",
+            "vi": "Nâng xe lên để bảo trì gầm. Đảm bảo không có ai ở gần và kiểm tra tiếng khóa an toàn."
+          },
+          {
+            "key": "subguideText",
+            "ko": "상승 버튼 클릭 → 작업 높이 도달 → 안전 잠금 확인",
+            "en": "Click Up Button → Reach Height → Verify Safety Lock",
+            "vi": "Bấm nút nâng → Đạt độ cao → Kiểm tra khóa an toàn"
           }
         ]
       }
@@ -1648,7 +1740,7 @@
         "requiredItems": [
           "ImpactWrench"
         ],
-        "targetObjName": "BatteryPack_Bolts4",
+        "targetObjName": "Battery_TopCover_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -2292,6 +2384,141 @@
           {
             "key": "snapDelay",
             "ko": "2.0"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "BatteryJack_Lift_Up",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "BatteryJack_Button_Up",
+        "targetValue": 1,
+        "toleranceRatio": 0.05,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 리프트 상승 및 지지",
+            "en": "Battery Lift Up & Support"
+          },
+          {
+            "key": "description",
+            "ko": "배터리 리프트를 상승시켜 배터리 팩에 밀착시키세요.",
+            "en": "Raise the battery lift until it firmly contacts the battery pack."
+          },
+          {
+            "key": "guideText",
+            "ko": "리프트의 상승 버튼을 눌러 상판이 배터리에 닿을 때까지 올리세요. 접촉 시 배터리가 리프트에 자동으로 고정됩니다.",
+            "en": "Press the lift up button until the plate touches the battery. The pack will auto-attach upon contact."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "BatteryPack_Unbolt",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [
+          "ImpactWrench"
+        ],
+        "targetObjName": "Battery_Main_Bolts",
+        "targetZoneId": "Battery_Unbolt_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": true,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 팩 고정 볼트 탈거",
+            "en": "Battery Pack Bolt Removal"
+          },
+          {
+            "key": "description",
+            "ko": "임팩트 렌치를 사용하여 배터리 팩을 고정하는 12개의 볼트를 탈거하세요.",
+            "en": "Use the impact wrench to remove the 12 bolts securing the battery pack."
+          },
+          {
+            "key": "guideText",
+            "ko": "볼트 탈거 전 리프트가 배터리를 안전하게 지지하고 있는지 다시 한번 확인하세요. 볼트 탈거 순서는 대각선 방향을 권장합니다.",
+            "en": "Verify the lift is securely supporting the pack before unbolting. Diagonal removal pattern is recommended."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "BatteryJack_Lowering",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "BatteryJack_Button_Down",
+        "targetValue": 0.1,
+        "toleranceRatio": 0.1,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 팩 하강 및 분리",
+            "en": "Battery Pack Lowering & Separation"
+          },
+          {
+            "key": "description",
+            "ko": "리프트를 천천히 하강시켜 배터리 팩을 차량에서 완전히 분리하세요.",
+            "en": "Slowly lower the lift to fully separate the battery pack from the vehicle."
+          },
+          {
+            "key": "guideText",
+            "ko": "하강 버튼을 눌러 리프트를 끝까지 내리세요. 바닥까지 완전히 하강하면 배터리 팩 분리 작업이 완료됩니다.",
+            "en": "Press the down button to lower the lift completely. The separation is complete once it reaches the bottom."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Vehicle_Hood_Open",
+      "config": {
+        "actionType": "ConfirmTask",
+        "targetObjName": "Hood_Latch_Point",
+        "extra": [
+          {
+            "key": "title",
+            "ko": "차량 후드 개방",
+            "en": "Vehicle Hood Open"
+          },
+          {
+            "key": "description",
+            "ko": "차량 전면 후드를 열어 엔진룸(프렁크) 내부를 노출시키세요.",
+            "en": "Open the vehicle front hood to expose the engine room (frunk)."
+          },
+          {
+            "key": "guideText",
+            "ko": "MSD 및 12V 배터리에 접근하기 위해 후드를 개방합니다. 안전 레버를 해제하고 후드를 끝까지 들어 올리세요.",
+            "en": "Open the hood to access the MSD and 12V battery. Release the safety latch and lift the hood fully."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Cover_Removal",
+      "config": {
+        "actionType": "ConfirmTask",
+        "targetObjName": "Battery_12V_Cover",
+        "extra": [
+          {
+            "key": "title",
+            "ko": "12V 배터리 커버 탈거",
+            "en": "12V Battery Cover Removal"
+          },
+          {
+            "key": "description",
+            "ko": "12V 배터리 상단의 보호 커버를 제거하세요.",
+            "en": "Remove the protective cover on top of the 12V battery."
+          },
+          {
+            "key": "guideText",
+            "ko": "고전압 차단 작업 전 보조 배터리(12V) 확인을 위해 전면 상단 커버를 탈거합니다. 고정 클립이 손상되지 않도록 주의하세요.",
+            "en": "Remove the front top cover to check the auxiliary (12V) battery before HV isolation. Be careful not to damage clips."
           }
         ]
       }

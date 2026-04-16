@@ -547,7 +547,8 @@ public class ScenarioRunner : MonoBehaviour
             int id = conn.IsValid ? conn.ClientId : signalClientId;
             _activePlayerId = id;
             Debug.Log($"<color=cyan>[ScenarioRunner]</color> 정답 확인됨. 진행자 등록: {id}");
-
+            Debug.Log($"<color=magenta>[Step-Trigger]</color> 단계[{_currentTaskState.taskIndex}] 완료 트리거 발생! " +
+                  $"진행자 ID: {id}, 원인: {StackTraceUtility.ExtractStackTrace()}");
             // 진행자 정보가 포함된 상태를 즉시 브로드캐스트하여 UI 불을 켭니다.
             BroadcastState();
         }

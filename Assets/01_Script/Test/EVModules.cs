@@ -61,6 +61,50 @@ public class LOTO_WarringSignModule : GrabZoneTaskModule
     public override string ModuleId => "LOTO_WarringSign";
 }
 
+public class CarLiftUpStepModule : Car_Lift_UpModule
+{
+    // 클래스 이름이 다르므로 충돌하지 않습니다.
+    public override string ModuleId => "Car_Lift_Up";
+}
+
+// 1. 배터리 잭 상승 모듈
+public class BatteryJack_Lift_UpModule : BatteryJack_BaseModule
+{
+    public override string ModuleId => "BatteryJack_Lift_Up";
+
+    public override void OnUpdate(float deltaTime)
+    {
+        if(_isCompleted || _jack == null) return;
+
+        // 목표 높이 '이상' 올라갔을 때 완료
+        if(_jack.CurrentHeight >= _config.targetValue)
+        {
+            _isCompleted = true;
+            Debug.Log($"<color=lime>[{ModuleId}] 상승 완료!</color> 도달 높이: {_jack.CurrentHeight:F2}m");
+            _onComplete?.Invoke();
+        }
+    }
+}
+
+// 2. 배터리 잭 하강 모듈
+public class BatteryJack_LoweringModule : BatteryJack_BaseModule
+{
+    public override string ModuleId => "BatteryJack_Lowering";
+
+    public override void OnUpdate(float deltaTime)
+    {
+        if(_isCompleted || _jack == null) return;
+
+        // 목표 높이 '이하'로 내려갔을 때 완료 (보통 바닥 0.1m)
+        if(_jack.CurrentHeight <= _config.targetValue)
+        {
+            _isCompleted = true;
+            Debug.Log($"<color=lime>[{ModuleId}] 하강 완료!</color> 최종 높이: {_jack.CurrentHeight:F2}m");
+            _onComplete?.Invoke();
+        }
+    }
+}
+
 // ──────────────────────────────────────────────────────────────
 //  Task[02] MSD_Removal
 //  MSD_Lever 를 MSD_Port_Zone 밖으로 탈거하면 완료
@@ -268,15 +312,19 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
             registry.Register(new Coolant_Hose_In_ConnectModule());
             registry.Register(new Coolant_Hose_OutModule());
             registry.Register(new Coolant_Hose_Out_ConnectModule());
-            registry.Register(new BatteryPack_LoweringModule());
             registry.Register(new InsulationResistanceTestModule());
             registry.Register(new PRA_RemovalModule());
             registry.Register(new PRA_ReplaceModule());
             registry.Register(new BatteryPackTopCover_MoveModule());
             registry.Register(new BatteryPackTopCover_AssembleModule());
             registry.Register(new LOTO_WarringSignModule());
-        
-            Debug.Log($"[EVModules] P0AA6 시나리오 전체 모듈 등록 완료 (v2 포함)");
+            registry.Register(new CarLiftUpStepModule());
+            registry.Register(new BatteryJack_Lift_UpModule());
+            registry.Register(new BatteryJack_LoweringModule());
+            registry.Register(new BatteryPack_UnboltModule());
+            registry.Register(new Vehicle_Hood_OpenModule());
+            registry.Register(new Battery_12V_Cover_RemovalModule());
+        Debug.Log($"[EVModules] P0AA6 시나리오 전체 모듈 등록 완료 (v2 포함)");
         }
     }
 
@@ -366,9 +414,18 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
         public override string ModuleId => "Coolant_Hose_Out_Connect";
     }
 
-    public class BatteryPack_LoweringModule : ConfirmTaskModule
+    public class BatteryPack_UnboltModule : ConfirmTaskModule
     {
-        public override string ModuleId => "BatteryPack_Lowering";
+        public override string ModuleId => "BatteryPack_Unbolt";
+    }
+    public class Vehicle_Hood_OpenModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Vehicle_Hood_Open";
+    }
+
+    public class Battery_12V_Cover_RemovalModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Battery_12V_Cover_Removal";
     }
 
     public class LOTO_SmartKeyModule : GrabZoneTaskModule

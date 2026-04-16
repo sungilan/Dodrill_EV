@@ -36,6 +36,7 @@ using UnityEngine;
 //        public override string ModuleId => "Voltage_Verification";
 //    }
 // ──────────────────────────────────────────────────────────────
+
 public abstract class ZoneAndUseModule : ITaskModule
 {
     public abstract string ModuleId { get; }
@@ -277,4 +278,85 @@ public abstract class ZoneAndFillModule : ZoneAndMeasureModule
 {
     // ZoneAndMeasureModule과 동일 로직 — GreaseTool도 FireZoneActivated를 발행하므로 그대로 동작
     // 서브클래스에서 GetTargetObjName()만 오버라이드
+}
+
+public class Car_Lift_UpModule : ITaskModule
+{
+    public virtual string ModuleId => "Car_Lift_Up";
+    private ModuleConfig _config;
+    private Action _onComplete;
+    private bool _isCompleted;
+    private VehicleLiftController _lift;
+    private float _cachedTargetHeight;
+
+    public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
+    {
+        _config = config;
+        _onComplete = onComplete;
+        _isCompleted = false;
+
+        // JSON에서 targetValue를 가져옴 (기본값 1.5m)
+        _cachedTargetHeight = config != null ? config.targetValue : 1.5f;
+
+        // [중요] 서버 권한으로 씬에 있는 리프트를 찾음
+        _lift = GameObject.FindAnyObjectByType<VehicleLiftController>(FindObjectsInactive.Include);
+
+        if(_lift == null)
+        {
+            Debug.LogError($"<color=red>[{ModuleId}]</color> <b>에러:</b> VehicleLiftController를 찾을 수 없습니다! 하이어라키에 리프트가 있는지 확인하세요.");
+        }
+        else
+        {
+            Debug.Log($"<color=cyan>[{ModuleId}]</color> 감시 시작! 목표 높이: <b>{_cachedTargetHeight}m</b> (현재: {_lift.CurrentHeight:F2}m)");
+        }
+    }
+
+    public void OnUpdate(float deltaTime)
+    {
+        if(_isCompleted || _lift == null) return;
+
+        // 매 프레임 리프트 높이 체크
+        if(_lift.CurrentHeight >= _cachedTargetHeight)
+        {
+            _isCompleted = true;
+            Debug.Log($"<color=lime>[{ModuleId}] 완료!</color> 목표 높이 도달: {_lift.CurrentHeight:F2}m (기준: {_cachedTargetHeight}m)");
+            _onComplete?.Invoke();
+        }
+    }
+
+    public void OnComplete() { }
+    public void OnFail() { }
+}
+
+// 배터리 잭 전용 베이스 모듈 (차량 리프트와 혼동 방지)
+public abstract class BatteryJack_BaseModule : ITaskModule
+{
+    public abstract string ModuleId { get; }
+    protected ModuleConfig _config;
+    protected Action _onComplete;
+    protected bool _isCompleted;
+    protected BatteryLiftController _jack; // ★ VehicleLiftController 대신 명확한 타입 사용
+
+    public virtual void OnStart(ModuleConfig config, Action onComplete, Action onFail)
+    {
+        _config = config;
+        _onComplete = onComplete;
+        _isCompleted = false;
+
+        // 씬에서 배터리 잭(BatteryLiftController)만 골라서 찾음
+        _jack = GameObject.FindAnyObjectByType<BatteryLiftController>(FindObjectsInactive.Include);
+
+        if(_jack == null)
+        {
+            Debug.LogError($"<color=red>[{ModuleId}]</color> 배터리 잭(BatteryLiftController)을 찾을 수 없습니다!");
+        }
+        else
+        {
+            Debug.Log($"<color=cyan>[{ModuleId}]</color> 배터리 잭 감시 시작 (목표: {config.targetValue}m / 현재: {_jack.CurrentHeight:F2}m)");
+        }
+    }
+
+    public abstract void OnUpdate(float deltaTime);
+    public void OnComplete() { }
+    public void OnFail() { }
 }

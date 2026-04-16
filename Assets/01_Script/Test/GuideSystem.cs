@@ -377,48 +377,62 @@ public class GuideSystem : MonoBehaviour
         // ── 2. 아이템 결정 ──
         GameObject itemGO = !string.IsNullOrEmpty(prefabId) ? FindSpawnedItem(prefabId) : null;
 
-        // ── 3. 가이드 마커 및 미니맵 처리 (markerTargetGO 기준) ──
-        if(markerTargetGO != null) // ★ 여기서 반드시 null 체크
+        // ── 3. 가이드 마커 및 미니맵 처리 ──
+        if(markerTargetGO != null)
         {
             var zoneData = markerTargetGO.GetComponent<GuideZoneData>();
             UpdateGuideUI(zoneData);
 
-            bool shouldSpawnMarker = (zoneData == null) || zoneData.showGuide;
+            // [디버그 로그 추가]
+            bool hasZoneData = zoneData != null;
+            bool zoneShowGuide = hasZoneData ? zoneData.showGuide : true; // 데이터가 없으면 기본적으로 켬
+            bool shouldSpawnMarker = !hasZoneData || zoneShowGuide;
+
+            Debug.Log($"<color=yellow>[Guide-Check]</color> 타겟: <b>{markerTargetGO.name}</b> | " +
+                      $"GuideZoneData 존재: {hasZoneData} | " +
+                      $"showGuide 값: {zoneShowGuide} | " +
+                      $"최종 마커 생성 결정: <color={(shouldSpawnMarker ? "lime" : "red")}>{shouldSpawnMarker}</color>");
+
             if(shouldSpawnMarker)
             {
-                // [에러 방지] zoneData가 null일 경우 기본 텍스트 사용
-                //string label = (zoneData != null && zoneData.guideDescription != null && zoneData.guideDescription.RuntimeKeyIsValid)
                 string label = "이곳으로 이동하세요";
-                // [방어] 로컬라이징 키 유효성 체크 수정
                 if(zoneData != null && zoneData.guideDescription != null)
                 {
                     var tr = zoneData.guideDescription.TableReference;
                     var ter = zoneData.guideDescription.TableEntryReference;
 
-                    // 테이블과 엔트리가 둘 다 설정되어 있을 때만 호출
                     if(!tr.ReferenceType.Equals(TableReference.Type.Empty) &&
-                        !ter.ReferenceType.Equals(TableEntryReference.Type.Empty))
+                       !ter.ReferenceType.Equals(TableEntryReference.Type.Empty))
                     {
                         label = zoneData.guideDescription.GetLocalizedString();
                     }
                 }
 
-                var boltGroup = markerTargetGO.GetComponent<BoltGroupCounter>();
-                // [에러 방지] markerTargetGO.name 참조 전 안전 확인
-                bool isBoltTask = boltGroup != null || (markerTargetGO.name != null && markerTargetGO.name.Contains("Bolt"));
+                // 고스트 생성 시 markerTargetGO가 null인지 다시 확인 (에러 포인트)
+                if(shouldSpawnMarker && markerTargetGO != null && ghostMaterial != null && !markerTargetGO.name.Contains("Bolt"))
+                {
+                    _ghostObject = SpawnGhost(itemGO, markerTargetGO.transform.position);
+                }
 
+                var boltGroup = markerTargetGO.GetComponent<BoltGroupCounter>();
+                bool isBoltTask = boltGroup != null || (markerTargetGO.name != null && markerTargetGO.name.Contains("Bolt"));
                 Vector3 markerPos = isBoltTask ? GetBoundsCenter(markerTargetGO) : markerTargetGO.transform.position;
 
                 var marker = SpawnMarker(markerPos, label, targetGuideColor, true);
                 if(marker != null)
                 {
+                    Debug.Log($"<color=cyan>[Guide-Success]</color> {markerTargetGO.name} 지점에 마커 프리팹 생성 완료");
                     marker.Setup(label, targetGuideColor, !isBoltTask && markerTargetGO.GetComponent<NoneHighlight>() == null);
                     _targetMarker = marker;
                     if(boltGroup != null) StartCoroutine(UpdateBoltProgressRoutine(marker, boltGroup));
                 }
             }
+            else
+            {
+                Debug.Log($"<color=orange>[Guide-Skip]</color> {markerTargetGO.name}은 showGuide가 false이므로 마커 생성을 건너뜁니다.");
+            }
 
-            // 미니맵 컴포넌트 일괄 활성화
+            // 미니맵은 showGuide와 상관없이 켜줌 (아이콘은 보여야 하므로)
             foreach(var mmc in markerTargetGO.GetComponentsInChildren<MiniMapComponent>(true))
             {
                 if(mmc != null)
@@ -443,12 +457,6 @@ public class GuideSystem : MonoBehaviour
                     if(!_activeMiniMapBlinks.Contains(immc)) _activeMiniMapBlinks.Add(immc);
                 }
             }
-
-            // 고스트 생성 시 markerTargetGO가 null인지 다시 확인 (에러 포인트)
-            if(markerTargetGO != null && ghostMaterial != null && !markerTargetGO.name.Contains("Bolt"))
-            {
-                _ghostObject = SpawnGhost(itemGO, markerTargetGO.transform.position);
-            }
         }
     }
 
@@ -462,18 +470,55 @@ public class GuideSystem : MonoBehaviour
 
     private GameObject SpawnGhost(GameObject sourceItem, Vector3 ghostPos)
     {
-        var ghost = Instantiate(sourceItem, ghostPos, sourceItem.transform.rotation);
-        foreach(var col in ghost.GetComponentsInChildren<Collider>()) Destroy(col);
-        foreach(var rb in ghost.GetComponentsInChildren<Rigidbody>()) Destroy(rb);
-        foreach(var mono in ghost.GetComponentsInChildren<MonoBehaviour>()) Destroy(mono);
-        foreach(var r in ghost.GetComponentsInChildren<Renderer>())
+        if(sourceItem == null) return null;
+
+        // 1. 고스트 생성
+        GameObject ghost = Instantiate(sourceItem, ghostPos, sourceItem.transform.rotation);
+        if(ghost == null) return null;
+
+        // 2. 물리 컴포넌트 제거
+        foreach(var col in ghost.GetComponentsInChildren<Collider>(true)) Destroy(col);
+        foreach(var rb in ghost.GetComponentsInChildren<Rigidbody>(true)) Destroy(rb);
+
+        // 3. ★ 네트워크 컴포넌트 의존성 역순 제거 ★
+        // FishNet의 의존성 구조: NetworkObserver -> NetworkObject
+        // 따라서 반드시 Observer를 먼저 지워야 Object를 지울 수 있습니다.
+
+        // 모든 자식들을 포함하여 NetworkObserver부터 제거
+        var observers = ghost.GetComponentsInChildren<FishNet.Observing.NetworkObserver>(true);
+        foreach(var obs in observers) DestroyImmediate(obs);
+
+        // 그 다음 NetworkObject 제거
+        var nObjects = ghost.GetComponentsInChildren<FishNet.Object.NetworkObject>(true);
+        foreach(var nob in nObjects) DestroyImmediate(nob);
+
+        // 나머지 모든 일반 스크립트 제거 (Transform 제외)
+        var allScripts = ghost.GetComponentsInChildren<MonoBehaviour>(true);
+        foreach(var script in allScripts)
         {
-            var mats = new Material[r.sharedMaterials.Length];
-            for(int i = 0; i < mats.Length; i++) mats[i] = ghostMaterial;
-            r.materials = mats;
+            if(script == null || script is Transform) continue;
+            DestroyImmediate(script);
         }
+
+        // 4. 레이어 변경 (UI 레이어)
+        int uiLayer = LayerMask.NameToLayer("UI");
+        if(uiLayer != -1) SetLayerRecursive(ghost, uiLayer);
+
+        // 5. 머티리얼 적용
+        if(ghostMaterial != null)
+        {
+            foreach(var r in ghost.GetComponentsInChildren<Renderer>(true))
+            {
+                if(r == null) continue;
+                var mats = new Material[r.sharedMaterials.Length];
+                for(int i = 0; i < mats.Length; i++) mats[i] = ghostMaterial;
+                r.materials = mats;
+            }
+        }
+
         _tempGuides.Add(ghost);
-        ghost.transform.DOLocalMoveY(0.05f, 1.5f).SetLoops(-1, LoopType.Yoyo).SetRelative().SetId(ghost);
+        ghost.transform.DOLocalMoveY(0.05f, 1.5f).SetLoops(-1, LoopType.Yoyo).SetRelative().SetLink(ghost);
+
         return ghost;
     }
 
@@ -578,10 +623,22 @@ public class GuideSystem : MonoBehaviour
         foreach(var t in _clickTargets)
         {
             SetOutline(t, true);
-            if(taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0)
+
+            // ★ [수정 포인트] 클릭 타겟 마커 생성 시에도 showGuide 조건을 확인해야 합니다.
+            var zoneData = t.GetComponent<GuideZoneData>();
+            bool shouldSpawnMarker = (zoneData == null) || zoneData.showGuide;
+
+            // spawnObjects가 없을 때만 마커를 생성하는 기존 로직에 showGuide 조건 추가
+            if(shouldSpawnMarker && (taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0))
             {
                 string label = GetExtraValue(config, "description", "이곳을 클릭하세요.");
                 SpawnMarker(t.transform.position, label, targetGuideColor, true);
+
+                Debug.Log($"<color=cyan>[Guide-ClickTarget]</color> {t.name}에 클릭 가이드 생성");
+            }
+            else if(!shouldSpawnMarker)
+            {
+                Debug.Log($"<color=orange>[Guide-ClickTarget]</color> {t.name}은 showGuide가 false이므로 클릭 마커 생성을 스킵합니다.");
             }
         }
     }
@@ -667,6 +724,16 @@ public class GuideSystem : MonoBehaviour
         }
 
         HandleCenterUI();
+    }
+    private void SetLayerRecursive(GameObject obj, int newLayer)
+    {
+        if(obj == null) return;
+
+        obj.layer = newLayer;
+        foreach(Transform child in obj.transform)
+        {
+            SetLayerRecursive(child.gameObject, newLayer);
+        }
     }
 
     private string GetDisplayName(string id) => id switch
