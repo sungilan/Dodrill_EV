@@ -285,7 +285,8 @@ public class ScenarioRunner : MonoBehaviour
         _currentTaskState.status = TaskStatus.Completed;
         _retryCount = 0;
 
-        _spawner?.DespawnCurrentTask();
+        var currentTaskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
+        _spawner?.DespawnCurrentTask(currentTaskDef);
         BroadcastState();
 
         Debug.Log($"[ScenarioRunner] Task[{_currentTaskState.taskIndex}] 완료 - 진행자: {activePlayerName}");
@@ -304,7 +305,8 @@ public class ScenarioRunner : MonoBehaviour
         _isRunning = false; // 딜레이 중 중복 호출 방지
 
         // 실패한 Task 오브젝트 디스폰 (재도전 시 StartTask에서 다시 스폰됨)
-        _spawner?.DespawnCurrentTask();
+        var currentTaskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
+        _spawner?.DespawnCurrentTask(currentTaskDef);
         BroadcastState(); // 클라이언트에 Fail 상태 먼저 전달
 
         // maxRetries 초과 체크 (0 = 무제한)
@@ -745,7 +747,8 @@ public class ScenarioRunner : MonoBehaviour
     {
         _retryCount = 0;
         _currentModule?.OnFail();
-        _spawner?.DespawnCurrentTask();
+        var currentTaskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
+        _spawner?.DespawnCurrentTask(currentTaskDef);
         StartTask(index);
     }
 

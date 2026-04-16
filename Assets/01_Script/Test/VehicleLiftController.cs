@@ -179,6 +179,13 @@ public class VehicleLiftController : LiftControllerBase
 
     public void AttachVehicle(Transform vehicle)
     {
+        var rb = vehicle.GetComponent<Rigidbody>();
+        if(rb != null)
+        {
+            rb.isKinematic = true; // 리프트 이동 중 물리 계산 중단
+            rb.useGravity = false;
+        }
+
         if(vehicle == null)
         {
             Debug.LogError("[VehicleLift] AttachVehicle: 전달된 vehicle이 null입니다!");

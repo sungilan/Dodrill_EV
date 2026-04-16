@@ -219,7 +219,7 @@ public class SyncGrab : NetworkBehaviour
         else
         {
             _rb.isKinematic = false;
-            _rb.useGravity = !_isGrabbed.Value;
+            _rb.useGravity = true;
         }
     }
 
@@ -574,12 +574,13 @@ public class SyncGrab : NetworkBehaviour
     [ServerRpc(RequireOwnership = true)]
     private void ReleaseServerRpc(Vector3 position, Quaternion rotation)
     {
-        transform.SetPositionAndRotation(position, rotation);
         _isGrabbed.Value = false;
-        NetworkObject.GiveOwnership(null);
+        transform.SetPositionAndRotation(position, rotation);
 
-        // 서버에서 Kinematic 복구 → SyncVar → 전체 클라 자동 전파
+        // 즉시 Kinematic을 켜지 말고, 한 프레임 뒤에 켜서 
+        // 클라이언트들이 위치를 잡을 시간을 줌 (선택 사항)
         ServerSetKinematic(true);
+        NetworkObject.GiveOwnership(null);
     }
 
     // ══════════════════════════════════════════════════════
@@ -609,6 +610,7 @@ public class SyncGrab : NetworkBehaviour
         // VR: 저장된 손으로 TryGrab
         if(_pendingHand != null)
         {
+            // 소유권이 확인될 때까지 대기하는 코루틴을 더 확실하게 실행
             StopCoroutineIfRunning(ref _grabCoroutine);
             _grabCoroutine = StartCoroutine(TryGrabAfterOwnership(_pendingHand));
         }
@@ -632,26 +634,29 @@ public class SyncGrab : NetworkBehaviour
     /// </summary>
     private IEnumerator TryGrabAfterOwnership(Hand hand)
     {
-        float timeout = 1.0f; // 최대 1초 대기
+        float timeout = 0.5f;
         float timer = 0f;
 
-        // IsOwner가 true가 될 때까지 명확히 대기
         while(!IsOwner && timer < timeout)
         {
             timer += Time.deltaTime;
             yield return null;
         }
 
-        if(!IsOwner || hand == null)
+        if(IsOwner && hand != null && _grab != null)
         {
-            Debug.LogWarning($"[SyncGrab] 소유권 획득 실패 혹은 손 유실. Release 요청.");
-            _pendingHand = null;
-            RequestRelease();
-            yield break;
-        }
+            // 1. 가장 권장되는 방식
+            hand.TryGrab(_grab);
 
-        _pendingHand = null;
-        hand.TryGrab(_grab);
+            // 2. 만약 위 함수가 안 된다면 (구버전 또는 특정 커스텀)
+            // hand.Grab(_grab);
+
+            _pendingHand = null;
+        }
+        else
+        {
+            RequestRelease();
+        }
     }
 
     [TargetRpc]

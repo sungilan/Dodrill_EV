@@ -74,6 +74,9 @@ PrefabInstance:
       addedObject: {fileID: 1793545340383942425}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a32cfd4ec4c23a94db57ef3affbf473a, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 8474034988989778616}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a32cfd4ec4c23a94db57ef3affbf473a, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 384187183016501084}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a32cfd4ec4c23a94db57ef3affbf473a, type: 3}
       insertIndex: -1
@@ -216,6 +219,30 @@ MonoBehaviour:
     Rotation: {x: 0, y: -0, z: -0, w: 1}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
+--- !u!114 &8474034988989778616
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4910085193603353779}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d5f3cd3dd6be3a49aa81f40ab47c0ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalNetworkTransform
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 1793545340383942425}
+  _networkObjectCache: {fileID: 0}
+  anchor: {fileID: 0}
+  syncInterval: 0.025
+  lerpSpeed: 12
+  rotationLerpSpeed: 12
+  positionThreshold: 0.001
+  rotationThreshold: 0.5
+  teleportDistanceThreshold: 2
+  sendAuthorityInServer: 1
+  ownerSendOnly: 0
 --- !u!114 &384187183016501084
 MonoBehaviour:
   m_ObjectHideFlags: 0

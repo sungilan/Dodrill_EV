@@ -615,7 +615,7 @@ GameObject:
   - component: {fileID: 258709315005495253}
   - component: {fileID: 4672372380717274762}
   - component: {fileID: 7343297675666226015}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_06
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -1507,7 +1507,7 @@ Transform:
   - {fileID: 8088793418242288297}
   - {fileID: 5468496279019037249}
   - {fileID: 4305276161827877387}
-  - {fileID: 7844197550526286422}
+  - {fileID: 2448598511095245335}
   - {fileID: 7392022930654332496}
   - {fileID: 2371164293847931766}
   - {fileID: 8690430611152826332}
@@ -1920,6 +1920,7 @@ GameObject:
   - component: {fileID: 8656311724862535791}
   - component: {fileID: 8871002936026703234}
   - component: {fileID: 13214047894883313}
+  - component: {fileID: 5495061448062543621}
   m_Layer: 17
   m_Name: HV_Front_Cable_Term
   m_TagString: Untagged
@@ -1982,6 +1983,42 @@ MonoBehaviour:
   resistanceValue: 9999999
   faultyVoltageValue: 380
   isFaulty: 0
+--- !u!114 &5495061448062543621
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 246919728880022791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
+  targetImage: {fileID: 21300000, guid: 9779433f0bac32e41b69d3cec4a3049e, type: 3}
+  targetName:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 13404517329092608
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  guideDescription:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 13404652477956096
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  showProgress: 0
+  showGuide: 1
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &255735265714719723
 GameObject:
   m_ObjectHideFlags: 0
@@ -2035,7 +2072,7 @@ GameObject:
   - component: {fileID: 4297784145337086419}
   - component: {fileID: 3944385156471944161}
   - component: {fileID: 7984856746506133697}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_04
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -2661,7 +2698,7 @@ GameObject:
   - component: {fileID: 7104293060945020307}
   - component: {fileID: 7334481979216494114}
   - component: {fileID: 6236818723199200924}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_07
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -3000,10 +3037,10 @@ GameObject:
   - component: {fileID: 7081101608876309620}
   - component: {fileID: 3045860093857752858}
   - component: {fileID: 4008430869921808402}
-  - component: {fileID: 3406791097118846478}
   - component: {fileID: 5372322118663187898}
   - component: {fileID: 8661629953721072813}
   - component: {fileID: 8443013380109533884}
+  - component: {fileID: 6150788978032701491}
   m_Layer: 15
   m_Name: Hood_Latch_Point
   m_TagString: Untagged
@@ -3020,13 +3057,13 @@ Transform:
   m_GameObject: {fileID: 377371568576170474}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071069, y: 0.00000005338507, z: 0.70710665, w: -0.000000053385087}
-  m_LocalPosition: {x: -1.9316691, y: 0.96131444, z: 0.004676425}
-  m_LocalScale: {x: 1.0002443, y: 1.0002443, z: 1.0002443}
+  m_LocalPosition: {x: -0.41666913, y: 0.051314414, z: 0.15467644}
+  m_LocalScale: {x: 1.0002439, y: 1.0002443, z: 1.0002439}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8518550286472968584}
   - {fileID: 6228886988780470931}
-  m_Father: {fileID: 693374942892577907}
+  m_Father: {fileID: 2448598511095245335}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &1338865120048633005
 MeshFilter:
@@ -3100,12 +3137,12 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 68
+  <ComponentIndex>k__BackingField: 74
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
   - {fileID: 7576145819191162543}
-  InitializedParentNetworkBehaviour: {fileID: 1128512114491222955}
+  InitializedParentNetworkBehaviour: {fileID: 863745945771154228}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
   RuntimeChildNetworkBehaviours: []
@@ -3134,9 +3171,9 @@ MonoBehaviour:
   <AssetPathHash>k__BackingField: 0
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: -1.9316691, y: 0.96131444, z: 0.004676425}
+    Position: {x: -0.41666913, y: 0.051314414, z: 0.15467644}
     Rotation: {x: 0.7071069, y: 0.00000005338507, z: 0.70710665, w: -0.000000053385087}
-    Scale: {x: 1.0002443, y: 1.0002443, z: 1.0002443}
+    Scale: {x: 1.0002439, y: 1.0002443, z: 1.0002439}
     IsValid: 1
 --- !u!114 &7576145819191162543
 MonoBehaviour:
@@ -3208,8 +3245,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.8745375, y: 0.2807, z: 1.2116448}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 1.8745375, y: 0.18728493, z: 1.0917871}
+  m_Center: {x: 2.3384007e-15, y: 0.04670754, z: 0.05992878}
 --- !u!114 &4008430869921808402
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3229,35 +3266,13 @@ MonoBehaviour:
   useTrigger: 1
   openTrigger: Open
   closeTrigger: Close
-  _animator: {fileID: 3406791097118846478}
+  _animator: {fileID: 4165802103395228468}
   _grabbable: {fileID: 5372322118663187898}
   _isOpen: 0
   autoCloseDelay: 0
   openSound: Door_Open
   closeSound: Door_Close
   soundVolume: 1
---- !u!95 &3406791097118846478
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 377371568576170474}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: bd82e714319dee144b40dafb2554f571, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &5372322118663187898
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3364,16 +3379,28 @@ MonoBehaviour:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 7911842744188928
+      m_KeyId: 13263269339414528
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   showProgress: 0
-  showGuide: 0
+  showGuide: 1
   references:
     version: 2
     RefIds: []
+--- !u!114 &6150788978032701491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 377371568576170474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1da63015b0093e47864202f2e470720, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoDrill.NoneHighlight
 --- !u!1 &381874229283710844
 GameObject:
   m_ObjectHideFlags: 0
@@ -3427,7 +3454,7 @@ GameObject:
   - component: {fileID: 5476120411492676148}
   - component: {fileID: 2817085084753408169}
   - component: {fileID: 6435054460224958488}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_03
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -4439,7 +4466,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 76
+  <ComponentIndex>k__BackingField: 80
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -5631,7 +5658,7 @@ GameObject:
   - component: {fileID: 615819315519353189}
   - component: {fileID: 1194043982991758981}
   - component: {fileID: 3453809514269354089}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_12
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -6377,7 +6404,7 @@ GameObject:
   - component: {fileID: 3399485839772786555}
   - component: {fileID: 8288487069211000985}
   - component: {fileID: 9062396653878241635}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_07
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -6694,7 +6721,7 @@ GameObject:
   - component: {fileID: 4606154215442261625}
   - component: {fileID: 3573843949024850715}
   - component: {fileID: 4696386488750294969}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_04
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -7037,7 +7064,7 @@ GameObject:
   - component: {fileID: 3585816836999705149}
   - component: {fileID: 8188744225853723034}
   - component: {fileID: 4790274689493156656}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_15
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -7440,6 +7467,8 @@ GameObject:
   - component: {fileID: 319257517257014690}
   - component: {fileID: 6868686307362874669}
   - component: {fileID: 6949099801258254584}
+  - component: {fileID: 3375472522719050967}
+  - component: {fileID: 4128396022635767259}
   m_Layer: 0
   m_Name: SM_Bottom_01
   m_TagString: Untagged
@@ -7519,6 +7548,74 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3375472522719050967
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1275658927277239914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
+  <IsNested>k__BackingField: 1
+  WasActiveDuringEdit: 1
+  WasActiveDuringEdit_Set1: 1
+  <ComponentIndex>k__BackingField: 68
+  <PredictedSpawn>k__BackingField: {fileID: 0}
+  <PredictedOwner>k__BackingField: {fileID: 0}
+  NetworkBehaviours:
+  - {fileID: 4128396022635767259}
+  InitializedParentNetworkBehaviour: {fileID: 1128512114491222955}
+  InitializedNestedNetworkObjects: []
+  RuntimeParentNetworkBehaviour: {fileID: 0}
+  RuntimeChildNetworkBehaviours: []
+  _isNetworked: 1
+  _isSpawnable: 1
+  _isGlobal: 0
+  _initializeOrder: 0
+  _preventDespawnOnDisconnect: 0
+  _defaultDespawnType: 0
+  NetworkObserver: {fileID: 0}
+  _enablePrediction: 0
+  _predictionType: 0
+  _graphicalObject: {fileID: 0}
+  _detachGraphicalObject: 0
+  _enableStateForwarding: 1
+  _networkTransform: {fileID: 0}
+  _ownerInterpolation: 1
+  _ownerSmoothedProperties: 255
+  _adaptiveInterpolation: 3
+  _spectatorSmoothedProperties: 255
+  _spectatorInterpolation: 2
+  _enableTeleport: 0
+  _teleportThreshold: 1
+  <PrefabId>k__BackingField: 65535
+  <SpawnableCollectionId>k__BackingField: 0
+  <AssetPathHash>k__BackingField: 0
+  <SceneId>k__BackingField: 0
+  SerializedTransformProperties:
+    Position: {x: 1.7870065, y: 0.21662907, z: -0.010426797}
+    Rotation: {x: 0.5000001, y: 0.4999999, z: 0.50000006, w: -0.49999994}
+    Scale: {x: 1, y: 1, z: 1}
+    IsValid: 1
+--- !u!114 &4128396022635767259
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1275658927277239914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: 3375472522719050967}
+  _networkObjectCache: {fileID: 3375472522719050967}
 --- !u!1 &1288086767355658258
 GameObject:
   m_ObjectHideFlags: 0
@@ -7533,11 +7630,10 @@ GameObject:
   - component: {fileID: 2434250987589059353}
   - component: {fileID: 5845254384731997302}
   - component: {fileID: 4083770292824825021}
-  - component: {fileID: 6693802920301959779}
   - component: {fileID: 1561597171226098622}
   - component: {fileID: 5775711082960143925}
   - component: {fileID: 553732824161428835}
-  m_Layer: 0
+  m_Layer: 15
   m_Name: SM_Ioniq_DoorFrontRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7632,7 +7728,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 70
+  <ComponentIndex>k__BackingField: 71
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -7721,27 +7817,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!65 &6693802920301959779
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1288086767355658258}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1.9115229, y: 1.3111541, z: 1.2550595}
-  m_Center: {x: 0.043880206, y: 0.3547672, z: 0.000000010572887}
 --- !u!95 &1561597171226098622
 Animator:
   serializedVersion: 7
@@ -8193,7 +8268,7 @@ GameObject:
   - component: {fileID: 3557592773264131464}
   - component: {fileID: 967914028626481739}
   - component: {fileID: 5604321696312743590}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_11
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -8530,11 +8605,10 @@ GameObject:
   - component: {fileID: 7767534378595988055}
   - component: {fileID: 5449969245585015500}
   - component: {fileID: 4052098040638056079}
-  - component: {fileID: 5486238112039463379}
   - component: {fileID: 3500734278958023514}
   - component: {fileID: 336815414867037973}
   - component: {fileID: 4019298589233364905}
-  m_Layer: 0
+  m_Layer: 15
   m_Name: SM_Ioniq_DoorRearLeft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -8629,7 +8703,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 71
+  <ComponentIndex>k__BackingField: 72
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -8718,27 +8792,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!65 &5486238112039463379
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1423899009048259810}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.36181983, y: 1.2531033, z: 1.2781667}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!95 &3500734278958023514
 Animator:
   serializedVersion: 7
@@ -8970,7 +9023,7 @@ GameObject:
   - component: {fileID: 1192265917361821612}
   - component: {fileID: 5329346505504389624}
   - component: {fileID: 4660641854019557891}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_03
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -9690,7 +9743,7 @@ GameObject:
   - component: {fileID: 1493582218397996955}
   - component: {fileID: 8330452542192908376}
   - component: {fileID: 6907006671170151466}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_01
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -10512,7 +10565,7 @@ GameObject:
   - component: {fileID: 6902303112511585363}
   - component: {fileID: 6033373216640407492}
   - component: {fileID: 4556644817094055419}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_22
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -11072,7 +11125,7 @@ GameObject:
   - component: {fileID: 7045196441726258300}
   - component: {fileID: 7546732685980616723}
   - component: {fileID: 1645684723189056702}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_01
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -11529,6 +11582,7 @@ GameObject:
   - component: {fileID: 1863851648321163001}
   - component: {fileID: 5400933560825684123}
   - component: {fileID: -3553503027591746852}
+  - component: {fileID: 8002811583555004112}
   m_Layer: 17
   m_Name: HV_Front_Cable_Term
   m_TagString: Untagged
@@ -11607,6 +11661,42 @@ MonoBehaviour:
   _componentIndexCache: 1
   _addedNetworkObject: {fileID: 5198598015469163211}
   _networkObjectCache: {fileID: 5198598015469163211}
+--- !u!114 &8002811583555004112
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2049557058794761155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
+  targetImage: {fileID: 21300000, guid: 9779433f0bac32e41b69d3cec4a3049e, type: 3}
+  targetName:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 13404517329092608
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  guideDescription:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 13404652477956096
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  showProgress: 0
+  showGuide: 1
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &2052585995659697430
 GameObject:
   m_ObjectHideFlags: 0
@@ -11911,7 +12001,7 @@ GameObject:
   - component: {fileID: 5795454251145528162}
   - component: {fileID: 2065490900947008589}
   - component: {fileID: 8776350646777497319}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_08
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -12835,6 +12925,7 @@ GameObject:
   - component: {fileID: 1085763225025347936}
   - component: {fileID: 4552554262902605983}
   - component: {fileID: 5977821916741397843}
+  - component: {fileID: 7887012707327165650}
   m_Layer: 15
   m_Name: MSD_Lever
   m_TagString: Untagged
@@ -13218,13 +13309,13 @@ MonoBehaviour:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 8487431699615744
+      m_KeyId: 13402677535391744
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   showProgress: 0
-  showGuide: 0
+  showGuide: 1
   references:
     version: 2
     RefIds: []
@@ -13253,6 +13344,18 @@ MonoBehaviour:
   blinkDuration: 0.6
   outlineColor: {r: 0.8627451, g: 0.078431375, b: 0.23529412, a: 1}
   outlineDistance: {x: 2, y: -2}
+--- !u!114 &7887012707327165650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2292568167266286571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1da63015b0093e47864202f2e470720, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoDrill.NoneHighlight
 --- !u!1 &2317259403905847392
 GameObject:
   m_ObjectHideFlags: 0
@@ -13535,7 +13638,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 79
+  <ComponentIndex>k__BackingField: 83
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -13870,7 +13973,7 @@ GameObject:
   - component: {fileID: 5123857720638112502}
   - component: {fileID: 4066223208746055103}
   - component: {fileID: 1950236083427580569}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_13
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -14361,7 +14464,7 @@ GameObject:
   - component: {fileID: 7059229636232988199}
   - component: {fileID: 1456724805099579196}
   - component: {fileID: 3371452459769064279}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_01
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -14970,7 +15073,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
-  _componentIndexCache: 8
+  _componentIndexCache: 7
   _addedNetworkObject: {fileID: 5198598015469163211}
   _networkObjectCache: {fileID: 5198598015469163211}
 --- !u!1 &2469863236048507067
@@ -15445,7 +15548,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 0
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 73
+  <ComponentIndex>k__BackingField: 77
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -15895,7 +15998,7 @@ GameObject:
   - component: {fileID: 7161496825355127105}
   - component: {fileID: 810939004527353969}
   - component: {fileID: 5875845295357931476}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_02
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -16707,7 +16810,7 @@ GameObject:
   - component: {fileID: 2794747963668606145}
   - component: {fileID: 3522591949414712677}
   - component: {fileID: 2315055774344204594}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_05
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -17115,7 +17218,7 @@ GameObject:
   - component: {fileID: 50733492026887075}
   - component: {fileID: 8815599095650054977}
   - component: {fileID: 869690966889955853}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_08
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -17661,7 +17764,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 0
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 74
+  <ComponentIndex>k__BackingField: 78
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -17777,7 +17880,7 @@ GameObject:
   - component: {fileID: 3536128020372596472}
   - component: {fileID: 6683873596026145279}
   - component: {fileID: 3087718332239539175}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_06
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -18235,6 +18338,7 @@ GameObject:
   - component: {fileID: 166918494908312487}
   - component: {fileID: 587422052396568027}
   - component: {fileID: -5373774094617330678}
+  - component: {fileID: 3280129040236053397}
   m_Layer: 17
   m_Name: HV_Rear_Cable_Term
   m_TagString: Untagged
@@ -18313,6 +18417,42 @@ MonoBehaviour:
   _componentIndexCache: 2
   _addedNetworkObject: {fileID: 5198598015469163211}
   _networkObjectCache: {fileID: 5198598015469163211}
+--- !u!114 &3280129040236053397
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3006967790363038546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
+  targetImage: {fileID: 21300000, guid: 9779433f0bac32e41b69d3cec4a3049e, type: 3}
+  targetName:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 13404517329092608
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  guideDescription:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 13404652477956096
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  showProgress: 0
+  showGuide: 1
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &3038133295539659389
 GameObject:
   m_ObjectHideFlags: 0
@@ -19253,7 +19393,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 81
+  <ComponentIndex>k__BackingField: 85
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -19361,8 +19501,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.10961765, y: 0.033802062, z: 0.05291358}
-  m_Center: {x: -0.3319131, y: 0.008101925, z: -0.010163363}
+  m_Size: {x: 0.10961765, y: 0.037970364, z: 0.06319496}
+  m_Center: {x: -0.3319131, y: 0.01639092, z: -0.005022675}
 --- !u!114 &8663261813382823578
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20057,7 +20197,7 @@ GameObject:
   - component: {fileID: 5886072721542145752}
   - component: {fileID: 343444280655057202}
   - component: {fileID: 3790875643777917277}
-  m_Layer: 0
+  m_Layer: 15
   m_Name: SM_Ioniq_DoorFrontLeft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -20152,7 +20292,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 69
+  <ComponentIndex>k__BackingField: 70
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -20258,10 +20398,10 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
-  m_Size: {x: 0.47735846, y: 1.2556536, z: 1.25213}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0.191598, y: 0.82632554, z: 0.8365818}
+  m_Center: {x: 0.14288129, y: 0.21466406, z: 0.037117783}
 --- !u!95 &5886072721542145752
 Animator:
   serializedVersion: 7
@@ -21410,7 +21550,7 @@ GameObject:
   - component: {fileID: 6234328214012075915}
   - component: {fileID: 8744291177906289021}
   - component: {fileID: 2042692059770568529}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_05
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -21902,6 +22042,8 @@ GameObject:
   - component: {fileID: 7049834897880642175}
   - component: {fileID: 4648409222021582579}
   - component: {fileID: 2220476222208060009}
+  - component: {fileID: 2649371302619133345}
+  - component: {fileID: 3259128251804409750}
   m_Layer: 0
   m_Name: SM_Bottom_02
   m_TagString: Untagged
@@ -21981,6 +22123,74 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &2649371302619133345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3869001271286270814}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
+  <IsNested>k__BackingField: 1
+  WasActiveDuringEdit: 1
+  WasActiveDuringEdit_Set1: 1
+  <ComponentIndex>k__BackingField: 69
+  <PredictedSpawn>k__BackingField: {fileID: 0}
+  <PredictedOwner>k__BackingField: {fileID: 0}
+  NetworkBehaviours:
+  - {fileID: 3259128251804409750}
+  InitializedParentNetworkBehaviour: {fileID: 1128512114491222955}
+  InitializedNestedNetworkObjects: []
+  RuntimeParentNetworkBehaviour: {fileID: 0}
+  RuntimeChildNetworkBehaviours: []
+  _isNetworked: 1
+  _isSpawnable: 1
+  _isGlobal: 0
+  _initializeOrder: 0
+  _preventDespawnOnDisconnect: 0
+  _defaultDespawnType: 0
+  NetworkObserver: {fileID: 0}
+  _enablePrediction: 0
+  _predictionType: 0
+  _graphicalObject: {fileID: 0}
+  _detachGraphicalObject: 0
+  _enableStateForwarding: 1
+  _networkTransform: {fileID: 0}
+  _ownerInterpolation: 1
+  _ownerSmoothedProperties: 255
+  _adaptiveInterpolation: 3
+  _spectatorSmoothedProperties: 255
+  _spectatorInterpolation: 2
+  _enableTeleport: 0
+  _teleportThreshold: 1
+  <PrefabId>k__BackingField: 65535
+  <SpawnableCollectionId>k__BackingField: 0
+  <AssetPathHash>k__BackingField: 0
+  <SceneId>k__BackingField: 0
+  SerializedTransformProperties:
+    Position: {x: 1.8871713, y: 0.22942448, z: 0.004676544}
+    Rotation: {x: 0.5000001, y: 0.4999999, z: 0.50000006, w: -0.49999994}
+    Scale: {x: 1, y: 1, z: 1}
+    IsValid: 1
+--- !u!114 &3259128251804409750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3869001271286270814}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: 2649371302619133345}
+  _networkObjectCache: {fileID: 2649371302619133345}
 --- !u!1 &3926312557213622083
 GameObject:
   m_ObjectHideFlags: 0
@@ -22002,7 +22212,7 @@ GameObject:
   - component: {fileID: 6374791823781169811}
   - component: {fileID: 5294218280881161119}
   - component: {fileID: 5472940491154588167}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_12
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -22325,6 +22535,77 @@ MonoBehaviour:
   blinkDuration: 0.6
   outlineColor: {r: 0.8627451, g: 0.078431375, b: 0.23529412, a: 1}
   outlineDistance: {x: 2, y: -2}
+--- !u!1 &3929572357937648501
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2448598511095245335}
+  - component: {fileID: 4165802103395228468}
+  - component: {fileID: 863745945771154228}
+  m_Layer: 0
+  m_Name: Hood_Parent
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2448598511095245335
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3929572357937648501}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.515, y: 0.91, z: -0.15}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 7844197550526286422}
+  m_Father: {fileID: 693374942892577907}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!95 &4165802103395228468
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3929572357937648501}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: bd82e714319dee144b40dafb2554f571, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &863745945771154228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3929572357937648501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
+  _componentIndexCache: 10
+  _addedNetworkObject: {fileID: 5198598015469163211}
+  _networkObjectCache: {fileID: 5198598015469163211}
 --- !u!1 &3931369300364611300
 GameObject:
   m_ObjectHideFlags: 0
@@ -23371,11 +23652,13 @@ MonoBehaviour:
   - {fileID: 7036993807452176451}
   - {fileID: 8400550360808323651}
   - {fileID: 1128512114491222955}
-  - {fileID: -7470526478024067011}
   - {fileID: 8466327420327965995}
   - {fileID: 993993932684355816}
   - {fileID: 1362003848728089911}
   - {fileID: 2141806129760149377}
+  - {fileID: 863745945771154228}
+  - {fileID: 7124888014916771833}
+  - {fileID: -7470526478024067011}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects:
   - {fileID: 9072033799423772321}
@@ -23396,11 +23679,15 @@ MonoBehaviour:
   - {fileID: 2292015375058740571}
   - {fileID: 8277497451804358051}
   - {fileID: 1248407955139167436}
-  - {fileID: 1474547671320431302}
+  - {fileID: 3375472522719050967}
+  - {fileID: 2649371302619133345}
   - {fileID: 186058206050096415}
   - {fileID: 2434250987589059353}
   - {fileID: 7767534378595988055}
   - {fileID: 1793070500638238480}
+  - {fileID: 1474547671320431302}
+  - {fileID: 3435880562217438102}
+  - {fileID: 6428172262147902713}
   - {fileID: 4893610141073434767}
   - {fileID: 784239277362425838}
   - {fileID: 7696054791600865295}
@@ -23524,7 +23811,7 @@ GameObject:
   - component: {fileID: 4408630409032197549}
   - component: {fileID: 298055951575953600}
   - component: {fileID: 6173914302602023178}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_11
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -24018,6 +24305,8 @@ GameObject:
   - component: {fileID: 8486725666534175124}
   - component: {fileID: 1536025438357698662}
   - component: {fileID: 3114764186073207391}
+  - component: {fileID: 3435880562217438102}
+  - component: {fileID: -7912758791291324876}
   m_Layer: 0
   m_Name: SM_BatteryCover
   m_TagString: Untagged
@@ -24097,6 +24386,74 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3435880562217438102
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4257071172088093529}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
+  <IsNested>k__BackingField: 1
+  WasActiveDuringEdit: 1
+  WasActiveDuringEdit_Set1: 1
+  <ComponentIndex>k__BackingField: 75
+  <PredictedSpawn>k__BackingField: {fileID: 0}
+  <PredictedOwner>k__BackingField: {fileID: 0}
+  NetworkBehaviours:
+  - {fileID: -7912758791291324876}
+  InitializedParentNetworkBehaviour: {fileID: 7124888014916771833}
+  InitializedNestedNetworkObjects: []
+  RuntimeParentNetworkBehaviour: {fileID: 0}
+  RuntimeChildNetworkBehaviours: []
+  _isNetworked: 1
+  _isSpawnable: 1
+  _isGlobal: 0
+  _initializeOrder: 0
+  _preventDespawnOnDisconnect: 0
+  _defaultDespawnType: 0
+  NetworkObserver: {fileID: 0}
+  _enablePrediction: 0
+  _predictionType: 0
+  _graphicalObject: {fileID: 0}
+  _detachGraphicalObject: 0
+  _enableStateForwarding: 1
+  _networkTransform: {fileID: 0}
+  _ownerInterpolation: 1
+  _ownerSmoothedProperties: 255
+  _adaptiveInterpolation: 3
+  _spectatorSmoothedProperties: 255
+  _spectatorInterpolation: 2
+  _enableTeleport: 0
+  _teleportThreshold: 1
+  <PrefabId>k__BackingField: 65535
+  <SpawnableCollectionId>k__BackingField: 0
+  <AssetPathHash>k__BackingField: 0
+  <SceneId>k__BackingField: 0
+  SerializedTransformProperties:
+    Position: {x: -0.353, y: 0.241, z: 0.003}
+    Rotation: {x: 0.5, y: -0.5, z: 0.49999997, w: 0.50000006}
+    Scale: {x: 1, y: 1, z: 1}
+    IsValid: 1
+--- !u!114 &-7912758791291324876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4257071172088093529}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: 3435880562217438102}
+  _networkObjectCache: {fileID: 3435880562217438102}
 --- !u!1 &4259187333972178566
 GameObject:
   m_ObjectHideFlags: 0
@@ -24919,7 +25276,7 @@ GameObject:
   - component: {fileID: 1665700835838487489}
   - component: {fileID: 1947824134703249884}
   - component: {fileID: 8993024429201390342}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_20
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -27106,7 +27463,7 @@ GameObject:
   - component: {fileID: 7079231309683587782}
   - component: {fileID: 772232500687651847}
   - component: {fileID: 5878124920223798366}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_19
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -28071,7 +28428,7 @@ GameObject:
   - component: {fileID: 881356753165371149}
   - component: {fileID: 1129134674837527624}
   - component: {fileID: 4190158451764688709}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_12
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -28633,7 +28990,7 @@ GameObject:
   - component: {fileID: 4043141052549226503}
   - component: {fileID: 2851197950275111750}
   - component: {fileID: 1847420124018163666}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_09
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -29589,7 +29946,7 @@ GameObject:
   - component: {fileID: 3742404757517143865}
   - component: {fileID: 5298390979729474097}
   - component: {fileID: 8228225204034477111}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_13
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -30620,7 +30977,7 @@ GameObject:
   - component: {fileID: 825745356420368908}
   - component: {fileID: 3482286232169837120}
   - component: {fileID: 2879794915951559141}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_13
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -31381,7 +31738,7 @@ GameObject:
   - component: {fileID: 542475631268372341}
   - component: {fileID: 6520056563850615301}
   - component: {fileID: 427967631911018825}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_10
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -32015,6 +32372,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8302986357292525020}
+  - component: {fileID: 7124888014916771833}
   m_Layer: 0
   m_Name: BatteryPack
   m_TagString: Untagged
@@ -32044,6 +32402,21 @@ Transform:
   - {fileID: 7126044708771981096}
   m_Father: {fileID: 693374942892577907}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+--- !u!114 &7124888014916771833
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5575380004968619973}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
+  _componentIndexCache: 11
+  _addedNetworkObject: {fileID: 5198598015469163211}
+  _networkObjectCache: {fileID: 5198598015469163211}
 --- !u!1 &5608945423600709468
 GameObject:
   m_ObjectHideFlags: 0
@@ -32775,7 +33148,7 @@ GameObject:
   - component: {fileID: 2829857535364118524}
   - component: {fileID: 2362749782282607184}
   - component: {fileID: 550671254643103943}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_06
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -33845,6 +34218,8 @@ GameObject:
   - component: {fileID: 7126044708771981096}
   - component: {fileID: 6123434490227832125}
   - component: {fileID: 4798715109649083743}
+  - component: {fileID: 6428172262147902713}
+  - component: {fileID: 5429354671750620379}
   m_Layer: 0
   m_Name: SM_FrontConnector
   m_TagString: Untagged
@@ -33924,6 +34299,74 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &6428172262147902713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5967269153743730971}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
+  <IsNested>k__BackingField: 1
+  WasActiveDuringEdit: 1
+  WasActiveDuringEdit_Set1: 1
+  <ComponentIndex>k__BackingField: 76
+  <PredictedSpawn>k__BackingField: {fileID: 0}
+  <PredictedOwner>k__BackingField: {fileID: 0}
+  NetworkBehaviours:
+  - {fileID: 5429354671750620379}
+  InitializedParentNetworkBehaviour: {fileID: 7124888014916771833}
+  InitializedNestedNetworkObjects: []
+  RuntimeParentNetworkBehaviour: {fileID: 0}
+  RuntimeChildNetworkBehaviours: []
+  _isNetworked: 1
+  _isSpawnable: 1
+  _isGlobal: 0
+  _initializeOrder: 0
+  _preventDespawnOnDisconnect: 0
+  _defaultDespawnType: 0
+  NetworkObserver: {fileID: 0}
+  _enablePrediction: 0
+  _predictionType: 0
+  _graphicalObject: {fileID: 0}
+  _detachGraphicalObject: 0
+  _enableStateForwarding: 1
+  _networkTransform: {fileID: 0}
+  _ownerInterpolation: 1
+  _ownerSmoothedProperties: 255
+  _adaptiveInterpolation: 3
+  _spectatorSmoothedProperties: 255
+  _spectatorInterpolation: 2
+  _enableTeleport: 0
+  _teleportThreshold: 1
+  <PrefabId>k__BackingField: 65535
+  <SpawnableCollectionId>k__BackingField: 0
+  <AssetPathHash>k__BackingField: 0
+  <SceneId>k__BackingField: 0
+  SerializedTransformProperties:
+    Position: {x: 0.94186974, y: 0.24460697, z: 0.117040634}
+    Rotation: {x: -0.00000014106499, y: -0, z: -0, w: 1}
+    Scale: {x: 1, y: 1, z: 1}
+    IsValid: 1
+--- !u!114 &5429354671750620379
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5967269153743730971}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: 6428172262147902713}
+  _networkObjectCache: {fileID: 6428172262147902713}
 --- !u!1 &5972319731379554155
 GameObject:
   m_ObjectHideFlags: 0
@@ -34523,24 +34966,24 @@ MonoBehaviour:
   targetImage: {fileID: 21300000, guid: e4c04ca83e84ee8409c6300c39db8338, type: 3}
   targetName:
     m_TableReference:
-      m_TableCollectionName: 
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 0
+      m_KeyId: 13404573092364288
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   guideDescription:
     m_TableReference:
-      m_TableCollectionName: 
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 0
+      m_KeyId: 13404669259366400
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   showProgress: 0
-  showGuide: 0
+  showGuide: 1
   references:
     version: 2
     RefIds: []
@@ -34686,7 +35129,7 @@ GameObject:
   - component: {fileID: 6886337461340643091}
   - component: {fileID: 4266221312426840486}
   - component: {fileID: 188013762365631039}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_10
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -35061,7 +35504,7 @@ GameObject:
   - component: {fileID: 1880061405344885737}
   - component: {fileID: 6504174679984377035}
   - component: {fileID: 9206314643655108644}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_11
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -35377,7 +35820,8 @@ GameObject:
   - component: {fileID: 3505796245914036555}
   - component: {fileID: 2543008060568155885}
   - component: {fileID: 5613228850371802987}
-  m_Layer: 0
+  - component: {fileID: 8691209155594843486}
+  m_Layer: 15
   m_Name: Battery_12V_Cover
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -35741,10 +36185,22 @@ MonoBehaviour:
     m_WaitForCompletion: 0
     m_LocalVariables: []
   showProgress: 0
-  showGuide: 0
+  showGuide: 1
   references:
     version: 2
     RefIds: []
+--- !u!114 &8691209155594843486
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6282551299653505647}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1da63015b0093e47864202f2e470720, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoDrill.NoneHighlight
 --- !u!1 &6297714324244327589
 GameObject:
   m_ObjectHideFlags: 0
@@ -35934,7 +36390,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
-  _componentIndexCache: 9
+  _componentIndexCache: 8
   _addedNetworkObject: {fileID: 5198598015469163211}
   _networkObjectCache: {fileID: 5198598015469163211}
 --- !u!1 &6323716755326532023
@@ -36282,7 +36738,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 80
+  <ComponentIndex>k__BackingField: 84
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -38207,7 +38663,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 78
+  <ComponentIndex>k__BackingField: 82
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -39222,7 +39678,7 @@ GameObject:
   - component: {fileID: 3180327165041199443}
   - component: {fileID: 6720034659091623252}
   - component: {fileID: 891807798787532392}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_10
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -39613,7 +40069,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
-  _componentIndexCache: 10
+  _componentIndexCache: 9
   _addedNetworkObject: {fileID: 5198598015469163211}
   _networkObjectCache: {fileID: 5198598015469163211}
 --- !u!1 &6972399572012344130
@@ -39684,7 +40140,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
-  _componentIndexCache: 7
+  _componentIndexCache: 6
   _addedNetworkObject: {fileID: 5198598015469163211}
   _networkObjectCache: {fileID: 5198598015469163211}
 --- !u!1 &6978676357544057044
@@ -39698,6 +40154,7 @@ GameObject:
   - component: {fileID: 718748911514292831}
   - component: {fileID: 1773126456155590881}
   - component: {fileID: 6101994353756951464}
+  - component: {fileID: 7798928699192946697}
   m_Layer: 17
   m_Name: HV_Rear_Cable_Term
   m_TagString: Untagged
@@ -39760,6 +40217,42 @@ MonoBehaviour:
   resistanceValue: 9999999
   faultyVoltageValue: 380
   isFaulty: 0
+--- !u!114 &7798928699192946697
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6978676357544057044}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
+  targetImage: {fileID: 21300000, guid: 9779433f0bac32e41b69d3cec4a3049e, type: 3}
+  targetName:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 13404517329092608
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  guideDescription:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 13404652477956096
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  showProgress: 0
+  showGuide: 1
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &6985229887425457717
 GameObject:
   m_ObjectHideFlags: 0
@@ -39955,11 +40448,10 @@ GameObject:
   - component: {fileID: 1793070500638238480}
   - component: {fileID: 8233330499878018365}
   - component: {fileID: 2883799546536888801}
-  - component: {fileID: 2887017684974467370}
   - component: {fileID: 6074575045671868379}
   - component: {fileID: 5064344419473530806}
   - component: {fileID: 7827752439551284500}
-  m_Layer: 0
+  m_Layer: 15
   m_Name: SM_Ioniq_DoorRearRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -40054,7 +40546,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 72
+  <ComponentIndex>k__BackingField: 73
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -40143,27 +40635,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!65 &2887017684974467370
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6993059708469380081}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.36190835, y: 1.3096538, z: 1.2530878}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!95 &6074575045671868379
 Animator:
   serializedVersion: 7
@@ -40933,7 +41404,7 @@ GameObject:
   - component: {fileID: 675005376610809709}
   - component: {fileID: 4748970558064133948}
   - component: {fileID: 4770223881685271223}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_18
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -42317,7 +42788,7 @@ GameObject:
   - component: {fileID: 720045713512748935}
   - component: {fileID: 4244535701759841175}
   - component: {fileID: 6203924700055019607}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_04
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -42969,7 +43440,7 @@ GameObject:
   - component: {fileID: 7545909147298291726}
   - component: {fileID: 5163929317697639833}
   - component: {fileID: 8766178355656860270}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_15
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -44071,7 +44542,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 75
+  <ComponentIndex>k__BackingField: 79
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -44661,7 +45132,7 @@ GameObject:
   - component: {fileID: 6875049444572016824}
   - component: {fileID: 7406975812933325330}
   - component: {fileID: 8464022006529046719}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_21
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -45589,7 +46060,7 @@ GameObject:
   - component: {fileID: 1052715539757877169}
   - component: {fileID: 1436147850199758962}
   - component: {fileID: 7763193884668008281}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_14
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -46053,7 +46524,7 @@ GameObject:
   - component: {fileID: 779464655876763373}
   - component: {fileID: 6155451891097164359}
   - component: {fileID: 146874574463336054}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_09
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -46677,7 +47148,7 @@ GameObject:
   - component: {fileID: 6522086091999111478}
   - component: {fileID: 2359291961411610240}
   - component: {fileID: 4482546793761187730}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_04
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -47854,7 +48325,7 @@ MonoBehaviour:
   <IsNested>k__BackingField: 1
   WasActiveDuringEdit: 1
   WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 77
+  <ComponentIndex>k__BackingField: 81
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
@@ -48357,7 +48828,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
-  _componentIndexCache: 6
+  _componentIndexCache: 12
   _addedNetworkObject: {fileID: 5198598015469163211}
   _networkObjectCache: {fileID: 5198598015469163211}
 --- !u!1 &8302461937100836569
@@ -48503,7 +48974,7 @@ GameObject:
   - component: {fileID: 2863123809270074931}
   - component: {fileID: 9201604231448295997}
   - component: {fileID: 4899700573864166676}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_02
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -49089,7 +49560,7 @@ GameObject:
   - component: {fileID: 3126226657227648672}
   - component: {fileID: 4143217924618125306}
   - component: {fileID: 278619256665639502}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_14
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -49621,7 +50092,7 @@ GameObject:
   - component: {fileID: 7738928923759303409}
   - component: {fileID: 6637826527203181100}
   - component: {fileID: 1318289052504251090}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_07
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -50588,7 +51059,7 @@ GameObject:
   - component: {fileID: 2569620945007734420}
   - component: {fileID: 1377311465367077998}
   - component: {fileID: 6245919629686699950}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_16
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -51110,7 +51581,7 @@ GameObject:
   - component: {fileID: 4649416876314103889}
   - component: {fileID: 576687155762294614}
   - component: {fileID: 2516695992618151076}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_09
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -51485,7 +51956,7 @@ GameObject:
   - component: {fileID: 4178392258580497733}
   - component: {fileID: 7404489650254370494}
   - component: {fileID: 6673637722208157202}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_08
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -52082,24 +52553,24 @@ MonoBehaviour:
   targetImage: {fileID: 21300000, guid: 9779433f0bac32e41b69d3cec4a3049e, type: 3}
   targetName:
     m_TableReference:
-      m_TableCollectionName: 
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 0
+      m_KeyId: 13404517329092608
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   guideDescription:
     m_TableReference:
-      m_TableCollectionName: 
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 0
+      m_KeyId: 13404652477956096
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   showProgress: 0
-  showGuide: 0
+  showGuide: 1
   references:
     version: 2
     RefIds: []
@@ -52637,7 +53108,7 @@ GameObject:
   - component: {fileID: 7297100700163017156}
   - component: {fileID: 816631594610244284}
   - component: {fileID: 1973260355907297649}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_05
   m_TagString: Bolt
   m_Icon: {fileID: 0}
@@ -53468,7 +53939,7 @@ GameObject:
   - component: {fileID: 59848969295014258}
   - component: {fileID: 984700276620797869}
   - component: {fileID: 485603570932103035}
-  m_Layer: 0
+  m_Layer: 18
   m_Name: FBX_Bolt_17
   m_TagString: Bolt
   m_Icon: {fileID: 0}

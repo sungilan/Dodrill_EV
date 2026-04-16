@@ -264,7 +264,8 @@ public abstract class LiftControllerBase : NetworkBehaviour, ILiftController
     public virtual void OnUpButton()
     {
         if(_currentHeight >= MaxValue) return;
-        RequestOwnershipAndMoveServerRpc(1, LocalConnection);
+        // Ownership을 가져오지 말고 명령만 내림
+        RequestMoveServerRpc(1);
     }
 
     public virtual void OnDownButton()

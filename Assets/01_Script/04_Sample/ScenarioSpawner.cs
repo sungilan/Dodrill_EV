@@ -63,6 +63,9 @@ public class ScenarioSpawner : MonoBehaviour
     // 현재 Task에서 스폰된 NetworkObject 목록
     private readonly List<NetworkObject> _activeObjects = new();
 
+    // --- [추가] persist=true 로 유지되고 있는 오브젝트 목록 ---
+    private readonly List<NetworkObject> _persistedObjects = new();
+
     // map.objects로 스폰된 환경 오브젝트 목록 (차량·리프트·카트 등)
     private readonly List<GameObject> _mapObjects = new();
 
@@ -71,6 +74,12 @@ public class ScenarioSpawner : MonoBehaviour
 
     // 씬의 모든 SpawnPoint 캐시
     private Dictionary<string, SpawnPoint> _spawnPointCache;
+
+    // prefabId로 Persisted 오브젝트를 찾는 헬퍼
+    private NetworkObject GetPersistedObject(string prefabId)
+    {
+        return _persistedObjects.Find(x => x.name == $"{prefabId}(Persist)");
+    }
 
     // ── 에디터 자동 등록 ──────────────────
 #if UNITY_EDITOR
@@ -397,54 +406,62 @@ public class ScenarioSpawner : MonoBehaviour
     /// </summary>
     public void SpawnForTask(TaskDef taskDef)
     {
-        if (taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0) return;
-        if (!InstanceFinder.IsServerStarted)
-        {
-            Debug.LogWarning("[ScenarioSpawner] 서버에서만 호출 가능");
-            return;
-        }
+        if(taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0) return;
+        if(!InstanceFinder.IsServerStarted) return;
 
         int count = taskDef.spawnObjects.Count;
-        for (int i = 0; i < count; i++)
+        for(int i = 0; i < count; i++)
         {
-            // 아이템이 여러 개면 중앙 기준으로 좌우 분산
-            // ex) 2개: -0.2 / +0.2 / 3개: -0.4 / 0 / +0.4
+            // 아이템 좌우 분산 계산
             float xOffset = (i - (count - 1) * 0.5f) * SPAWN_SPREAD;
             SpawnBundle(taskDef.spawnObjects[i], xOffset);
         }
     }
 
     /// <summary>
-    /// Task 종료(완료/Fail 재시작) 시 ScenarioRunner가 호출
-    /// 현재 Task의 스폰 오브젝트 디스폰 + 가이드 비활성화
+    /// Task 종료 시 호출. 
+    /// 1. despawnObjectIds에 명시된 persist 오브젝트 삭제
+    /// 2. 일반 오브젝트 삭제 및 새로 생긴 persist 오브젝트 이관
     /// </summary>
-    public void DespawnCurrentTask()
+    public void DespawnCurrentTask(TaskDef taskDef)
     {
-        // 스폰 오브젝트 디스폰
-        Debug.Log($"[ScenarioSpawner] DespawnCurrentTask — 대상 {_activeObjects.Count}개, IsServer={InstanceFinder.IsServerStarted}");
-        foreach (var obj in _activeObjects)
+        // 1. 이번 단계에서 명시적으로 "지워라"고 한 놈들 처리
+        if(taskDef.despawnObjectIds != null)
         {
-            if (obj == null)
+            foreach(string id in taskDef.despawnObjectIds)
             {
-                Debug.LogWarning("[ScenarioSpawner] null 객체 건너뜀");
-                continue;
+                NetworkObject target = GetPersistedObject(id);
+                if(target != null)
+                {
+                    _persistedObjects.Remove(target);
+                    _activeObjects.Remove(target);
+                    if(InstanceFinder.IsServerStarted) InstanceFinder.ServerManager.Despawn(target.gameObject);
+                    Debug.Log($"[Spawner] 조건부 유지 종료 - 삭제: {id}");
+                }
             }
+        }
 
-            Debug.Log($"[ScenarioSpawner] 디스폰: {obj.name}");
+        // 2. 나머지 오브젝트 처리 (역순 순회 필수)
+        for(int i = _activeObjects.Count - 1; i >= 0; i--)
+        {
+            var obj = _activeObjects[i];
+            if(obj == null) continue;
 
-            // FishNet Despawn: 서버가 클라이언트에 despawn 메시지 전송 후 오브젝트 파괴
-            // SetActive(false) 또는 Destroy()를 먼저 호출하면 FishNet이 패킷을 보내기 전에
-            // 오브젝트가 파괴되어 클라이언트가 despawn 알림을 받지 못하는 문제 발생
-            if (InstanceFinder.IsServerStarted)
-                InstanceFinder.ServerManager.Despawn(obj.gameObject);
+            if(!obj.name.Contains("(Persist)"))
+            {
+                if(InstanceFinder.IsServerStarted) InstanceFinder.ServerManager.Despawn(obj.gameObject);
+                else Destroy(obj.gameObject);
+            }
             else
-                Destroy(obj.gameObject); // 클라이언트 단독 실행 시 폴백
+            {
+                // (Persist)가 있으면 유지 목록으로 이동
+                if(!_persistedObjects.Contains(obj)) _persistedObjects.Add(obj);
+            }
         }
         _activeObjects.Clear();
 
-        // 가이드 비활성화
-        foreach (var guideId in _activeGuides)
-            _guideRegistry?.Hide(guideId);
+        // 3. 가이드 비활성화
+        foreach(var guideId in _activeGuides) _guideRegistry?.Hide(guideId);
         _activeGuides.Clear();
     }
 
@@ -452,69 +469,73 @@ public class ScenarioSpawner : MonoBehaviour
 
     private void SpawnBundle(SpawnBundle bundle, float xOffset = 0f)
     {
-        // 1. 스폰 위치 결정
-        Vector3 spawnPos = Vector3.zero;
-        Quaternion spawnRot = Quaternion.identity;
+        // 1. 위치 결정
+        Vector3 spawnPos = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.position : Vector3.zero;
+        Quaternion spawnRot = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.rotation : Quaternion.identity;
 
-        if (!string.IsNullOrEmpty(bundle.spawnPointId))
+        if(!string.IsNullOrEmpty(bundle.spawnPointId) && _spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
         {
-            if (_spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
-            {
-                spawnPos = sp.transform.position;
-                spawnRot = sp.transform.rotation;
-            }
-            else
-            {
-                Debug.LogWarning($"[ScenarioSpawner] spawnPointId '{bundle.spawnPointId}' 없음 — 폴백 사용");
-                if (_fallbackSpawnRoot != null)
-                {
-                    spawnPos = _fallbackSpawnRoot.position;
-                    spawnRot = _fallbackSpawnRoot.rotation;
-                }
-            }
+            spawnPos = sp.transform.position;
+            spawnRot = sp.transform.rotation;
         }
-        else if (_fallbackSpawnRoot != null)
-        {
-            spawnPos = _fallbackSpawnRoot.position;
-            spawnRot = _fallbackSpawnRoot.rotation;
-        }
-
-        // Y 위로 띄우기 + 다중 아이템 X 분산
         spawnPos += new Vector3(xOffset, SPAWN_HEIGHT, 0f);
 
-        // 2. prefab 스폰
-        if (!string.IsNullOrEmpty(bundle.prefabId))
+        // 2. 스폰 또는 재사용
+        if(!string.IsNullOrEmpty(bundle.prefabId))
         {
-            var prefab = FindPrefab(bundle.prefabId);
-            if (prefab != null)
+            NetworkObject existingPersist = GetPersistedObject(bundle.prefabId);
+
+            if(existingPersist != null)
             {
-                var instance = Instantiate(prefab, spawnPos, spawnRot);
-                _activeObjects.Add(instance); // Spawn 전에 등록 (Spawn 실패해도 추적 가능)
-                if (InstanceFinder.IsServerStarted)
-                    InstanceFinder.ServerManager.Spawn(instance.gameObject);
-                Debug.Log($"[ScenarioSpawner] 스폰: {bundle.prefabId} @ {bundle.spawnPointId}, 총 추적 {_activeObjects.Count}개");
+                Debug.Log($"[Spawner] 기존 persist 오브젝트 재사용: {bundle.prefabId}");
+                _persistedObjects.Remove(existingPersist);
+                _activeObjects.Add(existingPersist);
+
+                //existingPersist.transform.position = spawnPos;
+                //existingPersist.transform.rotation = spawnRot;
             }
             else
             {
-                Debug.LogWarning($"[ScenarioSpawner] prefabId '{bundle.prefabId}' 등록 안 됨");
+                var prefab = FindPrefab(bundle.prefabId);
+                if(prefab != null)
+                {
+                    var instance = Instantiate(prefab, spawnPos, spawnRot);
+                    instance.name = bundle.persist ? $"{bundle.prefabId}(Persist)" : bundle.prefabId;
+
+                    _activeObjects.Add(instance);
+                    if(InstanceFinder.IsServerStarted) InstanceFinder.ServerManager.Spawn(instance.gameObject);
+                }
+                else
+                {
+                    Debug.LogWarning($"[Spawner] 프리팹을 찾을 수 없음: {bundle.prefabId}");
+                }
             }
         }
 
         // 3. 가이드 활성화
-        if (!string.IsNullOrEmpty(bundle.guideId))
+        if(!string.IsNullOrEmpty(bundle.guideId))
         {
             _guideRegistry?.Show(bundle.guideId);
             _activeGuides.Add(bundle.guideId);
         }
+    }
 
-        // GuideSystem 표시는 클라이언트(GuideSystem.ShowSpawnPointGuides)가 ScenarioData에서 직접 처리
+    /// <summary>시나리오 완전 종료 시 호출하여 남겨둔 persist 오브젝트들을 모두 정리</summary>
+    public void DespawnAllPersisted()
+    {
+        foreach(var obj in _persistedObjects)
+        {
+            if(obj != null && InstanceFinder.IsServerStarted)
+                InstanceFinder.ServerManager.Despawn(obj.gameObject);
+        }
+        _persistedObjects.Clear();
+        Debug.Log("[ScenarioSpawner] 모든 Persisted 오브젝트 정리 완료");
     }
 
     private NetworkObject FindPrefab(string prefabId)
     {
-        foreach (var entry in _prefabRegistry)
-            if (entry.prefabId == prefabId) return entry.prefab;
-        return null;
+        var entry = _prefabRegistry.Find(e => e.prefabId == prefabId);
+        return entry.prefab;
     }
 }
 

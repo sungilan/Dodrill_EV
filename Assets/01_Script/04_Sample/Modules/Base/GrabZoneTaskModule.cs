@@ -19,66 +19,57 @@ public abstract class GrabZoneTaskModule : ITaskModule
 {
     public abstract string ModuleId { get; }
 
-    private string         _targetZoneId;
-    private List<string>   _requiredItems;
-    private Action         _onComplete;
-    private Action         _onFail;
-
-    // 존 활성화 여부 추적 (중복 호출 방지)
+    protected string _targetZoneId; // 자식 접근을 위해 private -> protected
+    private List<string> _requiredItems;
+    private Action _onComplete;
+    private Action _onFail;
     private bool _completed;
 
     public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
     {
-        _targetZoneId  = config?.targetZoneId ?? string.Empty;
+        _targetZoneId = config?.targetZoneId ?? string.Empty;
         _requiredItems = config?.requiredItems ?? new List<string>();
-        _onComplete    = onComplete;
-        _onFail        = onFail;
-        _completed     = false;
+        _onComplete = onComplete;
+        _onFail = onFail;
+        _completed = false;
 
-        // 데디케이티드 서버에서는 존 활성화/이벤트 구독 스킵
-        // → 서버는 OnReceiveZoneSignal로 완료 처리, 클라이언트/호스트만 로컬 물리 경로 사용
         bool isServerOnly = InstanceFinder.IsServerStarted && !InstanceFinder.IsClientStarted;
-        if (!isServerOnly)
+        if(!isServerOnly)
         {
             var zone = TaskInteractionZone.Find(_targetZoneId);
             zone?.Activate();
             InteractionEvents.OnZoneActivated += HandleZoneActivated;
         }
-
-        if (string.IsNullOrEmpty(_targetZoneId))
-            Debug.LogWarning($"[{ModuleId}] targetZoneId가 비어있음 — GrabZoneTaskModule 의도적 사용인지 확인");
     }
 
     private void HandleZoneActivated(string zoneId, string itemId)
     {
-        if (_completed) return;
-        if (zoneId != _targetZoneId) return;
+        if(_completed) return;
+        if(zoneId != _targetZoneId) return;
 
-        bool validItem = _requiredItems.Count == 0       // 빈손 모드
-                      || _requiredItems.Contains(itemId); // 필요 아이템 보유
-
-        if (!validItem) return;
+        bool validItem = _requiredItems.Count == 0 || _requiredItems.Contains(itemId);
+        if(!validItem) return;
 
         _completed = true;
+
+        // ★ 자식 클래스에서 "FinalModel" 활성화 등 추가 로직을 실행할 수 있도록 Hook 호출
+        OnModuleSuccess(itemId);
+
         _onComplete?.Invoke();
     }
 
+    // ★ 자식에서 필요 시 오버라이드 (기본은 빈 함수)
+    protected virtual void OnModuleSuccess(string itemId) { }
+
     public void OnUpdate(float deltaTime) { }
 
-    public void OnComplete()
-    {
-        bool isServerOnly = InstanceFinder.IsServerStarted && !InstanceFinder.IsClientStarted;
-        if (!isServerOnly)
-        {
-            InteractionEvents.OnZoneActivated -= HandleZoneActivated;
-            TaskInteractionZone.Find(_targetZoneId)?.Deactivate();
-        }
-    }
+    public void OnComplete() => Cleanup();
+    public void OnFail() => Cleanup();
 
-    public void OnFail()
+    private void Cleanup()
     {
         bool isServerOnly = InstanceFinder.IsServerStarted && !InstanceFinder.IsClientStarted;
-        if (!isServerOnly)
+        if(!isServerOnly)
         {
             InteractionEvents.OnZoneActivated -= HandleZoneActivated;
             TaskInteractionZone.Find(_targetZoneId)?.Deactivate();

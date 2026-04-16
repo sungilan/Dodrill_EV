@@ -350,7 +350,7 @@ public static class ClickableAnimatorManager
     {
         var target = Get(broadcast.id);
         if(target == null) return;
-
+        if(!target.CanInteract()) return;
         target.ApplyAnimState(broadcast.isOpen);
         InstanceFinder.ServerManager.Broadcast(broadcast);
     }
@@ -422,7 +422,7 @@ public class ClickableAnimator : MonoBehaviour
     }
 
     /// <summary>현재 시나리오 단계가 리스트에 포함되어 있는지 확인</summary>
-    private bool CanInteract()
+    public bool CanInteract()
     {
         // 1. 리스트가 비어있으면 상시 허용
         if(targetTaskIndices == null || targetTaskIndices.Count == 0) return true;
@@ -438,10 +438,34 @@ public class ClickableAnimator : MonoBehaviour
 
         if(!isAllowed)
         {
-            Debug.Log($"<color=orange>[Clickable]</color> {uniqueId} 차단: 현재 Index({currentIdx})는 허용되지 않음.");
+            //Debug.Log($"<color=orange>[Clickable]</color> {uniqueId} 차단: 현재 Index({currentIdx})는 허용되지 않음.");
         }
 
         return isAllowed;
+    }
+    private void Update()
+    {
+        // 실시간으로 그랩 가능 여부를 업데이트
+        UpdateGrabbableState();
+    }
+
+    /// <summary>
+    /// 시나리오 단계에 따라 Grabbable 컴포넌트를 활성화/비활성화
+    /// </summary>
+    private void UpdateGrabbableState()
+    {
+        if(_grabbable == null) return;
+
+        bool canNowInteract = CanInteract();
+
+        // 현재 상태와 다를 때만 갱신 (성능 최적화)
+        if(_grabbable.enabled != canNowInteract)
+        {
+            _grabbable.enabled = canNowInteract;
+
+            // 시각적 피드백이나 로그가 필요하다면 추가
+            // Debug.Log($"[Clickable] {uniqueId} Grabbable 상태 변경: {canNowInteract}");
+        }
     }
 
     public void OnPCClick()

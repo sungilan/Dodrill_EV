@@ -385,7 +385,7 @@ public class GuideSystem : MonoBehaviour
 
             // [디버그 로그 추가]
             bool hasZoneData = zoneData != null;
-            bool zoneShowGuide = hasZoneData ? zoneData.showGuide : true; // 데이터가 없으면 기본적으로 켬
+            bool zoneShowGuide = hasZoneData ? zoneData.showGuide : false; // 데이터가 없으면 기본적으로 끔
             bool shouldSpawnMarker = !hasZoneData || zoneShowGuide;
 
             Debug.Log($"<color=yellow>[Guide-Check]</color> 타겟: <b>{markerTargetGO.name}</b> | " +
@@ -622,24 +622,26 @@ public class GuideSystem : MonoBehaviour
         _clickTargets = FindClickTargets(config);
         foreach(var t in _clickTargets)
         {
+            // 아웃라인은 여기서 켜줍니다.
             SetOutline(t, true);
 
-            // ★ [수정 포인트] 클릭 타겟 마커 생성 시에도 showGuide 조건을 확인해야 합니다.
+            // ★ 마커 생성 중복 방지 로직 ★
+            // 이미 _targetMarker가 존재하거나 ProcessTargetGuide에서 처리되었다면 여기서 생성하지 않음
             var zoneData = t.GetComponent<GuideZoneData>();
             bool shouldSpawnMarker = (zoneData == null) || zoneData.showGuide;
 
-            // spawnObjects가 없을 때만 마커를 생성하는 기존 로직에 showGuide 조건 추가
+            // targetMarker가 이미 생성되었는지 체크하거나, 
+            // 아예 마커 생성 로직을 이 함수에서 제거하고 ProcessTargetGuide에 맡깁니다.
+
+            /* 기존 마커 생성 코드 주석 처리 또는 삭제
             if(shouldSpawnMarker && (taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0))
             {
-                string label = GetExtraValue(config, "description", "이곳을 클릭하세요.");
-                SpawnMarker(t.transform.position, label, targetGuideColor, true);
+                // ... 생략 ...
+                // SpawnMarker(...) -> 이 부분을 삭제하세요.
+            }
+            */
 
-                Debug.Log($"<color=cyan>[Guide-ClickTarget]</color> {t.name}에 클릭 가이드 생성");
-            }
-            else if(!shouldSpawnMarker)
-            {
-                Debug.Log($"<color=orange>[Guide-ClickTarget]</color> {t.name}은 showGuide가 false이므로 클릭 마커 생성을 스킵합니다.");
-            }
+            Debug.Log($"<color=cyan>[Guide-ClickTarget]</color> {t.name} 아웃라인 설정 완료 (마커 생성은 통합 로직에서 관리)");
         }
     }
 

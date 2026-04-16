@@ -1,6 +1,8 @@
+using DG.Tweening;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using static BatteryJack_BaseModule;
 
 // ============================================================
 //  EVModules.cs
@@ -56,9 +58,23 @@ public class PRA_ReplaceModule : GrabZoneTaskModule
     public override string ModuleId => "PRA_Replace";
 }
 
-public class LOTO_WarringSignModule : GrabZoneTaskModule
+public class LOTO_WarningSignModule : GrabZoneTaskModule
 {
-    public override string ModuleId => "LOTO_WarringSign";
+    public override string ModuleId => "LOTO_WarningSign";
+
+    protected override void OnModuleSuccess(string itemId)
+    {
+        // 1. 시스템이 존을 끄기 전에 먼저 실행되거나, 경로를 직접 참조해야 합니다.
+        // 만약 FinalModel을 존 외부에 두었다면 아래와 같이 찾습니다.
+        GameObject finalModelObj = GameObject.Find("Final_WarningSign_Model");
+
+        if(finalModelObj != null)
+        {
+            finalModelObj.SetActive(true);
+            finalModelObj.transform.DOPunchScale(Vector3.one * 0.15f, 0.4f);
+            Debug.Log("<color=lime>표지판 모델 활성화 완료</color>");
+        }
+    }
 }
 
 public class CarLiftUpStepModule : Car_Lift_UpModule
@@ -317,7 +333,7 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
             registry.Register(new PRA_ReplaceModule());
             registry.Register(new BatteryPackTopCover_MoveModule());
             registry.Register(new BatteryPackTopCover_AssembleModule());
-            registry.Register(new LOTO_WarringSignModule());
+            registry.Register(new LOTO_WarningSignModule());
             registry.Register(new CarLiftUpStepModule());
             registry.Register(new BatteryJack_Lift_UpModule());
             registry.Register(new BatteryJack_LoweringModule());

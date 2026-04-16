@@ -25,6 +25,7 @@ public class SlidingPanel : MonoBehaviour
     public Vector2 vrVisiblePos = Vector2.zero;
 
     private bool _isShown = false;
+    public bool startVisible = true;
     // 기존 설정된 플랫폼 매니저의 IsVR을 참조하세요.
     private bool _isVR => GameScenePlatformManager.IsVR;
 
@@ -36,26 +37,24 @@ public class SlidingPanel : MonoBehaviour
         InitState();
     }
 
+    
+
     private void InitState()
     {
-        _isShown = false;
-        _canvasGroup.alpha = 0f;
-        _canvasGroup.blocksRaycasts = false;
-        _canvasGroup.interactable = false;
+        _isShown = startVisible;
+        _canvasGroup.alpha = startVisible ? 1f : 0f;
+        _canvasGroup.blocksRaycasts = startVisible;
+        _canvasGroup.interactable = startVisible;
 
         if(_isVR)
         {
-            // VR: 지정된 부모가 있다면 자식으로 설정
-            if(vrParentTransform != null)
-            {
-                transform.SetParent(vrParentTransform, false);
-            }
-            _rect.anchoredPosition = vrHiddenPos;
+            if(vrParentTransform != null) transform.SetParent(vrParentTransform, false);
+            _rect.anchoredPosition = startVisible ? vrVisiblePos : vrHiddenPos;
         }
         else
         {
-            // PC: 기존 왼쪽 밖 위치
-            _rect.anchoredPosition = new Vector2(hiddenPosX, _rect.anchoredPosition.y);
+            float targetX = startVisible ? visiblePosX : hiddenPosX;
+            _rect.anchoredPosition = new Vector2(targetX, _rect.anchoredPosition.y);
         }
     }
 

@@ -34,16 +34,14 @@ public class MapObject : MonoBehaviour
         }
 
         if(miniMapTarget == null && mmc != null && mmc.target != null)
-        {
             miniMapTarget = mmc.target;
-        }
 
         if(miniMapTarget == null) return;
 
         SetPositionAndRotation();
 
-        // --- [추가] 텍스트 정방향 유지 ---
-        // 아이콘은 회전해도 텍스트는 항상 읽기 편하게 0도 유지
+        // --- [수정] 텍스트 및 아이콘 정방향 유지 보강 ---
+        // 부모인 sprRect가 회전하더라도 텍스트는 항상 월드 기준 0도를 유지합니다.
         if(labelRect != null)
         {
             labelRect.rotation = Quaternion.identity;
@@ -63,21 +61,35 @@ public class MapObject : MonoBehaviour
         rt = panelGO.GetComponent<RectTransform>();
         mmc = controller;
 
-        // --- [추가] 텍스트 컴포넌트 초기화 ---
-        // 프리팹 내부에 이미 있다면 가져오고, 없다면 로그 출력
+        // --- [수정] 텍스트 초기화 및 색상 적용 ---
         labelText = GetComponentInChildren<TextMeshProUGUI>();
         if(labelText != null)
         {
-            labelText.text = mme.objectName; // MiniMapEntity에 추가한 이름을 할당
+            labelText.text = mme.objectName;
             labelRect = labelText.GetComponent<RectTransform>();
+
+            // 플레이어인지 확인 (Tag나 이름을 통해 판단)
+            if(owner.CompareTag("Player") || owner.name.Contains("Player"))
+            {
+                labelText.color = Color.green; // 플레이어 이름은 초록색
+                labelText.fontStyle = FontStyles.Bold; // 강조를 위해 굵게
+            }
+            else
+            {
+                labelText.color = Color.white; // 일반 오브젝트는 흰색
+            }
+
+            // 시인성을 위해 외곽선(Outline) 컴포넌트가 없다면 추가 (검은 테두리)
+            if(labelText.gameObject.GetComponent<Shadow>() == null)
+            {
+                var shadow = labelText.gameObject.AddComponent<Shadow>();
+                shadow.effectColor = Color.black;
+                shadow.effectDistance = new Vector2(1.5f, -1.5f);
+            }
         }
 
         miniMapTarget = mmc.target;
-
-        if(miniMapTarget != null)
-        {
-            SetPositionAndRotation();
-        }
+        if(miniMapTarget != null) SetPositionAndRotation();
     }
 
     void SetPositionAndRotation()

@@ -29,35 +29,35 @@ public class MultimeterProbeSync : MonoBehaviour
     {
         // 서버 소유권 요청 후 이동 실행
         _syncGrab.RequestGrab(() => {
-            PerformFly(targetPoint, hitPos, hitNormal);
+            //PerformFly(targetPoint, hitPos, hitNormal);
         });
     }
 
-    private void PerformFly(MeasurementPoint targetPoint, Vector3 hitPos, Vector3 hitNormal)
-    {
-        DOTween.Kill(transform);
+    //private void PerformFly(MeasurementPoint targetPoint, Vector3 hitPos, Vector3 hitNormal)
+    //{
+    //    DOTween.Kill(transform);
 
-        // 단자에 꽂히는 회전값 계산 (단자의 Normal 반대 방향 + 오프셋 결합)
-        Quaternion targetRot = Quaternion.LookRotation(-hitNormal) * Quaternion.Euler(_syncGrab.holdRotationOffset);
-        Vector3 finalPos = hitPos + (targetRot * _syncGrab.holdPositionOffset);
+    //    // 단자에 꽂히는 회전값 계산 (단자의 Normal 반대 방향 + 오프셋 결합)
+    //    Quaternion targetRot = Quaternion.LookRotation(-hitNormal) * Quaternion.Euler(_syncGrab.holdRotationOffset);
+    //    Vector3 finalPos = hitPos + (targetRot * _syncGrab.holdPositionOffset);
 
-        // 아크 이동 연출
-        Vector3 mid = (transform.position + finalPos) * 0.5f + Vector3.up * 0.2f;
-        transform.DOPath(new[] { mid, finalPos }, 0.4f, PathType.CatmullRom)
-            .SetEase(Ease.OutCubic);
+    //    // 아크 이동 연출
+    //    Vector3 mid = (transform.position + finalPos) * 0.5f + Vector3.up * 0.2f;
+    //    transform.DOPath(new[] { mid, finalPos }, 0.4f, PathType.CatmullRom)
+    //        .SetEase(Ease.OutCubic);
 
-        transform.DORotateQuaternion(targetRot, 0.4f)
-            .SetEase(Ease.OutCubic)
-            .OnComplete(() => {
-                // 도달 시 실제 측정 로직에 단자 ID 주입 및 LCD 갱신
-                _probe.currentTerminalId = targetPoint.terminalId;
-                _probe.master.EvaluateConnection();
+    //    transform.DORotateQuaternion(targetRot, 0.4f)
+    //        .SetEase(Ease.OutCubic)
+    //        .OnComplete(() => {
+    //            // 도달 시 실제 측정 로직에 단자 ID 주입 및 LCD 갱신
+    //            _probe.currentTerminalId = targetPoint.terminalId;
+    //            _probe.master.EvaluateConnection();
 
-                // LNT를 통해 최종 위치 강제 동기화
-                var lnt = GetComponent<LocalNetworkTransform>();
-                lnt?.SetTargetPosition(finalPos, targetRot);
-            });
-    }
+    //            // LNT를 통해 최종 위치 강제 동기화
+    //            var lnt = GetComponent<LocalNetworkTransform>();
+    //            lnt?.SetTargetPosition(finalPos, targetRot);
+    //        });
+    //}
 
     /// <summary>
     /// 매개변수 없이 호출 시 초기 저장된 로컬 위치로 복구합니다.

@@ -124,6 +124,7 @@ public class TaskDef
     /// 각 번들: 스폰 오브젝트 + 스폰 위치 + 가이드 오브젝트
     /// </summary>
     public List<SpawnBundle> spawnObjects = new();
+    public List<string> despawnObjectIds;
 }
 
 /// <summary>
@@ -153,6 +154,7 @@ public class SpawnBundle
     /// </summary>
     public string targetGuideId;
     public bool showGuide = true;
+    public bool persist = false;
 }
 
 [Serializable]

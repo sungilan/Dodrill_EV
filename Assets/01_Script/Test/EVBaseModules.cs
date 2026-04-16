@@ -1,6 +1,7 @@
+using DG.Tweening;
+using FishNet;
 using System;
 using System.Collections.Generic;
-using FishNet;
 using UnityEngine;
 
 // ============================================================
@@ -343,20 +344,29 @@ public abstract class BatteryJack_BaseModule : ITaskModule
         _onComplete = onComplete;
         _isCompleted = false;
 
-        // 씬에서 배터리 잭(BatteryLiftController)만 골라서 찾음
+        // Inactive를 포함해서 찾는 이유는 스폰 직후 활성화 타이밍 때문일 수 있음
         _jack = GameObject.FindAnyObjectByType<BatteryLiftController>(FindObjectsInactive.Include);
 
         if(_jack == null)
         {
-            Debug.LogError($"<color=red>[{ModuleId}]</color> 배터리 잭(BatteryLiftController)을 찾을 수 없습니다!");
+            Debug.LogError($"<color=red>[{ModuleId}]</color> 배터리 잭을 찾을 수 없습니다!");
         }
         else
         {
-            Debug.Log($"<color=cyan>[{ModuleId}]</color> 배터리 잭 감시 시작 (목표: {config.targetValue}m / 현재: {_jack.CurrentHeight:F2}m)");
+            // [중요] 스폰된 직후라면 Height가 Target보다 높을 리가 없음. 
+            // 만약 높다면, 이건 이전 단계에서 쓰던 잭이거나 초기화가 안 된 것임.
+            Debug.Log($"<color=cyan>[{ModuleId}]</color> 감시 시작 | 목표: {config.targetValue}m | 현재: {_jack.CurrentHeight:F2}m");
+
+            // 만약 현재 높이가 이미 목표치 이상이라면 즉시 완료하지 말고 로그를 남겨 확인
+            if(_jack.CurrentHeight >= config.targetValue)
+            {
+                Debug.LogWarning($"<color=orange>[{ModuleId}]</color> 경고: 시작부터 목표 높이에 도달해있음! (유령 데이터 확인 필요)");
+            }
         }
     }
 
     public abstract void OnUpdate(float deltaTime);
     public void OnComplete() { }
     public void OnFail() { }
+
 }

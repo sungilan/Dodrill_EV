@@ -153,15 +153,14 @@
         "spawnObjects": []
       },
       {
-        "moduleId": "LOTO_WarringSign",
+        "moduleId": "LOTO_WarningSign",
         "timeout": 90,
         "completionMode": "AllPlayer",
         "spawnObjects": [
           {
-            "prefabId": "WarringSign",
-            "spawnPointId": "SP_WarringSign",
-            "guideId": "Guide_WarringSign",
-            "targetGuideId": ""
+            "prefabId": "WarningSign",
+            "spawnPointId": "SP_WarningSign",
+            "guideId": "Guide_WarningSign"
           }
         ]
       },
@@ -170,10 +169,9 @@
         "timeout": 60,
         "completionMode": "AnyPlayer",
         "config": {
-          "targetValue": 1,
+          "targetValue": 1.5,
           "targetObjName": "Lift_Button_Up"
-        },
-        "spawnObjects": []
+        }
       },
       {
         "moduleId": "Front_Cover_Removal",
@@ -183,7 +181,8 @@
           {
             "prefabId": "ImpactWrench",
             "spawnPointId": "SP_Cart_Tool",
-            "guideId": ""
+            "guideId": "",
+            "persist": true
           }
         ]
       },
@@ -191,37 +190,20 @@
         "moduleId": "Rear_Cover_Removal",
         "timeout": 120,
         "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": ""
-          }
-        ]
+        "spawnObjects": []
       },
       {
         "moduleId": "Battery_Cover_Removal",
         "timeout": 120,
         "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": ""
-          }
-        ]
+        "spawnObjects": []
       },
       {
         "moduleId": "Connector_Cover_Removal",
         "timeout": 120,
         "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": ""
-          }
-        ]
+        "spawnObjects": [],
+        "despawnObjectIds": [ "ImpactWrench" ]
       },
       {
         "moduleId": "HV_Front_Disconnect",
@@ -243,7 +225,8 @@
           {
             "prefabId": "Multimeter",
             "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_HV_Front_Cable_Term"
+            "guideId": "Guide_HV_Front_Cable_Term",
+            "persist": true
           }
         ]
       },
@@ -251,13 +234,8 @@
         "moduleId": "HV_Rear_Voltage",
         "timeout": 180,
         "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "Multimeter",
-            "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_HV_Rear_Cable_Term"
-          }
-        ]
+        "spawnObjects": [],
+        "despawnObjectIds": [ "Multimeter" ]
       },
       {
         "moduleId": "ICCU_Disconnect",
@@ -863,41 +841,41 @@
       }
     },
     {
-      "moduleId": "LOTO_WarringSign",
+      "moduleId": "LOTO_WarningSign",
       "config": {
         "actionType": "Swap",
         "requiredItems": [
-          "WarringSign"
+          "WarningSign"
         ],
-        "targetObjName": "Guide_WarringSign",
-        "targetZoneId": "WarringSign_Zone",
+        "targetObjName": "Guide_WarningSign",
+        "targetZoneId": "WarningSign_Zone",
         "targetValue": 0,
         "toleranceRatio": 0,
         "requiresSafetyCheck": false,
         "extra": [
           {
             "key": "title",
-            "ko": "고전압 차단 표지판",
-            "en": "Smart Key Lock-Out",
-            "vi": "Khóa chìa khóa thông minh"
+            "ko": "고전압 차단 표지판 설치",
+            "en": "High Voltage Warning Sign",
+            "vi": "Đặt biển báo cảnh báo cao áp"
           },
           {
             "key": "description",
-            "ko": "스마트키를 잠금박스에 넣어 차량 시동을 차단하세요.",
-            "en": "Place the smart key in the lock box to prevent vehicle start.",
-            "vi": "Đặt chìa khóa thông minh vào hộp khóa để ngăn khởi động xe."
+            "ko": "작업 구역에 고전압 차단 표지판을 거치하여 안전을 확보하세요.",
+            "en": "Place the warning sign in the work area to ensure safety.",
+            "vi": "Đặt biển báo cảnh báo tại khu vực làm việc để đảm bảo an toàn."
           },
           {
             "key": "guideText",
-            "ko": "LOTO 절차의 첫 단계입니다. 스마트키를 잠금박스에 보관하면 작업 중 제3자가 차량을 시동할 수 없어 고전압 회로 활성화를 원천 차단합니다.",
-            "en": "First LOTO step. Locking the smart key prevents anyone from starting the vehicle, blocking HV circuit activation during work.",
-            "vi": "Bước LOTO đầu tiên. Khóa chìa khóa ngăn người khác khởi động xe, ngăn kích hoạt mạch HV."
+            "ko": "고전압 차단 작업 중임을 알리는 표지판입니다. 제3자의 접근 및 임의 조작을 방지하기 위해 차량 전면 등 식별이 쉬운 곳에 설치합니다.",
+            "en": "This sign indicates high voltage cut-off work is in progress. Place it where it is easily visible to prevent unauthorized access or operation.",
+            "vi": "Biển báo cho biết công việc ngắt điện cao áp đang được tiến hành. Đặt ở nơi dễ nhìn thấy để ngăn chặn sự truy cập hoặc thao tác trái phép."
           },
           {
             "key": "subguideText",
-            "ko": "스마트키 → 잠금박스 투입 → 박스 잠금",
-            "en": "Smart key → Lock box → Lock the box",
-            "vi": "Chìa khóa → Hộp khóa → Khóa hộp"
+            "ko": "표지판 확인 → 지정 위치 설치 → 시인성 확인",
+            "en": "Check sign → Install at location → Verify visibility",
+            "vi": "Kiểm tra biển báo → Lắp đặt tại vị trí → Kiểm tra tầm nhìn"
           }
         ]
       }
@@ -907,7 +885,7 @@
       "config": {
         "actionType": "ConfirmTask",
         "targetObjName": "Lift_Button_Up",
-        "targetValue": 1,
+        "targetValue": 1.5,
         "extra": [
           {
             "key": "title",
