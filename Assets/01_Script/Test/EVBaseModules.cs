@@ -290,25 +290,28 @@ public class Car_Lift_UpModule : ITaskModule
     private VehicleLiftController _lift;
     private float _cachedTargetHeight;
 
+    // ★ 추가: 연속 감지 카운터 (노이즈 방지)
+    private int _targetHeightFrameCount = 0;
+    private const int REQUIRED_FRAMES = 3; // 3프레임 연속으로 도달해야 완료 판정
+
     public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
     {
         _config = config;
         _onComplete = onComplete;
         _isCompleted = false;
+        _targetHeightFrameCount = 0;
 
-        // JSON에서 targetValue를 가져옴 (기본값 1.5m)
         _cachedTargetHeight = config != null ? config.targetValue : 1.5f;
-
-        // [중요] 서버 권한으로 씬에 있는 리프트를 찾음
         _lift = GameObject.FindAnyObjectByType<VehicleLiftController>(FindObjectsInactive.Include);
 
         if(_lift == null)
         {
-            Debug.LogError($"<color=red>[{ModuleId}]</color> <b>에러:</b> VehicleLiftController를 찾을 수 없습니다! 하이어라키에 리프트가 있는지 확인하세요.");
+            Debug.LogError($"<color=red>[{ModuleId}]</color> VehicleLiftController를 찾을 수 없습니다!");
         }
         else
         {
-            Debug.Log($"<color=cyan>[{ModuleId}]</color> 감시 시작! 목표 높이: <b>{_cachedTargetHeight}m</b> (현재: {_lift.CurrentHeight:F2}m)");
+            Debug.Log($"<color=cyan>[{ModuleId}]</color> 감시 시작! " +
+                      $"목표: {_cachedTargetHeight}m / 현재: {_lift.CurrentHeight:F2}m");
         }
     }
 
@@ -316,12 +319,36 @@ public class Car_Lift_UpModule : ITaskModule
     {
         if(_isCompleted || _lift == null) return;
 
-        // 매 프레임 리프트 높이 체크
-        if(_lift.CurrentHeight >= _cachedTargetHeight)
+        float currentHeight = _lift.CurrentHeight;
+
+        // ★ 개선 1: 부동소수점 오차 허용 (±0.01m)
+        float epsilon = 0.01f;
+        bool isAtTarget = currentHeight >= (_cachedTargetHeight - epsilon);
+
+        if(isAtTarget)
         {
-            _isCompleted = true;
-            Debug.Log($"<color=lime>[{ModuleId}] 완료!</color> 목표 높이 도달: {_lift.CurrentHeight:F2}m (기준: {_cachedTargetHeight}m)");
-            _onComplete?.Invoke();
+            // ★ 개선 2: 연속 감지로 노이즈 필터링
+            _targetHeightFrameCount++;
+
+            if(_targetHeightFrameCount >= REQUIRED_FRAMES)
+            {
+                _isCompleted = true;
+                Debug.Log($"<color=lime>[{ModuleId}] ✅ 완료!</color> " +
+                          $"높이: {currentHeight:F2}m (목표: {_cachedTargetHeight}m)");
+                _onComplete?.Invoke();
+            }
+        }
+        else
+        {
+            // ★ 개선 3: 목표 아래로 내려가면 카운터 리셋
+            _targetHeightFrameCount = 0;
+
+            // 디버그: 진행 상황 주기적으로 출력
+            if(Time.frameCount % 30 == 0) // 약 0.5초마다 (60fps 기준)
+            {
+                Debug.Log($"[{ModuleId}] 진행 중... 높이: {currentHeight:F2}m / " +
+                          $"목표: {_cachedTargetHeight}m (차이: {(_cachedTargetHeight - currentHeight):F3}m)");
+            }
         }
     }
 

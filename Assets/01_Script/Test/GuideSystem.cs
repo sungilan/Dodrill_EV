@@ -367,32 +367,34 @@ public class GuideSystem : MonoBehaviour
 
     private void ProcessTargetGuide(string guideId, string prefabId, ModuleConfig config)
     {
-        // ── 1. 목표 지점 결정 ──
+        // ── 1. 목표 지점(Target) 결정 ──
+        // GuideZoneData가 붙은 객체를 우선적으로 찾도록 FindSpawnedItem 로직이 보강되었다고 가정합니다.
         GameObject markerTargetGO = !string.IsNullOrEmpty(guideId) ? FindSpawnedItem(guideId) : null;
         if(markerTargetGO == null && config != null && !string.IsNullOrEmpty(config.targetObjName))
         {
             markerTargetGO = FindSpawnedItem(config.targetObjName);
         }
 
-        // ── 2. 아이템 결정 ──
+        // ── 2. 기본 아이템(Item) 결정 ──
         GameObject itemGO = !string.IsNullOrEmpty(prefabId) ? FindSpawnedItem(prefabId) : null;
 
-        // ── 3. 가이드 마커 및 미니맵 처리 ──
+        // ── 3. 가이드 처리 시작 ──
         if(markerTargetGO != null)
         {
             var zoneData = markerTargetGO.GetComponent<GuideZoneData>();
             UpdateGuideUI(zoneData);
 
-            // [디버그 로그 추가]
             bool hasZoneData = zoneData != null;
-            bool zoneShowGuide = hasZoneData ? zoneData.showGuide : false; // 데이터가 없으면 기본적으로 끔
-            bool shouldSpawnMarker = !hasZoneData || zoneShowGuide;
+
+            // [판정] 데이터가 있다면 그 값을 따르고, 없다면 기본적으로 켬
+            bool shouldSpawnMarker = hasZoneData ? zoneData.showGuide : true;
+            bool shouldSpawnGhost = hasZoneData ? zoneData.showGhost : true;
 
             Debug.Log($"<color=yellow>[Guide-Check]</color> 타겟: <b>{markerTargetGO.name}</b> | " +
                       $"GuideZoneData 존재: {hasZoneData} | " +
-                      $"showGuide 값: {zoneShowGuide} | " +
-                      $"최종 마커 생성 결정: <color={(shouldSpawnMarker ? "lime" : "red")}>{shouldSpawnMarker}</color>");
+                      $"마커 생성 결정: {shouldSpawnMarker} | 고스트 생성 결정: {shouldSpawnGhost}");
 
+            // [A] 마커(화살표) 생성 처리
             if(shouldSpawnMarker)
             {
                 string label = "이곳으로 이동하세요";
@@ -401,17 +403,11 @@ public class GuideSystem : MonoBehaviour
                     var tr = zoneData.guideDescription.TableReference;
                     var ter = zoneData.guideDescription.TableEntryReference;
 
-                    if(!tr.ReferenceType.Equals(TableReference.Type.Empty) &&
-                       !ter.ReferenceType.Equals(TableEntryReference.Type.Empty))
+                    if(!tr.ReferenceType.Equals(UnityEngine.Localization.Tables.TableReference.Type.Empty) &&
+                        !ter.ReferenceType.Equals(UnityEngine.Localization.Tables.TableEntryReference.Type.Empty))
                     {
                         label = zoneData.guideDescription.GetLocalizedString();
                     }
-                }
-
-                // 고스트 생성 시 markerTargetGO가 null인지 다시 확인 (에러 포인트)
-                if(shouldSpawnMarker && markerTargetGO != null && ghostMaterial != null && !markerTargetGO.name.Contains("Bolt"))
-                {
-                    _ghostObject = SpawnGhost(itemGO, markerTargetGO.transform.position);
                 }
 
                 var boltGroup = markerTargetGO.GetComponent<BoltGroupCounter>();
@@ -421,7 +417,7 @@ public class GuideSystem : MonoBehaviour
                 var marker = SpawnMarker(markerPos, label, targetGuideColor, true);
                 if(marker != null)
                 {
-                    Debug.Log($"<color=cyan>[Guide-Success]</color> {markerTargetGO.name} 지점에 마커 프리팹 생성 완료");
+                    Debug.Log($"<color=cyan>[Guide-Success]</color> {markerTargetGO.name} 지점에 마커 생성 완료");
                     marker.Setup(label, targetGuideColor, !isBoltTask && markerTargetGO.GetComponent<NoneHighlight>() == null);
                     _targetMarker = marker;
                     if(boltGroup != null) StartCoroutine(UpdateBoltProgressRoutine(marker, boltGroup));
@@ -429,10 +425,35 @@ public class GuideSystem : MonoBehaviour
             }
             else
             {
-                Debug.Log($"<color=orange>[Guide-Skip]</color> {markerTargetGO.name}은 showGuide가 false이므로 마커 생성을 건너뜁니다.");
+                Debug.Log($"<color=orange>[Guide-Skip]</color> {markerTargetGO.name}: showGuide가 false이므로 마커 생성을 건너뜁니다.");
             }
 
-            // 미니맵은 showGuide와 상관없이 켜줌 (아이콘은 보여야 하므로)
+            // [B] 고스트(Ghost) 생성 처리
+            if(shouldSpawnGhost && ghostMaterial != null && !markerTargetGO.name.Contains("Bolt"))
+            {
+                GameObject ghostSource = null;
+
+                // 1순위: GuideZoneData에 지정된 전용 고스트가 있는지 확인
+                if(hasZoneData && !string.IsNullOrEmpty(zoneData.customGhostPrefabId))
+                {
+                    ghostSource = FindSpawnedItem(zoneData.customGhostPrefabId);
+                    Debug.Log($"<color=lime>[Ghost-Log]</color> 커스텀 고스트 원본 사용: {zoneData.customGhostPrefabId}");
+                }
+
+                // 2순위: 없다면 현재 태스크의 prefabId 아이템 사용
+                if(ghostSource == null)
+                {
+                    ghostSource = itemGO;
+                    if(ghostSource != null) Debug.Log($"<color=lime>[Ghost-Log]</color> 기본 아이템 고스트 사용: {ghostSource.name}");
+                }
+
+                if(ghostSource != null)
+                {
+                    _ghostObject = SpawnGhost(ghostSource, markerTargetGO.transform.position);
+                }
+            }
+
+            // [C] 미니맵 처리 (가이드 ON/OFF와 상관없이 위치는 알려줌)
             foreach(var mmc in markerTargetGO.GetComponentsInChildren<MiniMapComponent>(true))
             {
                 if(mmc != null)
@@ -443,7 +464,7 @@ public class GuideSystem : MonoBehaviour
             }
         }
 
-        // ── 4. 아이템 하이라이트 및 고스트 ──
+        // ── 4. 필요 아이템(도구) 하이라이트 처리 ──
         if(itemGO != null)
         {
             SetOutline(itemGO, true);
@@ -563,16 +584,35 @@ public class GuideSystem : MonoBehaviour
     private GameObject FindSpawnedItem(string id)
     {
         if(string.IsNullOrEmpty(id)) return null;
+
+        // [핵심 보강 1] 볼트 그룹(BoltGroupCounter)을 최우선으로 탐색
+        // 부모인 배터리 팩이 잡히는 것을 원천적으로 차단합니다.
+        var allBoltGroups = FindObjectsByType<BoltGroupCounter>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach(var bg in allBoltGroups)
+        {
+            if(bg.gameObject.name == id || bg.gameObject.name == id + "(Clone)")
+            {
+                return bg.gameObject;
+            }
+        }
+
+        // [핵심 보강 2] GuideZoneData가 붙은 객체 우선 탐색
+        var allZoneData = FindObjectsByType<GuideZoneData>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach(var zd in allZoneData)
+        {
+            if(zd.gameObject.name == id || zd.gameObject.name == id + "(Clone)") return zd.gameObject;
+        }
+
+        // 3. 그 외 일반 오브젝트 탐색
         var allObjects = FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach(var obj in allObjects)
+        {
+            if(obj.name == id || obj.name == id + "(Clone)") return obj;
+        }
 
-        // 1. 완전 일치 우선 탐색
-        foreach(var obj in allObjects) if(obj.name == id || obj.name == id + "(Clone)") return obj;
-
-        // 2. ClickableAnimator uniqueId 탐색
         var allClickables = FindObjectsByType<ClickableAnimator>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach(var clickable in allClickables) if(clickable.uniqueId == id) return clickable.gameObject;
 
-        // 3. 부분 일치 (Icon_ 접두사 제외)
         foreach(var obj in allObjects) if(!obj.name.StartsWith("Icon_") && obj.name.Contains(id)) return obj;
 
         return null;

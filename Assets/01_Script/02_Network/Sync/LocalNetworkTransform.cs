@@ -1,5 +1,6 @@
 ﻿using FishNet.Connection;
 using FishNet.Object;
+using System.Collections;
 using UnityEngine;
 
 public class LocalNetworkTransform : NetworkBehaviour
@@ -194,10 +195,29 @@ public class LocalNetworkTransform : NetworkBehaviour
 
             SendLocalTransformServerRpc(localPos, localRot);
         }
+        // 대신 코루틴을 통해 안전하게 전송합니다.
+        StartCoroutine(SafeInitialSync());
+    }
+    private IEnumerator SafeInitialSync()
+    {
+        // 소유권이 완전히 물리적으로 내부 반영될 때까지 한 프레임 대기
+        yield return null;
+
+        if(IsOwner && anchor != null)
+        {
+            Vector3 localPos = Quaternion.Inverse(anchor.rotation) * (transform.position - anchor.position);
+            Quaternion localRot = Quaternion.Inverse(anchor.rotation) * transform.rotation;
+
+            lastSentPos = localPos;
+            lastSentRot = localRot;
+
+            // 이제 IsOwner가 확실하므로 에러가 발생하지 않습니다.
+            SendLocalTransformServerRpc(localPos, localRot);
+        }
     }
 
     #region RPCs
-    [ServerRpc]
+    [ServerRpc(RequireOwnership = true)]
     private void SendLocalTransformServerRpc(Vector3 localPos, Quaternion localRot)
     {
         if(anchor == null)

@@ -84,22 +84,9 @@ public class CarLiftUpStepModule : Car_Lift_UpModule
 }
 
 // 1. 배터리 잭 상승 모듈
-public class BatteryJack_Lift_UpModule : BatteryJack_BaseModule
+public class BatteryJack_Lift_UpModule : GrabZoneTaskModule
 {
     public override string ModuleId => "BatteryJack_Lift_Up";
-
-    public override void OnUpdate(float deltaTime)
-    {
-        if(_isCompleted || _jack == null) return;
-
-        // 목표 높이 '이상' 올라갔을 때 완료
-        if(_jack.CurrentHeight >= _config.targetValue)
-        {
-            _isCompleted = true;
-            Debug.Log($"<color=lime>[{ModuleId}] 상승 완료!</color> 도달 높이: {_jack.CurrentHeight:F2}m");
-            _onComplete?.Invoke();
-        }
-    }
 }
 
 // 2. 배터리 잭 하강 모듈
@@ -194,9 +181,9 @@ public class BatteryPack_Disassemble1Module : ConfirmTaskModule
     public override string ModuleId => "BatteryPack_Disassemble1";
 }
 
-public class BatteryPack_Disassemble2Module : ConfirmTaskModule
+public class BatteryPack_Cover_OpenModule : ConfirmTaskModule
 {
-    public override string ModuleId => "BatteryPack_Disassemble2";
+    public override string ModuleId => "BatteryPack_Cover_Open";
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -296,7 +283,7 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
             registry.Register(new HV_FrontVoltageModule());
             registry.Register(new HV_RearVoltageModule());
             registry.Register(new BatteryPack_Disassemble1Module());
-            registry.Register(new BatteryPack_Disassemble2Module());
+            registry.Register(new BatteryPack_Cover_OpenModule());
             registry.Register(new Insulation_MeasureModule());
             registry.Register(new Contamination_CleanModule());
             registry.Register(new Gasket_ReplaceModule());

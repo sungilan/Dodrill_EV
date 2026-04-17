@@ -160,7 +160,8 @@
           {
             "prefabId": "WarningSign",
             "spawnPointId": "SP_WarningSign",
-            "guideId": "Guide_WarningSign"
+            "guideId": "Guide_WarningSign",
+            "persist": true
           }
         ]
       },
@@ -278,10 +279,10 @@
         "spawnObjects": [
           {
             "prefabId": "BatteryJack",
-            "spawnPointId": "SP_Battery_Under_Default",
-            "persist": true
+            "spawnPointId": "SP_Battery_Under_Default"
           }
-        ]
+        ],
+        "despawnObjectIds": [ "BatteryPack" ]
       },
       {
         "moduleId": "BatteryPack_Unbolt",
@@ -308,7 +309,7 @@
         }
       },
       {
-        "moduleId": "BatteryPack_Disassemble2",
+        "moduleId": "BatteryPack_Cover_Open",
         "timeout": 600,
         "completionMode": "AnyPlayer",
         "spawnObjects": [
@@ -332,7 +333,8 @@
           {
             "prefabId": "BatteryPack_Open",
             "spawnPointId": "SP_Battery",
-            "guideId": "Guide_PRA_Location"
+            "guideId": "Guide_PRA_Location",
+            "persist": true
           }
         ]
       },
@@ -342,16 +344,12 @@
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
-            "prefabId": "BatteryPack_Open",
-            "spawnPointId": "SP_Battery",
-            "guideId": ""
-          },
-          {
             "prefabId": "New_PRA_Unit",
             "spawnPointId": "SP_NewPRA",
             "guideId": "Guide_PRA_Zone"
           }
-        ]
+        ],
+        "despawnObjectIds": [ "BatteryPack_Open" ]
       },
       {
         "moduleId": "BatteryPackTopCover_Move",
@@ -1523,7 +1521,7 @@
       "moduleId": "BatteryJack_Lift_Up",
       "config": {
         "actionType": "ZoneAndUse",
-        "targetZoneId": "BatteryJack_Attached",
+        "targetZoneId": "BatteryContactZone",
         "spawnObjects": [
           {
             "prefabId": "BatteryJack",
@@ -1554,14 +1552,13 @@
       }
     },
     {
-      "moduleId": "BatteryPack_Disassemble2",
+      "moduleId": "BatteryPack_Cover_Open",
       "config": {
         "actionType": "ConfirmTask",
         "requiredItems": [
-          "ImpactWrench",
-          "BatteryJack"
+          "ImpactWrench"
         ],
-        "targetObjName": "BatteryPack_Bolts2",
+        "targetObjName": "Battery_TopCover",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -1569,37 +1566,37 @@
         "extra": [
           {
             "key": "title",
-            "ko": "배터리 팩 볼트 탈거 2 및 하강",
-            "en": "Battery Pack Bolt Removal (2) & Lower",
-            "vi": "Tháo bu lông bộ pin (2) và hạ xuống"
+            "ko": "배터리 팩 상부 커버 분리",
+            "en": "Battery Pack Top Cover Removal",
+            "vi": "Tháo nắp trên bộ pin"
           },
           {
             "key": "description",
-            "ko": "후면 고정 볼트를 탈거하고 배터리 잭으로 팩을 서서히 하강하세요.",
-            "en": "Remove rear mounting bolts and slowly lower the pack with the battery jack.",
-            "vi": "Tháo bu lông cố định phía sau và từ từ hạ bộ pin bằng kích."
+            "ko": "임팩트 렌치로 상부 커버 볼트를 모두 제거한 후 커버를 열어 내부 PRA를 확인하세요.",
+            "en": "Remove all top cover bolts using the impact wrench, then open the cover to check the internal PRA.",
+            "vi": "Tháo tất cả bu lông nắp trên bằng cờ lê lực, sau đó mở nắp để kiểm tra PRA bên trong."
           },
           {
             "key": "guideText",
-            "ko": "마지막 볼트 탈거 시 팩의 무게가 완전히 잭에 실립니다. 잭을 조심스럽게 내려 팩을 하강시키세요. 급격한 하강은 팩 손상 및 부상을 초래합니다.",
-            "en": "Pack weight fully transfers to the jack at the last bolt. Lower the jack carefully and slowly. Rapid lowering can damage the pack and cause injury.",
-            "vi": "Trọng lượng bộ pin chuyển hoàn toàn sang kích ở bu lông cuối. Hạ kích cẩn thận. Hạ nhanh có thể làm hỏng bộ pin và gây thương tích."
+            "ko": "볼트를 모두 제거해야 커버가 열립니다. 제거된 볼트는 부품함에 보관하고 커버를 클릭하여 개방하세요.",
+            "en": "The cover will only open after all bolts are removed. Place removed bolts in the parts box and click the cover to open.",
+            "vi": "Nắp chỉ mở sau khi tháo hết bu lông. Cất bu lông vào hộp phụ tùng 및 click để mở nắp."
           },
           {
             "key": "subguideText",
-            "ko": "볼트 규격: M10 | 마지막 볼트 탈거 후 잭 하강 | 하강 속도: 1cm/sec 이하",
-            "en": "Bolt spec: M10 | Lower jack after last bolt | Rate: max 1cm/sec",
-            "vi": "Quy cách: M10 | Hạ kích sau bu lông cuối | Tốc độ: tối đa 1cm/giây"
+            "ko": "볼트 규격: M8 (24개) | PRA 내부 절연 상태 점검 준비",
+            "en": "Bolt spec: M8 (24ea) | Prepare for internal PRA insulation inspection",
+            "vi": "Quy cách: M8 (24 cái) | Chuẩn bị kiểm tra cách điện PRA bên trong"
           },
           {
             "key": "boltCount",
-            "ko": "12",
-            "en": "12"
+            "ko": "24",
+            "en": "24"
           },
           {
             "key": "boltTorque",
-            "ko": "45 Nm",
-            "en": "45 Nm"
+            "ko": "25 Nm",
+            "en": "25 Nm"
           }
         ]
       }
@@ -1638,7 +1635,7 @@
         "requiredItems": [
           "ImpactWrench"
         ],
-        "targetObjName": "",
+        "targetObjName": "Battery_TopCover_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,

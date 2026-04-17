@@ -474,6 +474,7 @@ GameObject:
   - component: {fileID: 3068565549223157417}
   - component: {fileID: 8740184420529569538}
   - component: {fileID: 3821441586849648481}
+  - component: {fileID: 3450053551771576904}
   m_Layer: 5
   m_Name: Preb_TaskItem
   m_TagString: Untagged
@@ -501,7 +502,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 520, y: 72}
+  m_SizeDelta: {x: 520, y: 0}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &4473648776594216194
 CanvasRenderer:
@@ -586,3 +587,17 @@ MonoBehaviour:
   _failIcon: {fileID: 0}
   _indexCharWidth: 20
   _indexBasePadding: 10
+--- !u!114 &3450053551771576904
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8712746006778453522}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 0
+  m_VerticalFit: 2

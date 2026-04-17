@@ -170,6 +170,7 @@ public abstract class LiftControllerBase : NetworkBehaviour, ILiftController
     {
         base.OnStopClient();
         Debug.Log($"[LiftBase] OnStopClient 호출 - ID: {uniqueId}");
+        StopAllCoroutines();
         _syncCurrentHeight.OnChange -= OnSyncHeightChanged;
         _syncDirection.OnChange -= OnSyncDirectionChanged;
     }

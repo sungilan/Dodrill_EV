@@ -103,7 +103,7 @@ public class GameScenePlatformManager : MonoBehaviour
 
 
 
-        Managers.Sound.Play("GameTheme", Define.Sound.Bgm);
+        //Managers.Sound.Play("GameTheme", Define.Sound.Bgm);
 
     }
 
