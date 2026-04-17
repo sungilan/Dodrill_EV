@@ -23,8 +23,8 @@ public class LobbyPanel : UIView
     [SerializeField] private Button setAnchorButton;
 
     [Header("夔蘸隴 薑爾")]
-    [SerializeField] private RawImage thumbnailImage;
-    [SerializeField] private Texture2D defaultThumbnail;
+    [SerializeField] private Image thumbnailImage;
+    [SerializeField] private Sprite defaultThumbnail;
     [SerializeField] private TMP_Text contentTitleText;
 
     private static JoinedLobby _lobby;
@@ -146,14 +146,14 @@ public class LobbyPanel : UIView
         if (string.IsNullOrEmpty(scenarioId))
         {
             if (contentTitleText) contentTitleText.text = "夔蘸隴 橈擠";
-            if (thumbnailImage) thumbnailImage.texture = defaultThumbnail;
+            if (thumbnailImage) thumbnailImage.sprite = defaultThumbnail;
             return;
         }
 
         if (ScenarioDataLoader.Instance == null || !ScenarioDataLoader.Instance.IsLoaded)
         {
             if (contentTitleText) contentTitleText.text = scenarioId;
-            if (thumbnailImage) thumbnailImage.texture = defaultThumbnail;
+            if (thumbnailImage) thumbnailImage.sprite = defaultThumbnail;
 
             if (ScenarioDataLoader.Instance != null)
                 ScenarioDataLoader.Instance.OnLoaded += OnDataLoaded;
@@ -181,7 +181,7 @@ public class LobbyPanel : UIView
             contentTitleText.text = entry != null ? entry.scenarioName : scenarioId;
 
         if (thumbnailImage)
-            thumbnailImage.texture = (entry?.thumbnail != null) ? entry.thumbnail : defaultThumbnail;
+            thumbnailImage.sprite = (entry?.thumbnail != null) ? entry.thumbnail : defaultThumbnail;
     }
 
     // 式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式

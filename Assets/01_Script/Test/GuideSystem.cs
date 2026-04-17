@@ -387,8 +387,10 @@ public class GuideSystem : MonoBehaviour
             bool hasZoneData = zoneData != null;
 
             // [판정] 데이터가 있다면 그 값을 따르고, 없다면 기본적으로 켬
-            bool shouldSpawnMarker = hasZoneData ? zoneData.showGuide : true;
-            bool shouldSpawnGhost = hasZoneData ? zoneData.showGhost : true;
+            //bool shouldSpawnMarker = hasZoneData ? zoneData.showGuide : true;
+            //bool shouldSpawnGhost = hasZoneData ? zoneData.showGhost : true;
+            bool shouldSpawnMarker = hasZoneData && zoneData.showGuide;
+            bool shouldSpawnGhost = hasZoneData && zoneData.showGhost;
 
             Debug.Log($"<color=yellow>[Guide-Check]</color> 타겟: <b>{markerTargetGO.name}</b> | " +
                       $"GuideZoneData 존재: {hasZoneData} | " +

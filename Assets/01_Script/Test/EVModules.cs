@@ -212,6 +212,14 @@ public class Contamination_CleanModule : ZoneAndFillModule
 //  Task[08] Gasket_Replace
 //  SealGasket_New → Battery_Top_Zone 에 가져다 놓으면 완료
 // ──────────────────────────────────────────────────────────────
+public class BatteryPack_Extraction_MoveModule : GrabZoneTaskModule
+{
+    public override string ModuleId => "BatteryPack_Extraction_Move";
+}
+public class BatteryPack_Reinsertion_MoveModule : GrabZoneTaskModule
+{
+    public override string ModuleId => "BatteryPack_Reinsertion_Move";
+}
 public class Gasket_ReplaceModule : GrabZoneTaskModule
 {
     public override string ModuleId => "Gasket_Replace";
@@ -245,11 +253,21 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
         public override string ModuleId => "Connector_Cover_Reinstall";
     }
 
-    // ──────────────────────────────────────────────────────────────
-    //  Task[10] MSD_Reinstall
-    //  MSD_Lever 를 MSD_Port_Zone 에 꽂으면 완료
-    // ──────────────────────────────────────────────────────────────
-    public class MSD_ReinstallModule : ConfirmTaskModule
+    public class Front_Cover_ReInstallModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Front_Cover_ReInstall";
+    }
+
+    public class Rear_Cover_ReInstallModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Rear_Cover_ReInstall";
+    }
+
+// ──────────────────────────────────────────────────────────────
+//  Task[10] MSD_Reinstall
+//  MSD_Lever 를 MSD_Port_Zone 에 꽂으면 완료
+// ──────────────────────────────────────────────────────────────
+public class MSD_ReinstallModule : ConfirmTaskModule
     {
         public override string ModuleId => "MSD_Reinstall";
     }
@@ -299,7 +317,8 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
             registry.Register(new LOTO_ShoesModule());        // 시나리오 4번째 단계
             registry.Register(new Front_Cover_RemovalModule());
             registry.Register(new Rear_Cover_RemovalModule());
-            registry.Register(new Battery_Cover_RemovalModule());
+            registry.Register(new Battery_Cover_Removal1Module());
+            registry.Register(new Battery_Cover_Removal2Module());
             registry.Register(new Connector_Cover_RemovalModule());
             registry.Register(new HV_Front_DisconnectModule());
             registry.Register(new HV_Front_ConnectModule());
@@ -327,15 +346,36 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
             registry.Register(new BatteryPack_UnboltModule());
             registry.Register(new Vehicle_Hood_OpenModule());
             registry.Register(new Battery_12V_Cover_RemovalModule());
+            registry.Register(new BatteryPack_Extraction_MoveModule());
+            registry.Register(new BatteryPack_Reinsertion_MoveModule());
+            registry.Register(new Front_Cover_ReInstallModule());
+            registry.Register(new Rear_Cover_ReInstallModule());
+            registry.Register(new BatteryJack_Lift_Up_FinalModule());
+            registry.Register(new BatteryJack_LoweringFinalModule());
+            registry.Register(new Coolant_RefillModule());
+        
         Debug.Log($"[EVModules] P0AA6 시나리오 전체 모듈 등록 완료 (v2 포함)");
         }
     }
 
-    // ──────────────────────────────────────────────────────────────
-    //  v2 시나리오 추가 모듈 (9개)
-    //  모두 ConfirmTaskModule 상속 — 타겟 GO 클릭 or TaskCompleteSignal로 완료
-    // ──────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
+//  v2 시나리오 추가 모듈 (9개)
+//  모두 ConfirmTaskModule 상속 — 타겟 GO 클릭 or TaskCompleteSignal로 완료
+// ──────────────────────────────────────────────────────────────
 
+    public class Coolant_RefillModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "Coolant_Refill";
+    }
+
+    public class BatteryJack_Lift_Up_FinalModule : GrabZoneTaskModule
+{
+        public override string ModuleId => "BatteryJack_Lift_Up_Final";
+    }
+    public class BatteryJack_LoweringFinalModule : ConfirmTaskModule
+    {
+        public override string ModuleId => "BatteryJack_Lowering_Final";
+    }
     public class Front_Cover_RemovalModule : ConfirmTaskModule
     {
         public override string ModuleId => "Front_Cover_Removal";
@@ -344,9 +384,13 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
     {
         public override string ModuleId => "Rear_Cover_Removal";
     }
-    public class Battery_Cover_RemovalModule : ConfirmTaskModule
+    public class Battery_Cover_Removal1Module : ConfirmTaskModule
     {
-        public override string ModuleId => "Battery_Cover_Removal";
+        public override string ModuleId => "Battery_Cover_Removal1";
+    }
+    public class Battery_Cover_Removal2Module : ConfirmTaskModule
+    {
+        public override string ModuleId => "Battery_Cover_Removal2";
     }
 
     public class Connector_Cover_RemovalModule : ConfirmTaskModule

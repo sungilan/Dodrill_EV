@@ -155,6 +155,7 @@ public class SpawnBundle
     public string targetGuideId;
     public bool showGuide = true;
     public bool persist = false;
+    public bool attachToSpawnPoint = false;
 }
 
 [Serializable]

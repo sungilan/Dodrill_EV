@@ -27,8 +27,8 @@ public class CreateNewLobbyPanel : UIView
     // ─────────────────────────────────────────
 
     [Header("콘텐츠 선택")]
-    [SerializeField] private RawImage thumbnailImage;
-    [SerializeField] private Texture2D defaultThumbnail;
+    [SerializeField] private Image thumbnailImage;
+    [SerializeField] private Sprite defaultThumbnail;
 
     private List<ScenarioEntry> _entries = new();
     private int _currentIndex = 0;
@@ -104,14 +104,14 @@ public class CreateNewLobbyPanel : UIView
         if (_entries.Count == 0)
         {
             if (contentNameText) contentNameText.text = "콘텐츠 없음";
-            if (thumbnailImage) thumbnailImage.texture = defaultThumbnail;
+            if (thumbnailImage) thumbnailImage.sprite = defaultThumbnail;
             return;
         }
 
         var entry = _entries[_currentIndex];
 
         if (contentNameText) contentNameText.text = entry.scenarioName;
-        if (thumbnailImage) thumbnailImage.texture = entry.thumbnail != null
+        if (thumbnailImage) thumbnailImage.sprite = entry.thumbnail != null
                                                       ? entry.thumbnail
                                                       : defaultThumbnail;
     }

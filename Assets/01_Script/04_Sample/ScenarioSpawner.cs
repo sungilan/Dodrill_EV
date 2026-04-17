@@ -467,16 +467,84 @@ public class ScenarioSpawner : MonoBehaviour
 
     // ── 내부 처리 ─────────────────────────
 
+    //private void SpawnBundle(SpawnBundle bundle, float xOffset = 0f)
+    //{
+    //    // 1. 위치 결정
+    //    Vector3 spawnPos = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.position : Vector3.zero;
+    //    Quaternion spawnRot = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.rotation : Quaternion.identity;
+
+    //    Transform targetParent = null;
+
+    //    if(!string.IsNullOrEmpty(bundle.spawnPointId) && _spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
+    //    {
+    //        spawnPos = sp.transform.position;
+    //        spawnRot = sp.transform.rotation;
+
+    //        if(bundle.attachToSpawnPoint)
+    //        {
+    //            targetParent = sp.transform;
+    //        }
+    //    }
+    //    spawnPos += new Vector3(xOffset, SPAWN_HEIGHT, 0f);
+
+    //    // 2. 스폰 또는 재사용
+    //    if(!string.IsNullOrEmpty(bundle.prefabId))
+    //    {
+    //        NetworkObject existingPersist = GetPersistedObject(bundle.prefabId);
+
+    //        if(existingPersist != null)
+    //        {
+    //            Debug.Log($"[Spawner] 기존 persist 오브젝트 재사용: {bundle.prefabId}");
+    //            _persistedObjects.Remove(existingPersist);
+    //            _activeObjects.Add(existingPersist);
+
+    //            //existingPersist.transform.position = spawnPos;
+    //            //existingPersist.transform.rotation = spawnRot;
+    //        }
+    //        else
+    //        {
+    //            var prefab = FindPrefab(bundle.prefabId);
+    //            if(prefab != null)
+    //            {
+    //                // Instantiate 시점에 부모 지정 여부 결정
+    //                var instance = Instantiate(prefab, spawnPos, spawnRot, targetParent);
+    //                instance.name = bundle.persist ? $"{bundle.prefabId}(Persist)" : bundle.prefabId;
+
+    //                _activeObjects.Add(instance);
+    //                if(InstanceFinder.IsServerStarted)
+    //                    InstanceFinder.ServerManager.Spawn(instance.gameObject);
+    //            }
+    //            else
+    //            {
+    //                Debug.LogWarning($"[Spawner] 프리팹을 찾을 수 없음: {bundle.prefabId}");
+    //            }
+    //        }
+    //    }
+
+    //    // 3. 가이드 활성화
+    //    if(!string.IsNullOrEmpty(bundle.guideId))
+    //    {
+    //        _guideRegistry?.Show(bundle.guideId);
+    //        _activeGuides.Add(bundle.guideId);
+    //    }
+    //}
     private void SpawnBundle(SpawnBundle bundle, float xOffset = 0f)
     {
         // 1. 위치 결정
         Vector3 spawnPos = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.position : Vector3.zero;
         Quaternion spawnRot = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.rotation : Quaternion.identity;
 
+        Transform targetParent = null;
+
         if(!string.IsNullOrEmpty(bundle.spawnPointId) && _spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
         {
             spawnPos = sp.transform.position;
             spawnRot = sp.transform.rotation;
+
+            if(bundle.attachToSpawnPoint)
+            {
+                targetParent = sp.transform;
+            }
         }
         spawnPos += new Vector3(xOffset, SPAWN_HEIGHT, 0f);
 
@@ -484,30 +552,56 @@ public class ScenarioSpawner : MonoBehaviour
         if(!string.IsNullOrEmpty(bundle.prefabId))
         {
             NetworkObject existingPersist = GetPersistedObject(bundle.prefabId);
+            NetworkObject instanceToSpawn = null;
 
             if(existingPersist != null)
             {
                 Debug.Log($"[Spawner] 기존 persist 오브젝트 재사용: {bundle.prefabId}");
                 _persistedObjects.Remove(existingPersist);
-                _activeObjects.Add(existingPersist);
-
-                //existingPersist.transform.position = spawnPos;
-                //existingPersist.transform.rotation = spawnRot;
+                instanceToSpawn = existingPersist;
             }
             else
             {
                 var prefab = FindPrefab(bundle.prefabId);
                 if(prefab != null)
                 {
-                    var instance = Instantiate(prefab, spawnPos, spawnRot);
-                    instance.name = bundle.persist ? $"{bundle.prefabId}(Persist)" : bundle.prefabId;
-
-                    _activeObjects.Add(instance);
-                    if(InstanceFinder.IsServerStarted) InstanceFinder.ServerManager.Spawn(instance.gameObject);
+                    // ✅ 수정: Instantiate 시점에는 부모를 지정하지 않음 (targetParent 제외)
+                    var instanceGo = Instantiate(prefab.gameObject, spawnPos, spawnRot);
+                    instanceToSpawn = instanceGo.GetComponent<NetworkObject>();
+                    instanceToSpawn.name = bundle.persist ? $"{bundle.prefabId}(Persist)" : bundle.prefabId;
                 }
                 else
                 {
                     Debug.LogWarning($"[Spawner] 프리팹을 찾을 수 없음: {bundle.prefabId}");
+                }
+            }
+
+            // 실제 네트워크 스폰 및 부모 설정 실행
+            if(instanceToSpawn != null)
+            {
+                _activeObjects.Add(instanceToSpawn);
+
+                if(InstanceFinder.IsServerStarted)
+                {
+                    // ✅ 1단계: 서버 매니저를 통해 네트워크 스폰 (월드 루트 상태로 스폰됨)
+                    InstanceFinder.ServerManager.Spawn(instanceToSpawn.gameObject);
+
+                    // ✅ 2단계: 스폰 완료 후 FishNet API로 부모 설정 (동기화 보장)
+                    if(bundle.attachToSpawnPoint && targetParent != null)
+                    {
+                        // 부모가 NetworkObject를 가지고 있는지 확인 (FishNet 권장 사항)
+                        var parentNob = targetParent.GetComponent<NetworkObject>() ?? targetParent.GetComponentInParent<NetworkObject>();
+
+                        if(parentNob != null)
+                        {
+                            instanceToSpawn.SetParent(parentNob);
+                        }
+                        else
+                        {
+                            // 부모가 NetworkObject가 없는 단순 Transform일 경우의 폴백
+                            instanceToSpawn.transform.SetParent(targetParent);
+                        }
+                    }
                 }
             }
         }
@@ -517,6 +611,20 @@ public class ScenarioSpawner : MonoBehaviour
         {
             _guideRegistry?.Show(bundle.guideId);
             _activeGuides.Add(bundle.guideId);
+        }
+    }
+
+    public void RegisterExternalPersistObject(string prefabId, NetworkObject netObj)
+    {
+        if(netObj == null) return;
+
+        // JSON에서 찾는 이름 규칙에 맞게 이름 변경
+        netObj.gameObject.name = $"{prefabId}(Persist)";
+
+        if(!_persistedObjects.Contains(netObj))
+        {
+            _persistedObjects.Add(netObj);
+            Debug.Log($"[Spawner] 외부 오브젝트 등록 완료: {netObj.name}");
         }
     }
 

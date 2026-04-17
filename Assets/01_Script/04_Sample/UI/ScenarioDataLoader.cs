@@ -82,7 +82,7 @@ namespace DoDrill.Training
 
                 // 썸네일 — JSON 파일명(asset.name) 기준으로 로드
                 // scenarioId 와 파일명이 다를 수 있으므로 asset.name 우선 사용
-                Texture2D thumb = LoadThumbnail(asset.name);
+                Sprite thumb = LoadThumbnail(asset.name);
                 if (thumb == null)
                     thumb = LoadThumbnail(data.scenarioId); // 폴백
 
@@ -105,17 +105,17 @@ namespace DoDrill.Training
         // 썸네일 로드 (Resources 동기)
         // ─────────────────────────────────────────
 
-        public Texture2D LoadThumbnail(string scenarioId)
+        public Sprite LoadThumbnail(string scenarioId)
         {
             string path = $"{ThumbnailResourcePath}/{scenarioId}";
-            var tex = Resources.Load<Texture2D>(path);
+            var tex = Resources.Load<Sprite>(path);
             if (tex == null)
                 Debug.LogWarning($"[ScenarioDataLoader] 썸네일 없음: {path}");
             return tex;
         }
 
         // 기존 코루틴 방식 호환용 (외부에서 코루틴으로 호출하는 곳 있을 경우)
-        public IEnumerator LoadThumbnail(string scenarioId, Action<Texture2D> callback)
+        public IEnumerator LoadThumbnail(string scenarioId, Action<Sprite> callback)
         {
             callback(LoadThumbnail(scenarioId));
             yield break;
@@ -142,6 +142,6 @@ namespace DoDrill.Training
     {
         public string scenarioId;
         public string scenarioName;
-        public Texture2D thumbnail;
+        public Sprite thumbnail;
     }
 }

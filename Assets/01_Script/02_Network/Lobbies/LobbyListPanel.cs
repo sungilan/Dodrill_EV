@@ -146,13 +146,14 @@ public class LobbyListPanel : UIView
         {
             if (entry?.thumbnail != null)
             {
+                card.thumbnail.sprite = entry.thumbnail;
                 // Texture2D ¡æ Sprite º¯È¯
-                var tex = entry.thumbnail;
-                card.thumbnail.sprite = Sprite.Create(
-                    tex,
-                    new Rect(0, 0, tex.width, tex.height),
-                    new Vector2(0.5f, 0.5f)
-                );
+                //var tex = entry.thumbnail;
+                //card.thumbnail.sprite = Sprite.Create(
+                //    tex,
+                //    new Rect(0, 0, tex.width, tex.height),
+                //    new Vector2(0.5f, 0.5f)
+                //);
             }
             else
             {
