@@ -793,7 +793,7 @@ public class ScenarioRunner : MonoBehaviour
         public string taskName;    // 완료한 단계 명칭
     }
 
-    private void BroadcastSound(string soundName, float volume = 1.0f)
+    public void BroadcastSound(string soundName, float volume = 1.0f)
     {
         if(!InstanceFinder.IsServerStarted) return;
 

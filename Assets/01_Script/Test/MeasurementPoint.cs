@@ -23,17 +23,18 @@ public class MeasurementPoint : MonoBehaviour
     /// <summary>두 단자 조합의 측정값 반환 — MultimeterMaster 에서 호출</summary>
     public static float GetValue(string terminalA, string terminalB, MultimeterMode mode)
     {
-        // NetworkObjectFinder 로 오브젝트 찾기
-        var goA = NetworkObjectFinder.Instance?.Get(terminalA);
-        var goB = NetworkObjectFinder.Instance?.Get(terminalB);
+        // [수정] Finder 대신 직접 이름으로 찾아보기
+        GameObject goA = GameObject.Find(terminalA);
+        GameObject goB = GameObject.Find(terminalB);
 
-        var ptA = goA != null ? goA.GetComponent<MeasurementPoint>() : null;
-
-        if (ptA == null)
+        if(goA == null || goB == null)
         {
-            Debug.LogWarning($"[MeasurementPoint] '{terminalA}' 에 MeasurementPoint 없음");
+            Debug.LogWarning($"[Debug] 직접 찾기 실패 - A:{terminalA}({(goA == null ? "X" : "O")}), B:{terminalB}({(goB == null ? "X" : "O")})");
             return 0f;
         }
+
+        var ptA = goA.GetComponent<MeasurementPoint>();
+        if(ptA == null) return 0f;
 
         return mode switch
         {

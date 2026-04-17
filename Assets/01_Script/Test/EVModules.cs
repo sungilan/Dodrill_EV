@@ -353,7 +353,11 @@ public class MSD_ReinstallModule : ConfirmTaskModule
             registry.Register(new BatteryJack_Lift_Up_FinalModule());
             registry.Register(new BatteryJack_LoweringFinalModule());
             registry.Register(new Coolant_RefillModule());
-        
+            registry.Register(new Insulation_Test_BPA_PlusModule());
+            registry.Register(new Insulation_Test_BPA_MinusModule());
+            registry.Register(new Insulation_Test_Inverter_PlusModule());
+            registry.Register(new Insulation_Test_Inverter_MinusModule());
+
         Debug.Log($"[EVModules] P0AA6 시나리오 전체 모듈 등록 완료 (v2 포함)");
         }
     }
@@ -488,4 +492,48 @@ public class MSD_ReinstallModule : ConfirmTaskModule
     public class LOTO_ShoesModule : GrabAllItemsModule
     {
         public override string ModuleId => "LOTO_Shoes";
+    }
+// ──────────────────────────────────────────────────────────────
+//  절연 저항 측정 4단계 (현대 정비 매뉴얼 기준)
+//  Megger(절연저항계)를 각 단자에 접촉하여 측정값 확인 시 완료
+// ──────────────────────────────────────────────────────────────
+
+    // 1. 검정 프로브(접지)를 파란색 지점에 고정하는 단계
+    public class Megger_Setup_GroundModule : GrabZoneTaskModule
+    {
+        public override string ModuleId => "Megger_Setup_Ground";
+
+        protected override void OnModuleSuccess(string itemId)
+        {
+            // 파란색 지점에 닿은 검정 프로브를 물리적으로 고정시키는 처리
+            // 예: 검정프로브.SetParent(GroundZone); 검정프로브.IsKinematic = true;
+            Debug.Log("<color=blue>[Megger]</color> 검정 프로브 접지 완료 및 고정");
+        }
+    }
+    // [점검 1] BPA(+) 절연 저항 측정 (릴레이 전단)
+    public class Insulation_Test_BPA_PlusModule : ZoneAndMeasureModule
+    {
+        public override string ModuleId => "Insulation_Test_BPA_Plus";
+        protected override string GetTargetObjName() => "PRA_BPA_Plus_Terminal";
+    }
+
+    // [점검 2] BPA(-) 절연 저항 측정 (릴레이 전단)
+    public class Insulation_Test_BPA_MinusModule : ZoneAndMeasureModule
+    {
+        public override string ModuleId => "Insulation_Test_BPA_Minus";
+        protected override string GetTargetObjName() => "PRA_BPA_Minus_Terminal";
+    }
+
+    // [점검 3] 인버터(+) 절연 저항 측정 (릴레이 후단)
+    public class Insulation_Test_Inverter_PlusModule : ZoneAndMeasureModule
+    {
+        public override string ModuleId => "Insulation_Test_Inverter_Plus";
+        protected override string GetTargetObjName() => "PRA_Inverter_Plus_Terminal";
+    }
+
+    // [점검 4] 인버터(-) 절연 저항 측정 (릴레이 후단)
+    public class Insulation_Test_Inverter_MinusModule : ZoneAndMeasureModule
+    {
+        public override string ModuleId => "Insulation_Test_Inverter_Minus";
+        protected override string GetTargetObjName() => "PRA_Inverter_Minus_Terminal";
     }

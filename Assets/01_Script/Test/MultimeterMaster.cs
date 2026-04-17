@@ -1,6 +1,7 @@
-using UnityEngine;
-using TMPro;
+using DG.Tweening;
 using System.Collections;
+using TMPro;
+using UnityEngine;
 
 // ============================================================
 //  MultimeterMaster.cs
@@ -50,9 +51,10 @@ public class MultimeterMaster : MonoBehaviour
     [Tooltip("true 면 아무 단자에나 대도 측정 가능 (모드 체크 건너뜀)")]
     public bool bypassModeCheck = false;
 
-    [Header("결함 상태 연출 (추가)")]
+    [Header("결함 상태 연출")]
     [Tooltip("결함 발생 시 활성화될 빨간색 배경 오브젝트")]
-    public GameObject faultyLcdObject;
+    [SerializeField] private CanvasGroup _faultyCanvasGroup; // 결함용 빨간 화면 캔버스 그룹
+    [SerializeField] private float _fadeDuration = 0.3f;
 
     [Tooltip("기기 자체의 결함 여부 (외부 시나리오에서 제어 가능)")]
     public bool isFaulty = false;
@@ -100,7 +102,7 @@ public class MultimeterMaster : MonoBehaviour
         string red = redProbe != null ? redProbe.currentTerminalId : "";
         string black = blackProbe != null ? blackProbe.currentTerminalId : "";
 
-        // 접촉 안 됨 -> 모든 디스플레이 초기화
+        // 하나라도 떨어져 있으면 즉시 리셋 후 종료
         if(string.IsNullOrEmpty(red) || string.IsNullOrEmpty(black))
         {
             StopFluctuation();
@@ -108,16 +110,33 @@ public class MultimeterMaster : MonoBehaviour
             return;
         }
 
-        // 2. 결함 상태(isFaulty) 체크 (핵심 로직)
-        if(isFaulty)
+        // 2. 데이터 가져오기 (결함 여부와 상관없이 실제 값을 먼저 계산)
+        float baseValue = MeasurementPoint.GetValue(red, black, currentMode);
+        _lastMeasuredValue = baseValue;
+
+        // 3. 결함 여부 판단
+        bool isPointFaulty = false;
+        var targetGo = GameObject.Find(red);
+        if(targetGo != null)
         {
-            ShowFaultyUI(true);
-            return;
+            var pt = targetGo.GetComponent<MeasurementPoint>();
+            if(pt != null && pt.isFaulty) isPointFaulty = true;
         }
 
-        // 3. 정상 측정 로직
-        ShowFaultyUI(false); // 정상일 땐 빨간 화면 끄기
+        // ─── [A] 결함 상태 연출 ───
+        if(this.isFaulty || isPointFaulty)
+        {
+            ShowFaultyUI(true);
+            DisplayValue(baseValue); // 결함 수치 표시
+            StopFluctuation();
+            return; // 결함 처리 후 로직 종료
+        }
 
+        // ─── [B] 정상 상태 측정 ───
+        // 결함이 아닐 때만 아래 로직이 실행됨
+        ShowFaultyUI(false);
+
+        // OFF 모드 체크
         if(!bypassModeCheck && currentMode == MultimeterMode.OFF)
         {
             StopFluctuation();
@@ -125,45 +144,54 @@ public class MultimeterMaster : MonoBehaviour
             return;
         }
 
-        float baseValue = MeasurementPoint.GetValue(red, black, currentMode);
-        _lastMeasuredValue = baseValue;
-
+        // ★ 정상 수치 출력 및 흔들림 효과 시작
         DisplayValue(baseValue);
         StartFluctuation(baseValue);
 
-        // 시나리오 이벤트 발신
-        string primaryTarget = red;
-        InteractionEvents.FireZoneActivated(primaryTarget, gameObject.name);
-        InteractionEvents.FireValueMeasured(primaryTarget, baseValue);
+        // 시나리오 시스템 이벤트 발신
+        InteractionEvents.FireZoneActivated(red, gameObject.name);
+        InteractionEvents.FireValueMeasured(red, baseValue);
     }
 
-    /// <summary>결함 UI(빨간 화면)와 일반 LCD 텍스트 교체</summary>
+    // 결함 UI 연출 (수정된 버전)
     private void ShowFaultyUI(bool show)
     {
-        if(faultyLcdObject != null)
-            faultyLcdObject.SetActive(show);
+        if(_faultyCanvasGroup == null) return;
 
-        //if(lcdDisplay != null)
-        //    lcdDisplay.gameObject.SetActive(!show);
+        _faultyCanvasGroup.DOKill(); // 기존 트윈 제거
 
         if(show)
         {
-            StopFluctuation();
-            Debug.Log("<color=red>[Multimeter]</color> 결함 상태 감지됨!");
-        }
-    }
+            // 1. 이미 결함 화면이 떠 있는 상태라면 중복 실행 방지
+            if(_faultyCanvasGroup.alpha > 0.9f) return;
 
-    private void ResetDisplay()
-    {
-        ShowFaultyUI(false);
-        if(lcdDisplay != null) lcdDisplay.text = "----";
+            // 2. 빨간 화면 Fade In
+            _faultyCanvasGroup.DOFade(1f, _fadeDuration).SetEase(Ease.OutCubic);
+
+            // 3. 삐 소리 재생 (서버에 브로드캐스트 요청)
+            // ScenarioRunner에 작성하신 소리 재생 시스템을 활용합니다.
+            var runner = FindFirstObjectByType<ScenarioRunner>();
+            if(runner != null)
+            {
+                // "Beep_Error" 소리는 클라이언트 사운드 매니저에 등록되어 있어야 함
+                runner.BroadcastSound("Beep_Error", 1.0f);
+            }
+
+            StopFluctuation();
+            Debug.Log("<color=red>[Multimeter]</color> 결함 감지: 삐- 소리와 함께 연출 실행");
+        }
+        else
+        {
+            // 결함 해제 시 Fade Out
+            _faultyCanvasGroup.DOFade(0f, _fadeDuration).SetEase(Ease.InSine);
+        }
     }
 
     // ── 내부 유틸 ────────────────────────────
 
     private void DisplayValue(float value)
     {
-        if (lcdDisplay == null) return;
+        if(lcdDisplay == null) return;
 
         string unit = currentMode switch
         {
@@ -174,12 +202,36 @@ public class MultimeterMaster : MonoBehaviour
             _ => ""
         };
 
-        if (currentMode == MultimeterMode.Resistance && value > 900000f)
-            lcdDisplay.text = "O.L";
-        else if (currentMode == MultimeterMode.Continuity && value < 10f)
-            lcdDisplay.text = "))))";
-        else
-            lcdDisplay.text = $"{value:F1}{unit}";
+        // 1. 텍스트 갱신
+        string resultText = (currentMode == MultimeterMode.Resistance && value > 900000f) ? "O.L" :
+                            (currentMode == MultimeterMode.Continuity && value < 10f) ? "))))" :
+                            $"{value:F1}{unit}";
+
+        lcdDisplay.text = resultText;
+
+        // 2. [추가] 부드럽게 나타나는 연출 (Fade In)
+        // 이미 텍스트가 보이고 있는 상태라면 굳이 다시 트윈을 돌릴 필요가 없으므로 체크
+        if(lcdDisplay.alpha < 0.1f)
+        {
+            lcdDisplay.DOKill(); // 기존 트윈 중단
+            lcdDisplay.alpha = 0f; // 시작점 강제 설정
+            lcdDisplay.DOFade(1f, _fadeDuration).SetEase(Ease.OutCubic);
+        }
+    }
+
+    // ResetDisplay도 함께 수정해줘야 자연스럽습니다.
+    private void ResetDisplay()
+    {
+        ShowFaultyUI(false);
+
+        if(lcdDisplay != null)
+        {
+            // 사라질 때도 스르륵 사라지게 하고 싶다면:
+            lcdDisplay.DOKill();
+            lcdDisplay.DOFade(0f, _fadeDuration).OnComplete(() => {
+                lcdDisplay.text = "----";
+            });
+        }
     }
 
     private void StartFluctuation(float baseValue)

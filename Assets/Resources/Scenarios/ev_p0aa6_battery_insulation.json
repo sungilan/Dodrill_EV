@@ -333,21 +333,63 @@
           {
             "prefabId": "BatteryPack_Disassemble",
             "spawnPointId": "SP_Battery",
-            "guideId": ""
+            "guideId": "",
+            "persist": true
           }
         ]
       },
       {
-        "moduleId": "Insulation_Resistance_Test",
-        "timeout": 180,
+        "moduleId": "Insulation_Test_BPA_Plus",
+        "timeout": 120,
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
             "prefabId": "Megger",
-            "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_Battery_Main_Terminal"
+            "spawnPointId": "SP_Megger",
+            "guideId": "Guide_PRA_BPA_Plus_Point",
+            "persist": true
           }
         ]
+      },
+      {
+        "moduleId": "Insulation_Test_BPA_Minus",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Megger",
+            "spawnPointId": "SP_Megger",
+            "guideId": "Guide_PRA_BPA_Minus_Point",
+            "persist": true
+          }
+        ]
+      },
+      {
+        "moduleId": "Insulation_Test_Inverter_Plus",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Megger",
+            "spawnPointId": "SP_Megger",
+            "guideId": "Guide_PRA_Inverter_Plus_Point",
+            "persist": true
+          }
+        ]
+      },
+      {
+        "moduleId": "Insulation_Test_Inverter_Minus",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Megger",
+            "spawnPointId": "SP_Megger",
+            "guideId": "Guide_PRA_Inverter_Minus_Point",
+            "persist": true
+          }
+        ],
+        "despawnObjectIds": [ "Megger" ]
       },
       {
         "moduleId": "PRA_Removal",
@@ -2423,6 +2465,189 @@
           {
             "key": "snapDelay",
             "ko": "2.5"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Megger_Setup_Ground",
+      "timeout": 120,
+      "completionMode": "AnyPlayer",
+      "spawnObjects": [
+        {
+          "prefabId": "Megger",
+          "spawnPointId": "SP_Megger",
+          "guideId": "Guide_Ground_Point",
+          "persist": true
+        }
+      ],
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [ "BlackProbe" ],
+        "targetObjName": "Guide_Ground_Point",
+        "targetZoneId": "Ground_Point_Zone",
+        "extra": [
+          {
+            "key": "title",
+            "ko": "절연 저항계 접지 연결",
+            "en": "Megger Ground Connection",
+            "vi": "Kết nối tiếp đất máy đo cách điện"
+          },
+          {
+            "key": "description",
+            "ko": "검정색 프로브를 배터리 케이스 접지부(파란색 지점)에 연결하여 고정하세요.",
+            "en": "Connect and fix the black probe to the battery case ground point (blue spot).",
+            "vi": "Kết nối và cố định đầu đo màu đen vào điểm tiếp đất của vỏ pin (điểm màu xanh)."
+          },
+          {
+            "key": "guideText",
+            "ko": "정확한 측정을 위해 검정색 리드선을 반드시 차체 접지나 배터리 케이스에 먼저 연결해야 합니다.",
+            "en": "For accurate measurement, the black lead must be connected to the chassis ground or battery case first.",
+            "vi": "Để đo chính xác, dây đo màu đen phải được kết nối với tiếp đất thân xe hoặc vỏ pin trước."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Insulation_Test_BPA_Plus",
+      "config": {
+        "actionType": "MeasureResistance",
+        "requiredItems": [ "Megger" ],
+        "targetObjName": "PRA_BPA_Plus_Terminal",
+        "targetValue": 2.0,
+        "toleranceRatio": 0.5,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "BPA(+) 절연 저항 측정 (릴레이 전단)",
+            "en": "BPA(+) Insulation Resistance Test (Pre-Relay)",
+            "vi": "Kiểm tra điện trở cách điện BPA(+) (Trước Rơ-le)"
+          },
+          {
+            "key": "description",
+            "ko": "PRA 내 배터리(+) 단자와 케이스 간의 절연 상태를 점검하세요.",
+            "en": "Check insulation between the battery(+) terminal in PRA and the case.",
+            "vi": "Kiểm tra tình trạng cách điện giữa đầu cực pin(+) trong PRA và vỏ."
+          },
+          {
+            "key": "guideText",
+            "ko": "PRA 내 배터리 어셈블리(+) 단자를 측정합니다. 1000V 인가 후 안정된 값을 확인하세요. 정상 범위는 2MΩ 이상입니다.",
+            "en": "Measure the battery assembly(+) terminal. Check for a stable value after applying 1000V. Normal range is 2MΩ or higher.",
+            "vi": "Đo đầu cực bộ pin(+) trong PRA. Kiểm tra giá trị ổn định sau khi cấp 1000V. Phạm vi bình thường là từ 2MΩ trở lên."
+          },
+          {
+            "key": "subguideText",
+            "ko": "정상: 2MΩ 이상 | 측정 전압: DC 1000V | 릴레이 전단 점검",
+            "en": "Normal: 2MΩ+ | Test Voltage: DC 1000V | Pre-Relay Check",
+            "vi": "Bình thường: 2MΩ+ | Điện áp thử: DC 1000V | Kiểm tra trước Rơ-le"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Insulation_Test_BPA_Minus",
+      "config": {
+        "actionType": "MeasureResistance",
+        "requiredItems": [ "Megger" ],
+        "targetObjName": "PRA_BPA_Minus_Terminal",
+        "targetValue": 2.0,
+        "toleranceRatio": 0.5,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "BPA(-) 절연 저항 측정 (릴레이 전단)",
+            "en": "BPA(-) Insulation Resistance Test (Pre-Relay)",
+            "vi": "Kiểm tra điện trở cách điện BPA(-) (Trước Rơ-le)"
+          },
+          {
+            "key": "description",
+            "ko": "PRA 내 배터리(-) 단자와 케이스 간의 절연 상태를 점검하세요.",
+            "en": "Check insulation between the battery(-) terminal in PRA and the case.",
+            "vi": "Kiểm tra tình trạng cách điện giữa đầu cực pin(-) trong PRA và vỏ."
+          },
+          {
+            "key": "guideText",
+            "ko": "PRA 내 배터리 어셈블리(-) 단자를 측정합니다. 리드선을 정확히 밀착시킨 후 절연 파괴 여부를 확인하십시오.",
+            "en": "Measure the battery assembly(-) terminal. Ensure test leads are firmly contacted and check for insulation failure.",
+            "vi": "Đo đầu cực bộ pin(-) trong PRA. Đảm bảo các dây đo tiếp xúc chặt chẽ và kiểm tra xem có hỏng cách điện không."
+          },
+          {
+            "key": "subguideText",
+            "ko": "정상: 2MΩ 이상 | 측정 전압: DC 1000V | 릴레이 전단 점검",
+            "en": "Normal: 2MΩ+ | Test Voltage: DC 1000V | Pre-Relay Check",
+            "vi": "Bình thường: 2MΩ+ | Điện áp thử: DC 1000V | Kiểm tra trước Rơ-le"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Insulation_Test_Inverter_Plus",
+      "config": {
+        "actionType": "MeasureResistance",
+        "requiredItems": [ "Megger" ],
+        "targetObjName": "PRA_Inverter_Plus_Terminal",
+        "targetValue": 2.0,
+        "toleranceRatio": 0.5,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "인버터(+) 절연 저항 측정 (릴레이 후단)",
+            "en": "Inverter(+) Insulation Resistance Test (Post-Relay)",
+            "vi": "Kiểm tra điện trở cách điện Inverter(+) (Sau Rơ-le)"
+          },
+          {
+            "key": "description",
+            "ko": "인버터로 향하는 PRA 플러스 측 출력 단자의 절연을 점검하세요.",
+            "en": "Check insulation of the PRA positive output terminal connected to the inverter.",
+            "vi": "Kiểm tra cách điện của đầu cực đầu ra phía dương PRA hướng về bộ biến tần."
+          },
+          {
+            "key": "guideText",
+            "ko": "릴레이 후단(인버터 측) 플러스 라인을 점검합니다. 이 단계는 부하 측 케이블 및 인버터 내부 절연 상태를 포함합니다.",
+            "en": "Check the post-relay (inverter side) positive line. This includes the load-side cable and inverter internal insulation.",
+            "vi": "Kiểm tra dây dương sau rơ-le (phía biến tần). Bước này bao gồm tình trạng cách điện của cáp phía tải và bên trong biến tần."
+          },
+          {
+            "key": "subguideText",
+            "ko": "정상: 2MΩ 이상 | 측정 전압: DC 1000V | 릴레이 후단 점검",
+            "en": "Normal: 2MΩ+ | Test Voltage: DC 1000V | Post-Relay Check",
+            "vi": "Bình thường: 2MΩ+ | Điện áp thử: DC 1000V | Kiểm tra sau Rơ-le"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Insulation_Test_Inverter_Minus",
+      "config": {
+        "actionType": "MeasureResistance",
+        "requiredItems": [ "Megger" ],
+        "targetObjName": "PRA_Inverter_Minus_Terminal",
+        "targetValue": 2.0,
+        "toleranceRatio": 0.5,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "인버터(-) 절연 저항 측정 (릴레이 후단)",
+            "en": "Inverter(-) Insulation Resistance Test (Post-Relay)",
+            "vi": "Kiểm tra điện trở cách điện Inverter(-) (Sau Rơ-le)"
+          },
+          {
+            "key": "description",
+            "ko": "인버터로 향하는 PRA 마이너스 측 출력 단자의 절연을 점검하세요.",
+            "en": "Check insulation of the PRA negative output terminal connected to the inverter.",
+            "vi": "Kiểm tra cách điện của đầu cực đầu ra phía âm PRA hướng về bộ biến tần."
+          },
+          {
+            "key": "guideText",
+            "ko": "마지막 측정 포인트입니다. 모든 포인트에서 2MΩ 이상이 확인되면 차량의 절연 시스템은 정상으로 판단합니다.",
+            "en": "The final measurement point. If all points are 2MΩ or higher, the vehicle's insulation system is considered normal.",
+            "vi": "Điểm đo cuối cùng. Nếu tất cả các điểm đều từ 2MΩ trở lên, hệ thống cách điện của xe được coi là bình thường."
+          },
+          {
+            "key": "subguideText",
+            "ko": "정상: 2MΩ 이상 | 측정 전압: DC 1000V | 점검 완료",
+            "en": "Normal: 2MΩ+ | Test Voltage: DC 1000V | Inspection Complete",
+            "vi": "Bình thường: 2MΩ+ | Điện áp thử: DC 1000V | Hoàn tất kiểm tra"
           }
         ]
       }
