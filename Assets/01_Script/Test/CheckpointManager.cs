@@ -63,8 +63,8 @@ public class CheckpointManager : MonoBehaviour
     private void ResetAllInteractables()
     {
         // 씬의 모든 볼트 초기화
-        foreach(var bolt in FindObjectsByType<Bolt>(FindObjectsSortMode.None))
-            bolt.ResetBolt();
+        //foreach(var bolt in FindObjectsByType<Bolt>(FindObjectsSortMode.None))
+            //bolt.ResetBolt();
 
         // 씬의 모든 부품 초기화
         foreach(var part in FindObjectsByType<InteractablePart>(FindObjectsSortMode.None))

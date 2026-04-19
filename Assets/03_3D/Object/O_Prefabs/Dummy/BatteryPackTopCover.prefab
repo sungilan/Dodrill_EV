@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 3940982740188774665}
   - component: {fileID: 8127305336710027993}
   - component: {fileID: 4157407355737857195}
+  - component: {fileID: 6245827127955227946}
   m_Layer: 15
   m_Name: BatteryPackTopCover
   m_TagString: Untagged
@@ -115,7 +116,9 @@ MonoBehaviour:
   <ComponentIndex>k__BackingField: 0
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
-  NetworkBehaviours: []
+  NetworkBehaviours:
+  - {fileID: 1379499860574410786}
+  - {fileID: 8127305336710027993}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -140,15 +143,15 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 65535
+  <PrefabId>k__BackingField: 26
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 8489373282393153960
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
-    Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 0}
-    Scale: {x: 0, y: 0, z: 0}
-    IsValid: 0
+    Position: {x: 0.27776492, y: 0.05051422, z: 0.017241955}
+    Rotation: {x: -0, y: -0, z: -0, w: 1}
+    Scale: {x: 1, y: 1, z: 1}
+    IsValid: 1
 --- !u!114 &1379499860574410786
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -161,9 +164,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d5f3cd3dd6be3a49aa81f40ab47c0ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalNetworkTransform
-  _componentIndexCache: 255
+  _componentIndexCache: 0
   _addedNetworkObject: {fileID: 1433134461074470668}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 1433134461074470668}
   anchor: {fileID: 0}
   syncInterval: 0.025
   lerpSpeed: 12
@@ -246,9 +249,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ad070006259cc144bc759874631f905, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SyncGrab
-  _componentIndexCache: 255
+  _componentIndexCache: 1
   _addedNetworkObject: {fileID: 1433134461074470668}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 1433134461074470668}
   holdPoint: {fileID: 0}
   flyDuration: 0.5
   flyEase: 9
@@ -322,3 +325,41 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   lockHandOnGrab: 0
+--- !u!114 &6245827127955227946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7447575896430581035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 935aaf7da50abf94697c8d70a7a71efe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AutoHandAssembly::Autohand.DistanceGrabbable
+  ignoreMe: 0
+  instantPull: 1
+  grabType: 0
+  archMultiplier: 0.6
+  gravitationVelocity: 1
+  rotate: 1
+  rotationSpeed: 1
+  ignoreHighlights: 1
+  targetedMaterial: {fileID: 0}
+  selectedMaterial: {fileID: 0}
+  showEvents: 1
+  OnPull:
+    m_PersistentCalls:
+      m_Calls: []
+  StartTargeting:
+    m_PersistentCalls:
+      m_Calls: []
+  StopTargeting:
+    m_PersistentCalls:
+      m_Calls: []
+  StartSelecting:
+    m_PersistentCalls:
+      m_Calls: []
+  StopSelecting:
+    m_PersistentCalls:
+      m_Calls: []

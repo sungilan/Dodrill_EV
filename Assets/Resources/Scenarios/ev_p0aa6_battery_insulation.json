@@ -66,12 +66,6 @@
             "prefabId": "GDS_Tablet",
             "spawnPointId": "SP_Cart_Top",
             "guideId": "Guide_OBD_Port"
-          },
-          {
-            "prefabId": "BatteryPack",
-            "spawnPointId": "SP_BatteryPackInCar",
-            "persist": true,
-            "attachToSpawnPoint": true
           }
         ]
       },
@@ -272,7 +266,13 @@
         "moduleId": "Battery_Cover_Removal1",
         "timeout": 120,
         "completionMode": "AnyPlayer",
-        "spawnObjects": []
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": ""
+          }
+        ]
       },
       {
         "moduleId": "BatteryJack_Lift_Up",
@@ -295,12 +295,19 @@
         "moduleId": "Battery_Cover_Removal2",
         "timeout": 120,
         "completionMode": "AnyPlayer",
-        "spawnObjects": []
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": ""
+          }
+        ]
       },
       {
         "moduleId": "BatteryJack_Lowering",
         "timeout": 120,
         "completionMode": "AnyPlayer",
+        "spawnObjects": [],
         "despawnObjectIds": [ "BatteryJack" ],
         "config": {
           "targetValue": 0.1,
@@ -389,7 +396,7 @@
             "persist": true
           }
         ],
-        "despawnObjectIds": [ "Megger" ]
+        "despawnObjectIds": [ "BatteryPack_Disassemble" ]
       },
       {
         "moduleId": "PRA_Removal",
@@ -414,8 +421,7 @@
             "spawnPointId": "SP_NewPRA",
             "guideId": "Guide_PRA_Zone"
           }
-        ],
-        "despawnObjectIds": [ "BatteryPack_Open" ]
+        ]
       },
       {
         "moduleId": "Insulation_Verify",
@@ -438,13 +444,9 @@
             "prefabId": "BatteryPackTopCover",
             "spawnPointId": "SP_NewPRA",
             "guideId": ""
-          },
-          {
-            "prefabId": "BatteryPack_Open",
-            "spawnPointId": "SP_Battery",
-            "guideId": ""
           }
-        ]
+        ],
+        "despawnObjectIds": [ "BatteryPack_Open" ]
       },
       {
         "moduleId": "BatteryPackTopCover_Assemble",
@@ -481,7 +483,7 @@
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
-            "prefabId": "BatteryJack",
+            "prefabId": "BatteryJackFinal",
             "spawnPointId": "SP_Battery_Under_Default",
             "persist": true
           }
@@ -505,11 +507,11 @@
         ]
       },
       {
-        "moduleId": "BatteryJack_LoweringFinal",
+        "moduleId": "BatteryJack_Lowering_Final",
         "timeout": 120,
         "completionMode": "AnyPlayer",
         "spawnObjects": [],
-        "despawnObjectIds": [ "BatteryJack" ]
+        "despawnObjectIds": [ "BatteryJackFinal" ]
       },
       {
         "moduleId": "BatteryPack_Assemble2",
@@ -1735,13 +1737,34 @@
         "actionType": "ZoneAndUse",
         "targetZoneId": "BatteryContactZone",
         "requiredItems": [ "BatteryPackPos" ],
-        "spawnObjects": [
+        "extra": [
           {
-            "prefabId": "BatteryJack",
-            "spawnPointId": "SP_Battery_Under_Default",
-            "showGuide": true
+            "key": "title",
+            "ko": "배터리 리프트 상승 및 지지",
+            "en": "Battery Lift Up & Support",
+            "vi": "Nâng kích pin và đỡ"
+          },
+          {
+            "key": "description",
+            "ko": "배터리 리프트를 상승시켜 배터리 팩에 밀착시키세요.",
+            "en": "Raise the battery lift until it firmly contacts the battery pack.",
+            "vi": "Nâng kích pin cho đến khi nó tiếp xúc chặt chẽ với bộ pin."
+          },
+          {
+            "key": "guideText",
+            "ko": "리프트의 상승 버튼을 눌러 상판이 배터리에 닿을 때까지 올리세요. 접촉 시 배터리가 리프트에 자동으로 고정됩니다.",
+            "en": "Press the lift up button until the plate touches the battery. The pack will auto-attach upon contact.",
+            "vi": "Nhấn nút nâng kích cho đến khi tấm trên cùng chạm vào pin. Bộ pin sẽ tự động cố định khi tiếp xúc."
           }
-        ],
+        ]
+      }
+    },
+    {
+      "moduleId": "BatteryJack_Lift_Up_Final",
+      "config": {
+        "actionType": "ZoneAndUse",
+        "targetZoneId": "BatteryContactZone",
+        "requiredItems": [ "BatteryPackPos" ],
         "extra": [
           {
             "key": "title",
@@ -1771,7 +1794,7 @@
         "requiredItems": [
           "ImpactWrench"
         ],
-        "targetObjName": "Battery_TopCover",
+        "targetObjName": "Battery_TopCover_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -1856,27 +1879,35 @@
         "extra": [
           {
             "key": "title",
-            "ko": "배터리 팩 커버 재조립",
-            "en": "Battery Pack Install",
-            "vi": "Lắp bộ pin"
+            "ko": "배터리 팩 상부 커버 체결",
+            "en": "Secure Battery Pack Top Cover",
+            "vi": "Siết nắp trên bộ pin"
           },
           {
             "key": "description",
-            "ko": "배터리 잭으로 팩을 차체에 밀착시키고 전면 볼트를 체결하세요.",
-            "en": "Raise pack with battery jack to chassis and install front bolts.",
-            "vi": "Nâng bộ pin bằng kích vào khung xe và lắp bu lông phía trước."
+            "ko": "임팩트 렌치를 사용하여 상부 커버의 모든 고정 볼트를 체결하세요.",
+            "en": "Tighten all top cover mounting bolts using the impact wrench.",
+            "vi": "Siết chặt tất cả bu lông cố định nắp trên bằng cờ lê va đập."
           },
           {
             "key": "guideText",
-            "ko": "팩을 정확한 위치에 맞춘 후 볼트를 체결합니다. 위치 핀을 먼저 맞추고, 모든 볼트를 손으로 가체결한 뒤 대각선 순서로 규정 토크를 적용하세요.",
-            "en": "Align the pack precisely before tightening. Align guide pins first, hand-tighten all bolts, then apply spec torque in diagonal order.",
-            "vi": "Căn chỉnh bộ pin chính xác. Căn chỉnh chốt dẫn hướng trước, vặn tay tất cả bu lông, sau đó siết theo mô-men quy định theo đường chéo."
+            "ko": "배터리 팩 밀봉을 위해 24개의 볼트를 모두 체결합니다. 기밀 유지를 위해 대각선 순서로 규정 토크를 준수하여 작업하세요.",
+            "en": "Tighten all 24 bolts to seal the battery pack. Follow a diagonal pattern and observe the specified torque to ensure a proper seal.",
+            "vi": "Siết chặt tất cả 24 bu lông để đóng kín bộ pin. Làm việc theo hình chéo và tuân thủ mô-men quy định để đảm bảo độ kín."
           },
           {
             "key": "subguideText",
-            "ko": "위치 핀 맞춤 → 손 조임 → 대각선 순서 체결 (45Nm)",
-            "en": "Align guide pins → Hand-tighten → Diagonal torque (45Nm)",
-            "vi": "Căn chỉnh chốt → Vặn tay → Siết chéo (45Nm)"
+            "ko": "볼트 규격: M8 (24개) | 체결 순서: 대각선 방향 | 규정 토크: 25 Nm",
+            "en": "Bolt spec: M8 (24ea) | Order: diagonal | Spec torque: 25 Nm",
+            "vi": "Quy cách: M8 (24 cái) | Thứ tự: chéo | Mô-men quy định: 25 Nm"
+          },
+          {
+            "key": "boltCount",
+            "ko": "24"
+          },
+          {
+            "key": "boltTorque",
+            "ko": "25 Nm"
           }
         ]
       }
@@ -1914,7 +1945,7 @@
       "config": {
         "actionType": "ConfirmTask",
         "requiredItems": [ "ImpactWrench" ],
-        "targetObjName": "BatteryPack_Bolts3",
+        "targetObjName": "BatteryPack_Disassemble1_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -1942,39 +1973,11 @@
       }
     },
     {
-      "moduleId": "BatteryJack_Lowering_Final",
-      "config": {
-        "actionType": "ZoneAndUse",
-        "targetZoneId": "BatteryJack_Detached",
-        "requiredItems": [ "BatteryJack" ],
-        "extra": [
-          {
-            "key": "title",
-            "ko": "배터리 리프트 하강 및 철거",
-            "en": "Battery Lift Lowering & Removal",
-            "vi": "Hạ kích pin và tháo dỡ"
-          },
-          {
-            "key": "description",
-            "ko": "리프트를 완전히 하강시킨 후 차량 하부에서 제거하세요.",
-            "en": "Fully lower the lift and remove it from under the vehicle.",
-            "vi": "Hạ kích xuống hoàn toàn và tháo ra khỏi gầm xe."
-          },
-          {
-            "key": "guideText",
-            "ko": "전면 볼트 체결이 완료되어 배터리가 고정되었습니다. 이제 리프트를 내려 다음 작업을 위한 공간을 확보하세요.",
-            "en": "Battery is secured by front bolts. Lower the lift to clear space for the next steps.",
-            "vi": "Bộ pin đã được cố định bằng bu lông trước. Hạ kích để lấy không gian cho các bước tiếp theo."
-          }
-        ]
-      }
-    },
-    {
       "moduleId": "BatteryPack_Assemble2",
       "config": {
         "actionType": "ConfirmTask",
         "requiredItems": [ "ImpactWrench" ],
-        "targetObjName": "Battery_TopCover_Bolts",
+        "targetObjName": "BatteryPack_Disassemble2_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -2008,7 +2011,7 @@
         "requiredItems": [
           "ImpactWrench"
         ],
-        "targetObjName": "Front_Cover_Bolts",
+        "targetObjName": "Connector_Cover_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -2765,36 +2768,31 @@
         "extra": [
           {
             "key": "title",
-            "ko": "신품 PRA 장착",
-            "en": "New PRA Installation (Core Repair)",
-            "vi": "Lắp PRA mới (Sửa chữa cốt lõi)"
+            "ko": "배터리 팩 상부 커버 가안착",
+            "en": "Place Battery Pack Top Cover",
+            "vi": "Đặt nắp trên bộ pin"
           },
           {
             "key": "description",
-            "ko": "신품 PRA를 배터리 팩에 장착하세요.",
-            "en": "Install the new PRA onto the battery pack mount.",
-            "vi": "Lắp PRA mới vào giá đỡ của bộ pin."
+            "ko": "정비가 완료된 배터리 팩 위로 상부 커버를 옮겨 덮으세요.",
+            "en": "Move the top cover back onto the serviced battery pack.",
+            "vi": "Di chuyển nắp trên trở lại bộ pin đã bảo trì."
           },
           {
             "key": "guideText",
-            "ko": "이 단계가 P0AA6 고장의 근본 원인을 완전히 제거하는 핵심 정비입니다. 신품 PRA를 정확한 위치에 장착하고 규정 토크로 체결해야 재발을 방지할 수 있습니다.",
-            "en": "This step completely eliminates the root cause of P0AA6. Install the new PRA precisely and tighten to spec torque to prevent recurrence.",
-            "vi": "Bước này hoàn toàn loại bỏ nguyên nhân gốc rễ P0AA6. Lắp PRA mới chính xác và siết theo mô-men quy định để ngăn tái phát."
+            "ko": "내부 부품 정비가 완료되었습니다. 탈거했던 상부 커버를 정확한 방향으로 가져가 배터리 팩 본체 위에 안착시키세요.",
+            "en": "Internal maintenance is complete. Place the removed top cover back onto the battery pack body in the correct orientation.",
+            "vi": "Bảo trì bên trong đã hoàn tất. Đặt nắp trên đã tháo trở lại thân bộ pin theo đúng hướng."
           },
           {
             "key": "subguideText",
-            "ko": "PRA 거치 → HV 버스바 연결 (8Nm) → BMS 신호선 연결 → 고정 볼트 체결 (8Nm)",
-            "en": "Place PRA → Connect HV busbar (8Nm) → Connect BMS signal → Tighten bolts (8Nm)",
-            "vi": "Đặt PRA → Kết nối thanh dẫn HV (8Nm) → Kết nối tín hiệu BMS → Siết bu lông (8Nm)"
-          },
-          {
-            "key": "safetyNote",
-            "ko": "신품 PRA 장착 전 절연 저항을 측정하여 신품 PRA 자체의 이상 여부를 확인하세요.",
-            "en": "Verify the new PRA's own insulation before installation."
+            "ko": "커버 정렬 → 배터리 팩 본체 위 안착 → 볼트 구멍 일치 확인",
+            "en": "Align cover → Place on battery pack → Check bolt hole alignment",
+            "vi": "Căn chỉnh nắp → Đặt lên bộ pin → Kiểm tra căn chỉnh lỗ bu lông"
           },
           {
             "key": "snapDelay",
-            "ko": "2.0"
+            "ko": "1.5"
           }
         ]
       }
@@ -2888,34 +2886,6 @@
       }
     },
     {
-      "moduleId": "BatteryJack_Lift_Up",
-      "config": {
-        "actionType": "ConfirmTask",
-        "requiredItems": [],
-        "targetObjName": "BatteryJack_Button_Up",
-        "targetValue": 1,
-        "toleranceRatio": 0.05,
-        "requiresSafetyCheck": false,
-        "extra": [
-          {
-            "key": "title",
-            "ko": "배터리 리프트 상승 및 지지",
-            "en": "Battery Lift Up & Support"
-          },
-          {
-            "key": "description",
-            "ko": "배터리 리프트를 상승시켜 배터리 팩에 밀착시키세요.",
-            "en": "Raise the battery lift until it firmly contacts the battery pack."
-          },
-          {
-            "key": "guideText",
-            "ko": "리프트의 상승 버튼을 눌러 상판이 배터리에 닿을 때까지 올리세요. 접촉 시 배터리가 리프트에 자동으로 고정됩니다.",
-            "en": "Press the lift up button until the plate touches the battery. The pack will auto-attach upon contact."
-          }
-        ]
-      }
-    },
-    {
       "moduleId": "BatteryPack_Unbolt",
       "config": {
         "actionType": "ConfirmTask",
@@ -2948,6 +2918,34 @@
     },
     {
       "moduleId": "BatteryJack_Lowering",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "BatteryJack_Button_Down",
+        "targetValue": 0.1,
+        "toleranceRatio": 0.1,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 팩 하강 및 분리",
+            "en": "Battery Pack Lowering & Separation"
+          },
+          {
+            "key": "description",
+            "ko": "리프트를 천천히 하강시켜 배터리 팩을 차량에서 완전히 분리하세요.",
+            "en": "Slowly lower the lift to fully separate the battery pack from the vehicle."
+          },
+          {
+            "key": "guideText",
+            "ko": "하강 버튼을 눌러 리프트를 끝까지 내리세요. 바닥까지 완전히 하강하면 배터리 팩 분리 작업이 완료됩니다.",
+            "en": "Press the down button to lower the lift completely. The separation is complete once it reaches the bottom."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "BatteryJack_Lowering_Final",
       "config": {
         "actionType": "ConfirmTask",
         "requiredItems": [],
@@ -3029,7 +3027,7 @@
         "requiredItems": [
           "ImpactWrench"
         ],
-        "targetObjName": "Front_Cover_Bolts2",
+        "targetObjName": "Front_Cover_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -3069,7 +3067,7 @@
         "requiredItems": [
           "ImpactWrench"
         ],
-        "targetObjName": "Front_Cover_Bolts2",
+        "targetObjName": "Rear_Cover_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,

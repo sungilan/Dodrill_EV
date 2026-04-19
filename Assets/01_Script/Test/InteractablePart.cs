@@ -335,7 +335,7 @@ public class InteractablePart : MonoBehaviour
         {
             if(bolt == null) continue;
             bolt.gameObject.SetActive(true);
-            bolt.ResetBolt();
+            //bolt.ResetBolt();
         }
 
         Debug.Log($"[Part] {name}: 조립 완료 → Assembled");

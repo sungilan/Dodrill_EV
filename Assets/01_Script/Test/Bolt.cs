@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System;
+using FishNet.Object;
 
 public class Bolt : MonoBehaviour
 {
@@ -12,73 +13,101 @@ public class Bolt : MonoBehaviour
     public bool isTightened = false;
     public bool isBroken = false;
 
-    [Header("파손 VFX")]
-    public Mesh brokenBoltMesh;
-    public GameObject breakEffect;
+    [Header("이동 연출")]
+    public float ejectLocalY = 0.03f;
 
     [Header("상태 (읽기 전용)")]
     [SerializeField] private float _progress = 0f;
 
-    // 이벤트: Counter가 구독함
-    public event Action<Bolt> OnBoltLoosened;
+    private Vector3 _originLocalPos;
+    private Quaternion _originLocalRot;
+    private bool _originSaved;
 
+    public event Action<Bolt> OnBoltLoosened;
     public float Progress => _progress;
     public bool isloosened => _progress >= 1.0f;
+    public bool isAssembleMode = false;
 
-    public bool isAssembleMode = false; // 조립 단계인가?
+    // 도구의 방향을 전달받기 위한 변수 추가
+    private Vector3 _currentToolDirection;
 
-    public void InteractWithTool(float deltaProgress)
+    private void Awake() => SaveOrigin();
+
+    public void SaveOrigin()
     {
-        if(isBroken) return;
+        if (_originSaved) return;
+        _originLocalPos = transform.localPosition;
+        _originLocalRot = transform.localRotation;
+        _originSaved = true;
+    }
+
+    public void InteractWithTool(float deltaProgress, Vector3 toolForward)
+    {
+        if (isBroken) return;
+
+        _currentToolDirection = toolForward; // 렌치가 바라보는 방향 저장
 
         float prevProgress = _progress;
         _progress += deltaProgress;
         _progress = Mathf.Clamp01(_progress);
 
-        string msg = isAssembleMode ? "볼트 체결 중..." : "볼트 해제 중...";
-        string instruction = "작업을 완료할 때까지 키를 유지하세요.";
+        AnimateBoltPosition();
 
-        if(_progress >= 1.0f)
+        if (prevProgress < 1.0f && _progress >= 1.0f)
+            OnBoltLoosened?.Invoke(this);
+    }
+
+    private void AnimateBoltPosition()
+    {
+        if (!_originSaved) return;
+
+        // 렌치가 위를 향하고 있다면(차량 하부), 분해 시 아래로(-Y) 이동
+        // 렌치가 아래를 향하고 있다면(바닥 배터리), 분해 시 위로(+Y) 이동
+        // 렌치의 Forward와 볼트의 Local Up 사이의 관계를 계산
+        float dot = Vector3.Dot(_currentToolDirection, transform.up);
+        float directionMultiplier = dot > 0 ? 1f : -1f;
+
+        if (isAssembleMode)
         {
-            // [완료] 완료되는 순간 UI를 즉시 숨기거나 완료 문구 표시
-            InteractionProgressBarUI.Instance?.HideBoltProgress();
+            // 조립: 렌치 방향 반대쪽에서 원위치로 들어옴
+            float yOffset = (1f - _progress) * ejectLocalY * directionMultiplier;
+            transform.localPosition = _originLocalPos + new Vector3(0, yOffset, 0);
         }
         else
         {
-            // [진행] 실시간 UI 업데이트
-            InteractionProgressBarUI.Instance?.ShowBoltProgress(_progress, msg, gameObject.name, instruction);
+            // 분해: 원위치에서 렌치 방향(반대 방향)으로 밀려남
+            float yOffset = _progress * ejectLocalY * directionMultiplier;
+            transform.localPosition = _originLocalPos + new Vector3(0, yOffset, 0);
+
+            // 회전 효과 (나사 풀리는 연출)
+            float angle = _progress * 360f * 2f;
+            transform.localRotation = _originLocalRot * Quaternion.Euler(0f, angle, 0f);
         }
-
-        if(prevProgress < 1.0f && _progress >= 1.0f)
-        {
-            OnBoltLoosened?.Invoke(this);
-        }
     }
 
-    public void ApplyFinalTorque(float torqueAmount)
+    public void PlayFallEffect()
     {
-        if(isBroken || _progress > 0.05f) return;
-        currentTorque = torqueAmount;
-        isTightened = Mathf.Abs(currentTorque - requiredTorque) <= 2f;
+        var rb = GetComponent<Rigidbody>() ?? gameObject.AddComponent<Rigidbody>();
+        rb.isKinematic = false;
+        rb.useGravity = true;
+        rb.AddForce(Vector3.down * 2f, ForceMode.Impulse);
     }
 
-    public void BreakBoltByOverTorque()
+    public void Deactivate()
     {
-        if(isBroken) return;
-        isBroken = true;
-        isTightened = false;
+        Debug.Log($"<color=cyan>[Bolt]</color> {gameObject.name} 비활성화 실행");
+        gameObject.SetActive(false);
+    }
+
+    public void ReactivateForAssemble()
+    {
+        transform.localPosition = _originLocalPos + (Vector3.up * ejectLocalY);
+        transform.localRotation = _originLocalRot;
+
+        var rb = GetComponent<Rigidbody>();
+        if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
+
         _progress = 0f;
-        if(breakEffect != null) breakEffect.SetActive(true);
-        if(brokenBoltMesh != null) GetComponent<MeshFilter>().mesh = brokenBoltMesh;
-        Debug.LogError($"[Bolt] {gameObject.name} 과토크 파손!");
-    }
-
-    public void ResetBolt()
-    {
-        _progress = 0f;
-        currentTorque = 0f;
-        isTightened = false;
-        isBroken = false;
-        if(breakEffect != null) breakEffect.SetActive(false);
+        gameObject.SetActive(true);
     }
 }

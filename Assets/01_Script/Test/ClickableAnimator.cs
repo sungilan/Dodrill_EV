@@ -371,8 +371,8 @@ public class ClickableAnimator : MonoBehaviour
     public string uniqueId = "Obj_Default";
 
     [Header("시나리오 연동 설정")]
-    [Tooltip("이 오브젝트가 작동해야 하는 Task Index 리스트 (0부터 시작)")]
-    public List<int> targetTaskIndices = new List<int>(); // string에서 int로 변경
+    [Tooltip("이 오브젝트가 작동해야 하는 Task ID (moduleId) 리스트입니다.")]
+    public List<string> targetTaskIds = new List<string>(); // int에서 string으로 변경
 
     [Tooltip("체크 시 클릭하자마자 시나리오 단계 완료 신호를 보냅니다.")]
     public bool sendScenarioSignal = true;
@@ -421,25 +421,25 @@ public class ClickableAnimator : MonoBehaviour
         if(_grabbable != null) _grabbable.onGrab.RemoveListener(OnVRGrab);
     }
 
-    /// <summary>현재 시나리오 단계가 리스트에 포함되어 있는지 확인</summary>
+    /// <summary>현재 시나리오 단계의 Module ID가 허용 리스트에 있는지 확인</summary>
     public bool CanInteract()
     {
         // 1. 리스트가 비어있으면 상시 허용
-        if(targetTaskIndices == null || targetTaskIndices.Count == 0) return true;
+        if (targetTaskIds == null || targetTaskIds.Count == 0) return true;
 
         var sr = ScenarioStateReceiver.Instance;
-        if(sr == null) return false;
+        if (sr == null || sr.CurrentScenario == null) return false;
 
-        // 2. 서버에서 받은 현재 인덱스 확인
-        int currentIdx = sr.CurrentTaskState.taskIndex;
+        // 2. 현재 인덱스를 사용하여 실제 시나리오 데이터에서 moduleId 추출
+        int currentIndex = sr.CurrentTaskState.taskIndex;
+        var tasks = sr.CurrentScenario.scenario.tasks;
 
-        // 3. 현재 인덱스가 허용 리스트에 있는지 확인
-        bool isAllowed = targetTaskIndices.Contains(currentIdx);
+        if (currentIndex < 0 || currentIndex >= tasks.Count) return false;
 
-        if(!isAllowed)
-        {
-            //Debug.Log($"<color=orange>[Clickable]</color> {uniqueId} 차단: 현재 Index({currentIdx})는 허용되지 않음.");
-        }
+        string currentModuleId = tasks[currentIndex].moduleId;
+
+        // 3. 현재 모듈 ID가 허용 리스트에 포함되어 있는지 확인 (대소문자 무시)
+        bool isAllowed = targetTaskIds.Any(id => id.Equals(currentModuleId, StringComparison.OrdinalIgnoreCase));
 
         return isAllowed;
     }

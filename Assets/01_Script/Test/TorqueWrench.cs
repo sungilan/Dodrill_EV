@@ -34,13 +34,13 @@ public class TorqueWrench : XRGrabInteractable
 
                 if(currentTorque > breakTorque)
                 {
-                    targetBolt.BreakBoltByOverTorque();
+                    //targetBolt.BreakBoltByOverTorque();
                     targetBolt = null;
                     currentTorque = 0f;
                 }
                 else
                 {
-                    targetBolt.ApplyFinalTorque(currentTorque);
+                    //targetBolt.ApplyFinalTorque(currentTorque);
                 }
                 UpdateUI();
             }

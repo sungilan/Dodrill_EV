@@ -2842,7 +2842,6 @@ GameObject:
   - component: {fileID: 8970238440005732906}
   - component: {fileID: 6979233339887772188}
   - component: {fileID: 2699085283513570461}
-  - component: {fileID: 8038977206320997057}
   - component: {fileID: 4126905903809227427}
   - component: {fileID: 6608507527385167527}
   - component: {fileID: 9011634196814446419}
@@ -2963,22 +2962,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: InstalledBatteryJack
---- !u!114 &8038977206320997057
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4818487605189991162}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f2f447aaac7bd2d409bcc46082df6004, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VehiclePartsManager
-  vehicleParts:
-  - partName: Front_Cover
-    partObject: {fileID: 7982025953599992633}
-    boltGroup: {fileID: 3965212377740086630}
 --- !u!65 &4126905903809227427
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2998,8 +2981,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.4719915, y: 1.0432217, z: 0.83219814}
-  m_Center: {x: 0.15991831, y: 0.69907653, z: 0.08390093}
+  m_Size: {x: 0.18618178, y: 0.748688, z: 0.07747984}
+  m_Center: {x: -0.75121844, y: 0.0100284815, z: 0.87734103}
 --- !u!54 &6608507527385167527
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -3025,7 +3008,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 1
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 116
   m_CollisionDetection: 0
 --- !u!114 &9011634196814446419
 MonoBehaviour:

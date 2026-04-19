@@ -677,69 +677,65 @@ public class FreeLookController : NetworkBehaviour
         Vector2 clickPos = Vector2.zero;
 
 #if UNITY_IOS || UNITY_ANDROID
-        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
-        {
-            clicked = true;
-            clickPos = Input.GetTouch(0).position;
-        }
+    if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+    {
+        clicked = true;
+        clickPos = Input.GetTouch(0).position;
+    }
 #else
-        if(Input.GetMouseButtonDown(0) && !Input.GetMouseButton(1))
+        if (Input.GetMouseButtonDown(0) && !Input.GetMouseButton(1))
         {
             clicked = true;
             clickPos = Input.mousePosition;
         }
 #endif
 
-        if(!clicked) return;
+        if (!clicked) return;
 
-        // ★ UI 블로킹 체크 — Screen Space Overlay 캔버스가 클릭을 가로채는 경우 차단
-        if(IsPointerOverUI(clickPos))
-        {
-            Log($"UI 위 클릭 — 무시 ({GetUIObjectName(clickPos)})");
-            return;
-        }
+        // ★ UI 블로킹 체크
+        if (IsPointerOverUI(clickPos)) return;
 
-        // ── 1. 월드 UI 버튼(리프트 등) 클릭 시 사운드 ──
+        // ── 1. 월드 UI 버튼(리프트 등) 처리 ──
         if (HandleWorldSpaceUIClick(clickPos))
         {
-            Managers.Sound.Play(clickSound); // 딸깍 소리
+            Managers.Sound.Play(clickSound);
             return;
         }
 
-        // ── 2. 태스크/존 상호작용 성공 시 사운드 ──
+        // ── 2. 이미 무언가를 들고 있는 상태라면? ──
+        if (_heldObject != null)
+        {
+            // 들고 있는 상태에서는 "새로 집기" 로직이 실행되지 않도록 여기서 처리를 끝냅니다.
+            // PC 버전에서 우클릭(1)으로 내려놓기를 구현하고 싶다면 아래 조건을 유지하세요.
+            if (Input.GetMouseButtonDown(1))
+            {
+                DropHeldObject();
+            }
+            return; // ★ 중요: 들고 있을 때는 아래의 "집기" 로직을 타지 않고 종료
+        }
+
+        // ── 3. 태스크/존 상호작용 (문 열기, 버튼 누르기 등) ──
         if (HandleTaskClick(clickPos))
         {
             Managers.Sound.Play(clickSound);
             return;
         }
 
-        // ── 3. 아이템 집기 성공 시 사운드 ──
+        // ── 4. 아이템 새로 집기 (빈 손일 때만 여기까지 도달) ──
         SyncGrab target = RaycastSyncGrab(clickPos);
-        if (target == null || target.IsGrabbed) return;
-
-        Log($"집기: {target.name}");
-        _heldObject = target;
-        target.OnPCClick();
-
-        Managers.Sound.Play(grabSound); // 훅- 하는 집는 소리
-        HeldItemUI.Instance?.UpdateUI(target.gameObject);
-
-        // ── 들고 있는 상태 → 우클릭 = 내려놓기, 좌클릭 차단 ──
-        // G키는 Update의 HandleDropKey()에서 독립 처리
-        if (_heldObject != null)
+        if (target != null && !target.IsGrabbed)
         {
-            if(Input.GetMouseButtonDown(1))
-                DropHeldObject();
-            // 좌클릭은 다른 오브젝트 클릭과 겹치므로 차단
+            Log($"집기 성공: {target.name}");
+            _heldObject = target;
+            target.OnPCClick();
+
+            Managers.Sound.Play(grabSound);
+            HeldItemUI.Instance?.UpdateUI(target.gameObject);
+
+            // ★ 핵심 수정: 집기에 성공했다면 이번 프레임은 여기서 완전히 종료!
+            // 이 return이 없으면 아래 중복된 로직들에 의해 그랩이 꼬일 수 있습니다.
             return;
         }
-
-        // ── World Space UI 버튼 처리 (LiftButtonUI 등) ──
-        // IsPointerOverUI는 Screen Space만 차단하므로 World Space 버튼은 여기서 처리
-        if(HandleWorldSpaceUIClick(clickPos)) return;
-
-        // ── 빈 상태 → Task 인터랙션 시스템 우선, 없으면 SyncGrab ──
-        if(HandleTaskClick(clickPos)) return;
     }
 
     // TaskItem / Zone 처리. 인터랙션이 발생하면 true 반환

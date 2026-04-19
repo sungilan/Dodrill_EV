@@ -117,8 +117,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &7524532773565888040
@@ -190,7 +189,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -461,8 +460,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &5099236620025741259
@@ -534,7 +532,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -828,7 +826,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
-  targetImage: {fileID: 21300000, guid: 6c4f20102d8334441b27dbb2383c839d, type: 3}
+  targetImage: {fileID: 21300000, guid: cee3b330c0ddc5c4cbe33f38a2fd127e, type: 3}
   targetName:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
@@ -842,13 +840,13 @@ MonoBehaviour:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 13888762476576768
+      m_KeyId: 14113235846483968
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   showGuide: 1
-  showGhost: 1
+  showGhost: 0
   customGhostPrefabId: 
   references:
     version: 2
@@ -1093,7 +1091,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8736945585178232048
 Transform:
   m_ObjectHideFlags: 0
@@ -1176,7 +1174,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2041479198417939134}
   - component: {fileID: 3271272978071431773}
-  - component: {fileID: 3995530309021646063}
   - component: {fileID: 1497039106949007141}
   - component: {fileID: 8687217472704713849}
   - component: {fileID: 1958698198400595085}
@@ -1227,20 +1224,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.1, y: 0.1, z: 0.1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &3995530309021646063
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1868516226204434247}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b1da379afe8fcde428379fc5af3f8ada, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TaskInteractionZone
-  zoneId: OBD_Zone
-  startDisabled: 1
 --- !u!114 &1497039106949007141
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1321,7 +1304,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
-  targetImage: {fileID: 21300000, guid: 6c4f20102d8334441b27dbb2383c839d, type: 3}
+  targetImage: {fileID: 21300000, guid: d9d694fabf32cfe4c9c692ec695ab34f, type: 3}
   targetName:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
@@ -1335,13 +1318,13 @@ MonoBehaviour:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 13888774958825472
+      m_KeyId: 14113240200171520
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   showGuide: 1
-  showGhost: 1
+  showGhost: 0
   customGhostPrefabId: 
   references:
     version: 2
@@ -1505,8 +1488,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &6516545403258134685
@@ -1578,7 +1560,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -1849,8 +1831,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &8872343589068946528
@@ -1922,7 +1903,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -2283,8 +2264,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &3239524317413663438
@@ -2356,7 +2336,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -2791,7 +2771,6 @@ GameObject:
   m_Component:
   - component: {fileID: 199413021017387605}
   - component: {fileID: 3775103803282111101}
-  - component: {fileID: 4690111663460375384}
   - component: {fileID: 4888320962038537430}
   - component: {fileID: 1151196474494973860}
   - component: {fileID: 6171905590011638945}
@@ -2842,20 +2821,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.1, y: 0.1, z: 0.1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &4690111663460375384
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3936556682620740629}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b1da379afe8fcde428379fc5af3f8ada, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TaskInteractionZone
-  zoneId: OBD_Zone
-  startDisabled: 1
 --- !u!114 &4888320962038537430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2936,7 +2901,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
-  targetImage: {fileID: 21300000, guid: 6c4f20102d8334441b27dbb2383c839d, type: 3}
+  targetImage: {fileID: 21300000, guid: b4feba0c014a9704ab6e790566705ba9, type: 3}
   targetName:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
@@ -2950,13 +2915,13 @@ MonoBehaviour:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 13888779287347200
+      m_KeyId: 14113241403936768
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   showGuide: 1
-  showGhost: 1
+  showGhost: 0
   customGhostPrefabId: 
   references:
     version: 2
@@ -3110,7 +3075,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8780194315427173031
 Transform:
   m_ObjectHideFlags: 0
@@ -3300,8 +3265,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &1363006431531726942
@@ -3373,7 +3337,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -3544,7 +3508,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6146999780834353403
 Transform:
   m_ObjectHideFlags: 0
@@ -3634,7 +3598,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8842135448580806147
 Transform:
   m_ObjectHideFlags: 0
@@ -4041,9 +4005,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VehiclePartsManager
   vehicleParts:
-  - partName: Front_Cover
+  - partId: SM_Cover
     partObject: {fileID: 7982025953599992633}
     boltGroup: {fileID: 3965212377740086630}
+  batteryPack: {fileID: 0}
 --- !u!114 &2082281997726812777
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4121,10 +4086,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BoltGroupCounter
   assembleMode: 0
   groupId: Battery_TopCover_Bolts
-  taskId: BatteryPack_Disassemble2
+  taskId: BatteryPack_Cover_Open
   ejectDuration: 0.4
-  targetDespawnObject: {fileID: 7982025953599992633}
-  despawnDelay: 1.5
+  targetPart: {fileID: 7982025953599992633}
+  partToggleDelay: 1
   _totalCount: 0
   _removedCount: 0
 --- !u!114 &7224807758218121527
@@ -4365,8 +4330,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &3310208262041681687
@@ -4438,7 +4402,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -4799,8 +4763,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &3426340032119363421
@@ -4872,7 +4835,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -5324,8 +5287,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &9078187367406506523
@@ -5397,7 +5359,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -5561,7 +5523,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6367367343814277400}
   - component: {fileID: 5994294456696322060}
-  - component: {fileID: 3018122141764618757}
   - component: {fileID: 4027447295033583953}
   - component: {fileID: 4754150349339219861}
   - component: {fileID: 5239747246990894394}
@@ -5612,20 +5573,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.1, y: 0.1, z: 0.1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &3018122141764618757
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6809691339904582212}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b1da379afe8fcde428379fc5af3f8ada, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TaskInteractionZone
-  zoneId: Ground_Point_Zone
-  startDisabled: 1
 --- !u!114 &4027447295033583953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5890,8 +5837,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &4894564763880118879
@@ -5963,7 +5909,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -6234,8 +6180,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &1662788643686781357
@@ -6307,7 +6252,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -6561,7 +6506,6 @@ GameObject:
   m_Component:
   - component: {fileID: 7327594375158282020}
   - component: {fileID: 1942108922291394883}
-  - component: {fileID: 1106247512764085272}
   - component: {fileID: 7714514228756772978}
   - component: {fileID: 380683272440678254}
   - component: {fileID: 5292803213280824526}
@@ -6612,20 +6556,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.1, y: 0.1, z: 0.1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &1106247512764085272
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7396651058977633758}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b1da379afe8fcde428379fc5af3f8ada, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TaskInteractionZone
-  zoneId: OBD_Zone
-  startDisabled: 1
 --- !u!114 &7714514228756772978
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6706,7 +6636,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
-  targetImage: {fileID: 21300000, guid: 6c4f20102d8334441b27dbb2383c839d, type: 3}
+  targetImage: {fileID: 21300000, guid: 7262edbe924d7ef408e4b85a3f6dc8d8, type: 3}
   targetName:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
@@ -6720,13 +6650,13 @@ MonoBehaviour:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
     m_TableEntryReference:
-      m_KeyId: 13888770366062592
+      m_KeyId: 14113238518255616
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   showGuide: 1
-  showGhost: 1
+  showGhost: 0
   customGhostPrefabId: 
   references:
     version: 2
@@ -6790,7 +6720,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &986870445849059558
 Transform:
   m_ObjectHideFlags: 0
@@ -6980,8 +6910,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &3928561850796807164
@@ -7053,7 +6982,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -7595,8 +7524,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &2863681247266092229
@@ -7668,7 +7596,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -7939,8 +7867,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &6861795360496526696
@@ -8012,7 +7939,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -8283,8 +8210,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &7436135037238675936
@@ -8356,7 +8282,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -8627,8 +8553,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &1801919539280898864
@@ -8700,7 +8625,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1

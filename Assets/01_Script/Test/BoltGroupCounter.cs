@@ -2,25 +2,23 @@
 using System.Collections.Generic;
 using FishNet;
 using FishNet.Broadcast;
-using FishNet.Object;
+using FishNet.Connection;
 using FishNet.Transporting;
 using UnityEngine;
 
-// ── 볼트 제거 요청/명령 Broadcast ──────────────────────────────────────
+// ── Broadcasts ────────────────────────────────────────────────────────
 public struct BoltHideBroadcast : IBroadcast
 {
-    public string groupId;   // 어느 그룹의 볼트인지
-    public int boltIndex;    // 리스트 내 인덱스
+    public string groupId;
+    public int boltIndex;
 }
 
-// ── 볼트 낙하 연출 명령 ────────────────────────────────────
 public struct BoltFallBroadcast : IBroadcast
 {
     public string groupId;
     public int boltIndex;
 }
 
-// ── 볼트 진행도 동기화 Broadcast ────────────────────────────────────
 public struct BoltProgressBroadcast : IBroadcast
 {
     public string groupId;
@@ -28,88 +26,60 @@ public struct BoltProgressBroadcast : IBroadcast
     public int total;
 }
 
+// ── 조립 복원 명령 (서버 → 전체 클라) ──────────────────────────────
+public struct BoltGroupResetBroadcast : IBroadcast
+{
+    public string groupId;
+}
+
+// ============================================================
+//  BoltGroupCounter.cs
+//
+//  [분해 모드] assembleMode = false
+//    볼트 풀림 → 낙하 연출(BoltFallBroadcast) → Bolt.Deactivate()
+//    모든 볼트 제거 → targetPart.SetActive(false)
+//
+//  [조립 모드] assembleMode = true
+//    ResetForAssemble() 호출 → 볼트 ReactivateForAssemble()
+//    볼트 체결 → 완료 → targetPart.SetActive(true)
+//
+//  네트워크:
+//    클라 → BoltHideBroadcast → 서버 → BoltFallBroadcast / BoltProgressBroadcast
+//    서버 → BoltGroupResetBroadcast → 클라 (조립 모드 전환)
+// ============================================================
 public class BoltGroupCounter : MonoBehaviour
 {
-    [Header("모드 설정")]
-    [Tooltip("True: 조립 모드(볼트 유지), False: 분해 모드(볼트 삭제)")]
+    [Header("설정")]
     public bool assembleMode = false;
-
-    [Header("식별 (씬 내 고유값)")]
     public string groupId = "BoltGroup_Default";
-
-    [Header("완료 시 발신할 Task ID (moduleId)")]
     public string taskId = "";
+    public float ejectDuration = 0.5f;
 
-    [Header("볼트 제거 연출 (분해 전용)")]
-    [Tooltip("볼트가 낙하 연출을 보여주는 시간 후 디스폰")]
-    public float ejectDuration = 1.0f;
+    [Header("부품 참조")]
+    public GameObject targetPart;
+    public float partToggleDelay = 1.0f;
 
-    [Header("★ 완료 시 디스폰할 오브젝트")]
-    [Tooltip("모든 볼트가 처리되면 이 오브젝트를 서버에서 디스폰 (동적 생성 부품)")]
-    public GameObject targetDespawnObject;
-    [Tooltip("디스폰 전 대기 시간 (초)")]
-    public float despawnDelay = 1.5f;
-
-    [Header("상태 (읽기 전용)")]
     [SerializeField] private int _totalCount;
     [SerializeField] private int _removedCount;
-
     private List<Bolt> _bolts = new();
     private HashSet<int> _removedIndices = new();
     private bool _completed = false;
-    private VehiclePartsManager _vehicleManager;
 
     private void Awake()
     {
         _bolts.Clear();
-        _bolts.AddRange(GetComponentsInChildren<Bolt>());
+        _bolts.AddRange(GetComponentsInChildren<Bolt>(true));
         _totalCount = _bolts.Count;
-        _vehicleManager = GetComponentInParent<VehiclePartsManager>();
-
-        Debug.Log($"[BoltGroup] Awake: {groupId} - {_totalCount}개 볼트 발견");
     }
 
     private void Start()
     {
-        // VehiclePartsManager에서 부품 자동 할당
-        if(_vehicleManager == null)
+        foreach (var bolt in _bolts)
         {
-            _vehicleManager = GetComponentInParent<VehiclePartsManager>();
-        }
-
-        if(targetDespawnObject == null && _vehicleManager != null)
-        {
-            targetDespawnObject = _vehicleManager.GetPartByBoltGroup(this);
-            if(targetDespawnObject != null)
-            {
-                Debug.Log($"[BoltGroup] ✓ 차량 매니저에서 부품 찾음: {targetDespawnObject.name}");
-            }
-            else
-            {
-                Debug.LogWarning($"[BoltGroup] ⚠️ 차량 매니저에서 부품을 찾을 수 없음 (groupId: {groupId})");
-            }
-        }
-
-        foreach(var bolt in _bolts)
-        {
-            if(bolt != null)
-            {
-                bolt.OnBoltLoosened += HandleBoltLoosened;
-                bolt.isAssembleMode = this.assembleMode;
-            }
+            bolt.OnBoltLoosened += HandleBoltLoosened;
+            bolt.isAssembleMode = this.assembleMode;
         }
         RegisterBroadcast();
-
-        Debug.Log($"[BoltGroup] Start 완료: {groupId}");
-    }
-
-    private void OnDestroy()
-    {
-        foreach(var bolt in _bolts)
-        {
-            if(bolt != null) bolt.OnBoltLoosened -= HandleBoltLoosened;
-        }
-        UnregisterBroadcast();
     }
 
     private void RegisterBroadcast()
@@ -119,268 +89,131 @@ public class BoltGroupCounter : MonoBehaviour
         InstanceFinder.ClientManager?.RegisterBroadcast<BoltFallBroadcast>(OnClientBoltFall);
     }
 
-    private void UnregisterBroadcast()
-    {
-        InstanceFinder.ServerManager?.UnregisterBroadcast<BoltHideBroadcast>(OnServerHide);
-        InstanceFinder.ClientManager?.UnregisterBroadcast<BoltProgressBroadcast>(OnClientProgress);
-        InstanceFinder.ClientManager?.UnregisterBroadcast<BoltFallBroadcast>(OnClientBoltFall);
-    }
-
-    // 볼트가 100% 풀리거나(분해) 100% 조여졌을 때(조립) 호출
     private void HandleBoltLoosened(Bolt bolt)
     {
-        Debug.Log($"[BoltGroup] HandleBoltLoosened 호출: {bolt.name}");
-
-        if(_completed)
-        {
-            Debug.LogWarning($"[BoltGroup] 이미 완료됨 - 무시");
-            return;
-        }
-
+        if (_completed) return;
         int idx = _bolts.IndexOf(bolt);
-        if(idx == -1)
-        {
-            Debug.LogError($"[BoltGroup] ❌ 볼트를 리스트에서 찾을 수 없음: {bolt.name}");
-            return;
-        }
+        if (idx == -1 || _removedIndices.Contains(idx)) return;
 
-        if(_removedIndices.Contains(idx))
-        {
-            Debug.LogWarning($"[BoltGroup] 볼트 {idx}번은 이미 처리됨");
-            return;
-        }
-
-        // [로컬] 애니메이션/사운드 실행
-        var ca = bolt.GetComponent<ClickableAnimator>();
-        if(ca != null)
-        {
-            ca.Open();
-            Debug.Log($"[BoltGroup] 볼트 {idx}번 애니메이션 실행");
-        }
-
-        if(InstanceFinder.IsClientStarted)
-        {
-            // 서버에 이 볼트 작업 끝났다고 보고
-            var msg = new BoltHideBroadcast { groupId = groupId, boltIndex = idx };
-            InstanceFinder.ClientManager.Broadcast(msg);
-            Debug.Log($"[BoltGroup] 서버에 보고: groupId={groupId}, boltIndex={idx}");
-        }
+        if (InstanceFinder.IsClientStarted)
+            InstanceFinder.ClientManager.Broadcast(new BoltHideBroadcast { groupId = groupId, boltIndex = idx });
     }
 
-    private void OnServerHide(FishNet.Connection.NetworkConnection conn, BoltHideBroadcast msg, Channel ch)
+    private void OnServerHide(NetworkConnection conn, BoltHideBroadcast msg, Channel ch)
     {
-        Debug.Log($"[BoltGroup] OnServerHide 수신: groupId={msg.groupId}, boltIndex={msg.boltIndex}");
-
-        if(msg.groupId != groupId)
-        {
-            Debug.Log($"[BoltGroup] groupId 불일치 (받은: {msg.groupId}, 내: {groupId}) → 무시");
-            return;
-        }
-
-        if(_removedIndices.Contains(msg.boltIndex))
-        {
-            Debug.Log($"[BoltGroup] 볼트 {msg.boltIndex}는 이미 처리됨 → 무시");
-            return;
-        }
-
+        if (msg.groupId != groupId || _removedIndices.Contains(msg.boltIndex)) return;
         _removedIndices.Add(msg.boltIndex);
-        Debug.Log($"[BoltGroup] {groupId}: 볼트 {msg.boltIndex}번 추가 완료 → 현재: {_removedIndices.Count}/{_totalCount}");
 
-        if(assembleMode)
+        if (!assembleMode)
         {
-            Debug.Log($"[BoltGroup] {groupId} 조립 모드 → ApplyCountAndCheckCompletion 호출");
-            ApplyCountAndCheckCompletion();
+            InstanceFinder.ServerManager.Broadcast(new BoltFallBroadcast { groupId = groupId, boltIndex = msg.boltIndex });
+            StartCoroutine(DeactivateBoltAfterDelay(msg.boltIndex));
         }
-        else
+        ApplyCountAndCheckCompletion();
+    }
+
+    private void OnClientBoltFall(BoltFallBroadcast msg, Channel ch)
+    {
+        if (msg.groupId != groupId) return;
+        var bolt = _bolts[msg.boltIndex];
+        if (bolt != null)
         {
-            Debug.Log($"[BoltGroup] {groupId} 분해 모드 → DespawnAfterDelay 시작");
-            InstanceFinder.ServerManager.Broadcast(new BoltFallBroadcast
-            {
-                groupId = groupId,
-                boltIndex = msg.boltIndex
-            });
-            StartCoroutine(DespawnAfterDelay(msg.boltIndex));
+            bolt.PlayFallEffect();
+            // ✅ 클라이언트도 자기 화면에서 볼트를 꺼야 함
+            StartCoroutine(LocalDeactivateBolt(bolt));
         }
     }
 
-
-    private IEnumerator DespawnAfterDelay(int boltIndex)
+    private IEnumerator LocalDeactivateBolt(Bolt bolt)
     {
-        Debug.Log($"[BoltGroup] DespawnAfterDelay 시작: boltIndex={boltIndex}, 대기시간={ejectDuration}초");
         yield return new WaitForSeconds(ejectDuration);
-        Debug.Log($"[BoltGroup] {ejectDuration}초 대기 완료 → 볼트 {boltIndex}번 디스폰");
+        bolt.Deactivate();
+    }
 
-        if(boltIndex >= 0 && boltIndex < _bolts.Count)
-        {
-            var boltObj = _bolts[boltIndex];
-            if(boltObj != null && InstanceFinder.IsServerStarted)
-            {
-                Debug.Log($"[BoltGroup] 볼트 {boltIndex}번 디스폰: {boltObj.name}");
-                InstanceFinder.ServerManager.Despawn(boltObj.gameObject);
-            }
-            else
-            {
-                Debug.LogError($"[BoltGroup] ❌ 볼트 디스폰 실패: boltObj={boltObj}, IsServer={InstanceFinder.IsServerStarted}");
-            }
-        }
-        else
-        {
-            Debug.LogError($"[BoltGroup] ❌ boltIndex 범위 초과: {boltIndex} >= {_bolts.Count}");
-        }
+    private void OnClientProgress(BoltProgressBroadcast msg, Channel ch)
+    {
+        if (msg.groupId != groupId) return;
+        _removedCount = msg.removed;
 
-        Debug.Log($"[BoltGroup] ApplyCountAndCheckCompletion 호출 (DespawnAfterDelay 후)");
-        ApplyCountAndCheckCompletion();
+        // ✅ 클라이언트도 진행도가 다 차면 부품을 끔/켬
+        if (_removedCount >= _totalCount && targetPart != null)
+        {
+            Debug.Log($"<color=lime>[BoltGroup-Client]</color> 모든 볼트 완료 감지 -> 부품 상태 변경");
+            StartCoroutine(LocalTogglePart(assembleMode));
+        }
+    }
+
+    private IEnumerator LocalTogglePart(bool active)
+    {
+        yield return new WaitForSeconds(partToggleDelay);
+        if (targetPart != null) targetPart.SetActive(active);
     }
 
     private void ApplyCountAndCheckCompletion()
     {
         _removedCount = _removedIndices.Count;
-        Debug.Log($"[BoltGroup] ApplyCountAndCheckCompletion: {_removedCount}/{_totalCount} 완료됨");
+        InstanceFinder.ServerManager.Broadcast(new BoltProgressBroadcast { groupId = groupId, removed = _removedCount, total = _totalCount });
 
-        if(InstanceFinder.IsServerStarted)
-        {
-            InstanceFinder.ServerManager.Broadcast(new BoltProgressBroadcast
-            {
-                groupId = groupId,
-                removed = _removedCount,
-                total = _totalCount
-            });
-
-            var runner = UnityEngine.Object.FindFirstObjectByType<ScenarioRunner>();
-            string currentModuleId = runner != null ? runner.CurrentModuleId : "Runner 없음";
-            Debug.Log($"[BoltCheck] {groupId} ({_removedCount}/{_totalCount}) | Mode: {(assembleMode ? "조립" : "분해")} | Task: {taskId}");
-        }
-
-        // ★ 완료 조건 체크
-        Debug.Log($"[BoltGroup] 완료 조건 체크: _removedCount({_removedCount}) >= _totalCount({_totalCount}) && !_completed({!_completed})");
-
-        if(_removedCount >= _totalCount)
+        if (_removedCount >= _totalCount && !_completed)
         {
             _completed = true;
-            Debug.Log($"[BoltGroup] ========== 모든 볼트 완료! ==========");
-
-            if(InstanceFinder.IsServerStarted)
-            {
-                 //★ Task 완료 신호 발신
-                if(!string.IsNullOrEmpty(taskId))
-                {
-                    InteractionEvents.FireTaskConfirmed(taskId);
-                    Debug.Log($"[BoltGroup] ✅ Task '{taskId}' 완료 신호 발신");
-                }
-
-                // ★ 타겟 부품 디스폰 상태 확인
-                Debug.Log($"[BoltGroup] targetDespawnObject: {(targetDespawnObject != null ? targetDespawnObject.name : "NULL")}");
-
-                if(targetDespawnObject != null)
-                {
-                    Debug.Log($"[BoltGroup] 🗑️ DespawnTargetObject 코루틴 시작 (delay={despawnDelay}초)");
-                    StartCoroutine(DespawnTargetObject());
-                }
-                else
-                {
-                    Debug.LogError($"[BoltGroup] ❌❌❌ targetDespawnObject가 NULL입니다! 할당되지 않음!!");
-                }
-
-                // 조립 모드에서는 그룹 루트를 삭제하지 않음 (차에 붙어 있어야 하므로)
-                if(!assembleMode)
-                {
-                    Debug.Log($"[BoltGroup] 분해 모드 → DespawnGroupRoot 코루틴 시작");
-                    StartCoroutine(DespawnGroupRoot());
-                }
-            }
-        }
-        else
-        {
-            Debug.Log($"[BoltGroup] 아직 완료 안 됨 (조건 불만족)");
+            if (!string.IsNullOrEmpty(taskId)) InteractionEvents.FireTaskConfirmed(taskId);
+            if (targetPart != null) StartCoroutine(TogglePartServer(assembleMode));
         }
     }
+
+    private IEnumerator TogglePartServer(bool active)
+    {
+        yield return new WaitForSeconds(partToggleDelay);
+        targetPart.SetActive(active);
+    }
+
+    private IEnumerator DeactivateBoltAfterDelay(int idx)
+    {
+        yield return new WaitForSeconds(ejectDuration);
+        _bolts[idx].Deactivate();
+    }
+
+    // ── 조립 모드 전환을 위한 외부 호출 메서드 ──────────────────────
 
     /// <summary>
-    /// 지정된 타겟 오브젝트를 서버에서 디스폰 (동적 생성 부품용)
+    /// 조립 단계를 위해 볼트 그룹을 초기화하고 조립 모드로 전환합니다.
     /// </summary>
-    private IEnumerator DespawnTargetObject()
+    public void ResetForAssemble()
     {
-        Debug.Log($"[BoltGroup] DespawnTargetObject 코루틴 시작: {targetDespawnObject.name}, 대기={despawnDelay}초");
-        yield return new WaitForSeconds(despawnDelay);
-        Debug.Log($"[BoltGroup] {despawnDelay}초 대기 완료");
+        // 서버에서만 초기화 로직 실행 (상태 동기화 고려)
+        if (FishNet.InstanceFinder.IsServerStarted)
+        {
+            assembleMode = true;
+            _completed = false;
+            _removedCount = 0;
+            _removedIndices.Clear();
 
-        if(targetDespawnObject != null && InstanceFinder.IsServerStarted)
-        {
-            Debug.Log($"[BoltGroup] 🗑️🗑️ 부품 디스폰 실행: {targetDespawnObject.name}");
-            InstanceFinder.ServerManager.Despawn(targetDespawnObject);
-        }
-        else
-        {
-            Debug.LogError($"[BoltGroup] ❌ 부품 디스폰 실패: targetDespawnObject={targetDespawnObject}, IsServer={InstanceFinder.IsServerStarted}");
+            // 모든 자식 볼트들을 조립 대기 상태로 복원
+            foreach (var bolt in _bolts)
+            {
+                if (bolt != null)
+                {
+                    bolt.isAssembleMode = true;
+                    bolt.ReactivateForAssemble(); // 볼트 원위치 및 활성화
+                }
+            }
+
+            // 모든 클라이언트에게 조립 모드 전환 및 리셋 알림 방송
+            FishNet.InstanceFinder.ServerManager.Broadcast(new BoltGroupResetBroadcast { groupId = groupId });
+
+            Debug.Log($"<color=lime>[BoltGroup]</color> {groupId} 조립 모드 리셋 완료");
         }
     }
 
-    private IEnumerator DespawnGroupRoot()
-    {
-        Debug.Log($"[BoltGroup] DespawnGroupRoot 코루틴 시작: {gameObject.name}, 대기={despawnDelay}초");
-        yield return new WaitForSeconds(despawnDelay);
-        Debug.Log($"[BoltGroup] {despawnDelay}초 대기 완료");
+    // ── 가이드 시스템 및 외부 참조를 위한 공개 프로퍼티 ──────────────────────
 
-        if(gameObject != null && InstanceFinder.IsServerStarted)
-        {
-            Debug.Log($"[BoltGroup] 🗑️🗑️ 볼트 그룹 디스폰: {gameObject.name}");
-            InstanceFinder.ServerManager.Despawn(gameObject);
-        }
-        else
-        {
-            Debug.LogError($"[BoltGroup] ❌ 그룹 디스폰 실패: gameObject={gameObject}, IsServer={InstanceFinder.IsServerStarted}");
-        }
-    }
-
-    private void OnClientBoltFall(BoltFallBroadcast msg, Channel ch)
-    {
-        if(msg.groupId != groupId) return;
-
-        if(msg.boltIndex >= _bolts.Count || msg.boltIndex < 0)
-        {
-            Debug.LogError($"[BoltGroup] ❌ boltIndex 범위 초과: {msg.boltIndex}");
-            return;
-        }
-
-        var bolt = _bolts[msg.boltIndex];
-        if(bolt == null)
-        {
-            Debug.LogError($"[BoltGroup] ❌ 볼트 null: index={msg.boltIndex}");
-            return;
-        }
-
-        Rigidbody rb = bolt.GetComponent<Rigidbody>();
-        if(rb == null) rb = bolt.gameObject.AddComponent<Rigidbody>();
-
-        rb.isKinematic = false;
-        rb.useGravity = true;
-        rb.AddForce(Vector3.down * 2f, ForceMode.Impulse);
-        rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
-
-        Debug.Log($"[BoltGroup] 볼트 {msg.boltIndex}번 낙하 애니메이션 실행");
-    }
-
-    private void OnClientProgress(BoltProgressBroadcast msg, Channel ch)
-    {
-        if(msg.groupId != groupId) return;
-        _removedCount = msg.removed;
-        Debug.Log($"[BoltGroup] 클라이언트 진행도 업데이트: {_removedCount}/{msg.total}");
-    }
-
-    public void ResetCounter()
-    {
-        _removedCount = 0;
-        _completed = false;
-        _removedIndices.Clear();
-        Debug.Log($"[BoltGroup] {groupId} 리셋");
-    }
-
+    /// <summary>현재까지 처리(제거 또는 체결)된 볼트의 수</summary>
     public int RemovedCount => _removedCount;
+
+    /// <summary>이 그룹에 속한 전체 볼트의 수</summary>
     public int TotalCount => _totalCount;
 
-    // ★ 진행도 텍스트 반환
-    public string GetProgressText()
-    {
-        return $"{TotalCount - RemovedCount}/{TotalCount}";
-    }
+    /// <summary>진행도를 "남은수/전체수" 형태의 텍스트로 반환</summary>
+    public string GetProgressText() => $"{TotalCount - RemovedCount}/{TotalCount}";
 }

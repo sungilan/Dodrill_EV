@@ -560,6 +560,7 @@ GameObject:
   - component: {fileID: 8608917973734392707}
   - component: {fileID: 8741661560432796607}
   - component: {fileID: 1883362517618646762}
+  - component: {fileID: 7238959805260290086}
   m_Layer: 15
   m_Name: Old_PRA_Unit
   m_TagString: Untagged
@@ -866,6 +867,44 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Old_PRA_Unit
+--- !u!114 &7238959805260290086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3990714767177401029}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 935aaf7da50abf94697c8d70a7a71efe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AutoHandAssembly::Autohand.DistanceGrabbable
+  ignoreMe: 0
+  instantPull: 1
+  grabType: 0
+  archMultiplier: 0.6
+  gravitationVelocity: 1
+  rotate: 1
+  rotationSpeed: 1
+  ignoreHighlights: 1
+  targetedMaterial: {fileID: 0}
+  selectedMaterial: {fileID: 0}
+  showEvents: 1
+  OnPull:
+    m_PersistentCalls:
+      m_Calls: []
+  StartTargeting:
+    m_PersistentCalls:
+      m_Calls: []
+  StopTargeting:
+    m_PersistentCalls:
+      m_Calls: []
+  StartSelecting:
+    m_PersistentCalls:
+      m_Calls: []
+  StopSelecting:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &4248989041608106056
 GameObject:
   m_ObjectHideFlags: 0
@@ -1020,7 +1059,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
-  targetImage: {fileID: 21300000, guid: 6c4f20102d8334441b27dbb2383c839d, type: 3}
+  targetImage: {fileID: 21300000, guid: 2f2e1ce0780c1414497b944118605250, type: 3}
   targetName:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
@@ -1660,7 +1699,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
-  targetImage: {fileID: 21300000, guid: 6c4f20102d8334441b27dbb2383c839d, type: 3}
+  targetImage: {fileID: 21300000, guid: 3ce8e9e1c674bdd459ac15ec8b16a834, type: 3}
   targetName:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
@@ -1754,7 +1793,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecc6bbc6fbf6c4b428fcb9780ba830bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GuideZoneData
-  targetImage: {fileID: 21300000, guid: f10d5874ba329ba43a277f80d4a5f61e, type: 3}
+  targetImage: {fileID: 21300000, guid: 2f2e1ce0780c1414497b944118605250, type: 3}
   targetName:
     m_TableReference:
       m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8

@@ -117,8 +117,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &7524532773565888040
@@ -190,7 +189,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -461,8 +460,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &5099236620025741259
@@ -534,7 +532,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -805,8 +803,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &6516545403258134685
@@ -878,7 +875,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -1149,8 +1146,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &8872343589068946528
@@ -1222,7 +1218,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -1583,8 +1579,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &3239524317413663438
@@ -1656,7 +1651,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -2017,8 +2012,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &1363006431531726942
@@ -2090,7 +2084,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -2391,9 +2385,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VehiclePartsManager
   vehicleParts:
-  - partName: Front_Cover
+  - partId: SM_Cover
     partObject: {fileID: 7982025953599992633}
     boltGroup: {fileID: 3965212377740086630}
+  batteryPack: {fileID: 0}
 --- !u!114 &3245979672501982545
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2473,8 +2468,8 @@ MonoBehaviour:
   groupId: Battery_TopCover_Bolts
   taskId: BatteryPackTopCover_Assemble
   ejectDuration: 0.4
-  targetDespawnObject: {fileID: 7982025953599992633}
-  despawnDelay: 1.5
+  targetPart: {fileID: 7982025953599992633}
+  partToggleDelay: 1
   _totalCount: 0
   _removedCount: 0
 --- !u!114 &7224807758218121527
@@ -2715,8 +2710,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &3310208262041681687
@@ -2788,7 +2782,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -3149,8 +3143,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &3426340032119363421
@@ -3222,7 +3215,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -3493,8 +3486,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &9078187367406506523
@@ -3566,7 +3558,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -3837,8 +3829,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &4894564763880118879
@@ -3910,7 +3901,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -4181,8 +4172,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &1662788643686781357
@@ -4254,7 +4244,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -4615,8 +4605,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &3928561850796807164
@@ -4688,7 +4677,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -5049,8 +5038,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &2863681247266092229
@@ -5122,7 +5110,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -5393,8 +5381,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &6861795360496526696
@@ -5466,7 +5453,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -5737,8 +5724,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &7436135037238675936
@@ -5810,7 +5796,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
@@ -6081,8 +6067,7 @@ MonoBehaviour:
   currentTorque: 0
   isTightened: 0
   isBroken: 0
-  brokenBoltMesh: {fileID: 0}
-  breakEffect: {fileID: 0}
+  ejectLocalY: 0.03
   _progress: 0
   isAssembleMode: 0
 --- !u!135 &1801919539280898864
@@ -6154,7 +6139,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableAnimator
   uniqueId: Bolt_Default
-  targetTaskIndices: 
+  targetTaskIds: []
   sendScenarioSignal: 0
   animParamName: IsOpen
   useTrigger: 1
