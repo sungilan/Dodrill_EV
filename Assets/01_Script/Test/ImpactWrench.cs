@@ -121,33 +121,51 @@ public class ImpactWrench : MonoBehaviour
     // ── 단계 검증 로직 (디버그 강화) ──────────────────────────────────────
     private bool IsCorrectBoltTask(Bolt bolt)
     {
-        if (bolt == null) return false;
+        if(bolt == null) return false;
 
         // 1. 볼트 그룹의 설정 ID 가져오기
         BoltGroupCounter group = bolt.GetComponentInParent<BoltGroupCounter>();
-        if (group == null) return false;
+        if(group == null) return false;
 
-        // 2. ScenarioStateReceiver 및 시나리오 데이터 참조
-        var stateReceiver = FindFirstObjectByType<ScenarioStateReceiver>();
-        if (stateReceiver == null || stateReceiver.CurrentScenario == null)
+        // 2. 데이터 확보 (StateReceiver -> ScenarioReceiver 순으로 탐색)
+        var stateReceiver = ScenarioStateReceiver.Instance;
+        ScenarioData data = null;
+
+        if(stateReceiver != null && stateReceiver.CurrentScenario != null)
         {
-            Debug.LogWarning("[ImpactWrench] 데이터 수신 대기 중...");
-            return false;
+            data = stateReceiver.CurrentScenario;
+        }
+        else
+        {
+            // StateReceiver에 데이터가 없을 경우 원본 데이터 로더에서 확인
+            var receiver = FindFirstObjectByType<ScenarioReceiver>();
+            if(receiver != null && receiver.ReceivedData != null)
+            {
+                data = receiver.ReceivedData;
+            }
+        }
+
+        // 데이터가 아예 로드되지 않은 극초기 상태라면 차단하지 않고 일단 허용(true)
+        if(data == null)
+        {
+            // Debug.LogWarning("[ImpactWrench] 모든 경로에 시나리오 데이터 없음 - 일시 허용");
+            return true;
         }
 
         // 3. 현재 인덱스를 사용하여 실제 시나리오 데이터에서 moduleId 추출
-        int currentIndex = stateReceiver.CurrentTaskState.taskIndex;
-        var tasks = stateReceiver.CurrentScenario.scenario.tasks;
+        // stateReceiver가 없으면 인덱스 0으로 가정하거나 데이터 검증 패스
+        int currentIndex = (stateReceiver != null) ? stateReceiver.CurrentTaskState.taskIndex : 0;
+        var tasks = data.scenario.tasks;
 
-        if (currentIndex < 0 || currentIndex >= tasks.Count) return false;
+        if(currentIndex < 0 || currentIndex >= tasks.Count) return false;
 
-        // ✅ 숫자 인덱스가 아닌, JSON에 정의된 실제 문자열 ID를 가져옴
+        // ✅ JSON에 정의된 실제 문자열 ID 추출
         string currentModuleId = tasks[currentIndex].moduleId;
 
-        // 4. 비교 및 결과 반환
-        bool isMatch = group.taskId.Equals(currentModuleId, System.StringComparison.OrdinalIgnoreCase);
+        // 4. 비교 (대소문자/공백 무시)
+        bool isMatch = group.taskId.Trim().Equals(currentModuleId.Trim(), System.StringComparison.OrdinalIgnoreCase);
 
-        if (!isMatch)
+        if(!isMatch)
         {
             Debug.Log($"<color=orange>[ImpactWrench]</color> 단계 불일치: 현재[<b>{currentModuleId}</b>] vs 볼트설정[<b>{group.taskId}</b>]");
         }

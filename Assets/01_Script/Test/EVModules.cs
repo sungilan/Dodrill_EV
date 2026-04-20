@@ -84,7 +84,7 @@ public class CarLiftUpStepModule : Car_Lift_UpModule
 }
 
 // 1. 배터리 잭 상승 모듈
-public class BatteryJack_Lift_UpModule : GrabZoneTaskModule
+public class BatteryJack_Lift_UpModule : ConfirmTaskModule
 {
     public override string ModuleId => "BatteryJack_Lift_Up";
 }
@@ -255,12 +255,12 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
 
     public class Front_Cover_ReInstallModule : ConfirmTaskModule
     {
-        public override string ModuleId => "Front_Cover_ReInstall";
+        public override string ModuleId => "Front_Cover_Reinstall";
     }
 
     public class Rear_Cover_ReInstallModule : ConfirmTaskModule
     {
-        public override string ModuleId => "Rear_Cover_ReInstall";
+        public override string ModuleId => "Rear_Cover_Reinstall";
     }
 
 // ──────────────────────────────────────────────────────────────
@@ -372,7 +372,7 @@ public class MSD_ReinstallModule : ConfirmTaskModule
         public override string ModuleId => "Coolant_Refill";
     }
 
-    public class BatteryJack_Lift_Up_FinalModule : GrabZoneTaskModule
+    public class BatteryJack_Lift_Up_FinalModule : ConfirmTaskModule
 {
         public override string ModuleId => "BatteryJack_Lift_Up_Final";
     }
@@ -504,6 +504,7 @@ public class MSD_ReinstallModule : ConfirmTaskModule
         public override string ModuleId => "Megger_Setup_Ground";
 
         protected override void OnModuleSuccess(string itemId)
+
         {
             // 파란색 지점에 닿은 검정 프로브를 물리적으로 고정시키는 처리
             // 예: 검정프로브.SetParent(GroundZone); 검정프로브.IsKinematic = true;

@@ -292,8 +292,8 @@ using FishNet.Transporting;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using System.Linq; // 추가
+using UnityEngine;
 
 // ============================================================
 //  ClickableAnimator.cs
@@ -409,6 +409,34 @@ public class ClickableAnimator : MonoBehaviour
         if(_grabbable == null) _grabbable = GetComponent<Grabbable>();
     }
 
+    private void OnEnable()
+    {
+        // UI와 동일하게 이벤트 구독
+        ScenarioStateReceiver.OnTaskStateUpdated += OnTaskStateUpdated;
+        ScenarioStateReceiver.OnSnapshotReceived += OnSnapshotReceived;
+    }
+
+    private void OnDisable()
+    {
+        // 이벤트 구독 해제
+        ScenarioStateReceiver.OnTaskStateUpdated -= OnTaskStateUpdated;
+        ScenarioStateReceiver.OnSnapshotReceived -= OnSnapshotReceived;
+    }
+
+    // ── 이벤트 핸들러 ───────────────────────────────────────────
+
+    private void OnTaskStateUpdated(TaskStateBroadcast broadcast)
+    {
+        // 태스크 단계가 변경될 때마다 내 Grabbable 상태 갱신
+        UpdateGrabbableState();
+    }
+
+    private void OnSnapshotReceived(ScenarioSnapshotBroadcast broadcast)
+    {
+        // 처음에 전체 데이터를 받았을 때 상태 갱신
+        UpdateGrabbableState();
+    }
+
     private void Start()
     {
         ClickableAnimatorManager.Register(uniqueId, this);
@@ -424,31 +452,45 @@ public class ClickableAnimator : MonoBehaviour
     /// <summary>현재 시나리오 단계의 Module ID가 허용 리스트에 있는지 확인</summary>
     public bool CanInteract()
     {
-        // 1. 리스트가 비어있으면 상시 허용
-        if (targetTaskIds == null || targetTaskIds.Count == 0) return true;
+        if(targetTaskIds == null || targetTaskIds.Count == 0) return true;
 
         var sr = ScenarioStateReceiver.Instance;
-        if (sr == null || sr.CurrentScenario == null) return false;
+        ScenarioData data = null;
 
-        // 2. 현재 인덱스를 사용하여 실제 시나리오 데이터에서 moduleId 추출
-        int currentIndex = sr.CurrentTaskState.taskIndex;
-        var tasks = sr.CurrentScenario.scenario.tasks;
+        // ★ TaskProgressUI와 동일한 데이터 확보 로직 (Fallback)
+        if(sr != null && sr.CurrentScenario != null)
+        {
+            data = sr.CurrentScenario;
+        }
+        else
+        {
+            var receiver = FindFirstObjectByType<ScenarioReceiver>();
+            if(receiver != null && receiver.ReceivedData != null)
+                data = receiver.ReceivedData;
+        }
 
-        if (currentIndex < 0 || currentIndex >= tasks.Count) return false;
+        // 로딩 중이거나 데이터가 아예 없는 경우 조작 허용 (true)
+        if(data == null) return true;
+
+        int currentIndex = (sr != null) ? sr.CurrentTaskState.taskIndex : 0;
+        var tasks = data.scenario.tasks;
+
+        if(currentIndex < 0 || currentIndex >= tasks.Count) return false;
 
         string currentModuleId = tasks[currentIndex].moduleId;
 
-        // 3. 현재 모듈 ID가 허용 리스트에 포함되어 있는지 확인 (대소문자 무시)
-        bool isAllowed = targetTaskIds.Any(id => id.Equals(currentModuleId, StringComparison.OrdinalIgnoreCase));
-
-        return isAllowed;
+        return targetTaskIds.Any(id =>
+            id.Trim().Equals(currentModuleId.Trim(), StringComparison.OrdinalIgnoreCase));
     }
-    private void Update()
-    {
-        // 실시간으로 그랩 가능 여부를 업데이트
-        UpdateGrabbableState();
-    }
+    //private void Update()
+    //{
+    //    // 실시간으로 그랩 가능 여부를 업데이트
+    //    UpdateGrabbableState();
+    //}
 
+    /// <summary>
+    /// 시나리오 단계에 따라 Grabbable 컴포넌트를 활성화/비활성화
+    /// </summary>
     /// <summary>
     /// 시나리오 단계에 따라 Grabbable 컴포넌트를 활성화/비활성화
     /// </summary>
@@ -456,15 +498,14 @@ public class ClickableAnimator : MonoBehaviour
     {
         if(_grabbable == null) return;
 
+        // CanInteract 내부에서 이미 FindFirstObjectByType 등을 통해 체크하므로
+        // 결과값에 따라 enabled만 조절해줍니다.
         bool canNowInteract = CanInteract();
 
-        // 현재 상태와 다를 때만 갱신 (성능 최적화)
         if(_grabbable.enabled != canNowInteract)
         {
             _grabbable.enabled = canNowInteract;
-
-            // 시각적 피드백이나 로그가 필요하다면 추가
-            // Debug.Log($"[Clickable] {uniqueId} Grabbable 상태 변경: {canNowInteract}");
+            Debug.Log($"<color=lime>[Clickable]</color> {uniqueId} 상태 갱신 (이벤트 수신): {canNowInteract}");
         }
     }
 
@@ -529,7 +570,7 @@ public class ClickableAnimator : MonoBehaviour
         {
             // 클라이언트 수신 시에는 강제 적용 (CanInteract 체크 스킵)
         }
-        else if(!CanInteract()) return;
+        //else if(!CanInteract()) return;
 
         _isOpen = open;
         if(_animator != null)

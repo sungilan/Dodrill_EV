@@ -40,7 +40,7 @@ using UnityEditor;
 //          → 활성화된 가이드 전부 비활성화
 // ============================================================
 
-public class ScenarioSpawner : MonoBehaviour
+public class ScenarioSpawner : NetworkBehaviour
 {
     [System.Serializable]
     public struct PrefabEntry
@@ -552,87 +552,171 @@ public class ScenarioSpawner : MonoBehaviour
     //        _activeGuides.Add(bundle.guideId);
     //    }
     //}
+    //private void SpawnBundle(SpawnBundle bundle, float xOffset = 0f)
+    //{
+    //    Debug.Log($"<color=cyan>[Spawn-Bundle-Start]</color> Prefab: {bundle.prefabId}, SP: {bundle.spawnPointId}");
+
+    //    // 1. 위치 결정
+    //    Vector3 spawnPos = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.position : Vector3.zero;
+    //    Quaternion spawnRot = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.rotation : Quaternion.identity;
+    //    Transform targetParent = null;
+
+    //    if (!string.IsNullOrEmpty(bundle.spawnPointId) && _spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
+    //    {
+    //        spawnPos = sp.transform.position;
+    //        spawnRot = sp.transform.rotation;
+    //        if (bundle.attachToSpawnPoint) targetParent = sp.transform;
+    //        Debug.Log($"[Spawn-Pos] Point찾음: {bundle.spawnPointId}, WorldPos: {spawnPos}");
+    //    }
+    //    else if (!string.IsNullOrEmpty(bundle.spawnPointId))
+    //    {
+    //        Debug.LogError($"<color=red>[Spawn-Error]</color> SpawnPointId '{bundle.spawnPointId}'를 씬에서 찾을 수 없습니다!");
+    //    }
+
+    //    spawnPos += new Vector3(xOffset, SPAWN_HEIGHT, 0f);
+
+    //    // 2. 스폰 로직
+    //    if (!string.IsNullOrEmpty(bundle.prefabId))
+    //    {
+    //        NetworkObject existingPersist = GetPersistedObject(bundle.prefabId);
+    //        NetworkObject instanceToSpawn = null;
+
+    //        if (existingPersist != null)
+    //        {
+    //            Debug.Log($"<color=green>[Spawn-Reuse]</color> 기존 Persist 오브젝트 재사용: {bundle.prefabId} (NetID: {existingPersist.ObjectId})");
+    //            _persistedObjects.Remove(existingPersist);
+    //            instanceToSpawn = existingPersist;
+    //        }
+    //        else
+    //        {
+    //            var prefab = FindPrefab(bundle.prefabId);
+    //            if (prefab != null)
+    //            {
+    //                Debug.Log($"<color=white>[Spawn-Instantiate]</color> 새 객체 생성 시도: {bundle.prefabId}");
+    //                var instanceGo = Instantiate(prefab.gameObject, spawnPos, spawnRot);
+    //                instanceToSpawn = instanceGo.GetComponent<NetworkObject>();
+    //                instanceToSpawn.name = bundle.persist ? $"{bundle.prefabId}(Persist)" : bundle.prefabId;
+    //            }
+    //            else
+    //            {
+    //                Debug.LogError($"<color=red>[Spawn-Critical]</color> 프리팹 레지스트리에 '{bundle.prefabId}'가 없습니다!");
+    //                return;
+    //            }
+    //        }
+
+    //        if (instanceToSpawn != null)
+    //        {
+    //            _activeObjects.Add(instanceToSpawn);
+
+    //            if (InstanceFinder.IsServerStarted)
+    //            {
+    //                Debug.Log($"<color=lime>[Spawn-Network]</color> 서버 Spawn 호출 직전: {instanceToSpawn.name}");
+    //                Debug.Log($"[Spawn-Network] 서버 Spawn 호출 완료. NetID: {instanceToSpawn.ObjectId}");
+
+    //                if (bundle.attachToSpawnPoint && targetParent != null)
+    //                {
+    //                    Debug.Log($"[Spawn-Parent] 부모 설정 시도 -> {targetParent.name}");
+    //                    var parentNob = targetParent.GetComponent<NetworkObject>() ?? targetParent.GetComponentInParent<NetworkObject>();
+    //                    if (parentNob != null)
+    //                    {
+    //                        instanceToSpawn.SetParent(parentNob);
+    //                        Debug.Log("[Spawn-Parent] SetParent(NetworkObject) 완료");
+    //                    }
+    //                    //else
+    //                    //{
+    //                    //    instanceToSpawn.transform.SetParent(targetParent);
+    //                    //    Debug.Log("[Spawn-Parent] SetParent(Transform) 완료");
+    //                    //}
+    //                }
+    //                Spawn(instanceToSpawn.gameObject);
+    //            }
+    //        }
+    //    }
+    //}
+
     private void SpawnBundle(SpawnBundle bundle, float xOffset = 0f)
     {
         Debug.Log($"<color=cyan>[Spawn-Bundle-Start]</color> Prefab: {bundle.prefabId}, SP: {bundle.spawnPointId}");
 
-        // 1. 위치 결정
+        // 1. 위치 및 부모 결정
         Vector3 spawnPos = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.position : Vector3.zero;
         Quaternion spawnRot = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.rotation : Quaternion.identity;
         Transform targetParent = null;
 
-        if (!string.IsNullOrEmpty(bundle.spawnPointId) && _spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
+        // 스폰포인트 ID가 있으면 무조건 찾아서 부모 후보로 등록
+        if(!string.IsNullOrEmpty(bundle.spawnPointId) && _spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
         {
             spawnPos = sp.transform.position;
             spawnRot = sp.transform.rotation;
-            if (bundle.attachToSpawnPoint) targetParent = sp.transform;
-            Debug.Log($"[Spawn-Pos] Point찾음: {bundle.spawnPointId}, WorldPos: {spawnPos}");
-        }
-        else if (!string.IsNullOrEmpty(bundle.spawnPointId))
-        {
-            Debug.LogError($"<color=red>[Spawn-Error]</color> SpawnPointId '{bundle.spawnPointId}'를 씬에서 찾을 수 없습니다!");
+            targetParent = sp.transform; // 무조건 부모로 설정
+            Debug.Log($"[Spawn-Pos] 부모(SpawnPoint) 발견: {bundle.spawnPointId}");
         }
 
-        spawnPos += new Vector3(xOffset, SPAWN_HEIGHT, 0f);
+        // 2. 객체 생성 (Instantiate)
+        if(string.IsNullOrEmpty(bundle.prefabId)) return;
 
-        // 2. 스폰 로직
-        if (!string.IsNullOrEmpty(bundle.prefabId))
+        NetworkObject instanceToSpawn = GetPersistedObject(bundle.prefabId);
+
+        if(instanceToSpawn != null)
         {
-            NetworkObject existingPersist = GetPersistedObject(bundle.prefabId);
-            NetworkObject instanceToSpawn = null;
-
-            if (existingPersist != null)
+            Debug.Log($"<color=green>[Spawn-Reuse]</color> 기존 Persist 오브젝트 재사용: {bundle.prefabId}");
+            _persistedObjects.Remove(instanceToSpawn);
+        }
+        else
+        {
+            var prefab = FindPrefab(bundle.prefabId);
+            if(prefab != null)
             {
-                Debug.Log($"<color=green>[Spawn-Reuse]</color> 기존 Persist 오브젝트 재사용: {bundle.prefabId} (NetID: {existingPersist.ObjectId})");
-                _persistedObjects.Remove(existingPersist);
-                instanceToSpawn = existingPersist;
+                // 스폰 전에는 월드 좌표에 생성
+                var instanceGo = Instantiate(prefab.gameObject, spawnPos, spawnRot);
+                instanceToSpawn = instanceGo.GetComponent<NetworkObject>();
+                instanceToSpawn.name = bundle.persist ? $"{bundle.prefabId}(Persist)" : bundle.prefabId;
             }
             else
             {
-                var prefab = FindPrefab(bundle.prefabId);
-                if (prefab != null)
-                {
-                    Debug.Log($"<color=white>[Spawn-Instantiate]</color> 새 객체 생성 시도: {bundle.prefabId}");
-                    var instanceGo = Instantiate(prefab.gameObject, spawnPos, spawnRot);
-                    instanceToSpawn = instanceGo.GetComponent<NetworkObject>();
-                    instanceToSpawn.name = bundle.persist ? $"{bundle.prefabId}(Persist)" : bundle.prefabId;
-                }
-                else
-                {
-                    Debug.LogError($"<color=red>[Spawn-Critical]</color> 프리팹 레지스트리에 '{bundle.prefabId}'가 없습니다!");
-                    return;
-                }
+                Debug.LogError($"<color=red>[Spawn-Critical]</color> 프리팹 '{bundle.prefabId}'를 찾을 수 없음!");
+                return;
             }
+        }
 
-            if (instanceToSpawn != null)
+        // 3. 네트워크 스폰 및 부모 설정 (서버 전용)
+        if(instanceToSpawn != null)
+        {
+            _activeObjects.Add(instanceToSpawn);
+
+            if(InstanceFinder.IsServerStarted)
             {
-                _activeObjects.Add(instanceToSpawn);
+                // [중요 1] 먼저 네트워크 상에 존재하게 만듭니다 (Spawn)
+                InstanceFinder.ServerManager.Spawn(instanceToSpawn.gameObject);
 
-                if (InstanceFinder.IsServerStarted)
+                // [중요 2] 스폰 직후 부모 설정
+                if(targetParent != null)
                 {
-                    Debug.Log($"<color=lime>[Spawn-Network]</color> 서버 Spawn 호출 직전: {instanceToSpawn.name}");
-                    InstanceFinder.ServerManager.Spawn(instanceToSpawn.gameObject);
-                    Debug.Log($"[Spawn-Network] 서버 Spawn 호출 완료. NetID: {instanceToSpawn.ObjectId}");
+                    // 부모에게 NetworkObject가 있는지 확인 (재귀적으로 부모까지 탐색)
+                    var parentNob = targetParent.GetComponent<NetworkObject>() ?? targetParent.GetComponentInParent<NetworkObject>();
 
-                    if (bundle.attachToSpawnPoint && targetParent != null)
+                    if(parentNob != null)
                     {
-                        Debug.Log($"[Spawn-Parent] 부모 설정 시도 -> {targetParent.name}");
-                        var parentNob = targetParent.GetComponent<NetworkObject>() ?? targetParent.GetComponentInParent<NetworkObject>();
-                        if (parentNob != null)
-                        {
-                            instanceToSpawn.SetParent(parentNob);
-                            Debug.Log("[Spawn-Parent] SetParent(NetworkObject) 완료");
-                        }
-                        else
-                        {
-                            instanceToSpawn.transform.SetParent(targetParent);
-                            Debug.Log("[Spawn-Parent] SetParent(Transform) 완료");
-                        }
+                        // 네트워크 페어런팅 실행
+                        instanceToSpawn.SetParent(parentNob);
+                        instanceToSpawn.transform.SetParent(targetParent);
+                        // 자식으로 들어갔으므로 로컬 좌표 초기화 (살짝 위로 배치)
+                        instanceToSpawn.transform.localPosition = new Vector3(xOffset, SPAWN_HEIGHT, 0f);
+                        instanceToSpawn.transform.localRotation = Quaternion.identity;
+
+                        Debug.Log($"<color=lime>[Spawn-Parent]</color> {instanceToSpawn.name} -> {targetParent.name} (SetParent 완료)");
+                    }
+                    else
+                    {
+                        // 부모가 일반 오브젝트인 경우 (차선책)
+                        instanceToSpawn.transform.SetParent(targetParent);
+                        instanceToSpawn.transform.localPosition = new Vector3(xOffset, SPAWN_HEIGHT, 0f);
+                        Debug.LogWarning($"<color=yellow>[Spawn-Parent]</color> 부모({targetParent.name})에 NetworkObject가 없어 Transform으로만 연결됨");
                     }
                 }
             }
         }
-    }
+    }   
 
     public void RegisterExternalPersistObject(string prefabId, NetworkObject netObj)
     {

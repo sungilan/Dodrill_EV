@@ -102,7 +102,6 @@ public class MultimeterMaster : MonoBehaviour
         string red = redProbe != null ? redProbe.currentTerminalId : "";
         string black = blackProbe != null ? blackProbe.currentTerminalId : "";
 
-        // 하나라도 떨어져 있으면 즉시 리셋 후 종료
         if(string.IsNullOrEmpty(red) || string.IsNullOrEmpty(black))
         {
             StopFluctuation();
@@ -110,7 +109,7 @@ public class MultimeterMaster : MonoBehaviour
             return;
         }
 
-        // 2. 데이터 가져오기 (결함 여부와 상관없이 실제 값을 먼저 계산)
+        // 2. 데이터 가져오기 (실제 수치 계산)
         float baseValue = MeasurementPoint.GetValue(red, black, currentMode);
         _lastMeasuredValue = baseValue;
 
@@ -123,20 +122,11 @@ public class MultimeterMaster : MonoBehaviour
             if(pt != null && pt.isFaulty) isPointFaulty = true;
         }
 
-        // ─── [A] 결함 상태 연출 ───
-        if(this.isFaulty || isPointFaulty)
-        {
-            ShowFaultyUI(true);
-            DisplayValue(baseValue); // 결함 수치 표시
-            StopFluctuation();
-            return; // 결함 처리 후 로직 종료
-        }
+        // ─── [A] 결함 상태 연출 (UI만 처리하고 로직은 계속 진행) ───
+        bool isAnyFaulty = this.isFaulty || isPointFaulty;
+        ShowFaultyUI(isAnyFaulty);
 
-        // ─── [B] 정상 상태 측정 ───
-        // 결함이 아닐 때만 아래 로직이 실행됨
-        ShowFaultyUI(false);
-
-        // OFF 모드 체크
+        // OFF 모드 체크 (이 경우에만 신호 발신 없이 중단)
         if(!bypassModeCheck && currentMode == MultimeterMode.OFF)
         {
             StopFluctuation();
@@ -144,13 +134,26 @@ public class MultimeterMaster : MonoBehaviour
             return;
         }
 
-        // ★ 정상 수치 출력 및 흔들림 효과 시작
-        DisplayValue(baseValue);
-        StartFluctuation(baseValue);
+        // ─── [B] 수치 표시 및 신호 발신 ───
 
-        // 시나리오 시스템 이벤트 발신
-        InteractionEvents.FireZoneActivated(red, gameObject.name);
+        // 결함 상태일 때는 흔들림 효과 없이 고정 수치만 표시
+        if(isAnyFaulty)
+        {
+            StopFluctuation();
+            DisplayValue(baseValue);
+        }
+        else
+        {
+            DisplayValue(baseValue);
+            StartFluctuation(baseValue);
+        }
+
+        // ★ 핵심: 결함 여부와 상관없이 서버로 측정 신호를 보냅니다.
+        // 이를 통해 서버(ScenarioRunner)는 "잘못된 값"이 들어온 것을 인지하고 단계를 넘기지 않거나 실패 처리를 할 수 있습니다.
+        //InteractionEvents.FireZoneActivated(red, gameObject.name);
         InteractionEvents.FireValueMeasured(red, baseValue);
+
+        Debug.Log($"[Multimeter] 신호 발신: 단자={red}, 값={baseValue}, 결함여부={isAnyFaulty}");
     }
 
     // 결함 UI 연출 (수정된 버전)

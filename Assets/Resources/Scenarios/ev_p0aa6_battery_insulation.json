@@ -153,19 +153,6 @@
         "spawnObjects": []
       },
       {
-        "moduleId": "LOTO_WarningSign",
-        "timeout": 90,
-        "completionMode": "AllPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "WarningSign",
-            "spawnPointId": "SP_WarningSign",
-            "guideId": "Guide_WarningSign",
-            "persist": true
-          }
-        ]
-      },
-      {
         "moduleId": "Car_Lift_Up",
         "timeout": 60,
         "completionMode": "AnyPlayer",
@@ -284,48 +271,10 @@
         },
         "spawnObjects": [
           {
-            "prefabId": "BatteryJack",
-            "spawnPointId": "SP_Battery_Under_Default",
-            "persist": true
-          }
-        ],
-        "despawnObjectIds": [ "BatteryPack" ]
-      },
-      {
-        "moduleId": "Battery_Cover_Removal2",
-        "timeout": 120,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": ""
+            "prefabId": "BatteryJackA",
+            "spawnPointId": "SP_Battery_Under_Default"
           }
         ]
-      },
-      {
-        "moduleId": "BatteryJack_Lowering",
-        "timeout": 120,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [],
-        "despawnObjectIds": [ "BatteryJack" ],
-        "config": {
-          "targetValue": 0.1,
-          "targetObjName": "BatteryJack_Button_Down"
-        }
-      },
-      {
-        "moduleId": "BatteryPack_Extraction_Move",
-        "timeout": 600,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "InstalledBatteryJack",
-            "spawnPointId": "SP_Battery_Under_Default",
-            "guideId": "Guide_BatteryPack_Extraction_Move"
-          }
-        ],
-        "despawnObjectIds": [ "InstalledBatteryJack" ]
       },
       {
         "moduleId": "BatteryPack_Cover_Open",
@@ -353,8 +302,7 @@
           {
             "prefabId": "Megger",
             "spawnPointId": "SP_Megger",
-            "guideId": "Guide_PRA_BPA_Plus_Point",
-            "persist": true
+            "guideId": "Guide_PRA_BPA_Plus_Point"
           }
         ]
       },
@@ -366,8 +314,7 @@
           {
             "prefabId": "Megger",
             "spawnPointId": "SP_Megger",
-            "guideId": "Guide_PRA_BPA_Minus_Point",
-            "persist": true
+            "guideId": "Guide_PRA_BPA_Minus_Point"
           }
         ]
       },
@@ -379,8 +326,7 @@
           {
             "prefabId": "Megger",
             "spawnPointId": "SP_Megger",
-            "guideId": "Guide_PRA_Inverter_Plus_Point",
-            "persist": true
+            "guideId": "Guide_PRA_Inverter_Plus_Point"
           }
         ]
       },
@@ -392,11 +338,10 @@
           {
             "prefabId": "Megger",
             "spawnPointId": "SP_Megger",
-            "guideId": "Guide_PRA_Inverter_Minus_Point",
-            "persist": true
+            "guideId": "Guide_PRA_Inverter_Minus_Point"
           }
         ],
-        "despawnObjectIds": [ "BatteryPack_Disassemble" ]
+        "despawnObjectIds": [ "BatteryPack_Disassemble"]
       },
       {
         "moduleId": "PRA_Removal",
@@ -406,8 +351,7 @@
           {
             "prefabId": "BatteryPack_Open",
             "spawnPointId": "SP_Battery",
-            "guideId": "Guide_PRA_Location",
-            "persist": true
+            "guideId": "Guide_PRA_Location"
           }
         ]
       },
@@ -417,36 +361,16 @@
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
+            "prefabId": "BatteryPack_Open_RemovePRA",
+            "spawnPointId": "SP_Battery",
+            "guideId": "Guide_PRA_Location"
+          },
+          {
             "prefabId": "New_PRA_Unit",
             "spawnPointId": "SP_NewPRA",
             "guideId": "Guide_PRA_Zone"
           }
         ]
-      },
-      {
-        "moduleId": "Insulation_Verify",
-        "timeout": 180,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "Megger",
-            "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_Battery_Main_Terminal"
-          }
-        ]
-      },
-      {
-        "moduleId": "BatteryPackTopCover_Move",
-        "timeout": 600,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "BatteryPackTopCover",
-            "spawnPointId": "SP_NewPRA",
-            "guideId": ""
-          }
-        ],
-        "despawnObjectIds": [ "BatteryPack_Open" ]
       },
       {
         "moduleId": "BatteryPackTopCover_Assemble",
@@ -466,67 +390,13 @@
         ]
       },
       {
-        "moduleId": "BatteryPack_Reinsertion_Move",
-        "timeout": 600,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "InstalledBatteryJack",
-            "spawnPointId": "SP_Battery_Extraction_Zone",
-            "guideId": "Guide_BatteryPack_Reinsertion_Move"
-          }
-        ]
-      },
-      {
         "moduleId": "BatteryJack_Lift_Up_Final",
         "timeout": 120,
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
-            "prefabId": "BatteryJackFinal",
-            "spawnPointId": "SP_Battery_Under_Default",
-            "persist": true
-          }
-        ]
-      },
-      {
-        "moduleId": "BatteryPack_Assemble1",
-        "timeout": 600,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Battery_Bolts"
-          },
-          {
-            "prefabId": "BatteryPack_Bolts3",
-            "spawnPointId": "SP_BatteryPack_Bolts3",
-            "guideId": "BatteryPack_Bolts3"
-          }
-        ]
-      },
-      {
-        "moduleId": "BatteryJack_Lowering_Final",
-        "timeout": 120,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [],
-        "despawnObjectIds": [ "BatteryJackFinal" ]
-      },
-      {
-        "moduleId": "BatteryPack_Assemble2",
-        "timeout": 600,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Battery_Bolts"
-          },
-          {
-            "prefabId": "BatteryPack_Bolts4",
-            "spawnPointId": "SP_BatteryPack_Bolts4",
-            "guideId": "BatteryPack_Bolts4"
+            "prefabId": "BatteryJackFinalA",
+            "spawnPointId": "SP_Battery_Under_Default"
           }
         ]
       },
@@ -600,8 +470,8 @@
             "guideId": "Guide_Cover_Bolts"
           },
           {
-            "prefabId": "Front_Cover_Bolts2",
-            "spawnPointId": "SP_ForntConnector_Bolts",
+            "prefabId": "Front_Cover_Assemble_Bolts",
+            "spawnPointId": "SP_Front_Cover_Assemble_Bolts",
             "guideId": "Front_Cover_Bolts2"
           }
         ]
@@ -617,22 +487,9 @@
             "guideId": "Guide_Cover_Bolts"
           },
           {
-            "prefabId": "Front_Cover_Bolts2",
-            "spawnPointId": "SP_ForntConnector_Bolts",
+            "prefabId": "Rear_Cover_Assemble_Bolts",
+            "spawnPointId": "SP_Rear_Cover_Assemble_Bolts",
             "guideId": "Front_Cover_Bolts2"
-          }
-        ]
-      },
-      {
-        "moduleId": "Coolant_Refill",
-        "timeout": 180,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "Coolant_Container",
-            "spawnPointId": "SP_Cart_Top",
-            "guideId": "Guide_Coolant_Reservoir",
-            "persist": false
           }
         ]
       },
@@ -1945,7 +1802,7 @@
       "config": {
         "actionType": "ConfirmTask",
         "requiredItems": [ "ImpactWrench" ],
-        "targetObjName": "BatteryPack_Disassemble1_Bolts",
+        "targetObjName": "BatteryPack_Assemble1_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -1977,7 +1834,7 @@
       "config": {
         "actionType": "ConfirmTask",
         "requiredItems": [ "ImpactWrench" ],
-        "targetObjName": "BatteryPack_Disassemble2_Bolts",
+        "targetObjName": "BatteryPack_Assemble2_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -2517,7 +2374,7 @@
         "actionType": "MeasureResistance",
         "requiredItems": [ "Megger" ],
         "targetObjName": "PRA_BPA_Plus_Terminal",
-        "targetValue": 2.0,
+        "targetValue": 500,
         "toleranceRatio": 0.5,
         "extra": [
           {
@@ -2553,7 +2410,7 @@
         "actionType": "MeasureResistance",
         "requiredItems": [ "Megger" ],
         "targetObjName": "PRA_BPA_Minus_Terminal",
-        "targetValue": 2.0,
+        "targetValue": 500,
         "toleranceRatio": 0.5,
         "extra": [
           {
@@ -2589,7 +2446,7 @@
         "actionType": "MeasureResistance",
         "requiredItems": [ "Megger" ],
         "targetObjName": "PRA_Inverter_Plus_Terminal",
-        "targetValue": 2.0,
+        "targetValue": 0.1,
         "toleranceRatio": 0.5,
         "extra": [
           {
@@ -2625,7 +2482,7 @@
         "actionType": "MeasureResistance",
         "requiredItems": [ "Megger" ],
         "targetObjName": "PRA_Inverter_Minus_Terminal",
-        "targetValue": 2.0,
+        "targetValue": 500,
         "toleranceRatio": 0.5,
         "extra": [
           {
@@ -3027,7 +2884,7 @@
         "requiredItems": [
           "ImpactWrench"
         ],
-        "targetObjName": "Front_Cover_Bolts",
+        "targetObjName": "Front_Cover_Assemble_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,
@@ -3067,7 +2924,7 @@
         "requiredItems": [
           "ImpactWrench"
         ],
-        "targetObjName": "Rear_Cover_Bolts",
+        "targetObjName": "Rear_Cover_Assemble_Bolts",
         "targetZoneId": "",
         "targetValue": 0,
         "toleranceRatio": 0,

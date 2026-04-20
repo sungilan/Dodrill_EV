@@ -1,5 +1,6 @@
-using UnityEngine;
 using Autohand;
+using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
 /// 스폰되는 모든 인터랙션 오브젝트에 붙이는 컴포넌트
@@ -13,6 +14,8 @@ public class TaskItem : MonoBehaviour
 
     private Grabbable _grabbable;
 
+    // --- 추가된 부분: Registry 시스템 ---
+    public static Dictionary<int, TaskItem> Registry = new Dictionary<int, TaskItem>();
     private void Awake()
     {
         // Grabbable이 있으면 이벤트 연결, 없으면 스킵 (데모 큐브 등)
@@ -22,6 +25,17 @@ public class TaskItem : MonoBehaviour
             _grabbable.OnGrabEvent    += OnGrabbed;
             _grabbable.OnSqueezeEvent += OnUsed;
         }
+    }
+    private void OnEnable()
+    {
+        // 인스턴스 ID를 키로 등록
+        if(!Registry.ContainsKey(gameObject.GetInstanceID()))
+            Registry.Add(gameObject.GetInstanceID(), this);
+    }
+    private void OnDisable()
+    {
+        // 레지스트리에서 제거
+        Registry.Remove(gameObject.GetInstanceID());
     }
 
     private void OnDestroy()

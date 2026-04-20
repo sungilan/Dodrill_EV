@@ -272,9 +272,14 @@ MonoBehaviour:
   rotateWithObject: 0
   upAxis: {x: 0, y: 1, z: 0}
   initialIconRotation: 0
-  clampIconInBorder: 1
-  clampDistance: 100
-  myMapName: "\uC774\uB984 \uC785\uB825"
+  localizedName:
+    ko: 
+    en: 
+    vi: 
+  showNameOnMap: 1
+  blinkDuration: 0.6
+  outlineColor: {r: 0.8627451, g: 0.078431375, b: 0.23529412, a: 1}
+  outlineDistance: {x: 2, y: -2}
 --- !u!20 &3818969875660510125
 Camera:
   m_ObjectHideFlags: 0
@@ -1036,7 +1041,7 @@ MonoBehaviour:
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
-  m_Antialiasing: 0
+  m_Antialiasing: 2
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0

@@ -149,6 +149,7 @@ GameObject:
   - component: {fileID: 2412097218567294106}
   - component: {fileID: 5074332181675054728}
   - component: {fileID: 9159750253335240653}
+  - component: {fileID: 2450241208730431839}
   m_Layer: 8
   m_Name: PC_Player
   m_TagString: Player
@@ -199,7 +200,9 @@ MonoBehaviour:
   - {fileID: 4911098314664132104}
   - {fileID: 823836868806745997}
   - {fileID: 4020026540727249397}
+  - {fileID: 9159750253335240653}
   - {fileID: -1832908399129904540}
+  - {fileID: 309390068107612155}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -224,7 +227,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 40
+  <PrefabId>k__BackingField: 51
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 17400094349353826693
   <SceneId>k__BackingField: 0
@@ -291,7 +294,7 @@ MonoBehaviour:
   verticalSmoothTime: 0.12
   clickLayers:
     serializedVersion: 2
-    m_Bits: 32864
+    m_Bits: 32992
   raycastMaxDistance: 20
   useKey: 102
   rightClickUse: 0
@@ -553,9 +556,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76e060d33c4336546a51e4f16eda5b1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerEquipmentSync
-  _componentIndexCache: 255
+  _componentIndexCache: 4
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   equipments:
   - prefabId: FaceShield
     objectsToActivate:
@@ -582,6 +585,37 @@ MonoBehaviour:
     objectsToDeactivate: []
     targetRenderer: {fileID: 0}
     equipMaterial: {fileID: 0}
+--- !u!114 &2450241208730431839
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 206669820842534176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77d7ebae1f011914db5142248b45a898, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TaskDirectionCompass
+  _stateReceiver: {fileID: 0}
+  _playerRoot: {fileID: 0}
+  _head: {fileID: 0}
+  _arrowPrefab: {fileID: 919132149155446097, guid: bfa75480a7af626498e9fb1867c50ad1, type: 3}
+  _arrowNameHint: VFX_Arrow
+  _showDistance: 2.5
+  _hideDistance: 1.6
+  _anchorOffset: {x: 0, y: -0.2, z: 0.65}
+  _followHeadYaw: 1
+  _followHeadPitchAndRoll: 1
+  _invertDirection: 1
+  _arrowRotationOffsetEuler: {x: -90, y: 180, z: 180}
+  _blinkArrow: 1
+  _blinkIntervalSeconds: 0.5
+  _preferZoneWhileHoldingRequiredItem: 1
+  _zoneFacingToleranceDeg: 16
+  _angleShowThresholdDeg: 38
+  _angleHideThresholdDeg: 22
+  _hideArrowWhenFacingZone: 1
 --- !u!1 &209475778490987181
 GameObject:
   m_ObjectHideFlags: 0
@@ -3867,9 +3901,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76e060d33c4336546a51e4f16eda5b1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerEquipmentSync
-  _componentIndexCache: 255
+  _componentIndexCache: 6
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   equipments:
   - prefabId: FaceShield
     objectsToActivate: []
@@ -6134,7 +6168,7 @@ MonoBehaviour:
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
-  m_Antialiasing: 0
+  m_Antialiasing: 2
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -9811,7 +9845,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 4
+  _componentIndexCache: 5
   _addedNetworkObject: {fileID: 7513439500318563725}
   _networkObjectCache: {fileID: 7513439500318563725}
 --- !u!1 &6802514611373444724

@@ -281,6 +281,80 @@ public abstract class ZoneAndFillModule : ZoneAndMeasureModule
     // 서브클래스에서 GetTargetObjName()만 오버라이드
 }
 
+//public class Car_Lift_UpModule : ITaskModule
+//{
+//    public virtual string ModuleId => "Car_Lift_Up";
+//    private ModuleConfig _config;
+//    private Action _onComplete;
+//    private bool _isCompleted;
+//    private VehicleLiftController _lift;
+//    private float _cachedTargetHeight;
+
+//    // ★ 추가: 연속 감지 카운터 (노이즈 방지)
+//    private int _targetHeightFrameCount = 0;
+//    private const int REQUIRED_FRAMES = 3; // 3프레임 연속으로 도달해야 완료 판정
+
+//    public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
+//    {
+//        _config = config;
+//        _onComplete = onComplete;
+//        _isCompleted = false;
+//        _targetHeightFrameCount = 0;
+
+//        _cachedTargetHeight = config != null ? config.targetValue : 1.5f;
+//        _lift = GameObject.FindAnyObjectByType<VehicleLiftController>(FindObjectsInactive.Include);
+
+//        if(_lift == null)
+//        {
+//            Debug.LogError($"<color=red>[{ModuleId}]</color> VehicleLiftController를 찾을 수 없습니다!");
+//        }
+//        else
+//        {
+//            Debug.Log($"<color=cyan>[{ModuleId}]</color> 감시 시작! " +
+//                      $"목표: {_cachedTargetHeight}m / 현재: {_lift.CurrentHeight:F2}m");
+//        }
+//    }
+
+//    public void OnUpdate(float deltaTime)
+//    {
+//        if(_isCompleted || _lift == null) return;
+
+//        float currentHeight = _lift.CurrentHeight;
+
+//        // ★ 개선 1: 부동소수점 오차 허용 (±0.01m)
+//        float epsilon = 0.01f;
+//        bool isAtTarget = currentHeight >= (_cachedTargetHeight - epsilon);
+
+//        if(isAtTarget)
+//        {
+//            // ★ 개선 2: 연속 감지로 노이즈 필터링
+//            _targetHeightFrameCount++;
+
+//            if(_targetHeightFrameCount >= REQUIRED_FRAMES)
+//            {
+//                _isCompleted = true;
+//                Debug.Log($"<color=lime>[{ModuleId}] ✅ 완료!</color> " +
+//                          $"높이: {currentHeight:F2}m (목표: {_cachedTargetHeight}m)");
+//                _onComplete?.Invoke();
+//            }
+//        }
+//        else
+//        {
+//            // ★ 개선 3: 목표 아래로 내려가면 카운터 리셋
+//            _targetHeightFrameCount = 0;
+
+//            // 디버그: 진행 상황 주기적으로 출력
+//            if(Time.frameCount % 30 == 0) // 약 0.5초마다 (60fps 기준)
+//            {
+//                Debug.Log($"[{ModuleId}] 진행 중... 높이: {currentHeight:F2}m / " +
+//                          $"목표: {_cachedTargetHeight}m (차이: {(_cachedTargetHeight - currentHeight):F3}m)");
+//            }
+//        }
+//    }
+
+//    public void OnComplete() { }
+//    public void OnFail() { }
+//}
 public class Car_Lift_UpModule : ITaskModule
 {
     public virtual string ModuleId => "Car_Lift_Up";
@@ -290,65 +364,62 @@ public class Car_Lift_UpModule : ITaskModule
     private VehicleLiftController _lift;
     private float _cachedTargetHeight;
 
-    // ★ 추가: 연속 감지 카운터 (노이즈 방지)
-    private int _targetHeightFrameCount = 0;
-    private const int REQUIRED_FRAMES = 3; // 3프레임 연속으로 도달해야 완료 판정
+    // ★ 시간 기반 유지로 변경 (프레임보다 안정적)
+    private float _atTargetTimer = 0f;
+    private const float REQUIRED_TIME = 0.15f; // 0.15초간 유지되면 완료
 
     public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
     {
         _config = config;
         _onComplete = onComplete;
         _isCompleted = false;
-        _targetHeightFrameCount = 0;
+        _atTargetTimer = 0f;
 
         _cachedTargetHeight = config != null ? config.targetValue : 1.5f;
+
+        // 비활성화된 오브젝트까지 포함해서 찾기
         _lift = GameObject.FindAnyObjectByType<VehicleLiftController>(FindObjectsInactive.Include);
 
         if(_lift == null)
         {
-            Debug.LogError($"<color=red>[{ModuleId}]</color> VehicleLiftController를 찾을 수 없습니다!");
-        }
-        else
-        {
-            Debug.Log($"<color=cyan>[{ModuleId}]</color> 감시 시작! " +
-                      $"목표: {_cachedTargetHeight}m / 현재: {_lift.CurrentHeight:F2}m");
+            Debug.LogError($"<color=red>[{ModuleId}]</color> VehicleLiftController를 찾을 수 없음!");
         }
     }
 
     public void OnUpdate(float deltaTime)
     {
+        // 1. 이미 완료되었거나 리프트가 없으면 리턴
         if(_isCompleted || _lift == null) return;
+
+        // 💡 팁: 멀티플레이어라면 오직 서버(Host)에서만 이 로직을 태우는 것이 안전합니다.
+        // if (!FishNet.InstanceFinder.IsServerStarted) return;
 
         float currentHeight = _lift.CurrentHeight;
 
-        // ★ 개선 1: 부동소수점 오차 허용 (±0.01m)
-        float epsilon = 0.01f;
+        // ★ 개선 1: 오차 범위를 조금 더 여유 있게 (0.01 -> 0.02)
+        float epsilon = 0.02f;
         bool isAtTarget = currentHeight >= (_cachedTargetHeight - epsilon);
 
         if(isAtTarget)
         {
-            // ★ 개선 2: 연속 감지로 노이즈 필터링
-            _targetHeightFrameCount++;
+            // ★ 개선 2: 프레임 카운트 대신 델타 타임을 누적
+            _atTargetTimer += deltaTime;
 
-            if(_targetHeightFrameCount >= REQUIRED_FRAMES)
+            if(_atTargetTimer >= REQUIRED_TIME)
             {
                 _isCompleted = true;
-                Debug.Log($"<color=lime>[{ModuleId}] ✅ 완료!</color> " +
-                          $"높이: {currentHeight:F2}m (목표: {_cachedTargetHeight}m)");
-                _onComplete?.Invoke();
+                Debug.Log($"<color=lime>[{ModuleId}] ✅ 판정 완료!</color> 높이: {currentHeight:F2}m");
+
+                // ⚠️ OnComplete가 호출된 후 로직이 다시 타지 않도록 확실히 처리
+                var callback = _onComplete;
+                _onComplete = null;
+                callback?.Invoke();
             }
         }
         else
         {
-            // ★ 개선 3: 목표 아래로 내려가면 카운터 리셋
-            _targetHeightFrameCount = 0;
-
-            // 디버그: 진행 상황 주기적으로 출력
-            if(Time.frameCount % 30 == 0) // 약 0.5초마다 (60fps 기준)
-            {
-                Debug.Log($"[{ModuleId}] 진행 중... 높이: {currentHeight:F2}m / " +
-                          $"목표: {_cachedTargetHeight}m (차이: {(_cachedTargetHeight - currentHeight):F3}m)");
-            }
+            // 목표치에 도달하지 못하면 타이머 초기화
+            _atTargetTimer = 0f;
         }
     }
 

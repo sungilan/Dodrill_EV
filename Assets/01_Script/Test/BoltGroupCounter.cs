@@ -84,9 +84,20 @@ public class BoltGroupCounter : MonoBehaviour
 
     private void RegisterBroadcast()
     {
-        InstanceFinder.ServerManager?.RegisterBroadcast<BoltHideBroadcast>(OnServerHide);
-        InstanceFinder.ClientManager?.RegisterBroadcast<BoltProgressBroadcast>(OnClientProgress);
-        InstanceFinder.ClientManager?.RegisterBroadcast<BoltFallBroadcast>(OnClientBoltFall);
+        // 서버 핸들러는 서버에서만 등록
+        if(InstanceFinder.IsServerStarted)
+        {
+            InstanceFinder.ServerManager.RegisterBroadcast<BoltHideBroadcast>(OnServerHide);
+            Debug.Log($"<color=cyan>[Server]</color> BoltHideBroadcast 핸들러 등록 완료");
+        }
+
+        // 클라이언트 핸들러는 클라이언트에서만 등록
+        if(InstanceFinder.IsClientStarted)
+        {
+            InstanceFinder.ClientManager.RegisterBroadcast<BoltProgressBroadcast>(OnClientProgress);
+            InstanceFinder.ClientManager.RegisterBroadcast<BoltFallBroadcast>(OnClientBoltFall);
+            Debug.Log($"<color=cyan>[Client]</color> 브로드캐스트 핸들러 등록 완료");
+        }
     }
 
     private void HandleBoltLoosened(Bolt bolt)
@@ -101,27 +112,60 @@ public class BoltGroupCounter : MonoBehaviour
 
     private void OnServerHide(NetworkConnection conn, BoltHideBroadcast msg, Channel ch)
     {
-        if (msg.groupId != groupId || _removedIndices.Contains(msg.boltIndex)) return;
+        // 그룹 ID 및 인덱스 검증
+        if(msg.groupId != groupId)
+        {
+            Debug.LogWarning($"<color=yellow>[Server]</color> 잘못된 groupId: {msg.groupId}");
+            return;
+        }
+
+        if(msg.boltIndex < 0 || msg.boltIndex >= _bolts.Count)
+        {
+            Debug.LogError($"<color=red>[Server]</color> 인덱스 범위 초과: {msg.boltIndex}, 전체: {_bolts.Count}");
+            return;
+        }
+
+        if(_removedIndices.Contains(msg.boltIndex))
+        {
+            Debug.LogWarning($"<color=yellow>[Server]</color> 이미 제거된 볼트: {msg.boltIndex}");
+            return;
+        }
+
         _removedIndices.Add(msg.boltIndex);
 
-        if (!assembleMode)
+        if(!assembleMode)
         {
-            InstanceFinder.ServerManager.Broadcast(new BoltFallBroadcast { groupId = groupId, boltIndex = msg.boltIndex });
+            InstanceFinder.ServerManager.Broadcast(new BoltFallBroadcast
+            {
+                groupId = groupId,
+                boltIndex = msg.boltIndex
+            });
             StartCoroutine(DeactivateBoltAfterDelay(msg.boltIndex));
         }
+
         ApplyCountAndCheckCompletion();
     }
 
     private void OnClientBoltFall(BoltFallBroadcast msg, Channel ch)
     {
-        if (msg.groupId != groupId) return;
-        var bolt = _bolts[msg.boltIndex];
-        if (bolt != null)
+        if(msg.groupId != groupId) return;
+
+        // 인덱스 범위 검증
+        if(msg.boltIndex < 0 || msg.boltIndex >= _bolts.Count)
         {
-            bolt.PlayFallEffect();
-            // ✅ 클라이언트도 자기 화면에서 볼트를 꺼야 함
-            StartCoroutine(LocalDeactivateBolt(bolt));
+            Debug.LogError($"<color=red>[Client]</color> 인덱스 범위 초과: {msg.boltIndex}");
+            return;
         }
+
+        var bolt = _bolts[msg.boltIndex];
+        if(bolt == null)
+        {
+            Debug.LogError($"<color=red>[Client]</color> Bolt가 null: 인덱스 {msg.boltIndex}");
+            return;
+        }
+
+        bolt.PlayFallEffect();
+        StartCoroutine(LocalDeactivateBolt(bolt));
     }
 
     private IEnumerator LocalDeactivateBolt(Bolt bolt)
@@ -138,7 +182,7 @@ public class BoltGroupCounter : MonoBehaviour
         // ✅ 클라이언트도 진행도가 다 차면 부품을 끔/켬
         if (_removedCount >= _totalCount && targetPart != null)
         {
-            Debug.Log($"<color=lime>[BoltGroup-Client]</color> 모든 볼트 완료 감지 -> 부품 상태 변경");
+            //Debug.Log($"<color=lime>[BoltGroup-Client]</color> 모든 볼트 완료 감지 -> 부품 상태 변경");
             StartCoroutine(LocalTogglePart(assembleMode));
         }
     }
@@ -152,13 +196,42 @@ public class BoltGroupCounter : MonoBehaviour
     private void ApplyCountAndCheckCompletion()
     {
         _removedCount = _removedIndices.Count;
-        InstanceFinder.ServerManager.Broadcast(new BoltProgressBroadcast { groupId = groupId, removed = _removedCount, total = _totalCount });
+        Debug.Log($"<color=yellow>[BoltGroupCounter-ApplyCount]</color> {groupId}: 제거됨={_removedCount}, 전체={_totalCount}");
 
-        if (_removedCount >= _totalCount && !_completed)
+        // 진행도 브로드캐스트
+        InstanceFinder.ServerManager.Broadcast(new BoltProgressBroadcast
+        {
+            groupId = groupId,
+            removed = _removedCount,
+            total = _totalCount
+        });
+        Debug.Log($"<color=cyan>[BoltGroupCounter]</color> BoltProgressBroadcast 송신: {_removedCount}/{_totalCount}");
+
+        // 완료 체크
+        if(_removedCount >= _totalCount && !_completed)
         {
             _completed = true;
-            if (!string.IsNullOrEmpty(taskId)) InteractionEvents.FireTaskConfirmed(taskId);
-            if (targetPart != null) StartCoroutine(TogglePartServer(assembleMode));
+            Debug.Log($"<color=lime>[BoltGroupCounter-Completion]</color> {groupId} 완료 감지!");
+
+            if(!string.IsNullOrEmpty(taskId))
+            {
+                Debug.Log($"<color=lime>[BoltGroupCounter]</color> TaskConfirmed 신호 발생: {taskId}");
+                InteractionEvents.FireTaskConfirmed(taskId);
+            }
+            else
+            {
+                Debug.LogWarning($"<color=orange>[BoltGroupCounter]</color> taskId가 비어있음 - TaskConfirmed 신호 미발생");
+            }
+
+            if(targetPart != null)
+            {
+                Debug.Log($"<color=lime>[BoltGroupCounter]</color> 부품 토글 코루틴 시작");
+                StartCoroutine(TogglePartServer(!assembleMode));
+            }
+            else
+            {
+                Debug.LogWarning($"<color=orange>[BoltGroupCounter]</color> targetPart가 null - 부품 토글 불가");
+            }
         }
     }
 
@@ -171,7 +244,16 @@ public class BoltGroupCounter : MonoBehaviour
     private IEnumerator DeactivateBoltAfterDelay(int idx)
     {
         yield return new WaitForSeconds(ejectDuration);
-        _bolts[idx].Deactivate();
+
+        // 코루틴 실행 중 bolt가 파괴되었을 수 있으므로 검증
+        if(idx >= 0 && idx < _bolts.Count && _bolts[idx] != null)
+        {
+            _bolts[idx].Deactivate();
+        }
+        else
+        {
+            Debug.LogWarning($"<color=yellow>[Server]</color> 볼트 비활성화 실패: 인덱스 {idx}");
+        }
     }
 
     // ── 조립 모드 전환을 위한 외부 호출 메서드 ──────────────────────

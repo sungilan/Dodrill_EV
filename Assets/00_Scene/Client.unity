@@ -2563,7 +2563,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1996018848525657815, guid: 7b0370bea14076d449d14ddea22e1f6c, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.00015199141
+      value: 0.000021320817
       objectReference: {fileID: 0}
     - target: {fileID: 2113214060242354015, guid: 7b0370bea14076d449d14ddea22e1f6c, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3505,6 +3505,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5418805181257667344, guid: 7b0370bea14076d449d14ddea22e1f6c, type: 3}
+      propertyPath: m_Alpha
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5513345888636623085, guid: 7b0370bea14076d449d14ddea22e1f6c, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -4315,7 +4319,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8077467183024287520, guid: 7b0370bea14076d449d14ddea22e1f6c, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.978
+      value: 4.061
       objectReference: {fileID: 0}
     - target: {fileID: 8077467183024287520, guid: 7b0370bea14076d449d14ddea22e1f6c, type: 3}
       propertyPath: m_LocalRotation.w
@@ -19412,6 +19416,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 415561500504022987, guid: 1362045d1d784a745a54896c4e3253ce, type: 3}
+      propertyPath: m_Antialiasing
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 416839238679589590, guid: 1362045d1d784a745a54896c4e3253ce, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -20876,7 +20884,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d619012772bc7049b46e7220feee5a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  currentAnchor: {fileID: 0}
 --- !u!21 &1154547945
 Material:
   serializedVersion: 8
@@ -46390,6 +46397,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   LobbyListView: {fileID: 8477452573156746615}
+  contentsListView: {fileID: 0}
+  lobbyBottomPanel: {fileID: 0}
   startPanel: {fileID: 7734212109593227180}
   dropdown: {fileID: 2947304484647443028}
   roomTitleText: {fileID: 4178551695275154050}

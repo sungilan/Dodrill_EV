@@ -147,6 +147,34 @@ public class ScenarioStateReceiver : MonoBehaviour
         OnTaskStateUpdated?.Invoke(broadcast);
     }
 
+    // ✅ TaskInteractionZone에서 사용할 메서드들 추가
+    /// <summary>
+    /// 현재 진행 중인 Task의 TaskDef를 반환합니다.
+    /// </summary>
+    public TaskDef GetCurrentTask()
+    {
+        if(CurrentScenario == null || CurrentTaskState.taskIndex < 0 ||
+           CurrentTaskState.taskIndex >= CurrentScenario.scenario.tasks.Count)
+            return null;
+
+        return CurrentScenario.scenario.tasks[CurrentTaskState.taskIndex];
+    }
+
+    /// <summary>
+    /// 현재 Task의 모듈 설정(Config)을 반환합니다.
+    /// </summary>
+    public ModuleConfig GetCurrentTaskConfig()
+    {
+        var task = GetCurrentTask();
+        if(task == null) return null;
+
+        return CurrentScenario.GetModuleConfig(task.moduleId);
+    }
+
+    /// <summary>
+    /// 현재 Task의 인덱스를 반환합니다.
+    /// </summary>
+    public int GetCurrentTaskIndex() => CurrentTaskState.taskIndex;
 
 }
 

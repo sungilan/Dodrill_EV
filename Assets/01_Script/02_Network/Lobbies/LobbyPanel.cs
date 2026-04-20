@@ -15,6 +15,8 @@ using XRAirpotrSecurity;
 
 public class LobbyPanel : UIView
 {
+    private const string RoomDisplayTitleKey = "roomDisplayTitle";
+
     [SerializeField] private LobbyPlayerInfos infoPrefab;
     [SerializeField] private RectTransform listContainer;
     [SerializeField] private TMP_Text statusInfoText;
@@ -22,7 +24,7 @@ public class LobbyPanel : UIView
     [SerializeField] private Button startGameButton;
     [SerializeField] private Button setAnchorButton;
 
-    [Header("콘텐츠 정보")]
+
     [SerializeField] private Image thumbnailImage;
     [SerializeField] private Sprite defaultThumbnail;
     [SerializeField] private TMP_Text contentTitleText;
@@ -32,26 +34,25 @@ public class LobbyPanel : UIView
     private RoomAccessPacket _currentRoomAccess;
     private bool readyStatus;
     public UIView LobbyListView;
+    [SerializeField] private UIView contentsListView;
+    [SerializeField] private LobbyBottomPanel lobbyBottomPanel;
     public GameObject startPanel;
     public TMP_Dropdown dropdown;
     private bool isHost = false;
     public TextMeshProUGUI roomTitleText;
+    private readonly Dictionary<Sprite, Sprite> _thumbnailSpriteCache = new();
 
     private string StageName =>
         stageDropdown != null && stageDropdown.options.Count > 0
             ? stageDropdown.options[stageDropdown.value].text
             : string.Empty;
 
-    // ─────────────────────────────────────────
-    // 생명주기
-    // ─────────────────────────────────────────
+
 
     protected override void Awake()
     {
         base.Awake();
         Mst.Events.AddListener(MstEventKeys.showLobbyView, OnShowLobbyViewEventHandler);
-
-        Managers.Sound.Play("MainTheme", Define.Sound.Bgm);
     }
 
     protected override void OnDestroy()
@@ -62,13 +63,12 @@ public class LobbyPanel : UIView
 
     protected void Start()
     {
-        if (listContainer)
-            foreach (Transform t in listContainer)
+        EnsureReturnViewsBound();
+        if(listContainer)
+            foreach(Transform t in listContainer)
                 Destroy(t.gameObject);
 
-        // _lobby 가 있고 아직 나가지 않은 상태일 때만 표시
-        // (타이틀 씬으로 복귀 후 ResetStaticState() 호출 시 _lobby = null 이므로 표시 안 됨)
-        if (_lobby != null && !_lobby.HasLeft)
+        if(_lobby != null && !_lobby.HasLeft)
         {
             ResetLobby();
             DrawPlayersList();
@@ -76,18 +76,16 @@ public class LobbyPanel : UIView
     }
 
 
-    // ─────────────────────────────────────────
-    // 이벤트 핸들러
-    // ─────────────────────────────────────────
 
     private void OnShowLobbyViewEventHandler(EventMessage message)
     {
+        //TrainingSessionLoadingFlow.Reset();
         LobbyListView.Hide();
         Mst.Events.Invoke(MstEventKeys.hideCreateLobbyView);
         Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
 
-        // 이전 로비 이벤트 구독 해제
-        if (_lobby != null)
+
+        if(_lobby != null)
         {
             _lobby.OnLobbyStateChangeEvent -= OnLobbyStateChange;
             _lobby.OnLobbyStatusTextChangeEvent -= OnLobbyStatusTextChange;
@@ -102,7 +100,7 @@ public class LobbyPanel : UIView
     }
     public static void ResetStaticState()
     {
-        if (_lobby != null)
+        if(_lobby != null)
         {
             _lobby.OnLobbyStateChangeEvent -= null;
             _lobby.OnLobbyStatusTextChangeEvent -= null;
@@ -120,6 +118,7 @@ public class LobbyPanel : UIView
 
         bool isMasterUser = _lobby.IsMasterUser(Mst.Client.Auth.AccountInfo.Username);
         startGameButton.gameObject.SetActive(isMasterUser);
+        SyncLocalReadyStatus();
 
         RefreshContentInfo();
         Show();
@@ -127,7 +126,7 @@ public class LobbyPanel : UIView
 
     private void UnsubscribeLobbyEvents()
     {
-        if (_lobby == null) return;
+        if(_lobby == null) return;
         _lobby.OnMemberJoinedEvent -= OnMemberJoined;
         _lobby.OnMemberLeftEvent -= OnMemberLeft;
         _lobby.OnMemberReadyStatusChangedEvent -= OnMemberReadyStatusChanged;
@@ -135,27 +134,25 @@ public class LobbyPanel : UIView
         _lobby.OnMemberTeamChangedEvent -= OnMemberTeamChangedEvent;
     }
 
-    // ─────────────────────────────────────────
-    // 콘텐츠 정보 표시
-    // ─────────────────────────────────────────
 
     private void RefreshContentInfo()
     {
+        RefreshRoomTitle();
         _lobby.Properties.TryGetValue("scenarioId", out string scenarioId);
 
-        if (string.IsNullOrEmpty(scenarioId))
+        if(string.IsNullOrEmpty(scenarioId))
         {
-            if (contentTitleText) contentTitleText.text = "콘텐츠 없음";
-            if (thumbnailImage) thumbnailImage.sprite = defaultThumbnail;
+            if(contentTitleText) contentTitleText.text = "시나리오 없음";
+            if(thumbnailImage) thumbnailImage.sprite = defaultThumbnail;
             return;
         }
 
-        if (ScenarioDataLoader.Instance == null || !ScenarioDataLoader.Instance.IsLoaded)
+        if(ScenarioDataLoader.Instance == null || !ScenarioDataLoader.Instance.IsLoaded)
         {
-            if (contentTitleText) contentTitleText.text = scenarioId;
-            if (thumbnailImage) thumbnailImage.sprite = defaultThumbnail;
+            if(contentTitleText) contentTitleText.text = scenarioId;
+            if(thumbnailImage) thumbnailImage.sprite = defaultThumbnail;
 
-            if (ScenarioDataLoader.Instance != null)
+            if(ScenarioDataLoader.Instance != null)
                 ScenarioDataLoader.Instance.OnLoaded += OnDataLoaded;
             return;
         }
@@ -172,21 +169,56 @@ public class LobbyPanel : UIView
 
     private void ApplyEntry(string scenarioId)
     {
-        if (string.IsNullOrEmpty(scenarioId)) return;
+        if(string.IsNullOrEmpty(scenarioId)) return;
 
         var entry = ScenarioDataLoader.Instance?.Entries
             .FirstOrDefault(e => e.scenarioId == scenarioId);
 
-        if (contentTitleText)
+        if(contentTitleText)
             contentTitleText.text = entry != null ? entry.scenarioName : scenarioId;
 
-        if (thumbnailImage)
-            thumbnailImage.sprite = (entry?.thumbnail != null) ? entry.thumbnail : defaultThumbnail;
+        if(thumbnailImage)
+            thumbnailImage.sprite = (entry?.thumbnail != null)
+                ? GetOrCreateThumbnailSprite(entry.thumbnail)
+                : defaultThumbnail;
     }
 
-    // ─────────────────────────────────────────
-    // 기존 기능
-    // ─────────────────────────────────────────
+    private Sprite GetOrCreateThumbnailSprite(Sprite texture)
+    {
+        if(texture == null)
+            return defaultThumbnail;
+
+        if(_thumbnailSpriteCache.TryGetValue(texture, out var cached) && cached != null)
+            return cached;
+
+        //var created = Sprite.Create(
+        //    texture,
+        //    new Rect(0f, 0f, texture.width, texture.height),
+        //    new Vector2(0.5f, 0.5f));
+
+        _thumbnailSpriteCache[texture] = texture;
+        return texture;
+    }
+
+    private void RefreshRoomTitle()
+    {
+        if(roomTitleText == null || _lobby == null)
+            return;
+
+        if(_lobby.Properties.TryGetValue(RoomDisplayTitleKey, out string roomDisplayTitle) &&
+            !string.IsNullOrWhiteSpace(roomDisplayTitle))
+        {
+            roomTitleText.text = roomDisplayTitle;
+            return;
+        }
+
+        if(_lobby.Properties.TryGetValue("scenarioId", out string scenarioId) &&
+            !string.IsNullOrWhiteSpace(scenarioId))
+        {
+            roomTitleText.text = scenarioId;
+            return;
+        }
+    }
 
     private void OnLobbyStatusTextChange(string text)
     {
@@ -195,26 +227,29 @@ public class LobbyPanel : UIView
 
     private void OnLobbyStateChange(LobbyState state)
     {
-        switch (state)
+        switch(state)
         {
             case LobbyState.FailedToStart:
                 Debug.Log("LobbyView:OnLobbyStateChange:FailedToStart");
+                //TrainingSessionLoadingFlow.Reset();
                 break;
             case LobbyState.Preparations:
                 Debug.Log("LobbyView:OnLobbyStateChange:Preparations");
                 Scene scene = SceneManager.GetActiveScene();
-                if (!scene.name.Equals("Client", StringComparison.OrdinalIgnoreCase))
+                if(!scene.name.Equals("Client", StringComparison.OrdinalIgnoreCase))
                     SceneManager.LoadScene("Client");
                 break;
             case LobbyState.StartingGameServer:
                 Debug.Log("LobbyView:OnLobbyStateChange:StartingGameServer");
+                //TrainingSessionLoadingFlow.BeginGameTransition();
                 break;
             case LobbyState.GameInProgress:
                 Debug.Log("LobbyView:OnLobbyStateChange:GameInProgress");
+                //TrainingSessionLoadingFlow.BeginGameTransition();
                 _currentRoomAccess = null;
                 _lobby.GetLobbyRoomAccess((access, error) =>
                 {
-                    if (!string.IsNullOrWhiteSpace(error))
+                    if(!string.IsNullOrWhiteSpace(error))
                     {
                         Mst.Events.Invoke(MstEventKeys.showLoadingInfo, $"Get Lobby Room Access error: [{error}]");
                         return;
@@ -224,6 +259,7 @@ public class LobbyPanel : UIView
                 break;
             case LobbyState.GameOver:
                 Debug.Log("LobbyView:OnLobbyStateChange:GameOver");
+                //TrainingSessionLoadingFlow.Reset();
                 break;
         }
     }
@@ -232,6 +268,9 @@ public class LobbyPanel : UIView
     {
         _lobby.Leave();
         Hide();
+        EnsureReturnViewsBound();
+        contentsListView?.Show();
+        lobbyBottomPanel?.ViewContentsList();
         Mst.Events.Invoke(MstEventKeys.showGamesListView);
     }
 
@@ -239,10 +278,10 @@ public class LobbyPanel : UIView
     {
         isSet = false;
 
-        if (!isSet)
+        if(!isSet)
         {
             var options = _lobby.Members[Mst.Client.Auth.AccountInfo.Username].Properties;
-            if (!options.ToDictionary().TryGetValue("PlatformType", out string _))
+            if(!options.ToDictionary().TryGetValue("PlatformType", out string _))
             {
                 options.Add("PlatformType", Utils.GetPlatformType().ToString());
                 options.Add("UserName", UserInfo.UserName);
@@ -260,8 +299,8 @@ public class LobbyPanel : UIView
 
     private void ClearPlayersList()
     {
-        if (listContainer)
-            foreach (Transform tr in listContainer)
+        if(listContainer)
+            foreach(Transform tr in listContainer)
                 Destroy(tr.gameObject);
     }
 
@@ -270,10 +309,10 @@ public class LobbyPanel : UIView
     private void DrawPlayersList()
     {
         ClearPlayersList();
-        if (!listContainer) { logger.Error("Not all components are setup."); return; }
+        if(!listContainer) { logger.Error("Not all components are setup."); return; }
 
         int index = 0;
-        foreach (LobbyMemberData member in _lobby.Members.Values.ToArray())
+        foreach(LobbyMemberData member in _lobby.Members.Values.ToArray())
         {
             var info = Instantiate(infoPrefab);
             info.transform.SetParent(listContainer);
@@ -284,12 +323,18 @@ public class LobbyPanel : UIView
             bool isLocalPlayer = Mst.Client.Auth.AccountInfo.Username
                 .Equals(member.Username, StringComparison.OrdinalIgnoreCase);
 
-            if (isLocalPlayer)
+            if(isLocalPlayer)
             {
-                if (Utils.GetPlatformType() == PlatformType.VR)
-                    setAnchorButton.gameObject.SetActive(memberIsHost);
+                if(Utils.GetPlatformType() == PlatformType.VR)
+                {
+                    if(setAnchorButton != null)
+                        setAnchorButton.gameObject.SetActive(memberIsHost);
+                    else
+                        Debug.LogWarning("[LobbyPanel] setAnchorButton is not assigned. VR anchor toggle UI is skipped.");
+                }
                 UserInfo.isHost = memberIsHost;
                 this.isHost = memberIsHost;
+                readyStatus = member.IsReady;
             }
 
             string userName = member.Properties.AsString("UserName");
@@ -306,10 +351,34 @@ public class LobbyPanel : UIView
 
     public void OnReadyClick()
     {
-        _lobby.SetReadyStatus(!readyStatus, (bool isSuccessful, string error) =>
+        bool nextReadyState = !readyStatus;
+        if(TryGetLocalMember(out var localMember))
+            nextReadyState = !localMember.IsReady;
+
+        _lobby.SetReadyStatus(nextReadyState, (bool isSuccessful, string error) =>
         {
-            if (isSuccessful) readyStatus = !readyStatus;
+            if(isSuccessful)
+                readyStatus = nextReadyState;
         });
+    }
+
+    private bool TryGetLocalMember(out LobbyMemberData localMember)
+    {
+        localMember = null;
+        if(_lobby == null || _lobby.Members == null || Mst.Client?.Auth?.AccountInfo == null)
+            return false;
+
+        string username = Mst.Client.Auth.AccountInfo.Username;
+        if(string.IsNullOrWhiteSpace(username))
+            return false;
+
+        return _lobby.Members.TryGetValue(username, out localMember) && localMember != null;
+    }
+
+    private void SyncLocalReadyStatus()
+    {
+        if(TryGetLocalMember(out var localMember))
+            readyStatus = localMember.IsReady;
     }
     public void ClearLobby()
     {
@@ -317,30 +386,68 @@ public class LobbyPanel : UIView
         _lobby = null;
         Hide();
     }
+
+    private void EnsureReturnViewsBound()
+    {
+        if(contentsListView == null)
+        {
+            var allViews = FindObjectsByType<UIView>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach(var view in allViews)
+            {
+                if(view != null && string.Equals(view.name, "View_ContentsListView", StringComparison.Ordinal))
+                {
+                    contentsListView = view;
+                    break;
+                }
+            }
+        }
+
+        if(lobbyBottomPanel == null)
+            lobbyBottomPanel = FindFirstObjectByType<LobbyBottomPanel>(FindObjectsInactive.Include);
+    }
+
     public void OnChangeTeamClick()
     {
         string currentTeam = _lobby.Members[Mst.Client.Auth.AccountInfo.Username].Team;
         string otherTeam = currentTeam.Equals("A", StringComparison.OrdinalIgnoreCase) ? "B" : "A";
         _lobby.JoinTeam(otherTeam, (isSuccessful, error) =>
         {
-            if (!isSuccessful) Debug.LogError($"Lobby Change Team Error: {error}");
+            if(!isSuccessful) Debug.LogError($"Lobby Change Team Error: {error}");
         });
     }
 
     public void OnStartGame()
     {
         bool allReady = _lobby.Members.Values.All(m => m.IsReady);
-        if (!allReady) { Debug.Log("플레이어가 모두 준비되지 않았습니다."); return; }
+        if(!allReady)
+        {
+            return;
+        }
+
 
         _lobby.SetLobbyProperty(Mst.Args.Names.RoomOnlineScene, "Game", (isSuccessful, error) =>
         {
-            if (!isSuccessful) { Debug.LogError($"Set Property Error: {error}"); return; }
+            if(!isSuccessful)
+            {
+                Debug.LogError($"Set Property Error: {error}");
+                Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
+                return;
+            }
             _lobby.SetLobbyProperty("IsPlaying", "true", (isSuccessful2, error2) =>
             {
-                if (!isSuccessful2) { Debug.LogError($"Set Property Error: {error2}"); return; }
+                if(!isSuccessful2)
+                {
+                    Debug.LogError($"Set Property Error: {error2}");
+                    Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
+                    return;
+                }
                 _lobby.StartGame((isSuccessful3, error3) =>
                 {
-                    if (!isSuccessful3) Debug.LogError($"Start Game Error: {error3}");
+                    if(!isSuccessful3)
+                    {
+                        Debug.LogError($"Start Game Error: {error3}");
+                        Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
+                    }
                 });
             });
         });
@@ -360,7 +467,7 @@ public class LobbyPanel : UIView
     private IEnumerator DelayUpdate(LobbyMemberData member, string propertyKey, string propertyValue)
     {
         yield return new WaitForEndOfFrame();
-        if (_lobby.Members[member.Username].Properties.FindByKey(propertyKey) == null)
+        if(_lobby.Members[member.Username].Properties.FindByKey(propertyKey) == null)
             _lobby.Members[member.Username].Properties.Add(propertyKey, propertyValue);
         DrawPlayersList();
     }

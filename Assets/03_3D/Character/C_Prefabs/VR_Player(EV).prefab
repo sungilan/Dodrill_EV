@@ -196,6 +196,7 @@ GameObject:
   - component: {fileID: 7950039927442058359}
   - component: {fileID: 3168414929683191907}
   - component: {fileID: 5306275678771546045}
+  - component: {fileID: 1284999996911283466}
   m_Layer: 16
   m_Name: VR_Player(EV)
   m_TagString: Untagged
@@ -521,6 +522,37 @@ MonoBehaviour:
     objectsToDeactivate: []
     targetRenderer: {fileID: 0}
     equipMaterial: {fileID: 0}
+--- !u!114 &1284999996911283466
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 93069368751711485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77d7ebae1f011914db5142248b45a898, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TaskDirectionCompass
+  _stateReceiver: {fileID: 0}
+  _playerRoot: {fileID: 0}
+  _head: {fileID: 0}
+  _arrowPrefab: {fileID: 919132149155446097, guid: bfa75480a7af626498e9fb1867c50ad1, type: 3}
+  _arrowNameHint: VFX_Arrow
+  _showDistance: 2.5
+  _hideDistance: 1.6
+  _anchorOffset: {x: 0, y: -0.2, z: 0.65}
+  _followHeadYaw: 1
+  _followHeadPitchAndRoll: 1
+  _invertDirection: 1
+  _arrowRotationOffsetEuler: {x: -90, y: 180, z: 180}
+  _blinkArrow: 1
+  _blinkIntervalSeconds: 0.5
+  _preferZoneWhileHoldingRequiredItem: 1
+  _zoneFacingToleranceDeg: 16
+  _angleShowThresholdDeg: 38
+  _angleHideThresholdDeg: 22
+  _hideArrowWhenFacingZone: 1
 --- !u!1 &98143407444997667
 GameObject:
   m_ObjectHideFlags: 0
@@ -4964,11 +4996,11 @@ MonoBehaviour:
   m_RendererIndex: -1
   m_VolumeLayerMask:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 1074781911
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
-  m_Antialiasing: 0
+  m_Antialiasing: 2
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -10605,7 +10637,7 @@ CapsuleCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_Radius: 0.2
   m_Height: 1.6
@@ -10633,8 +10665,8 @@ Rigidbody:
     m_Bits: 512
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 0
+  m_UseGravity: 1
+  m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 116
   m_CollisionDetection: 0
@@ -26427,6 +26459,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d619012772bc7049b46e7220feee5a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentAnchor: {fileID: 0}
 --- !u!1 &6823756768971634918
 GameObject:
   m_ObjectHideFlags: 0
