@@ -1131,6 +1131,45 @@ MonoBehaviour:
   _notifCanvasGroup: {fileID: 262751893}
   _notifText: {fileID: 1699431011}
   _displayDuration: 3
+  _lsRunning:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsFailed:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsCompleted:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsRetrying:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &16217691
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10995,7 +11034,7 @@ MonoBehaviour:
   miniMapBorder: {fileID: 21300000, guid: 75ad13df6091e964bbca6fe9f9f3e928, type: 3}
   miniMapOpacity: 1
   miniMapScale: {x: 1.1, y: 1.1, z: 1.1}
-  cameraOffset: {x: 1, y: 2.3, z: 2}
+  cameraOffset: {x: 1, y: 4, z: 2}
   camSize: 4.4
   camFarClip: 31.97
   rotationOfCam: {x: 90, y: 90, z: 0}
@@ -15851,6 +15890,27 @@ MonoBehaviour:
   bypassLOTO: 1
   dischargeTaskIndex: 8
   isDischarged: 0
+  _lsDischarging:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15098284411011072
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsComplete:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15098386617810944
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &209815000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19685,6 +19745,45 @@ MonoBehaviour:
   _notifCanvasGroup: {fileID: 371946569}
   _notifText: {fileID: 762407395}
   _displayDuration: 3
+  _lsRunning:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsFailed:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsCompleted:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsRetrying:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &247257284
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22318,6 +22417,43 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9c2f84477bce19144a7505e3db76670f, type: 3}
   m_PrefabInstance: {fileID: 291996661}
   m_PrefabAsset: {fileID: 0}
+--- !u!84 &293733660
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 460
+  m_Height: 260
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 94
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &294480847
 GameObject:
   m_ObjectHideFlags: 0
@@ -35053,6 +35189,27 @@ MonoBehaviour:
   bypassLOTO: 1
   dischargeTaskIndex: 8
   isDischarged: 0
+  _lsDischarging:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15098284411011072
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsComplete:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15098386617810944
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &494551323
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -37267,7 +37424,7 @@ MonoBehaviour:
   m_UpdateString:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 2139399444}
+      - m_Target: {fileID: 526426234}
         m_TargetAssemblyTypeName: TMPro.TextMeshProUGUI, Unity.TextMeshPro
         m_MethodName: set_text
         m_Mode: 0
@@ -50677,7 +50834,7 @@ Transform:
   m_GameObject: {fileID: 716035726}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: 0.5, z: -0.5, w: 0.5}
-  m_LocalPosition: {x: 305.60004, y: 2283.3499, z: 3137.8}
+  m_LocalPosition: {x: 305.60004, y: 5116.683, z: 3137.8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -50776,7 +50933,7 @@ Camera:
     serializedVersion: 2
     m_Bits: 1073802999
   m_RenderingPath: -1
-  m_TargetTexture: {fileID: 944080992}
+  m_TargetTexture: {fileID: 293733660}
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 0
@@ -66977,43 +67134,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0a622198097348248951d58706c83575, type: 3}
   m_PrefabInstance: {fileID: 941056410}
   m_PrefabAsset: {fileID: 0}
---- !u!84 &944080992
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 460
-  m_Height: 260
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 94
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1001 &949683255
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -67211,6 +67331,27 @@ MonoBehaviour:
   bypassLOTO: 1
   dischargeTaskIndex: 8
   isDischarged: 0
+  _lsDischarging:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15098284411011072
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsComplete:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15098386617810944
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!223 &953781288
 Canvas:
   m_ObjectHideFlags: 0
@@ -82410,6 +82551,8 @@ GameObject:
   - component: {fileID: 1218850582}
   - component: {fileID: 1218850584}
   - component: {fileID: 1218850583}
+  - component: {fileID: 1218850586}
+  - component: {fileID: 1218850585}
   m_Layer: 0
   m_Name: DescriptionText
   m_TagString: Untagged
@@ -82536,6 +82679,86 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1218850581}
   m_CullTransparentMesh: 1
+--- !u!114 &1218850585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1218850581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Components.LocalizeStringEvent
+  m_StringReference:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  m_FormatArguments: []
+  m_UpdateString:
+    m_PersistentCalls:
+      m_Calls: []
+  references:
+    version: 2
+    RefIds: []
+--- !u!114 &1218850586
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1218850581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Components.LocalizeStringEvent
+  m_StringReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15098284411011072
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  m_FormatArguments: []
+  m_UpdateString:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: TMPro.TextMeshProUGUI, Unity.TextMeshPro
+        m_MethodName: 
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1218850583}
+        m_TargetAssemblyTypeName: TMPro.TextMeshProUGUI, Unity.TextMeshPro
+        m_MethodName: set_text
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1219309773
 GameObject:
   m_ObjectHideFlags: 0
@@ -89175,6 +89398,43 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7696952623727185703, guid: 2b750522ea396434eac82b89e4d806d3, type: 3}
   m_PrefabInstance: {fileID: 1296795505}
   m_PrefabAsset: {fileID: 0}
+--- !u!84 &1297204813
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 460
+  m_Height: 260
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 94
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &1297433809
 GameObject:
   m_ObjectHideFlags: 0
@@ -95885,7 +96145,7 @@ Camera:
     serializedVersion: 2
     m_Bits: 1073802967
   m_RenderingPath: -1
-  m_TargetTexture: {fileID: 2098487394}
+  m_TargetTexture: {fileID: 1297204813}
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 0
@@ -95974,7 +96234,7 @@ Transform:
   m_GameObject: {fileID: 1400184736}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: 0.5, z: -0.5, w: 0.5}
-  m_LocalPosition: {x: -37.69702, y: -773.69995, z: 2.091}
+  m_LocalPosition: {x: -37.69702, y: -772, z: 2.091}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -96349,7 +96609,7 @@ MonoBehaviour:
   m_UpdateString:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 2139399444}
+      - m_Target: {fileID: 1402797826}
         m_TargetAssemblyTypeName: TMPro.TextMeshProUGUI, Unity.TextMeshPro
         m_MethodName: set_text
         m_Mode: 0
@@ -96897,7 +97157,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   shapeColliderGO: {fileID: 0}
-  renderTex: {fileID: 2098487394}
+  renderTex: {fileID: 1297204813}
   mapMaterial: {fileID: 2100000, guid: 65bbe9e0008384c5997f0cf300c3cb81, type: 2}
   iconPref: {fileID: 100164, guid: d392edba23dec4ef38924695a920a568, type: 3}
   mapCamera: {fileID: 1399562020}
@@ -96911,7 +97171,7 @@ MonoBehaviour:
   miniMapBorder: {fileID: 21300000, guid: 75ad13df6091e964bbca6fe9f9f3e928, type: 3}
   miniMapOpacity: 1
   miniMapScale: {x: 1.1, y: 1.1, z: 1.1}
-  cameraOffset: {x: 1, y: 2.3, z: 2}
+  cameraOffset: {x: 1, y: 4, z: 2}
   camSize: 4.4
   camFarClip: 31.97
   rotationOfCam: {x: 90, y: 90, z: 0}
@@ -97230,6 +97490,7 @@ GameObject:
   - component: {fileID: 1414472006}
   - component: {fileID: 1414472008}
   - component: {fileID: 1414472007}
+  - component: {fileID: 1414472009}
   m_Layer: 0
   m_Name: DescriptionText
   m_TagString: Untagged
@@ -97356,6 +97617,46 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1414472005}
   m_CullTransparentMesh: 1
+--- !u!114 &1414472009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1414472005}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Components.LocalizeStringEvent
+  m_StringReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15098284411011072
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  m_FormatArguments: []
+  m_UpdateString:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1414472007}
+        m_TargetAssemblyTypeName: TMPro.TextMeshProUGUI, Unity.TextMeshPro
+        m_MethodName: set_text
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  references:
+    version: 2
+    RefIds: []
 --- !u!1001 &1416306091
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -108886,7 +109187,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   shapeColliderGO: {fileID: 0}
-  renderTex: {fileID: 944080992}
+  renderTex: {fileID: 293733660}
   mapMaterial: {fileID: 2100000, guid: 65bbe9e0008384c5997f0cf300c3cb81, type: 2}
   iconPref: {fileID: 100164, guid: d392edba23dec4ef38924695a920a568, type: 3}
   mapCamera: {fileID: 716035730}
@@ -108900,7 +109201,7 @@ MonoBehaviour:
   miniMapBorder: {fileID: 21300000, guid: 75ad13df6091e964bbca6fe9f9f3e928, type: 3}
   miniMapOpacity: 1
   miniMapScale: {x: 1, y: 1, z: 1}
-  cameraOffset: {x: 1, y: 2.3, z: 2}
+  cameraOffset: {x: 1, y: 4, z: 2}
   camSize: 4.4
   camFarClip: 31.97
   rotationOfCam: {x: 90, y: 90, z: 0}
@@ -110716,6 +111017,45 @@ MonoBehaviour:
   _notifCanvasGroup: {fileID: 0}
   _notifText: {fileID: 0}
   _displayDuration: 3
+  _lsRunning:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsFailed:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsCompleted:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _lsRetrying:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &1597954810
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -121611,6 +121951,7 @@ GameObject:
   - component: {fileID: 1745419311}
   - component: {fileID: 1745419313}
   - component: {fileID: 1745419312}
+  - component: {fileID: 1745419314}
   m_Layer: 0
   m_Name: DescriptionText
   m_TagString: Untagged
@@ -121737,6 +122078,46 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1745419310}
   m_CullTransparentMesh: 1
+--- !u!114 &1745419314
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1745419310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Components.LocalizeStringEvent
+  m_StringReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15098284411011072
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  m_FormatArguments: []
+  m_UpdateString:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1745419312}
+        m_TargetAssemblyTypeName: TMPro.TextMeshProUGUI, Unity.TextMeshPro
+        m_MethodName: set_text
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  references:
+    version: 2
+    RefIds: []
 --- !u!1001 &1749478427
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -145019,6 +145400,7 @@ GameObject:
   - component: {fileID: 2066597944}
   - component: {fileID: 2066597943}
   - component: {fileID: 2066597942}
+  - component: {fileID: 2066597945}
   m_Layer: 5
   m_Name: ConfirmButton
   m_TagString: Untagged
@@ -145140,6 +145522,46 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2066597940}
   m_CullTransparentMesh: 1
+--- !u!114 &2066597945
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2066597940}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Components.LocalizeStringEvent
+  m_StringReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 2016004460548
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  m_FormatArguments: []
+  m_UpdateString:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1402797826}
+        m_TargetAssemblyTypeName: TMPro.TextMeshProUGUI, Unity.TextMeshPro
+        m_MethodName: set_text
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  references:
+    version: 2
+    RefIds: []
 --- !u!1001 &2068004784
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -147153,43 +147575,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0a622198097348248951d58706c83575, type: 3}
   m_PrefabInstance: {fileID: 2096576845}
   m_PrefabAsset: {fileID: 0}
---- !u!84 &2098487394
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 460
-  m_Height: 260
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 94
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &2098903304
 GameObject:
   m_ObjectHideFlags: 0

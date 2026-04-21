@@ -3,6 +3,8 @@ using FishNet;
 using Newtonsoft.Json;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
 using UnityEngine.UI;
 using static ScenarioRunner;
 
@@ -41,6 +43,12 @@ namespace DoDrill.Training
         [SerializeField] private CanvasGroup _notifCanvasGroup; // 알림 패널의 CanvasGroup
         [SerializeField] private TMP_Text _notifText;          // 알림 텍스트 메쉬
         [SerializeField] private float _displayDuration = 3f;  // 표시 시간
+
+        [Header("Localization Settings")]
+        [SerializeField] private UnityEngine.Localization.LocalizedString _lsRunning;
+        [SerializeField] private UnityEngine.Localization.LocalizedString _lsFailed;
+        [SerializeField] private UnityEngine.Localization.LocalizedString _lsCompleted;
+        [SerializeField] private UnityEngine.Localization.LocalizedString _lsRetrying;
 
         private ScenarioData _scenarioData;
         private int          _currentTaskIndex = -1;
@@ -210,14 +218,21 @@ namespace DoDrill.Training
             if (_progressText != null)
                 _progressText.text = $"{state.taskIndex + 1} / {_totalCount}";
 
-            if (_statusText != null)
-                _statusText.text = state.status switch
+            if(_statusText != null)
+            {
+                var lse = _statusText.GetComponent<LocalizeStringEvent>();
+                if(lse != null)
                 {
-                    TaskStatus.Running   => "진행 중",
-                    TaskStatus.Failed    => "실패 — 재도전",
-                    TaskStatus.Completed => "완료",
-                    _                   => string.Empty,
-                };
+                    lse.StringReference = state.status switch
+                    {
+                        TaskStatus.Running => _lsRunning,
+                        TaskStatus.Failed => _lsFailed,
+                        TaskStatus.Completed => _lsCompleted,
+                        _ => null
+                    };
+                }
+                _statusText.gameObject.SetActive(true);
+            }
 
             if (_scenarioData != null && state.taskIndex < _scenarioData.scenario.tasks.Count)
             {
