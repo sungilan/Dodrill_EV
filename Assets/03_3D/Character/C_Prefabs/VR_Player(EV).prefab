@@ -534,25 +534,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 77d7ebae1f011914db5142248b45a898, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskDirectionCompass
-  _stateReceiver: {fileID: 0}
   _playerRoot: {fileID: 0}
   _head: {fileID: 0}
-  _arrowPrefab: {fileID: 919132149155446097, guid: bfa75480a7af626498e9fb1867c50ad1, type: 3}
-  _arrowNameHint: VFX_Arrow
+  _arrowPrefab: {fileID: 7502826489798646499, guid: bb5a2e06846b3a14f86e1b9f765b5679, type: 3}
   _showDistance: 2.5
   _hideDistance: 1.6
   _anchorOffset: {x: 0, y: -0.2, z: 0.65}
   _followHeadYaw: 1
-  _followHeadPitchAndRoll: 1
-  _invertDirection: 1
   _arrowRotationOffsetEuler: {x: -90, y: 180, z: 180}
   _blinkArrow: 1
-  _blinkIntervalSeconds: 0.5
-  _preferZoneWhileHoldingRequiredItem: 1
-  _zoneFacingToleranceDeg: 16
-  _angleShowThresholdDeg: 38
-  _angleHideThresholdDeg: 22
-  _hideArrowWhenFacingZone: 1
+  _blinkDuration: 0.6
 --- !u!1 &98143407444997667
 GameObject:
   m_ObjectHideFlags: 0
@@ -10666,7 +10657,7 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 1
-  m_IsKinematic: 1
+  m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 116
   m_CollisionDetection: 0
@@ -10705,7 +10696,7 @@ MonoBehaviour:
   minMaxHeight: {x: 0.5, y: 2.5}
   useHeadCollision: 1
   headRadius: 0.15
-  useGrounding: 1
+  useGrounding: 0
   maxStepHeight: 0.3
   groundingPenetrationOffset: 0.1
   maxStepAngle: 45

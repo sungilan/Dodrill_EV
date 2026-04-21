@@ -158,7 +158,8 @@
         "completionMode": "AnyPlayer",
         "config": {
           "targetValue": 1.5,
-          "targetObjName": "Lift_Button_Up"
+          "targetObjName": "Lift_Button_Up",
+          "targetZoneId": "Guide_Car_Lift_Move_Zone"
         }
       },
       {
@@ -363,7 +364,7 @@
           {
             "prefabId": "BatteryPack_Open_RemovePRA",
             "spawnPointId": "SP_Battery",
-            "guideId": "Guide_PRA_Location"
+            "guideId": ""
           },
           {
             "prefabId": "New_PRA_Unit",
@@ -442,57 +443,7 @@
         "completionMode": "AnyPlayer",
         "spawnObjects": []
       },
-      {
-        "moduleId": "Connector_Cover_Reinstall",
-        "timeout": 120,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Cover_Bolts"
-          },
-          {
-            "prefabId": "Front_Cover_Bolts2",
-            "spawnPointId": "SP_ForntConnector_Bolts",
-            "guideId": "Front_Cover_Bolts2"
-          }
-        ]
-      },
-      {
-        "moduleId": "Front_Cover_Reinstall",
-        "timeout": 120,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Cover_Bolts"
-          },
-          {
-            "prefabId": "Front_Cover_Assemble_Bolts",
-            "spawnPointId": "SP_Front_Cover_Assemble_Bolts",
-            "guideId": "Front_Cover_Bolts2"
-          }
-        ]
-      },
-      {
-        "moduleId": "Rear_Cover_Reinstall",
-        "timeout": 120,
-        "completionMode": "AnyPlayer",
-        "spawnObjects": [
-          {
-            "prefabId": "ImpactWrench",
-            "spawnPointId": "SP_Cart_Tool",
-            "guideId": "Guide_Cover_Bolts"
-          },
-          {
-            "prefabId": "Rear_Cover_Assemble_Bolts",
-            "spawnPointId": "SP_Rear_Cover_Assemble_Bolts",
-            "guideId": "Front_Cover_Bolts2"
-          }
-        ]
-      },
+      
       {
         "moduleId": "MSD_Reinstall",
         "timeout": 60,
@@ -874,6 +825,7 @@
       "config": {
         "actionType": "ConfirmTask",
         "targetObjName": "Lift_Button_Up",
+        "targetZoneId": "Car_Lift_Up",
         "targetValue": 1.5,
         "extra": [
           {

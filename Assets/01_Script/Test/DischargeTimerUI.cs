@@ -1,8 +1,8 @@
-﻿using System.Collections;
-using TMPro;
-using UnityEngine;
-using UnityEngine.Localization.Components;
+﻿using UnityEngine;
 using UnityEngine.UI; // ★ Slider 제어를 위해 추가
+using TMPro;
+using System.Collections;
+using UnityEngine.Localization;
 
 public class DischargeTimerUI : MonoBehaviour
 {
@@ -13,7 +13,7 @@ public class DischargeTimerUI : MonoBehaviour
     public GameObject timerPanel;
     public Slider progressBar; // ★ 프로그레스 바 Slider 참조 추가
 
-    [Header("설정")]
+    [Header("설정")]
     public float dischargeTime = 10f;
 
     [Header("테스트")]
@@ -22,19 +22,13 @@ public class DischargeTimerUI : MonoBehaviour
 
     public bool isDischarged = false;
 
-    [Header("Localization Settings")]
-    // 인스펙터에서 "잔류 전압 방전 중... {0:F1}s" 형태의 키를 연결하세요.
-    [SerializeField] private UnityEngine.Localization.LocalizedString _lsDischarging;
-    // 인스펙터에서 "방전 완료. 다음 단계를 진행하십시오." 키를 연결하세요.
-    [SerializeField] private UnityEngine.Localization.LocalizedString _lsComplete;
-
     private void Awake()
     {
         Instance = this;
-        if (timerPanel != null) timerPanel.SetActive(false);
+        if(timerPanel != null) timerPanel.SetActive(false);
 
-        // 슬라이더 초기 설정
-        if (progressBar != null)
+        // 슬라이더 초기 설정
+        if(progressBar != null)
         {
             progressBar.minValue = 0;
             progressBar.maxValue = dischargeTime;
@@ -54,9 +48,9 @@ public class DischargeTimerUI : MonoBehaviour
 
     private void OnTaskStateUpdated(TaskStateBroadcast broadcast)
     {
-        if (broadcast.currentTask.taskIndex == dischargeTaskIndex &&
-            broadcast.currentTask.status == TaskStatus.Running &&
-            !isDischarged)
+        if(broadcast.currentTask.taskIndex == dischargeTaskIndex &&
+          broadcast.currentTask.status == TaskStatus.Running &&
+          !isDischarged)
         {
             StartDischarge();
         }
@@ -65,57 +59,46 @@ public class DischargeTimerUI : MonoBehaviour
     public void StartDischarge()
     {
         bool locked = bypassLOTO
-                   || LOTOSystem.Instance == null
-                   || LOTOSystem.Instance.isLOCKED;
+             || LOTOSystem.Instance == null
+             || LOTOSystem.Instance.isLOCKED;
 
-        if (!locked)
+        if(!locked)
         {
             Debug.LogWarning("[DischargeTimer] LOTO 잠금 안 됨");
             return;
         }
 
-        if (isDischarged) return;
+        if(isDischarged) return;
 
-        if (timerPanel != null) timerPanel.SetActive(true);
+        if(timerPanel != null) timerPanel.SetActive(true);
         StartCoroutine(DischargeRoutine());
     }
 
     private IEnumerator DischargeRoutine()
     {
-        float t = 0f;
-        var lse = timerText != null ? timerText.GetComponent<LocalizeStringEvent>() : null;
+        float t = 0f; // 0에서 시작해서 dischargeTime까지 증가
 
-        while(t < dischargeTime)
+        while(t < dischargeTime)
         {
             t += Time.deltaTime;
-            float remaining = dischargeTime - t;
 
-            // 1. 텍스트 업데이트 (LocalizeStringEvent 방식)
-            if(lse != null)
-            {
-                // 인스펙터에서 지정된 _lsDischarging에 인자(remaining)를 전달하여 갱신
-                _lsDischarging.Arguments = new object[] { remaining };
-                lse.StringReference = _lsDischarging;
-            }
+            // 1. 텍스트 업데이트 (남은 시간 표시)
+            if(timerText != null)
+                timerText.text = $"잔류 전압 방전 중... {(dischargeTime - t):F1}s";
 
-            // 2. 슬라이더 업데이트
-            if(progressBar != null)
+            // 2. 슬라이더 업데이트 (진행도 표시)
+            if(progressBar != null)
                 progressBar.value = t;
 
-            yield return null;
-        }
+            yield return null; // 매 프레임 부드럽게 업데이트
+        }
 
         isDischarged = true;
 
         if(progressBar != null) progressBar.value = dischargeTime;
 
-        // 방전 완료 텍스트 설정
-        if(lse != null)
-        {
-            lse.StringReference = _lsComplete;
-        }
-
-        yield return new WaitForSeconds(1.0f); // 완료 메시지를 잠시 보여줌
+        if(timerText != null)
+            timerText.text = "방전 완료. 다음 단계를 진행하십시오.";
         if(timerPanel != null) timerPanel.SetActive(false);
 
         InteractionEvents.FireTaskConfirmed("DischargeWait");

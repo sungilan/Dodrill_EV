@@ -181,13 +181,42 @@ public class GuideSystem : MonoBehaviour
         HandleCenterUI();
 
         ClearVisualGuides();
-        _requiredItemObjects = FindRequiredItems(config);
+
+        // ★ [수정] requiredItemObjects는 초기화하되, BoltGroup 필터링은 나중에
+        var rawRequiredItems = FindRequiredItems(config);
         _idleTimer = 0f;
 
         if(currentLevel != GuideLevel.Hard)
         {
             ProcessClickTargets(config, taskDef);
-            foreach(var item in _requiredItemObjects) SetOutline(item, true);
+
+            // ★ [핵심] BoltGroup이 있으면 부모는 제외하고 자식만 추가
+            foreach(var item in rawRequiredItems)
+            {
+                if(item == null) continue;
+
+                var boltGroup = item.GetComponent<BoltGroupCounter>();
+                if(boltGroup == null)
+                {
+                    boltGroup = item.GetComponentInChildren<BoltGroupCounter>();
+                }
+
+                // BoltGroup이 있으면 부모는 추가하지 말고 자식만 추가
+                if(boltGroup != null)
+                {
+                    Debug.Log($"<color=orange>[ShowGuideForCurrentTask]</color> {item.name}은 BoltGroup 부모이므로 제외, 자식만 사용");
+                    // 부모는 _requiredItemObjects에 추가하지 않음
+                    // 자식은 나중에 BuildSpawnGuides에서 처리됨
+                }
+                else
+                {
+                    // BoltGroup 없으면 원본 추가
+                    //_requiredItemObjects.Add(item);
+                    //SetOutline(item, true);
+                    Debug.Log($"<color=lime>[ShowGuideForCurrentTask]</color> {item.name}에 아웃라인 적용");
+                }
+            }
+
             BuildSpawnGuides(taskDef);
             SpeakGuide(config);
         }
@@ -197,10 +226,23 @@ public class GuideSystem : MonoBehaviour
 
     private void OnTaskCompleted()
     {
-        _completed = true; _lastActiveTaskIndex = -1;
-        if(_currentGuideSequence != null) { _currentGuideSequence.Kill(); _currentGuideSequence = null; }
+        _completed = true;
+        _lastActiveTaskIndex = -1;
+
+        if(_currentGuideSequence != null)
+        {
+            _currentGuideSequence.Kill(true);
+            _currentGuideSequence = null;
+        }
+
         ClearVisualGuides();
-        if(centerGuideGroup != null) centerGuideGroup.DOFade(0f, 0.5f);
+
+        // ✅ 추가: 혹시 남은 Tween 전체 제거 (디버그용으로 매우 강력)
+        DOTween.KillAll();
+
+        if(centerGuideGroup != null)
+            centerGuideGroup.DOFade(0f, 0.5f);
+
         TTSManager.Instance?.Stop();
     }
 
@@ -221,32 +263,68 @@ public class GuideSystem : MonoBehaviour
             subGuideText.gameObject.SetActive(!string.IsNullOrEmpty(sub));
         }
     }
+    public Transform GetCurrentGuideTransform()
+    {
+        // 1순위: 목적지 마커 (Zone, Target)
+        if(_targetMarker != null)
+            return _targetMarker.transform;
 
-    private void SetOutline(GameObject target, bool on)
+        // 2순위: 필요한 아이템
+        if(_requiredItemObjects != null && _requiredItemObjects.Count > 0)
+        {
+            var obj = _requiredItemObjects[0];
+            if(obj != null) return obj.transform;
+        }
+
+        return null;
+    }
+
+    public bool HasGuideTarget()
+    {
+        return _targetMarker != null || (_requiredItemObjects != null && _requiredItemObjects.Count > 0);
+    }
+
+    public bool IsCurrentTargetZone()
+    {
+        return _targetMarker != null;
+    }
+
+    public void SetOutline(GameObject target, bool on)
     {
         if(target == null) return;
+
         var outlinable = target.GetComponent<Outlinable>();
         int targetId = target.GetInstanceID();
 
-        // 기존에 돌고 있던 트윈이 있다면 무조건 Kill
+        // ✅ 기존 트윈 무조건 제거
         if(_activeBlinkTweens.TryGetValue(targetId, out Tween existingTween))
         {
-            existingTween.Kill();
+            existingTween.Kill(true);
             _activeBlinkTweens.Remove(targetId);
         }
 
         if(on)
         {
-            if(outlinable == null) outlinable = target.AddComponent<Outlinable>();
-
-            // 렌더러 타겟 설정
-            var field = typeof(Outlinable).GetField("outlineTargets", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if(field != null) (field.GetValue(outlinable) as System.Collections.IList)?.Clear();
-
             var allRenderers = target.GetComponentsInChildren<Renderer>(true);
             foreach(var r in allRenderers)
             {
-                if(r is CanvasRenderer || (r.GetComponent<MeshFilter>() == null && r is not SkinnedMeshRenderer)) continue;
+                if(r is CanvasRenderer) continue;
+                if(!r.enabled) r.enabled = true;
+            }
+
+            if(outlinable == null) outlinable = target.AddComponent<Outlinable>();
+
+            var field = typeof(Outlinable).GetField("outlineTargets",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            if(field != null)
+                (field.GetValue(outlinable) as System.Collections.IList)?.Clear();
+
+            foreach(var r in allRenderers)
+            {
+                if(r is CanvasRenderer || (r.GetComponent<MeshFilter>() == null && r is not SkinnedMeshRenderer))
+                    continue;
+
                 outlinable.AddRenderer(r);
             }
 
@@ -255,21 +333,27 @@ public class GuideSystem : MonoBehaviour
             outlinable.OutlineParameters.BlurShift = outlineWidth;
             outlinable.enabled = true;
 
-            // 깜박임 트윈 시작
             Color targetColor = outlineColor;
             targetColor.a = 0.15f;
-            Tween blinkTween = DOTween.To(() => outlinable.OutlineParameters.Color, x => outlinable.OutlineParameters.Color = x, targetColor, 0.6f)
-                .SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetId(targetId);
+
+            // ✅ 핵심: SetLink + ID 둘 다 사용
+            Tween blinkTween = DOTween.To(
+                    () => outlinable.OutlineParameters.Color,
+                    x => outlinable.OutlineParameters.Color = x,
+                    targetColor,
+                    0.6f)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetEase(Ease.InOutSine)
+                .SetId(targetId)
+                .SetLink(target); // 🔥 중요
 
             _activeBlinkTweens[targetId] = blinkTween;
         }
         else
         {
-            // 아웃라인 끄기 로직 (보강)
             if(outlinable != null)
             {
                 outlinable.enabled = false;
-                // 색상 상태도 원래대로 복구 (깜박이다 멈춘 색이 남지 않도록)
                 outlinable.OutlineParameters.Color = outlineColor;
             }
         }
@@ -277,46 +361,103 @@ public class GuideSystem : MonoBehaviour
 
     private void ClearVisualGuides()
     {
-        // 1. 미니맵 정리
-        foreach(var mmc in _activeMiniMapBlinks) if(mmc != null) mmc.StopBlinking();
+        // 1. 미니맵
+        foreach(var mmc in _activeMiniMapBlinks)
+            if(mmc != null) mmc.StopBlinking();
+
         _activeMiniMapBlinks.Clear();
 
-        // 2. 아웃라인 트윈 정리 및 아웃라인 끄기 (보강된 부분)
+        // 2. Outline Tween 완전 제거
         foreach(var kvp in _activeBlinkTweens)
         {
-            if(kvp.Value != null) kvp.Value.Kill();
-
-            // 인스턴스 ID를 통해 대상 오브젝트를 찾아 아웃라인을 물리적으로 끔
-            // _requiredItemObjects나 _clickTargets 리스트를 활용하여 상태 복구
+            kvp.Value?.Kill(true);
         }
-
-        // 현재 단계에서 등록되었던 모든 타겟들의 아웃라인을 일괄 해제
-        foreach(var obj in _requiredItemObjects) { if(obj != null) SetOutline(obj, false); }
-        foreach(var obj in _clickTargets) { if(obj != null) SetOutline(obj, false); }
-
         _activeBlinkTweens.Clear();
+
+        // 3. 아웃라인 OFF
+        foreach(var obj in _requiredItemObjects)
+            if(obj != null) SetOutline(obj, false);
+
+        foreach(var obj in _clickTargets)
+            if(obj != null) SetOutline(obj, false);
+
         _requiredItemObjects.Clear();
         _clickTargets.Clear();
 
-        // 3. 고스트 및 마커 정리
+        // 4. 가이드 오브젝트 제거
         foreach(var g in _tempGuides)
         {
             if(g != null)
             {
-                g.transform.DOKill();
-                DOTween.Kill(g);
+                // 🔥 핵심: 완전 Kill
+                DOTween.Kill(g, true);
+                DOTween.Kill(g.transform, true);
+
                 Destroy(g);
             }
         }
-        _tempGuides.Clear(); _spawnMarkers.Clear();
 
-        _ghostObject = null; _targetMarker = null;
+        _tempGuides.Clear();
+        _spawnMarkers.Clear();
+
+        _ghostObject = null;
+        _targetMarker = null;
     }
 
+    //private void BuildSpawnGuides(TaskDef taskDef)
+    //{
+    //    if(taskDef == null) return;
+    //    Debug.Log($"<color=cyan>[Guide-Log]</color> <b>BuildSpawnGuides 시작</b>: {taskDef.moduleId}");
+
+    //    var allSP = FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+    //    var spCache = new Dictionary<string, SpawnPoint>();
+    //    foreach(var sp in allSP) if(!string.IsNullOrEmpty(sp.pointId)) spCache[sp.pointId] = sp;
+
+    //    var config = _scenarioData.GetModuleConfig(taskDef.moduleId);
+
+    //    if(taskDef.spawnObjects != null && taskDef.spawnObjects.Count > 0)
+    //    {
+    //        foreach(var bundle in taskDef.spawnObjects)
+    //        {
+    //            if(string.IsNullOrEmpty(bundle.prefabId)) continue;
+    //            var existingItem = FindSpawnedItem(bundle.prefabId);
+
+    //            // ★ [핵심수정] 이미 씬에 있는 아이템이라도, 이번 단계에서 필요한 도구라면 미니맵 아이콘을 켜줍니다.
+    //            if(existingItem != null && bundle.showGuide)
+    //            {
+    //                var mmcs = existingItem.GetComponentsInChildren<MiniMapComponent>(true);
+    //                foreach(var mmc in mmcs)
+    //                {
+    //                    mmc.StartBlinking();
+    //                    if(!_activeMiniMapBlinks.Contains(mmc)) _activeMiniMapBlinks.Add(mmc);
+    //                }
+    //            }
+
+    //            bool isGrabbed = (existingItem?.GetComponent<SyncGrab>()?.IsGrabbed ?? false);
+    //            if(!isGrabbed && bundle.showGuide)
+    //            {
+    //                if(!string.IsNullOrEmpty(bundle.spawnPointId) && spCache.TryGetValue(bundle.spawnPointId, out var spPt))
+    //                {
+    //                    Vector3 pos = (existingItem != null) ? GetBoundsCenter(existingItem) : spPt.transform.position;
+    //                    if(existingItem?.GetComponent<NoneHighlight>() == null)
+    //                    {
+    //                        var markerGO = SpawnMarker(pos, GetDisplayName(bundle.prefabId), spawnGuideColor, false);
+    //                        if(markerGO != null) _spawnMarkers[bundle.prefabId] = markerGO.gameObject;
+    //                    }
+    //                }
+    //            }
+    //            ProcessTargetGuide(bundle.guideId, bundle.prefabId, config);
+    //        }
+    //    }
+    //    else if(config != null && !string.IsNullOrEmpty(config.targetObjName))
+    //    {
+    //        Debug.Log($"<color=orange>[Guide-Log]</color> {taskDef.moduleId}: spawnObjects 없음. Config({config.targetObjName}) 기반 가이드 생성");
+    //        ProcessTargetGuide(null, null, config);
+    //    }
+    //}
     private void BuildSpawnGuides(TaskDef taskDef)
     {
         if(taskDef == null) return;
-        Debug.Log($"<color=cyan>[Guide-Log]</color> <b>BuildSpawnGuides 시작</b>: {taskDef.moduleId}");
 
         var allSP = FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         var spCache = new Dictionary<string, SpawnPoint>();
@@ -331,7 +472,41 @@ public class GuideSystem : MonoBehaviour
                 if(string.IsNullOrEmpty(bundle.prefabId)) continue;
                 var existingItem = FindSpawnedItem(bundle.prefabId);
 
-                // ★ [핵심수정] 이미 씬에 있는 아이템이라도, 이번 단계에서 필요한 도구라면 미니맵 아이콘을 켜줍니다.
+                Debug.Log($"<color=yellow>[BuildSpawnGuides]</color> 스폰 아이템: {bundle.prefabId} → {existingItem?.name ?? "NULL"}");
+
+                // ★ BoltGroup 찾기
+                GameObject outlineTarget = null;
+
+                if(existingItem != null)
+                {
+                    var innerBoltGroup = existingItem.GetComponent<BoltGroupCounter>();
+                    if(innerBoltGroup == null)
+                    {
+                        innerBoltGroup = existingItem.GetComponentInChildren<BoltGroupCounter>();
+                    }
+
+                    // BoltGroup이 있으면 자식만 아웃라인
+                    if(innerBoltGroup != null)
+                    {
+                        outlineTarget = innerBoltGroup.gameObject;
+                        Debug.Log($"<color=lime>[BuildSpawnGuides]</color> BoltGroup 자식 아웃라인: {outlineTarget.name}");
+                    }
+                    else
+                    {
+                        // BoltGroup이 없으면 원본 아이템 (단, ShowGuideForCurrentTask에서 이미 처리했을 가능성 있음)
+                        if(!_requiredItemObjects.Contains(existingItem))
+                        {
+                            outlineTarget = existingItem;
+                            Debug.Log($"<color=yellow>[BuildSpawnGuides]</color> 원본 아이템 아웃라인: {outlineTarget.name}");
+                        }
+                        else
+                        {
+                            Debug.Log($"<color=gray>[BuildSpawnGuides]</color> {existingItem.name}은 이미 처리됨");
+                        }
+                    }
+                }
+
+                // 미니맵
                 if(existingItem != null && bundle.showGuide)
                 {
                     var mmcs = existingItem.GetComponentsInChildren<MiniMapComponent>(true);
@@ -342,6 +517,7 @@ public class GuideSystem : MonoBehaviour
                     }
                 }
 
+                // 스폰 마커
                 bool isGrabbed = (existingItem?.GetComponent<SyncGrab>()?.IsGrabbed ?? false);
                 if(!isGrabbed && bundle.showGuide)
                 {
@@ -355,12 +531,20 @@ public class GuideSystem : MonoBehaviour
                         }
                     }
                 }
+
+                // ★ 아웃라인 적용 (중복 방지)
+                if(outlineTarget != null && !_requiredItemObjects.Contains(outlineTarget))
+                {
+                    _requiredItemObjects.Add(outlineTarget);
+                    SetOutline(outlineTarget, true);
+                    Debug.Log($"<color=green>[BuildSpawnGuides]</color> {outlineTarget.name}에 아웃라인 최종 적용");
+                }
+
                 ProcessTargetGuide(bundle.guideId, bundle.prefabId, config);
             }
         }
         else if(config != null && !string.IsNullOrEmpty(config.targetObjName))
         {
-            Debug.Log($"<color=orange>[Guide-Log]</color> {taskDef.moduleId}: spawnObjects 없음. Config({config.targetObjName}) 기반 가이드 생성");
             ProcessTargetGuide(null, null, config);
         }
     }
@@ -431,29 +615,29 @@ public class GuideSystem : MonoBehaviour
             }
 
             // [B] 고스트(Ghost) 생성 처리
-            if(shouldSpawnGhost && ghostMaterial != null && !markerTargetGO.name.Contains("Bolt"))
-            {
-                GameObject ghostSource = null;
+            //if(shouldSpawnGhost && ghostMaterial != null && !markerTargetGO.name.Contains("Bolt"))
+            //{
+            //    GameObject ghostSource = null;
 
-                // 1순위: GuideZoneData에 지정된 전용 고스트가 있는지 확인
-                if(hasZoneData && !string.IsNullOrEmpty(zoneData.customGhostPrefabId))
-                {
-                    ghostSource = FindSpawnedItem(zoneData.customGhostPrefabId);
-                    Debug.Log($"<color=lime>[Ghost-Log]</color> 커스텀 고스트 원본 사용: {zoneData.customGhostPrefabId}");
-                }
+            //    // 1순위: GuideZoneData에 지정된 전용 고스트가 있는지 확인
+            //    if(hasZoneData && !string.IsNullOrEmpty(zoneData.customGhostPrefabId))
+            //    {
+            //        ghostSource = FindSpawnedItem(zoneData.customGhostPrefabId);
+            //        Debug.Log($"<color=lime>[Ghost-Log]</color> 커스텀 고스트 원본 사용: {zoneData.customGhostPrefabId}");
+            //    }
 
-                // 2순위: 없다면 현재 태스크의 prefabId 아이템 사용
-                if(ghostSource == null)
-                {
-                    ghostSource = itemGO;
-                    if(ghostSource != null) Debug.Log($"<color=lime>[Ghost-Log]</color> 기본 아이템 고스트 사용: {ghostSource.name}");
-                }
+            //    // 2순위: 없다면 현재 태스크의 prefabId 아이템 사용
+            //    if(ghostSource == null)
+            //    {
+            //        ghostSource = itemGO;
+            //        if(ghostSource != null) Debug.Log($"<color=lime>[Ghost-Log]</color> 기본 아이템 고스트 사용: {ghostSource.name}");
+            //    }
 
-                if(ghostSource != null)
-                {
-                    _ghostObject = SpawnGhost(ghostSource, markerTargetGO.transform.position);
-                }
-            }
+            //    if(ghostSource != null)
+            //    {
+            //        _ghostObject = SpawnGhost(ghostSource, markerTargetGO.transform.position);
+            //    }
+            //}
 
             // [C] 미니맵 처리 (가이드 ON/OFF와 상관없이 위치는 알려줌)
             foreach(var mmc in markerTargetGO.GetComponentsInChildren<MiniMapComponent>(true))
@@ -469,7 +653,7 @@ public class GuideSystem : MonoBehaviour
         // ── 4. 필요 아이템(도구) 하이라이트 처리 ──
         if(itemGO != null)
         {
-            SetOutline(itemGO, true);
+            //SetOutline(itemGO, true);
 
             // 아이템의 미니맵 아이콘도 켜줌
             foreach(var immc in itemGO.GetComponentsInChildren<MiniMapComponent>(true))
@@ -780,18 +964,26 @@ public class GuideSystem : MonoBehaviour
         }
     }
 
-    private string GetDisplayName(string id) => id switch
+    private string GetDisplayName(string id)
     {
-        "GDS_Tablet" => "GDS 진단기",
-        "InsulatedGloves" => "절연 장갑",
-        "InsulatedShoes" => "절연화",
-        "FaceShield" => "안면보호구",
-        "SmartKey" => "스마트키",
-        "LockBox" => "잠금박스",
-        "ImpactWrench" => "임팩트 렌치",
-        "BatteryJack" => "배터리 잭",
-        "Multimeter" => "멀티미터",
-        "InsulationTester" => "절연 저항 측정기",
-        _ => id
-    };
+        // 1. 씬에 스폰된 아이템 중 해당 prefabId를 가진 TaskItem을 찾습니다.
+        GameObject go = FindSpawnedItem(id);
+        if(go != null)
+        {
+            var taskItem = go.GetComponent<TaskItem>();
+            // 2. TaskItem에 itemName이 설정되어 있다면 로컬라이징된 문자열 반환
+            if(taskItem != null)
+            {
+                return taskItem.itemName.GetLocalizedString();
+            }
+        }
+
+        // 3. 만약 아이템을 못 찾거나 이름 설정이 없다면 폴백(id) 반환
+        return id;
+    }
+
+    private void OnDestroy()
+    {
+        DOTween.KillAll();
+    }
 }

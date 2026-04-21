@@ -248,10 +248,9 @@ public class ScenarioRunner : MonoBehaviour
         if(string.IsNullOrEmpty(taskTitle)) taskTitle = taskDef.moduleId;
 
         // 2. SessionPlayerServer의 private _players 딕셔너리에서 이름 가져오기 (리플렉션 사용)
-        string activePlayerName = "알 수 없는 플레이어";
+        string activePlayerName = "Player 1";
 
-        // 씬에 있는 SessionPlayerServer 인스턴스를 찾습니다.
-        var sessionServer = FindFirstObjectByType<SessionPlayerServer>();
+       var sessionServer = FindFirstObjectByType<SessionPlayerServer>();
         if(sessionServer != null)
         {
             // 리플렉션을 통해 private 필드인 _players에 접근

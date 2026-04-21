@@ -362,69 +362,74 @@ public class Car_Lift_UpModule : ITaskModule
     private Action _onComplete;
     private bool _isCompleted;
     private VehicleLiftController _lift;
-    private float _cachedTargetHeight;
-
-    // ★ 시간 기반 유지로 변경 (프레임보다 안정적)
-    private float _atTargetTimer = 0f;
-    private const float REQUIRED_TIME = 0.15f; // 0.15초간 유지되면 완료
+    private float _targetHeight;
+    private float _maxReachedHeight = -1f; // 이번 단계에서 도달한 최대 높이 기록
 
     public void OnStart(ModuleConfig config, Action onComplete, Action onFail)
     {
         _config = config;
         _onComplete = onComplete;
         _isCompleted = false;
-        _atTargetTimer = 0f;
+        _targetHeight = config != null ? config.targetValue : 1.5f;
 
-        _cachedTargetHeight = config != null ? config.targetValue : 1.5f;
-
-        // 비활성화된 오브젝트까지 포함해서 찾기
         _lift = GameObject.FindAnyObjectByType<VehicleLiftController>(FindObjectsInactive.Include);
 
-        if(_lift == null)
+        // ★ 폴백: UI 버튼(Confirm) 클릭 시 즉시 강제 완료 및 리프트 보정
+        InteractionEvents.OnTaskConfirmed += HandleManualConfirm;
+
+        if(_lift != null)
         {
-            Debug.LogError($"<color=red>[{ModuleId}]</color> VehicleLiftController를 찾을 수 없음!");
+            _maxReachedHeight = _lift.CurrentHeight;
+            Debug.Log($"<color=cyan>[{ModuleId}]</color> 감시 시작 | 목표: {_targetHeight}m (여유범위 10cm)");
+        }
+    }
+
+    private void HandleManualConfirm(string moduleId)
+    {
+        if(moduleId == ModuleId && !_isCompleted)
+        {
+            Debug.Log($"<color=yellow>[{ModuleId}]</color> 수동 완료 요청. 높이를 강제 보정하고 단계를 넘깁니다.");
+            //if(_lift != null) _lift.SetHeight(_targetHeight); // 리프트 위치 강제 스냅
+            CompleteModule();
         }
     }
 
     public void OnUpdate(float deltaTime)
     {
-        // 1. 이미 완료되었거나 리프트가 없으면 리턴
         if(_isCompleted || _lift == null) return;
-
-        // 💡 팁: 멀티플레이어라면 오직 서버(Host)에서만 이 로직을 태우는 것이 안전합니다.
-        // if (!FishNet.InstanceFinder.IsServerStarted) return;
 
         float currentHeight = _lift.CurrentHeight;
 
-        // ★ 개선 1: 오차 범위를 조금 더 여유 있게 (0.01 -> 0.02)
-        float epsilon = 0.02f;
-        bool isAtTarget = currentHeight >= (_cachedTargetHeight - epsilon);
+        // 1. 최대 높이 기록 (한 번이라도 올라갔으면 성공 데이터 유지)
+        if(currentHeight > _maxReachedHeight) _maxReachedHeight = currentHeight;
 
-        if(isAtTarget)
+        // 2. 아주 널널한 판정 (목표치보다 10cm 아래에만 도달해도 인정)
+        const float EPSILON = 0.1f;
+        if(_maxReachedHeight >= (_targetHeight - EPSILON))
         {
-            // ★ 개선 2: 프레임 카운트 대신 델타 타임을 누적
-            _atTargetTimer += deltaTime;
-
-            if(_atTargetTimer >= REQUIRED_TIME)
-            {
-                _isCompleted = true;
-                Debug.Log($"<color=lime>[{ModuleId}] ✅ 판정 완료!</color> 높이: {currentHeight:F2}m");
-
-                // ⚠️ OnComplete가 호출된 후 로직이 다시 타지 않도록 확실히 처리
-                var callback = _onComplete;
-                _onComplete = null;
-                callback?.Invoke();
-            }
-        }
-        else
-        {
-            // 목표치에 도달하지 못하면 타이머 초기화
-            _atTargetTimer = 0f;
+            Debug.Log($"<color=lime>[{ModuleId}] 자동 감지 성공!</color> 기록된 최대높이: {_maxReachedHeight:F2}m");
+            CompleteModule();
         }
     }
 
-    public void OnComplete() { }
-    public void OnFail() { }
+    private void CompleteModule()
+    {
+        if(_isCompleted) return;
+        _isCompleted = true;
+
+        var callback = _onComplete;
+        _onComplete = null;
+        Cleanup();
+        callback?.Invoke();
+    }
+
+    private void Cleanup()
+    {
+        InteractionEvents.OnTaskConfirmed -= HandleManualConfirm;
+    }
+
+    public void OnComplete() => Cleanup();
+    public void OnFail() => Cleanup();
 }
 
 // 배터리 잭 전용 베이스 모듈 (차량 리프트와 혼동 방지)

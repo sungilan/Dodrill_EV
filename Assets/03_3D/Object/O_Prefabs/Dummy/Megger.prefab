@@ -574,6 +574,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8867731199366135800, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
+      propertyPath: m_Layer
+      value: 15
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -623,21 +627,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -2000830514497651557, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1822210720809168320}
-    - targetCorrespondingSourceObject: {fileID: -2000830514497651557, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2619290900227066858}
-    - targetCorrespondingSourceObject: {fileID: -2000830514497651557, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2544074756112638593}
-    - targetCorrespondingSourceObject: {fileID: -2000830514497651557, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 8022915806520185110}
-    - targetCorrespondingSourceObject: {fileID: -2000830514497651557, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6934462789697688197}
-    - targetCorrespondingSourceObject: {fileID: -2000830514497651557, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2506787758799349072}
     - targetCorrespondingSourceObject: {fileID: 2108083185262262805, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6782139407421962458}
@@ -763,193 +752,6 @@ MonoBehaviour:
   Iterations: 10
   Delta: 0.001
   SnapBackStrength: 1
---- !u!65 &2619290900227066858
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2882586774842821421}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 0
-  serializedVersion: 3
-  m_Size: {x: 0.016304262, y: 0.10681883, z: 0.014781998}
-  m_Center: {x: 0.000113747185, y: -0.053390518, z: 0.0017420074}
---- !u!114 &2544074756112638593
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2882586774842821421}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 822bc9090447b9c40833509c4a32e597, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: AutoHandAssembly::Autohand.Grabbable
-  ignoreMe: 0
-  body: {fileID: 0}
-  hightlightMaterial: {fileID: 0}
-  isGrabbable: 1
-  CopySettings: {fileID: 0}
-  grabType: 0
-  grabPoseType: 0
-  handType: 0
-  singleHandOnly: 0
-  instantGrab: 0
-  useGentleGrab: 0
-  maintainGrabOffset: 0
-  parentOnGrab: 1
-  heldNoFriction: 1
-  ignoreWeight: 0
-  allowHeldSwapping: 1
-  throwPower: 1
-  jointBreakForce: 3500
-  showAdvancedSettings: 1
-  makeChildrenGrabbable: 1
-  grabPriorityWeight: 1
-  ignoreReleaseTime: 0.5
-  minHeldDrag: 1.5
-  minHeldAngleDrag: 3
-  minHeldMass: 0.1
-  maxHeldVelocity: 10
-  heldPositionOffset: {x: 0, y: 0, z: 0}
-  heldRotationOffset: {x: 0, y: 0, z: 0}
-  customGrabJoint: {fileID: 0}
-  jointedBodies: []
-  heldIgnoreColliders: []
-  pullApartBreakOnly: 1
-  showEvents: 1
-  onGrab:
-    m_PersistentCalls:
-      m_Calls: []
-  onRelease:
-    m_PersistentCalls:
-      m_Calls: []
-  onSqueeze:
-    m_PersistentCalls:
-      m_Calls: []
-  onUnsqueeze:
-    m_PersistentCalls:
-      m_Calls: []
-  onHighlight:
-    m_PersistentCalls:
-      m_Calls: []
-  onUnhighlight:
-    m_PersistentCalls:
-      m_Calls: []
-  OnJointBreak:
-    m_PersistentCalls:
-      m_Calls: []
-  lockHandOnGrab: 0
---- !u!114 &8022915806520185110
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2882586774842821421}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0ad070006259cc144bc759874631f905, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SyncGrab
-  _componentIndexCache: 0
-  _addedNetworkObject: {fileID: 4663587349394507966}
-  _networkObjectCache: {fileID: 6934462789697688197}
-  holdPoint: {fileID: 0}
-  flyDuration: 0.5
-  flyEase: 9
-  arcHeight: 0.5
-  holdPositionOffset: {x: 0, y: 0, z: 0}
-  holdRotationOffset: {x: 0, y: 0, z: 0}
---- !u!114 &6934462789697688197
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2882586774842821421}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
-  <IsNested>k__BackingField: 1
-  WasActiveDuringEdit: 1
-  WasActiveDuringEdit_Set1: 1
-  <ComponentIndex>k__BackingField: 3
-  <PredictedSpawn>k__BackingField: {fileID: 0}
-  <PredictedOwner>k__BackingField: {fileID: 0}
-  NetworkBehaviours:
-  - {fileID: 8022915806520185110}
-  - {fileID: 2506787758799349072}
-  InitializedParentNetworkBehaviour: {fileID: -456569662591942316}
-  InitializedNestedNetworkObjects: []
-  RuntimeParentNetworkBehaviour: {fileID: 0}
-  RuntimeChildNetworkBehaviours: []
-  _isNetworked: 1
-  _isSpawnable: 1
-  _isGlobal: 0
-  _initializeOrder: 0
-  _preventDespawnOnDisconnect: 0
-  _defaultDespawnType: 0
-  NetworkObserver: {fileID: 0}
-  _enablePrediction: 0
-  _predictionType: 0
-  _graphicalObject: {fileID: 0}
-  _detachGraphicalObject: 0
-  _enableStateForwarding: 1
-  _networkTransform: {fileID: 0}
-  _ownerInterpolation: 1
-  _ownerSmoothedProperties: 255
-  _adaptiveInterpolation: 3
-  _spectatorSmoothedProperties: 255
-  _spectatorInterpolation: 2
-  _enableTeleport: 0
-  _teleportThreshold: 1
-  <PrefabId>k__BackingField: 65535
-  <SpawnableCollectionId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 0
-  <SceneId>k__BackingField: 0
-  SerializedTransformProperties:
-    Position: {x: -0, y: 0.08895254, z: 0}
-    Rotation: {x: 0, y: -0, z: -0, w: 1}
-    Scale: {x: 1, y: 1, z: 1}
-    IsValid: 1
---- !u!114 &2506787758799349072
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2882586774842821421}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0d5f3cd3dd6be3a49aa81f40ab47c0ce, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalNetworkTransform
-  _componentIndexCache: 1
-  _addedNetworkObject: {fileID: 6934462789697688197}
-  _networkObjectCache: {fileID: 6934462789697688197}
-  anchor: {fileID: 0}
-  syncInterval: 0.025
-  lerpSpeed: 12
-  rotationLerpSpeed: 12
-  positionThreshold: 0.001
-  rotationThreshold: 0.5
-  teleportDistanceThreshold: 2
-  sendAuthorityInServer: 1
-  ownerSendOnly: 0
 --- !u!1 &3975021316875601998 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8867731199366135800, guid: dada2b13f9408324ca2992bf720471d2, type: 3}
@@ -985,12 +787,12 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.042346857, y: 0.091883026, z: 0.033461474}
-  m_Center: {x: 0.034203067, y: 0.0013135934, z: -0.0116072185}
+  m_Size: {x: 0.042346854, y: 0.123086795, z: 0.066233456}
+  m_Center: {x: 0.034203164, y: -0.014288277, z: -0.007800728}
 --- !u!54 &2767647457647062397
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1235,6 +1037,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Megger
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 15109077894512640
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &4663587349394507966
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1261,7 +1075,7 @@ MonoBehaviour:
   InitializedNestedNetworkObjects:
   - {fileID: 7269334979986631408}
   - {fileID: 8244098384435867101}
-  - {fileID: 6934462789697688197}
+  - {fileID: 0}
   RuntimeParentNetworkBehaviour: {fileID: 0}
   RuntimeChildNetworkBehaviours: []
   _isNetworked: 1
@@ -1541,8 +1355,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.059826016, y: 0.029308915, z: 0.0090715885}
-  m_Center: {x: -0.0028770566, y: -0.049193442, z: 0.00021344423}
+  m_Size: {x: 0.08249569, y: 0.05604458, z: 0.051909566}
+  m_Center: {x: -0.014211893, y: -0.03582561, z: 0.01328361}
 --- !u!54 &737264985490240940
 Rigidbody:
   m_ObjectHideFlags: 0

@@ -35,7 +35,7 @@ public class ToggleButton : MonoBehaviour, IPointerClickHandler
 
     void Awake()
     {
-        if(bgImage == null)
+        if (bgImage == null)
             bgImage = GetComponent<Image>();
 
         _isSelected = _initialSelectedState;
@@ -46,10 +46,10 @@ public class ToggleButton : MonoBehaviour, IPointerClickHandler
     private void AutoSetup()
     {
         var btn = GetComponent<Button>();
-        if(btn != null)
+        if (btn != null)
             btn.transition = Selectable.Transition.None;
 
-        if(bgImage == null)
+        if (bgImage == null)
             bgImage = GetComponent<Image>();
 
 #if UNITY_EDITOR
@@ -60,7 +60,7 @@ public class ToggleButton : MonoBehaviour, IPointerClickHandler
 
     public void SetSelected(bool selected)
     {
-        if(_isSelected == selected)
+        if (_isSelected == selected)
             return;
 
         _isSelected = selected;
@@ -81,7 +81,7 @@ public class ToggleButton : MonoBehaviour, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if(ignorePointerClick)
+        if (ignorePointerClick)
             return;
 
         _isSelected = !_isSelected;
@@ -91,10 +91,10 @@ public class ToggleButton : MonoBehaviour, IPointerClickHandler
 
     private void UpdateVisual()
     {
-        if(bgImage != null && bgNormal != null && bgSelected != null)
+        if (bgImage != null && bgNormal != null && bgSelected != null)
             bgImage.sprite = _isSelected ? bgSelected : bgNormal;
 
-        if(iconImage != null && iconNormal != null && iconSelected != null)
+        if (iconImage != null && iconNormal != null && iconSelected != null)
             iconImage.sprite = _isSelected ? iconSelected : iconNormal;
     }
 }

@@ -174,13 +174,14 @@ namespace DoDrill.Training
             if(_notifCanvasGroup == null || _notifText == null) return;
 
             // ── 1. 이름 결정 로직 (ScenarioRunner가 보낸 이름을 우선 사용) ──
-            string activePlayerName = msg.clientName;
+            string activePlayerName = "Player 1";
+            //string activePlayerName = msg.clientName;
 
-            // 만약 서버에서 이름을 못 찾아서 빈 값으로 왔을 경우의 폴백
-            if(string.IsNullOrEmpty(activePlayerName))
-            {
-                activePlayerName = $"플레이어 {msg.clientId}";
-            }
+            //// 만약 서버에서 이름을 못 찾아서 빈 값으로 왔을 경우의 폴백
+            //if(string.IsNullOrEmpty(activePlayerName))
+            //{
+            //    activePlayerName = $"플레이어 {msg.clientId}";
+            //}
 
             // ── 2. 텍스트 구성 및 색상 적용 ──
             // 요청하신 형광 초록 계열 색상 (#00f800) 적용
@@ -231,7 +232,7 @@ namespace DoDrill.Training
                         _ => null
                     };
                 }
-                _statusText.gameObject.SetActive(true);
+                //_statusText.gameObject.SetActive(true);
             }
 
             if (_scenarioData != null && state.taskIndex < _scenarioData.scenario.tasks.Count)

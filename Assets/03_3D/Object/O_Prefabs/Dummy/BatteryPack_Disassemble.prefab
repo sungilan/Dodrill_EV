@@ -176,6 +176,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &4233195734209395596
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -343,6 +355,51 @@ MonoBehaviour:
   blinkDuration: 0.6
   outlineColor: {r: 0.8627451, g: 0.078431375, b: 0.23529412, a: 1}
   outlineDistance: {x: 2, y: -2}
+--- !u!1 &1082740799237839101
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7787653813660179776}
+  - component: {fileID: 3737860214572545752}
+  m_Layer: 0
+  m_Name: SP_Megger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7787653813660179776
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082740799237839101}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
+  m_LocalPosition: {x: -1.162, y: 0.18, z: -0.012}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 66146380278850805}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -90}
+--- !u!114 &3737860214572545752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082740799237839101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4687c360d69af7f48952827ca0a066fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpawnPoint
+  pointId: SP_Megger
 --- !u!1 &1133307401806496486
 GameObject:
   m_ObjectHideFlags: 0
@@ -519,6 +576,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &6037536505788668401
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -701,6 +770,7 @@ GameObject:
   - component: {fileID: 1153140446638250262}
   - component: {fileID: 8090206676749989199}
   - component: {fileID: 6298362862626229511}
+  - component: {fileID: 874911919290294781}
   m_Layer: 17
   m_Name: PRA_BPA_Plus_Terminal
   m_TagString: Untagged
@@ -744,7 +814,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.1, y: 0.1, z: 0.1}
+  m_Size: {x: 0.05, y: 0.05, z: 0.05}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &5539263741206995970
 MonoBehaviour:
@@ -847,6 +917,7 @@ MonoBehaviour:
     m_LocalVariables: []
   showGuide: 1
   showGhost: 0
+  showOutline: 1
   customGhostPrefabId: 
   references:
     version: 2
@@ -893,6 +964,18 @@ MonoBehaviour:
   resistanceValue: 500
   faultyVoltageValue: 380
   isFaulty: 0
+--- !u!114 &874911919290294781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1515961687704955079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1da63015b0093e47864202f2e470720, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoDrill.NoneHighlight
 --- !u!1 &1533632371564991183
 GameObject:
   m_ObjectHideFlags: 0
@@ -1140,7 +1223,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4f90fb2688849c54588be9a3d89d6f46, type: 2}
+  - {fileID: 10758, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1179,6 +1262,7 @@ GameObject:
   - component: {fileID: 1958698198400595085}
   - component: {fileID: 4666094114242338274}
   - component: {fileID: 5310187633883043303}
+  - component: {fileID: 5368884244751997218}
   m_Layer: 17
   m_Name: PRA_Inverter_Plus_Terminal
   m_TagString: Untagged
@@ -1222,7 +1306,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.1, y: 0.1, z: 0.1}
+  m_Size: {x: 0.05, y: 0.05, z: 0.05}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &1497039106949007141
 MonoBehaviour:
@@ -1325,6 +1409,7 @@ MonoBehaviour:
     m_LocalVariables: []
   showGuide: 1
   showGhost: 0
+  showOutline: 1
   customGhostPrefabId: 
   references:
     version: 2
@@ -1371,6 +1456,18 @@ MonoBehaviour:
   resistanceValue: 0.1
   faultyVoltageValue: 380
   isFaulty: 1
+--- !u!114 &5368884244751997218
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1868516226204434247}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1da63015b0093e47864202f2e470720, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoDrill.NoneHighlight
 --- !u!1 &2118697337505060847
 GameObject:
   m_ObjectHideFlags: 0
@@ -1547,6 +1644,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &4446978476503247316
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1890,6 +1999,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &6150950634523306554
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2323,6 +2444,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &8409874975286379501
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2776,6 +2909,7 @@ GameObject:
   - component: {fileID: 6171905590011638945}
   - component: {fileID: 6243159354035289213}
   - component: {fileID: 5253092376360424220}
+  - component: {fileID: 2135599141870859658}
   m_Layer: 17
   m_Name: PRA_Inverter_Minus_Terminal
   m_TagString: Untagged
@@ -2819,7 +2953,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.1, y: 0.1, z: 0.1}
+  m_Size: {x: 0.05, y: 0.05, z: 0.05}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &4888320962038537430
 MonoBehaviour:
@@ -2922,6 +3056,7 @@ MonoBehaviour:
     m_LocalVariables: []
   showGuide: 1
   showGhost: 0
+  showOutline: 1
   customGhostPrefabId: 
   references:
     version: 2
@@ -2968,6 +3103,18 @@ MonoBehaviour:
   resistanceValue: 500
   faultyVoltageValue: 380
   isFaulty: 0
+--- !u!114 &2135599141870859658
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3936556682620740629}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1da63015b0093e47864202f2e470720, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoDrill.NoneHighlight
 --- !u!1 &3990714767177401029
 GameObject:
   m_ObjectHideFlags: 0
@@ -3124,7 +3271,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4f90fb2688849c54588be9a3d89d6f46, type: 2}
+  - {fileID: 10758, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3324,6 +3471,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &9007202630134703002
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3557,7 +3716,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4f90fb2688849c54588be9a3d89d6f46, type: 2}
+  - {fileID: 10758, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3647,7 +3806,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4f90fb2688849c54588be9a3d89d6f46, type: 2}
+  - {fileID: 10758, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3899,6 +4058,7 @@ Transform:
   - {fileID: 2793161358336883989}
   - {fileID: 4123909950225008892}
   - {fileID: 1394543997296806286}
+  - {fileID: 7787653813660179776}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8970238440005732906
@@ -3998,6 +4158,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: BatteryPack_Disassemble
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: GUID:0e78f667002913f44a9bb59dbd92f6c8
+    m_TableEntryReference:
+      m_KeyId: 7918957072302080
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &8038977206320997057
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4215,6 +4387,7 @@ MonoBehaviour:
     m_LocalVariables: []
   showGuide: 0
   showGhost: 1
+  showOutline: 1
   customGhostPrefabId: 
   references:
     version: 2
@@ -4395,6 +4568,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &1431160267200088152
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4828,6 +5013,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &8868769490745159599
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5352,6 +5549,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &9123784491739607651
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5577,8 +5786,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.1, y: 0.1, z: 0.1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0.17104405, y: 0.10888074, z: 0.044560857}
+  m_Center: {x: -0.014063469, y: 0.0044403747, z: -0.00603775}
 --- !u!114 &4027447295033583953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5680,6 +5889,7 @@ MonoBehaviour:
     m_LocalVariables: []
   showGuide: 1
   showGhost: 1
+  showOutline: 1
   customGhostPrefabId: 
   references:
     version: 2
@@ -5902,6 +6112,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &461574442164389110
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6245,6 +6467,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &3567337881177027456
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6517,6 +6751,7 @@ GameObject:
   - component: {fileID: 5292803213280824526}
   - component: {fileID: 2847293921501353173}
   - component: {fileID: 2538981622252241820}
+  - component: {fileID: 6707280553310554846}
   m_Layer: 17
   m_Name: PRA_BPA_Minus_Terminal
   m_TagString: Untagged
@@ -6560,7 +6795,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.1, y: 0.1, z: 0.1}
+  m_Size: {x: 0.05, y: 0.05, z: 0.05}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &7714514228756772978
 MonoBehaviour:
@@ -6663,6 +6898,7 @@ MonoBehaviour:
     m_LocalVariables: []
   showGuide: 1
   showGhost: 0
+  showOutline: 1
   customGhostPrefabId: 
   references:
     version: 2
@@ -6709,6 +6945,18 @@ MonoBehaviour:
   resistanceValue: 500
   faultyVoltageValue: 380
   isFaulty: 0
+--- !u!114 &6707280553310554846
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7396651058977633758}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1da63015b0093e47864202f2e470720, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoDrill.NoneHighlight
 --- !u!1 &7536472361132262771
 GameObject:
   m_ObjectHideFlags: 0
@@ -6975,6 +7223,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &4548966613827023247
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7659,6 +7919,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &7576041590260976910
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8002,6 +8274,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &666753983366408154
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8345,6 +8629,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &978771463041948707
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8688,6 +8984,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaskItem
   prefabId: Bolt
+  itemName:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &5613038203502023788
 MonoBehaviour:
   m_ObjectHideFlags: 0

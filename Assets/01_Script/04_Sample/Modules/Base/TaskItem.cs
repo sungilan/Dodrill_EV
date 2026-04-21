@@ -1,6 +1,7 @@
 using Autohand;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Localization;
 
 /// <summary>
 /// 스폰되는 모든 인터랙션 오브젝트에 붙이는 컴포넌트
@@ -11,6 +12,10 @@ public class TaskItem : MonoBehaviour
 {
     [Tooltip("ScenarioData의 prefabId와 일치해야 함")]
     public string prefabId;
+
+    [Header("Localization")]
+    [Tooltip("아이템의 표시 명칭 (가이드 마커 등에 사용)")]
+    public UnityEngine.Localization.LocalizedString itemName;
 
     private Grabbable _grabbable;
 

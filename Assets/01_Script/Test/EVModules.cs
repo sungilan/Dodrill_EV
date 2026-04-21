@@ -77,7 +77,12 @@ public class LOTO_WarningSignModule : GrabZoneTaskModule
     }
 }
 
-public class CarLiftUpStepModule : Car_Lift_UpModule
+//public class CarLiftUpStepModule : Car_Lift_UpModule
+//{
+//    // 클래스 이름이 다르므로 충돌하지 않습니다.
+//    public override string ModuleId => "Car_Lift_Up";
+//}
+public class CarLiftUpStepModule : ConfirmTaskModule
 {
     // 클래스 이름이 다르므로 충돌하지 않습니다.
     public override string ModuleId => "Car_Lift_Up";
@@ -248,17 +253,78 @@ public class BatteryPackTopCover_MoveModule : GrabZoneTaskModule
         public override string ModuleId => "BatteryPack_Assemble2";
     }
 
-    public class Connector_Cover_ReInstallModule : ConfirmTaskModule
+    public abstract class BaseReinstallModule : ConfirmTaskModule
+    {
+        public override void OnStart(ModuleConfig config, Action onComplete, Action onFail)
+        {
+            base.OnStart(config, onComplete, onFail);
+
+            // JSON의 targetObjName에 해당하는 볼트 그룹 탐색
+            if(config != null && !string.IsNullOrEmpty(config.targetObjName))
+            {
+                ShowBoltGroup(config.targetObjName);
+            }
+        }
+
+        private void ShowBoltGroup(string targetName)
+        {
+            // 1. 이름으로 오브젝트 탐색 (비활성 오브젝트 포함)
+            GameObject targetGo = GameObject.Find(targetName);
+
+            // Find로 못 찾을 경우를 대비해 전체 탐색 (필요시)
+            if(targetGo == null)
+            {
+                var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+                foreach(var go in allObjects)
+                {
+                    if(go.name == targetName)
+                    {
+                        targetGo = go;
+                        break;
+                    }
+                }
+            }
+
+            if(targetGo != null)
+            {
+                // 2. 볼트 그룹 오브젝트 자체를 활성화
+                targetGo.SetActive(true);
+
+                // 3. 자식들 중 MeshRenderer가 있다면 모두 켬
+                var renderers = targetGo.GetComponentsInChildren<Renderer>(true);
+                foreach(var r in renderers)
+                {
+                    r.enabled = true;
+                }
+
+                // 4. (선택 사항) 조립을 위해 Bolt 스크립트 상태 초기화
+                var bolts = targetGo.GetComponentsInChildren<Bolt>(true);
+                foreach(var bolt in bolts)
+                {
+                    bolt.gameObject.SetActive(true);
+                    // 조립 모드로 강제 설정 로직이 필요하다면 여기서 처리
+                    // bolt.SetAssembleMode(true); 
+                }
+
+                Debug.Log($"<color=lime>[Reinstall]</color> {targetName} 볼트 그룹 활성화 완료");
+            }
+            else
+            {
+                Debug.LogWarning($"<color=red>[Reinstall]</color> {targetName} 오브젝트를 씬에서 찾을 수 없습니다.");
+            }
+        }
+    }
+    public class Connector_Cover_ReInstallModule : BaseReinstallModule
     {
         public override string ModuleId => "Connector_Cover_Reinstall";
     }
 
-    public class Front_Cover_ReInstallModule : ConfirmTaskModule
+    public class Front_Cover_ReInstallModule : BaseReinstallModule
     {
         public override string ModuleId => "Front_Cover_Reinstall";
     }
 
-    public class Rear_Cover_ReInstallModule : ConfirmTaskModule
+    public class Rear_Cover_ReInstallModule : BaseReinstallModule
     {
         public override string ModuleId => "Rear_Cover_Reinstall";
     }
