@@ -148,7 +148,7 @@
       },
       {
         "moduleId": "DischargeWait",
-        "timeout": 30,
+        "timeout": 240,
         "completionMode": "AnyPlayer",
         "spawnObjects": []
       },
@@ -714,9 +714,9 @@
           },
           {
             "key": "guideText",
-            "ko": "MSD 탈거는 고전압 회로를 물리적으로 차단하는 핵심 안전 조치입니다. 탈거 후 방전이 될 때까지 10초 대기하세요. 실제 정비환경에서는 캐패시터 방전을 위해 최소 5분을 대기해야 합니다.",
-            "en": "MSD removal physically disconnects the HV circuit — the most critical safety action. Store in lock box after removal, then wait at least 5 minutes for capacitor discharge.",
-            "vi": "Tháo MSD ngắt kết nối vật lý mạch HV — hành động an toàn quan trọng nhất. Cất vào hộp khóa, sau đó chờ ít nhất 5 phút để phóng điện tụ."
+            "ko": "MSD 탈거는 고전압 회로를 물리적으로 차단하는 핵심 안전 조치입니다. 탈거 후 캐패시터가 완전히 방전되도록 3분 이상 대기합니다.",
+            "en": "MSD removal physically disconnects the HV circuit — the most critical safety action. Store in lock box after removal, then wait at least 3 minutes for capacitor discharge.",
+            "vi": "Tháo MSD ngắt kết nối vật lý mạch HV — hành động an toàn quan trọng nhất. Cất vào hộp khóa, sau đó chờ ít nhất 3 phút để phóng điện tụ."
           },
           {
             "key": "subguideText",
@@ -757,25 +757,25 @@
           },
           {
             "key": "guideText",
-            "ko": "MSD 탈거 후에도 인버터 캐패시터에 수백 볼트가 남습니다. 전압이 완전히 방전될 때까지 절대 작업을 진행하지 마세요. 실제 정비환경에서는 캐패시터 방전을 위해 최소 5분을 대기해야 합니다.",
-            "en": "Even after MSD removal, inverter capacitors retain hundreds of volts. Never proceed until fully discharged. Waiting at least 5 minutes is mandatory.",
-            "vi": "Ngay cả sau khi tháo MSD, tụ điện biến tần vẫn giữ hàng trăm volt. Không bao giờ tiến hành cho đến khi phóng hết. Phải chờ ít nhất 5 phút."
+            "ko": "MSD 탈거 후에도 인버터 캐패시터에 수백 볼트가 남습니다. 전압이 완전히 방전될 때까지 절대 작업을 진행하지 마세요. 캐패시터가 완전히 방전되도록 3분 이상 대기해야 합니다.",
+            "en": "Even after MSD removal, inverter capacitors retain hundreds of volts. Never proceed until fully discharged. Waiting at least 3 minutes is mandatory.",
+            "vi": "Ngay cả sau khi tháo MSD, tụ điện biến tần vẫn giữ hàng trăm volt. Không bao giờ tiến hành cho đến khi phóng hết. Phải chờ ít nhất 3 phút."
           },
           {
             "key": "subguideText",
-            "ko": "대기 시간: 최소 5분 | 이후 전압계로 0V 확인 후 다음 단계 진행",
-            "en": "Wait time: min. 5 min | Then confirm 0V with voltmeter before proceeding",
-            "vi": "Thời gian chờ: tối thiểu 5 phút | Sau đó xác nhận 0V trước khi tiếp tục"
+            "ko": "대기 시간: 3분 이상 | 이후 전압계로 30V 이하 확인 후 다음 단계 진행",
+            "en": "Wait time: min. 3 min | Then confirm 30V or less with voltmeter before proceeding",
+            "vi": "Thời gian chờ: tối thiểu 3 phút | Sau đó xác nhận từ 30V trở xuống trước khi tiếp tục"
           },
           {
             "key": "waitSeconds",
-            "ko": "10",
-            "en": "10"
+            "ko": "180",
+            "en": "180"
           },
           {
             "key": "resultNote",
-            "ko": "캐패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 최소 5분 이상 대기 권장.",
-            "en": "캐패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 최소 5분 이상 대기 권장."
+            "ko": "캐패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 3분 이상 대기해야 합니다.",
+            "en": "캐패시터 방전 완료까지 대기. 잔류 전압이 있는 상태에서 작업 시 감전 위험. 3분 이상 대기해야 합니다."
           }
         ]
       }
@@ -1182,6 +1182,7 @@
         "targetZoneId": "Inverter_Check_Point",
         "targetValue": 0,
         "toleranceRatio": 0.05,
+        "maxValue": 30,
         "requiresSafetyCheck": false,
         "extra": [
           {
@@ -1192,21 +1193,21 @@
           },
           {
             "key": "description",
-            "ko": "전방 인버터 단자에서 잔류 전압을 측정하세요. 0V여야 안전합니다.",
-            "en": "Measure residual voltage at front inverter terminal. Must be 0V for safety.",
-            "vi": "Đo điện áp dư tại đầu cực biến tần phía trước. Phải là 0V để an toàn."
+            "ko": "전방 인버터 단자에서 잔류 전압을 측정하세요. 30V 이하여야 안전합니다.",
+            "en": "Measure residual voltage at front inverter terminal. Must be 30V or less for safety.",
+            "vi": "Đo điện áp dư tại đầu cực biến tần phía trước. Phải từ 30V trở xuống để an toàn."
           },
           {
             "key": "guideText",
-            "ko": "케이블 분리 후 단자에 잔류 전압이 없는지 반드시 확인해야 합니다. 0V가 아니면 추가 방전이 필요하며, 전압이 남아있는 상태에서 작업 시 감전 위험이 있습니다.",
-            "en": "After disconnecting, residual voltage must be confirmed absent. If not 0V, additional discharge is needed — working with voltage present risks electric shock.",
-            "vi": "Sau khi ngắt, phải xác nhận không còn điện áp dư. Nếu không phải 0V, cần phóng điện thêm — làm việc khi còn điện áp có nguy cơ điện giật."
+            "ko": "케이블 분리 후 단자에 잔류 전압이 없는지 반드시 확인해야 합니다. 30V를 넘으면 추가 방전이 필요하며, 전압이 남아있는 상태에서 작업 시 감전 위험이 있습니다.",
+            "en": "After disconnecting, residual voltage must be confirmed absent. If above 30V, additional discharge is needed — working with voltage present risks electric shock.",
+            "vi": "Sau khi ngắt, phải xác nhận không còn điện áp dư. Nếu trên 30V, cần phóng điện thêm — làm việc khi còn điện áp có nguy cơ điện giật."
           },
           {
             "key": "subguideText",
-            "ko": "정상값: 0V DC | 허용 범위: 5V 이하 | 5V 초과 시 추가 대기 후 재측정",
-            "en": "Target: 0V DC | Acceptable: under 5V | If over 5V, wait and re-measure",
-            "vi": "Mục tiêu: 0V DC | Chấp nhận: dưới 5V | Nếu trên 5V, chờ và đo lại"
+            "ko": "정상값: 30V 이하 | 30V 초과 시 추가 대기 후 재측정",
+            "en": "Normal: 30V or less | If over 30V, wait and re-measure",
+            "vi": "Bình thường: từ 30V trở xuống | Nếu trên 30V, chờ và đo lại"
           },
           {
             "key": "snapDelay",
@@ -1214,7 +1215,7 @@
           },
           {
             "key": "expectedValue",
-            "ko": "0",
+            "ko": "30",
             "en": "0"
           },
           {
@@ -1229,8 +1230,8 @@
           },
           {
             "key": "resultNote",
-            "ko": "0V 확인 → 전방 인버터 안전 확인 완료. 후방 인버터 잔류 전압도 확인합니다.",
-            "en": "0V 확인 → 전방 인버터 안전 확인 완료. 후방 인버터 잔류 전압도 확인합니다."
+            "ko": "30V 이하 확인 → 전방 인버터 안전 확인 완료. 후방 인버터 잔류 전압도 확인합니다.",
+            "en": "30V 이하 확인 → 전방 인버터 안전 확인 완료. 후방 인버터 잔류 전압도 확인합니다."
           }
         ]
       }
@@ -1246,6 +1247,7 @@
         "targetZoneId": "Inverter_Check_Point",
         "targetValue": 0,
         "toleranceRatio": 0.05,
+        "maxValue": 30,
         "requiresSafetyCheck": false,
         "extra": [
           {
@@ -1256,21 +1258,21 @@
           },
           {
             "key": "description",
-            "ko": "후방 인버터 단자에서 잔류 전압을 측정하세요. 0V여야 안전합니다.",
-            "en": "Measure residual voltage at rear inverter terminal. Must be 0V for safety.",
-            "vi": "Đo điện áp dư tại đầu cực biến tần phía sau. Phải là 0V để an toàn."
+            "ko": "후방 인버터 단자에서 잔류 전압을 측정하세요. 30V 이하여야 안전합니다.",
+            "en": "Measure residual voltage at rear inverter terminal. Must be 30V or less for safety.",
+            "vi": "Đo điện áp dư tại đầu cực biến tần phía sau. Phải từ 30V trở xuống để an toàn."
           },
           {
             "key": "guideText",
-            "ko": "전방에 이어 후방 단자도 0V를 확인합니다. 전방·후방 모두 0V가 확인되어야 이후 고압 부품을 안전하게 다룰 수 있습니다.",
-            "en": "Confirm 0V at the rear terminal as well. Both front and rear must show 0V before safely handling high-voltage components.",
-            "vi": "Xác nhận 0V tại đầu cực phía sau. Cả trước và sau phải hiển thị 0V trước khi xử lý an toàn các bộ phận cao áp."
+            "ko": "전방에 이어 후방 단자도 30V 이하인지 확인합니다. 전방·후방 모두 30V 이하로 확인되어야 이후 고압 부품을 안전하게 다룰 수 있습니다.",
+            "en": "Confirm 30V or less at the rear terminal as well. Both front and rear must show 30V or less before safely handling high-voltage components.",
+            "vi": "Xác nhận từ 30V trở xuống tại đầu cực phía sau. Cả trước và sau phải hiển thị từ 30V trở xuống trước khi xử lý an toàn các bộ phận cao áp."
           },
           {
             "key": "subguideText",
-            "ko": "정상값: 0V DC | 허용 범위: 5V 이하 | 전방·후방 모두 0V 확인 후 다음 단계",
-            "en": "Target: 0V DC | Acceptable: under 5V | Confirm both 0V before next step",
-            "vi": "Mục tiêu: 0V DC | Chấp nhận: dưới 5V | Xác nhận cả hai 0V trước khi tiếp tục"
+            "ko": "정상값: 30V 이하 | 전방·후방 모두 확인 후 다음 단계",
+            "en": "Normal: 30V or less | Confirm both before next step",
+            "vi": "Bình thường: từ 30V trở xuống | Xác nhận cả hai trước khi tiếp tục"
           },
           {
             "key": "snapDelay",
@@ -1278,7 +1280,7 @@
           },
           {
             "key": "expectedValue",
-            "ko": "0",
+            "ko": "30",
             "en": "0"
           },
           {
@@ -1293,8 +1295,8 @@
           },
           {
             "key": "resultNote",
-            "ko": "0V 확인 → 고전압 시스템 안전 확인 완료. 다음은 절연 저항 측정으로 고장 위치를 특정합니다.",
-            "en": "0V 확인 → 고전압 시스템 안전 확인 완료. 다음은 절연 저항 측정으로 고장 위치를 특정합니다."
+            "ko": "30V 이하 확인 → 고전압 시스템 안전 확인 완료. 다음은 절연 저항 측정으로 고장 위치를 특정합니다.",
+            "en": "30V 이하 확인 → 고전압 시스템 안전 확인 완료. 다음은 절연 저항 측정으로 고장 위치를 특정합니다."
           }
         ]
       }

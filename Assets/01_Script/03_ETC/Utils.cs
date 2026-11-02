@@ -48,7 +48,8 @@ namespace XRAirpotrSecurity
 #if ENABLE_VR || ENABLE_XR_MODULE
             if (XRGeneralSettings.Instance != null &&
                 XRGeneralSettings.Instance.Manager != null &&
-                XRGeneralSettings.Instance.Manager.isInitializationComplete)
+                XRGeneralSettings.Instance.Manager.isInitializationComplete &&
+                XRGeneralSettings.Instance.Manager.activeLoader != null)   // 초기화 '시도 종료'만으로는 VR이 아님 - 로더가 실제로 떠야 VR
             {
                 return PlatformType.VR;
             }
@@ -59,7 +60,8 @@ namespace XRAirpotrSecurity
 #if ENABLE_VR || ENABLE_XR_MODULE
         if (XRGeneralSettings.Instance != null &&
             XRGeneralSettings.Instance.Manager != null &&
-            XRGeneralSettings.Instance.Manager.isInitializationComplete
+            XRGeneralSettings.Instance.Manager.isInitializationComplete &&
+            XRGeneralSettings.Instance.Manager.activeLoader != null
             )
         {
             return PlatformType.VR;

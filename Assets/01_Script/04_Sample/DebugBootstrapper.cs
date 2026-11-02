@@ -15,12 +15,17 @@ public class DebugBootstrapper : MonoBehaviour
     [Tooltip("체크 시 디버그 시스템 활성화. 빌드 시에도 동작.")]
     public bool isDebugMode = false;
 
+    [Tooltip("false(기본): 에디터·Development Build 에서만 디버그 모드가 켜진다. 일반(Release) 빌드에서는 씬에 체크가 남아 있어도 강제로 꺼진다. 접속자 누구나 훈련을 강제 진행/초기화할 수 있는 명령이 열리는 것을 막는다.")]
+    public bool allowInReleaseBuild = false;
+
     public static DebugCommandRegistry Registry { get; private set; }
     public static bool IsDebugMode { get; private set; }
 
     private void Awake()
     {
-        IsDebugMode = isDebugMode;
+        IsDebugMode = isDebugMode && (Application.isEditor || Debug.isDebugBuild || allowInReleaseBuild);
+        if (isDebugMode && !IsDebugMode)
+            Debug.LogWarning("[DebugBootstrapper] Release 빌드라 씬의 isDebugMode 체크를 무시합니다.");
 
         if (!IsDebugMode)
         {

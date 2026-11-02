@@ -100,6 +100,8 @@ public class ScenarioRunner : MonoBehaviour
         InstanceFinder.ServerManager.RegisterBroadcast<ItemUsedSignal>(OnReceiveItemUsed);
         InstanceFinder.ServerManager.RegisterBroadcast<ItemGrabbedSignal>(OnReceiveItemGrabbed);
         InstanceFinder.ServerManager.RegisterBroadcast<TaskConfirmSignal>(OnReceiveTaskConfirm);
+        // 예전에는 이 경로에서 ValueMeasuredSignal 이 빠져, 서버보다 먼저 활성화되는 구성에서는 측정 단계(8단계)가 진행 불가였다
+        InstanceFinder.ServerManager.RegisterBroadcast<ValueMeasuredSignal>(OnReceiveValueMeasured);
         InteractionEvents.OnStepAdvanced += OnStepAdvanced;
     }
 
@@ -563,14 +565,14 @@ public class ScenarioRunner : MonoBehaviour
         if(!_isRunning || _taskLocked || _currentModule == null)
         {
             Debug.LogWarning($"<color=orange>[Runner-Measure]</color> 신호 무시: 서버 상태 비정상 (Running:{_isRunning}, Locked:{_taskLocked})");
-            //return;
+            return;
         }
 
         // ── [2단계] 인덱스 일치 확인 ──
         if(signal.taskIndex != _currentTaskState.taskIndex)
         {
             Debug.LogWarning($"<color=yellow>[Runner-Measure]</color> 인덱스 불일치: 신호Index({signal.taskIndex}) vs 서버Index({_currentTaskState.taskIndex})");
-            //return;
+            return;
         }
 
         // ── [3단계] 모듈 타입 캐스팅 확인 ──

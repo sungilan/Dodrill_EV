@@ -25,7 +25,33 @@ public class GuideMarker : MonoBehaviour
     public TextMeshProUGUI _labelText;
     public GameObject arrow;
 
+    [Header("거리별 크기 (가까이 가면 작게, 멀리서는 크게)")]
+    [Tooltip("이 거리(m)에서 원래 크기. 가까울수록 비례해서 작아진다.")]
+    public float referenceDistance = 3f;
+    public float minScale = 0.3f;
+    public float maxScale = 1.6f;
+
     private Tween _arrowTween;
+    private Vector3 _baseScale = Vector3.one;
+    private bool _baseScaleSaved;
+
+    private void Awake()
+    {
+        _baseScale = transform.localScale;
+        _baseScaleSaved = true;
+    }
+
+    // 가까이서 보면 화살표·라벨이 화면을 가득 채워 시야를 가리던 문제 방지
+    private void LateUpdate()
+    {
+        var cam = Camera.main;
+        if (cam == null || referenceDistance <= 0f) return;
+        if (!_baseScaleSaved) { _baseScale = transform.localScale; _baseScaleSaved = true; }
+
+        float d = Vector3.Distance(cam.transform.position, transform.position);
+        float s = Mathf.Clamp(d / referenceDistance, minScale, maxScale);
+        transform.localScale = _baseScale * s;
+    }
 
     // ── 외부 API ─────────────────────────────────────────
 

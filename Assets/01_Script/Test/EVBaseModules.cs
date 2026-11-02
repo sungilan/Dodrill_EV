@@ -152,6 +152,7 @@ public abstract class ZoneAndMeasureModule : ITaskModule
     protected string _targetObjName;   // 측정 대상 단자 ID (HV_Cable_Term 등)
     protected float _targetValue;      // 목표 측정값 (0V, 10MΩ 등)
     protected float _tolerance;        // 허용 오차 범위
+    protected float _maxValue;         // 상한 판정 (0이면 사용 안 함)
     protected List<string> _requiredItems;
     protected Action _onComplete;
     protected Action _onFail;
@@ -164,6 +165,7 @@ public abstract class ZoneAndMeasureModule : ITaskModule
         _targetObjName = config?.targetObjName ?? string.Empty; // JSON의 targetObjName 사용
         _targetValue = config?.targetValue ?? 0f;
         _tolerance = (config?.targetValue ?? 0f) * (config?.toleranceRatio ?? 0.05f);
+        _maxValue = config?.maxValue ?? 0f;
         _requiredItems = config?.requiredItems ?? new List<string>();
 
         _onComplete = onComplete;
@@ -223,9 +225,11 @@ public abstract class ZoneAndMeasureModule : ITaskModule
             return;
         }
 
-        // targetValue == 0 이면 5V 이하 = 방전완료 판정
+        // 규정값은 시나리오의 maxValue 를 쓴다. 지정이 없는 targetValue == 0 은 5V 이하 = 방전완료 판정
         bool valueMatch;
-        if(_targetValue == 0f)
+        if(_maxValue > 0f)
+            valueMatch = measuredValue <= _maxValue;
+        else if(_targetValue == 0f)
             valueMatch = measuredValue <= 5f;
         else
             valueMatch = Mathf.Abs(measuredValue - _targetValue) <= _tolerance;

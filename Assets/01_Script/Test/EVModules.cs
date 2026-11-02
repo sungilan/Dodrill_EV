@@ -137,13 +137,21 @@ public class DischargeWaitModule : ConfirmTaskModule
 {
     public override string ModuleId => "DischargeWait";
 
+    private float _earliestConfirmTime;
+
     public override void OnStart(ModuleConfig config, Action onComplete, Action onFail)
     {
         base.OnStart(config, onComplete, onFail);
+
+        // 타이머는 클라이언트에서 돌지만 완료 신호는 서버가 시간을 직접 확인한다.
+        // 클라이언트는 서버보다 늦게 시작하므로 정상 흐름에서는 걸리지 않는다 (1초는 시계 오차 여유).
+        _earliestConfirmTime = UnityEngine.Time.time + DischargeTimerUI.GetWaitSeconds(config, 0f) - 1f;
         // UI 활성화는 DischargeTimerUI가 ScenarioStateReceiver 이벤트로 처리
         // (서버에서 UI 직접 조작 불가 — 클라이언트 이벤트로 위임)
         UnityEngine.Debug.Log("[DischargeWait] 모듈 시작 — 클라이언트 타이머 대기 중");
     }
+
+    protected override bool CanConfirm() => UnityEngine.Time.time >= _earliestConfirmTime;
 }
 
 // ──────────────────────────────────────────────────────────────

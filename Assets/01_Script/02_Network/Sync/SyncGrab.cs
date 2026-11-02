@@ -807,7 +807,68 @@ public class SyncGrab : NetworkBehaviour
     [Tooltip("잡혔을 때 HoldPoint로부터의 회전 오프셋 (오브젝트 기준)")]
     public Vector3 holdRotationOffset = Vector3.zero;
 
+    [Header("PC/모바일 — 차체·벽 관통 방지")]
+    [Tooltip("손에 든 물체가 차체·벽에 파고들어 잘려 보이지 않도록, 장애물이 있으면 카메라 쪽으로 끌어당긴다.")]
+    public bool avoidGeometryClipping = true;
+    [Tooltip("카메라에서 이 거리(m)보다 가깝게는 끌어오지 않는다.")]
+    public float minHoldDistance = 0.18f;
+    [Tooltip("장애물과 유지할 여유(m).")]
+    public float geometryMargin = 0.03f;
+
+    [Tooltip("true: 손에 든 물체를 내 화면에서 HoldPoint에 즉시 붙인다(보간 지연 없음). 서버·다른 클라이언트에는 기존처럼 LNT로 전파.")]
+    public bool snapHoldToTarget = true;
+
+    private static readonly RaycastHit[] s_clipBuf = new RaycastHit[16];
+    private float _holdRadius = -1f;
+    private float _avoidReduction;   // 장애물 때문에 카메라 쪽으로 당겨진 거리(부드럽게 변화)
+
     private TaskItem _taskItem;
+
+    // ──────────────────────────────────────────────────────
+    // 손 모션(PcAvatar)용 — 누가 무엇을 잡고 있는지 / 어디를 잡는지
+    // ──────────────────────────────────────────────────────
+    private static readonly System.Collections.Generic.List<SyncGrab> s_held = new System.Collections.Generic.List<SyncGrab>();
+
+    [Header("손 모션")]
+    [Tooltip("(선택) 아바타 손이 잡을 위치. 비우면 렌더러 경계의 중심을 쓴다.")]
+    public Transform gripPoint;
+    private Renderer[] _gripRenderers;
+
+    /// <summary>해당 클라이언트가 지금 잡고 있는 물체(없으면 null). 소유권이 잡은 사람에게 넘어가므로 Owner 로 판별한다.</summary>
+    public static SyncGrab FindHeldBy(int clientId)
+    {
+        if(clientId < 0) return null;
+        for(int i = s_held.Count - 1; i >= 0; i--)
+        {
+            var g = s_held[i];
+            if(g == null) { s_held.RemoveAt(i); continue; }
+            if(g.IsGrabbed && g.Owner != null && g.Owner.IsValid && g.Owner.ClientId == clientId) return g;
+        }
+        return null;
+    }
+
+    /// <summary>손이 향할 월드 위치.</summary>
+    public Vector3 GripWorldPoint
+    {
+        get
+        {
+            if(gripPoint != null) return gripPoint.position;
+            if(_gripRenderers == null) _gripRenderers = GetComponentsInChildren<Renderer>(false);
+            bool any = false; Bounds b = default;
+            foreach(var r in _gripRenderers)
+            {
+                if(r == null || !r.enabled || r is ParticleSystemRenderer || r is LineRenderer || r is TrailRenderer) continue;
+                if(!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
+            }
+            return any ? b.center : transform.position;
+        }
+    }
+
+    private void TrackHeld(bool held)
+    {
+        if(held) { if(!s_held.Contains(this)) s_held.Add(this); }
+        else s_held.Remove(this);
+    }
 
     // ──────────────────────────────────────────────────────
     // SyncVar — 서버만 쓰기
@@ -900,6 +961,7 @@ public class SyncGrab : NetworkBehaviour
         _isKinematic.OnChange += OnKinematicChanged;
         _isGrabbed.OnChange += OnIsGrabbedChanged;
         _isDespawning.OnChange += OnIsDespawningChanged;
+        TrackHeld(_isGrabbed.Value);   // 늦게 들어왔을 때 이미 잡힌 물체도 등록
 
         // 현재 서버 상태 즉시 적용
         ApplyKinematic(_isKinematic.Value);
@@ -926,6 +988,7 @@ public class SyncGrab : NetworkBehaviour
         _isKinematic.OnChange -= OnKinematicChanged;
         _isGrabbed.OnChange -= OnIsGrabbedChanged;
         _isDespawning.OnChange -= OnIsDespawningChanged;
+        TrackHeld(false);
 
         DOTween.Kill(transform);
         _isPCHolding = false;
@@ -1177,7 +1240,9 @@ public class SyncGrab : NetworkBehaviour
     //    }
     //}
 
-    private void Update()
+    // LateUpdate: 카메라 회전·이동(FreeLookController.Update)이 모두 끝난 뒤의 HoldPoint 위치를 사용해
+    // '한 프레임 늦게 따라오는' 현상을 없앤다.
+    private void LateUpdate()
     {
         if(!_isPCHolding || holdPoint == null || !IsOwner) return;
 
@@ -1186,6 +1251,13 @@ public class SyncGrab : NetworkBehaviour
         // ★ 실시간 추적 시에도 오프셋 적용
         Vector3 finalPos = holdPoint.position + (holdPoint.rotation * holdPositionOffset);
         Quaternion finalRot = holdPoint.rotation * Quaternion.Euler(holdRotationOffset);
+
+        // 차체 아래 등 좁은 곳에서 물체가 메시를 뚫고 잘려 보이는 문제 방지
+        finalPos = AvoidGeometry(finalPos);
+
+        // 내 화면에서는 즉시 붙이고(지연 없음), 같은 목표를 LNT에 넘겨 서버·타 클라이언트로 전파한다.
+        if(snapHoldToTarget)
+            transform.SetPositionAndRotation(finalPos, finalRot);
 
         if(_lnt != null)
         {
@@ -1199,6 +1271,72 @@ public class SyncGrab : NetworkBehaviour
     }
 
     /// <summary>
+    /// 카메라 → 목표 위치 사이에 장애물(차체·바닥·벽)이 있으면 목표를 카메라 쪽으로 끌어온다.
+    /// 물체 크기만큼(_holdRadius)을 여유로 두고, minHoldDistance 보다 가깝게는 오지 않는다.
+    /// </summary>
+    private Vector3 AvoidGeometry(Vector3 desired)
+    {
+        if(!avoidGeometryClipping) return desired;
+
+        var cam = Camera.main;
+        if(cam == null) return desired;
+
+        Vector3 origin = cam.transform.position;
+        Vector3 to = desired - origin;
+        float dist = to.magnitude;
+        if(dist < 0.0001f) return desired;
+
+        Vector3 dir = to / dist;
+        if(_holdRadius < 0f) _holdRadius = ComputeHoldRadius();
+
+        // 이번 프레임에 필요한 '당겨올 거리'. 장애물이 없으면 0.
+        float targetReduction = 0f;
+
+        int n = Physics.RaycastNonAlloc(origin, dir, s_clipBuf, dist + _holdRadius,
+                                        ~0, QueryTriggerInteraction.Ignore);
+        if(n > 0)
+        {
+            Transform playerRoot = holdPoint != null ? holdPoint.root : null;
+            float nearest = float.MaxValue;
+
+            for(int i = 0; i < n; i++)
+            {
+                var col = s_clipBuf[i].collider;
+                if(col == null) continue;
+                if(col.transform.IsChildOf(transform)) continue;                          // 자기 자신
+                if(playerRoot != null && col.transform.IsChildOf(playerRoot)) continue;   // 내 플레이어
+
+                if(s_clipBuf[i].distance < nearest) nearest = s_clipBuf[i].distance;
+            }
+
+            if(nearest != float.MaxValue)
+            {
+                float allowed = Mathf.Max(minHoldDistance, nearest - _holdRadius - geometryMargin);
+                targetReduction = Mathf.Max(0f, dist - allowed);
+            }
+        }
+
+        // 급격한 튐을 막기 위해 부드럽게 변화시킨다 (당겨질 때는 빠르게, 풀릴 때는 완만하게)
+        float speed = targetReduction > _avoidReduction ? 30f : 12f;
+        _avoidReduction = Mathf.Lerp(_avoidReduction, targetReduction, 1f - Mathf.Exp(-speed * Time.deltaTime));
+        if(_avoidReduction < 0.001f) _avoidReduction = 0f;
+
+        return _avoidReduction <= 0f ? desired : origin + dir * Mathf.Max(minHoldDistance, dist - _avoidReduction);
+    }
+
+    /// <summary>렌더러 바운드 기준 물체 반경(대략). 너무 크거나 작은 값은 제한.</summary>
+    private float ComputeHoldRadius()
+    {
+        var renderers = GetComponentsInChildren<Renderer>();
+        if(renderers.Length == 0) return 0.1f;
+
+        Bounds b = renderers[0].bounds;
+        for(int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
+
+        return Mathf.Clamp(b.extents.magnitude * 0.8f, 0.05f, 0.6f);
+    }
+
+    /// <summary>
     /// 외부(InteractablePart.SnapToOriginalPosition)에서 호출.
     /// holdPoint 추적을 즉시 멈추고 소유권을 서버에 반환.
     /// </summary>
@@ -1206,6 +1344,8 @@ public class SyncGrab : NetworkBehaviour
     {
         if(!_isPCHolding) return;
         _isPCHolding = false;
+        _holdRadius = -1f;
+        _avoidReduction = 0f;
         DOTween.Kill(transform);
         _lnt?.ClearTargetPosition();
     }
@@ -1460,6 +1600,7 @@ public class SyncGrab : NetworkBehaviour
 
     private void OnIsGrabbedChanged(bool prev, bool next, bool asServer)
     {
+        TrackHeld(next);
         // 잡힘 상태가 변할 때, 만약 Kinematic이 풀려있다면 중력 상태를 즉시 동기화합니다.
         if(!_isKinematic.Value && _rb != null)
         {

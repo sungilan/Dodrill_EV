@@ -1,4 +1,5 @@
 using FishNet.Object;
+using RootMotion.FinalIK;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -68,8 +69,12 @@ public class VRPlayer : BasePlayer
     private Quaternion targetRightWristRot;
     private Quaternion[] targetLeftFingerRots;
     private Quaternion[] targetRightFingerRots;
-    private Vector3[] targetLeftFingerPoss;
-    private Vector3[] targetRightFingerPoss;
+
+    // 손가락은 관절별 로컬 회전만 받는다 (A-2). 위치는 아바타 뼈 길이가 결정하므로 건드리지 않는다.
+    [Header("손가락 보간")]
+    [SerializeField] private float fingerFollowSpeed = 18f;
+    private Quaternion[] _leftFingerPose;
+    private Quaternion[] _rightFingerPose;
 
     public override void OnStartClient()
     {
@@ -101,6 +106,13 @@ public class VRPlayer : BasePlayer
             return;
         if (!IsOwner)
         {
+            // Anchor 가 아직 없으면(씬 로드 순서) 재탐색만 하고 건너뜀 — 예전에는 여기서 NullReferenceException
+            if (anchor == null)
+            {
+                anchor = GameObject.FindGameObjectWithTag("Anchor")?.transform;
+                if (anchor == null) return;
+            }
+
             if (trackingSetup.applyHead != null)
             {
                 Vector3 worldHeadPos = anchor.position + anchor.rotation * targetHeadPos;
@@ -108,10 +120,12 @@ public class VRPlayer : BasePlayer
 
                 trackingSetup.applyHead.position = Vector3.Lerp(trackingSetup.applyHead.position, worldHeadPos, positionLerp);
                 trackingSetup.applyHead.rotation = Quaternion.Slerp(trackingSetup.applyHead.rotation, worldHeadRot, rotationLerp);
+
+                FollowAvatarRoot(trackingSetup.applyHead.position, trackingSetup.applyHead.rotation);
             }
 
-            ApplyHandSmooth(trackingSetup.leftHand, targetLeftWristPos, targetLeftWristRot, targetLeftFingerPoss, targetLeftFingerRots);
-            ApplyHandSmooth(trackingSetup.rightHand, targetRightWristPos, targetRightWristRot, targetRightFingerPoss, targetRightFingerRots);
+            ApplyWristSmooth(trackingSetup.leftHand, targetLeftWristPos, targetLeftWristRot);
+            ApplyWristSmooth(trackingSetup.rightHand, targetRightWristPos, targetRightWristRot);
             return;
         }
 
@@ -120,6 +134,53 @@ public class VRPlayer : BasePlayer
         {
             syncTimer = 0f;
             SendTrackingData();
+        }
+    }
+
+    // Animator 가 Update 뒤에 손가락을 덮어쓸 수 있으므로 LateUpdate 에서 적용한다.
+    // 보간 상태를 뼈가 아닌 별도 배열에 두어야 Animator 가 매 프레임 되돌려도 목표에 수렴한다.
+    private void LateUpdate()
+    {
+        if (IsServerInitialized == true || IsOwner) return;
+
+        ApplyFingers(trackingSetup.leftHand, targetLeftFingerRots, ref _leftFingerPose);
+        ApplyFingers(trackingSetup.rightHand, targetRightFingerRots, ref _rightFingerPose);
+    }
+
+    // ── 원격 아바타 몸통 추종 (A-1) ─────────────────────────────
+    // VR_Player 는 루트를 동기화하지 않고 머리·손 목표만 보낸다. 아바타 루트가 스폰 지점에 고정된 채
+    // 목표만 멀어지면 VRIK 이 척추·팔을 억지로 늘리거나 꺾어 기괴한 자세가 된다.
+    // → 아바타 루트(VRIK.references.root)를 머리의 수평 위치·좌우 방향으로 따라가게 하면
+    //   VRIK 의 보행(locomotion) 이 발을 옮기며 자연스럽게 서 있는다.
+    [Header("원격 아바타 몸통 추종")]
+    [SerializeField] private bool followAvatarRoot = true;
+    [SerializeField] private float rootFollowSpeed = 10f;
+    [SerializeField] private float rootTurnSpeed = 6f;
+    private Transform _avatarRoot;
+    private float _avatarFloorY;
+
+    private void FollowAvatarRoot(Vector3 headPos, Quaternion headRot)
+    {
+        if (!followAvatarRoot || applyAvatar == null) return;
+
+        if (_avatarRoot == null)
+        {
+            var vrik = applyAvatar.GetComponentInChildren<VRIK>(true);
+            if (vrik == null) { followAvatarRoot = false; return; }
+            _avatarRoot = vrik.references.root != null ? vrik.references.root : vrik.transform;
+            _avatarFloorY = _avatarRoot.position.y;     // 처음 위치의 높이 = 바닥
+        }
+
+        float dt = Time.deltaTime;
+        Vector3 target = new Vector3(headPos.x, _avatarFloorY, headPos.z);
+        _avatarRoot.position = Vector3.Lerp(_avatarRoot.position, target, 1f - Mathf.Exp(-rootFollowSpeed * dt));
+
+        // 위/아래를 보고 있으면 forward 의 수평 성분이 작아 방향이 튀므로 충분히 클 때만 회전
+        Vector3 fwd = Vector3.ProjectOnPlane(headRot * Vector3.forward, Vector3.up);
+        if (fwd.sqrMagnitude > 0.05f)
+        {
+            Quaternion want = Quaternion.LookRotation(fwd.normalized, Vector3.up);
+            _avatarRoot.rotation = Quaternion.Slerp(_avatarRoot.rotation, want, 1f - Mathf.Exp(-rootTurnSpeed * dt));
         }
     }
 
@@ -135,66 +196,55 @@ public class VRPlayer : BasePlayer
         // Left Hand
         Vector3 leftWristPos = trackingSetup.leftHand.trackingWrist ? Quaternion.Inverse(anchorT.rotation) * (trackingSetup.leftHand.trackingWrist.position - anchorT.position) : Vector3.zero;
         Quaternion leftWristRot = trackingSetup.leftHand.trackingWrist ? Quaternion.Inverse(anchorT.rotation) * trackingSetup.leftHand.trackingWrist.rotation : Quaternion.identity;
-        Quaternion[] leftFingerRots = GetFingerLocalRotations(trackingSetup.leftHand, anchorT);
-        Vector3[] leftFingerPoss = GetFingerLocalPositions(trackingSetup.leftHand, anchorT);
+        Quaternion[] leftFingerRots = GetFingerLocalRotations(trackingSetup.leftHand);
 
         // Right Hand
         Vector3 rightWristPos = trackingSetup.rightHand.trackingWrist ? Quaternion.Inverse(anchorT.rotation) * (trackingSetup.rightHand.trackingWrist.position - anchorT.position) : Vector3.zero;
         Quaternion rightWristRot = trackingSetup.rightHand.trackingWrist ? Quaternion.Inverse(anchorT.rotation) * trackingSetup.rightHand.trackingWrist.rotation : Quaternion.identity;
-        Quaternion[] rightFingerRots = GetFingerLocalRotations(trackingSetup.rightHand, anchorT);
-        Vector3[] rightFingerPoss = GetFingerLocalPositions(trackingSetup.rightHand, anchorT);
+        Quaternion[] rightFingerRots = GetFingerLocalRotations(trackingSetup.rightHand);
 
-        ApplyTrackingToServer(headPos, headRot, leftWristPos, leftWristRot, leftFingerPoss, leftFingerRots,
-                              rightWristPos, rightWristRot, rightFingerPoss, rightFingerRots);
+        ApplyTrackingToServer(headPos, headRot, leftWristPos, leftWristRot, leftFingerRots,
+                              rightWristPos, rightWristRot, rightFingerRots);
     }
 
-    private Vector3[] GetFingerLocalPositions(HandData hand, Transform anchorT)
-    {
-        List<Vector3> poss = new List<Vector3>();
-        foreach (var finger in hand.fingers)
-            for (int i = 0; i < finger.trackingBones.Count; i++)
-                poss.Add(finger.trackingBones[i] != null ? Quaternion.Inverse(anchorT.rotation) * (finger.trackingBones[i].position - anchorT.position) : Vector3.zero);
-        return poss.ToArray();
-    }
-
-    private Quaternion[] GetFingerLocalRotations(HandData hand, Transform anchorT)
+    private Quaternion[] GetFingerLocalRotations(HandData hand)
     {
         List<Quaternion> rots = new List<Quaternion>();
         foreach (var finger in hand.fingers)
             for (int i = 0; i < finger.trackingBones.Count; i++)
-                rots.Add(finger.trackingBones[i] != null ? Quaternion.Inverse(anchorT.rotation) * finger.trackingBones[i].rotation : Quaternion.identity);
+                rots.Add(finger.trackingBones[i] != null ? finger.trackingBones[i].localRotation : Quaternion.identity);
         return rots.ToArray();
     }
 
     [ServerRpc(RequireOwnership = true)]
     private void ApplyTrackingToServer(
         Vector3 headPos, Quaternion headRot,
-        Vector3 leftWristPos, Quaternion leftWristRot, Vector3[] leftFingerPoss, Quaternion[] leftFingerRots,
-        Vector3 rightWristPos, Quaternion rightWristRot, Vector3[] rightFingerPoss, Quaternion[] rightFingerRots)
+        Vector3 leftWristPos, Quaternion leftWristRot, Quaternion[] leftFingerRots,
+        Vector3 rightWristPos, Quaternion rightWristRot, Quaternion[] rightFingerRots)
     {
-        ApplyTrackingToClients(headPos, headRot, leftWristPos, leftWristRot, leftFingerPoss, leftFingerRots,
-                               rightWristPos, rightWristRot, rightFingerPoss, rightFingerRots);
+        ApplyTrackingToClients(headPos, headRot, leftWristPos, leftWristRot, leftFingerRots,
+                               rightWristPos, rightWristRot, rightFingerRots);
     }
 
     [ObserversRpc(ExcludeOwner = true)]
     private void ApplyTrackingToClients(
         Vector3 headPos, Quaternion headRot,
-        Vector3 leftWristPos, Quaternion leftWristRot, Vector3[] leftFingerPoss, Quaternion[] leftFingerRots,
-        Vector3 rightWristPos, Quaternion rightWristRot, Vector3[] rightFingerPoss, Quaternion[] rightFingerRots)
+        Vector3 leftWristPos, Quaternion leftWristRot, Quaternion[] leftFingerRots,
+        Vector3 rightWristPos, Quaternion rightWristRot, Quaternion[] rightFingerRots)
     {
         if (anchor == null)
         {
             anchor = GameObject.FindGameObjectWithTag("Anchor")?.transform;
             return;
         }
-        ApplyTrackingData(headPos, headRot, leftWristPos, leftWristRot, leftFingerPoss, leftFingerRots,
-                          rightWristPos, rightWristRot, rightFingerPoss, rightFingerRots);
+        ApplyTrackingData(headPos, headRot, leftWristPos, leftWristRot, leftFingerRots,
+                          rightWristPos, rightWristRot, rightFingerRots);
     }
 
     private void ApplyTrackingData(
         Vector3 headPos, Quaternion headRot,
-        Vector3 leftWristPos, Quaternion leftWristRot, Vector3[] leftFingerPoss, Quaternion[] leftFingerRots,
-        Vector3 rightWristPos, Quaternion rightWristRot, Vector3[] rightFingerPoss, Quaternion[] rightFingerRots)
+        Vector3 leftWristPos, Quaternion leftWristRot, Quaternion[] leftFingerRots,
+        Vector3 rightWristPos, Quaternion rightWristRot, Quaternion[] rightFingerRots)
     {
         targetHeadPos = headPos;
         targetHeadRot = headRot;
@@ -202,13 +252,11 @@ public class VRPlayer : BasePlayer
         targetLeftWristRot = leftWristRot;
         targetRightWristPos = rightWristPos;
         targetRightWristRot = rightWristRot;
-        targetLeftFingerPoss = leftFingerPoss;
         targetLeftFingerRots = leftFingerRots;
-        targetRightFingerPoss = rightFingerPoss;
         targetRightFingerRots = rightFingerRots;
     }
 
-    private void ApplyHandSmooth(HandData hand, Vector3 wristPos, Quaternion wristRot, Vector3[] fingerPoss, Quaternion[] fingerRots)
+    private void ApplyWristSmooth(HandData hand, Vector3 wristPos, Quaternion wristRot)
     {
         if (anchor == null)
         {
@@ -224,20 +272,24 @@ public class VRPlayer : BasePlayer
             hand.applyWrist.position = Vector3.Lerp(hand.applyWrist.position, targetWristPos, positionLerp);
             hand.applyWrist.rotation = Quaternion.Slerp(hand.applyWrist.rotation, targetWristRot, rotationLerp);
         }
+    }
 
+    private void ApplyFingers(HandData hand, Quaternion[] targets, ref Quaternion[] pose)
+    {
+        if (targets == null) return;
+        if (pose == null || pose.Length != targets.Length) pose = (Quaternion[])targets.Clone();
+
+        float t = 1f - Mathf.Exp(-fingerFollowSpeed * Time.deltaTime);
         int rotIdx = 0;
         for (int f = 0; f < hand.fingers.Count; f++)
         {
             var finger = hand.fingers[f];
             for (int i = 0; i < finger.applyBones.Count; i++)
             {
-                if (finger.applyBones[i] != null && fingerRots != null && rotIdx < fingerRots.Length && fingerPoss != null && rotIdx < fingerPoss.Length)
+                if (finger.applyBones[i] != null && rotIdx < targets.Length)
                 {
-                    Vector3 targetFingerPos = anchor.position + anchor.rotation * fingerPoss[rotIdx];
-                    Quaternion targetFingerRot = anchor.rotation * fingerRots[rotIdx];
-
-                    finger.applyBones[i].position = Vector3.Lerp(finger.applyBones[i].position, targetFingerPos, positionLerp);
-                    finger.applyBones[i].rotation = Quaternion.Slerp(finger.applyBones[i].rotation, targetFingerRot, rotationLerp);
+                    pose[rotIdx] = Quaternion.Slerp(pose[rotIdx], targets[rotIdx], t);
+                    finger.applyBones[i].localRotation = pose[rotIdx];
                 }
                 rotIdx++;
             }

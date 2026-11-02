@@ -177,6 +177,9 @@ public class ModuleConfig
     public float targetValue = 0f;
     public float toleranceRatio = 0.05f;
 
+    [Tooltip("0보다 크면 측정값이 이 값 이하일 때 합격 (예: 인버터 잔류 전압 30V 이하). targetValue 판정보다 우선한다.")]
+    public float maxValue = 0f;
+
     public string GetExtra(string key)
     {
         foreach (var pair in extra)

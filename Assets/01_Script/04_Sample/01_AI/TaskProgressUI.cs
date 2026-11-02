@@ -54,11 +54,36 @@ namespace DoDrill.Training
         private int          _currentTaskIndex = -1;
         private int          _totalCount;
         private string       _currentModuleId  = string.Empty;
+        private bool         _confirmAllowed;
+
+        // ScenarioData.modules[].config.actionType 값 — UI 확인으로 끝나는 단계
+        private const string ConfirmActionType = "ConfirmTask";
 
         // ── 생명주기 ──────────────────────────────────────────────
 
+        // ── 텍스트 넘침 방지 ──────────────────────────────────────
+
+        /// <summary>글이 길어져도 박스 밖으로 튀어나오지 않도록 자동 크기 조절 + 말줄임.</summary>
+        private static void FitText(TMP_Text t, float minRatio)
+        {
+            if (t == null) return;
+            float max = t.fontSize;
+            t.enableAutoSizing = true;
+            t.fontSizeMax = max;
+            t.fontSizeMin = Mathf.Max(8f, max * minRatio);
+            t.overflowMode = TextOverflowModes.Ellipsis;
+        }
+
+        /// <summary>제목이 없을 때의 대비책: "Front_Cover_Removal" → "Front Cover Removal".</summary>
+        private static string PrettifyId(string id)
+            => string.IsNullOrEmpty(id) ? string.Empty : id.Replace('_', ' ');
+
         private void Awake()
         {
+            FitText(_descriptionText, 0.6f);
+            FitText(_moduleText, 0.7f);
+            FitText(_boltProgressText, 0.7f);
+
             // 시작 시 알림창을 확실히 숨김
             if(_notifCanvasGroup != null)
             {
@@ -103,7 +128,7 @@ namespace DoDrill.Training
             ScenarioStateReceiver.OnTaskStateUpdated -= OnTaskStateUpdated;
             ScenarioStateReceiver.OnSnapshotReceived -= OnSnapshotReceived;
             ScenarioReceiver.OnScenarioReceived      -= OnScenarioReceived;
-            InstanceFinder.ClientManager?.RegisterBroadcast<BoltProgressBroadcast>(OnBoltProgressReceived);
+            InstanceFinder.ClientManager?.UnregisterBroadcast<BoltProgressBroadcast>(OnBoltProgressReceived);
             InstanceFinder.ClientManager?.UnregisterBroadcast<TaskNotificationBroadcast>(OnTaskNotificationReceived);
 
             if (_confirmButton != null)
@@ -174,14 +199,11 @@ namespace DoDrill.Training
             if(_notifCanvasGroup == null || _notifText == null) return;
 
             // ── 1. 이름 결정 로직 (ScenarioRunner가 보낸 이름을 우선 사용) ──
-            string activePlayerName = "Player 1";
-            //string activePlayerName = msg.clientName;
+            string activePlayerName = msg.clientName;
 
-            //// 만약 서버에서 이름을 못 찾아서 빈 값으로 왔을 경우의 폴백
-            //if(string.IsNullOrEmpty(activePlayerName))
-            //{
-            //    activePlayerName = $"플레이어 {msg.clientId}";
-            //}
+            // 서버가 이름을 찾지 못해 빈 값이 오면 접속자 목록(UserStateRow)과 같은 규칙의 번호로 대체
+            if(string.IsNullOrEmpty(activePlayerName))
+                activePlayerName = msg.clientId >= 0 ? $"Player {msg.clientId + 1}" : "Player";
 
             // ── 2. 텍스트 구성 및 색상 적용 ──
             // 요청하신 형광 초록 계열 색상 (#00f800) 적용
@@ -235,25 +257,36 @@ namespace DoDrill.Training
                 //_statusText.gameObject.SetActive(true);
             }
 
+            _confirmAllowed = false;
+
             if (_scenarioData != null && state.taskIndex < _scenarioData.scenario.tasks.Count)
             {
                 var taskDef = _scenarioData.scenario.tasks[state.taskIndex];
                 _currentModuleId = taskDef.moduleId;
                 var config = _scenarioData.GetModuleConfig(taskDef.moduleId);
 
+                // '완료' 버튼은 UI 확인으로 끝나는 단계(actionType = ConfirmTask)에서만 허용.
+                // 물건 집기·존 도착·측정 단계는 실제 상호작용으로만 완료되어야 한다.
+                _confirmAllowed = config != null
+                    && string.Equals(config.actionType, ConfirmActionType, System.StringComparison.OrdinalIgnoreCase);
+
+                // 내부 ID(Front_Cover_Removal 등)를 그대로 보여주지 않고 시나리오의 단계 제목(extra.title)을 쓴다.
                 if (_moduleText != null)
-                    _moduleText.text = taskDef.moduleId;
+                {
+                    string title = config?.GetExtra("title");
+                    _moduleText.text = string.IsNullOrEmpty(title) ? PrettifyId(taskDef.moduleId) : title;
+                }
 
                 if (_descriptionText != null)
                 {
                     string desc = config?.GetExtra("description");
-                    _descriptionText.text = string.IsNullOrEmpty(desc) ? taskDef.moduleId : desc;
+                    _descriptionText.text = string.IsNullOrEmpty(desc) ? PrettifyId(taskDef.moduleId) : desc;
                 }
             }
 
-            // 완료 버튼: Running 상태에서만 활성화
+            // 완료 버튼: Running 상태이면서 UI 확인 단계일 때만 활성화
             if (_confirmButton != null)
-                _confirmButton.interactable = state.status == TaskStatus.Running;
+                _confirmButton.interactable = state.status == TaskStatus.Running && _confirmAllowed;
 
             if (_confirmBtnLabel != null)
                 _confirmBtnLabel.text = state.status == TaskStatus.Failed ? "재시도 대기 중..." : "완료";
@@ -263,34 +296,16 @@ namespace DoDrill.Training
 
         private void OnConfirmClicked()
         {
-            if (_currentTaskIndex < 0) return;
-            SendDebugCommand("Scenario/ForceComplete");
+            if (_currentTaskIndex < 0 || !_confirmAllowed || string.IsNullOrEmpty(_currentModuleId)) return;
+
+            // 정식 확인 경로: InteractionEvents → NetworkInteractionBridge → TaskConfirmSignal → 서버.
+            // 서버(ScenarioRunner.OnReceiveTaskConfirm)가 현재 단계·moduleId 일치를 검증한 뒤 처리한다.
+            // 디버그 명령을 쓰지 않으므로 DebugBootstrapper.isDebugMode 와 무관하게 동작한다.
+            InteractionEvents.FireTaskConfirmed(_currentModuleId);
 
 #if UNITY_EDITOR
             Debug.Log($"[TaskProgressUI] 완료 버튼: moduleId={_currentModuleId}, task={_currentTaskIndex}");
 #endif
-        }
-
-        private void SendDebugCommand(string commandKey)
-        {
-            // Host 모드: Registry 직접 실행
-            if (InstanceFinder.IsServerStarted && DebugBootstrapper.Registry != null)
-            {
-                DebugBootstrapper.Registry.Execute(commandKey, System.Array.Empty<string>(), -99);
-                return;
-            }
-
-            // 데디케이티드 서버: 클라이언트 → 서버 Broadcast
-            if (InstanceFinder.IsClientStarted)
-            {
-                int clientId = InstanceFinder.ClientManager?.Connection?.ClientId ?? -1;
-                InstanceFinder.ClientManager.Broadcast(new DebugCommandBroadcast
-                {
-                    commandKey = commandKey,
-                    argsJson   = "",
-                    callerId   = clientId,
-                });
-            }
         }
     }
 }

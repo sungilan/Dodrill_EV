@@ -77,9 +77,12 @@ public abstract class ConfirmTaskModule : ITaskModule
     // UI 버튼 전용 (ModuleId 기반)
     private void HandleConfirm(string moduleId)
     {
-        if(_isCompleted || moduleId != ModuleId) return;
+        if(_isCompleted || moduleId != ModuleId || !CanConfirm()) return;
         Complete();
     }
+
+    // 서버가 조건(대기 시간 등)을 직접 검증해야 하는 단계에서 재정의
+    protected virtual bool CanConfirm() => true;
 
     // 오브젝트 클릭 전용 (TargetObjName 기반)
     private void HandleInteraction(string id, string itemId)
@@ -87,7 +90,7 @@ public abstract class ConfirmTaskModule : ITaskModule
         if(_isCompleted) return;
 
         // ClickableAnimator가 보낸 uniqueId가 현재 모듈의 목표와 일치하면 완료
-        if(!string.IsNullOrEmpty(_targetObjName) && id == _targetObjName)
+        if(!string.IsNullOrEmpty(_targetObjName) && id == _targetObjName && CanConfirm())
         {
             Debug.Log($"[{ModuleId}] 대상 오브젝트({_targetObjName}) 클릭 확인됨. 단계를 완료합니다.");
             Complete();

@@ -22,6 +22,17 @@ public class DischargeTimerUI : MonoBehaviour
 
     public bool isDischarged = false;
 
+    private Coroutine _dischargeRoutine;
+
+    /// <summary>시나리오 extra.waitSeconds (클라이언트 타이머·서버 검증 공용). 없으면 fallback.</summary>
+    public static float GetWaitSeconds(ModuleConfig config, float fallback)
+    {
+        string raw = config?.GetExtraRaw("waitSeconds");
+        return float.TryParse(raw, System.Globalization.NumberStyles.Float,
+                              System.Globalization.CultureInfo.InvariantCulture, out float seconds)
+            ? seconds : fallback;
+    }
+
     private void Awake()
     {
         Instance = this;
@@ -48,12 +59,25 @@ public class DischargeTimerUI : MonoBehaviour
 
     private void OnTaskStateUpdated(TaskStateBroadcast broadcast)
     {
-        if(broadcast.currentTask.taskIndex == dischargeTaskIndex &&
-          broadcast.currentTask.status == TaskStatus.Running &&
-          !isDischarged)
+        if(broadcast.currentTask.taskIndex != dischargeTaskIndex) return;
+
+        // 타임아웃 후 재도전이면 타이머를 처음부터 다시 돌린다
+        if(broadcast.currentTask.status == TaskStatus.Failed)
         {
-            StartDischarge();
+            ResetDischarge();
+            return;
         }
+
+        if(broadcast.currentTask.status == TaskStatus.Running && !isDischarged)
+            StartDischarge();
+    }
+
+    private void ResetDischarge()
+    {
+        if(_dischargeRoutine != null) StopCoroutine(_dischargeRoutine);
+        _dischargeRoutine = null;
+        isDischarged = false;
+        if(timerPanel != null) timerPanel.SetActive(false);
     }
 
     public void StartDischarge()
@@ -68,10 +92,15 @@ public class DischargeTimerUI : MonoBehaviour
             return;
         }
 
-        if(isDischarged) return;
+        if(isDischarged || _dischargeRoutine != null) return;
+
+        // 상태 방송은 진행 중에도 다시 올 수 있으므로 위에서 중복 시작을 막는다
+        var scenario = ScenarioStateReceiver.Instance != null ? ScenarioStateReceiver.Instance.CurrentScenario : null;
+        dischargeTime = GetWaitSeconds(scenario?.GetModuleConfig("DischargeWait"), dischargeTime);
+        if(progressBar != null) progressBar.maxValue = dischargeTime;
 
         if(timerPanel != null) timerPanel.SetActive(true);
-        StartCoroutine(DischargeRoutine());
+        _dischargeRoutine = StartCoroutine(DischargeRoutine());
     }
 
     private IEnumerator DischargeRoutine()
@@ -84,7 +113,10 @@ public class DischargeTimerUI : MonoBehaviour
 
             // 1. 텍스트 업데이트 (남은 시간 표시)
             if(timerText != null)
-                timerText.text = $"잔류 전압 방전 중... {(dischargeTime - t):F1}s";
+            {
+                int remain = Mathf.CeilToInt(Mathf.Max(0f, dischargeTime - t));
+                timerText.text = $"잔류 전압 방전 중... {remain / 60}:{remain % 60:00}";
+            }
 
             // 2. 슬라이더 업데이트 (진행도 표시)
             if(progressBar != null)
@@ -94,6 +126,7 @@ public class DischargeTimerUI : MonoBehaviour
         }
 
         isDischarged = true;
+        _dischargeRoutine = null;
 
         if(progressBar != null) progressBar.value = dischargeTime;
 

@@ -8,7 +8,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class FreeLookControllerMobile : NetworkBehaviour
+// 파일명(FreeLockControllerMobile.cs)과 클래스명이 달라 프리팹의 스크립트가 Missing 으로 풀리던 것을 파일명에 맞춤
+public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
 {
     // ═══════════════════════════════════════════════════════
     // 이동 / 회전 설정
@@ -19,6 +20,10 @@ public class FreeLookControllerMobile : NetworkBehaviour
     public float maxLookX = 80f;
     public float minLookX = -80f;
 
+    [Header("카메라")]
+    [Tooltip("플레이어 카메라 near clip(m). 0 이하면 프리팹 값 사용.")]
+    public float nearClip = 0.03f;
+
     [Header("Smooth Settings")]
     public float moveSmoothTime = 0.12f;
     public float verticalSmoothTime = 0.12f;
@@ -28,6 +33,26 @@ public class FreeLookControllerMobile : NetworkBehaviour
 
     private float rotX;
     private float rotY;
+
+    // ── 아바타(PcMobileAvatarController) 연동 ──
+    [Header("아바타 (PcMobileAvatarController 연동)")]
+    [Tooltip("카메라 피치를 적용할 피벗. 비워 두면 자식 'CameraPivot'을 찾는다. 없으면 예전처럼 루트 전체를 기울인다.")]
+    [SerializeField] private Transform cameraPivot;
+
+    private Vector3 _planarVelocity = Vector3.zero;
+    private float _crouchInput = 0f;
+    private PcMobileAvatarController _avatarCtrl;
+    public Vector3 CurrentPlanarVelocity => _planarVelocity;
+    public float CurrentPitch => rotX;
+    public float CrouchInput => _crouchInput;
+    public float MoveSpeed => moveSpeed;
+
+    private bool UseAvatarRig => cameraPivot != null && _avatarCtrl != null;
+
+    // 높이(크라우치) 버튼용 — MoveUp = 일어서기, MoveDown = 낮추기
+    public void MoveUp() { _crouchInput = -1f; desiredVertical = 0f; }
+    public void MoveDown() { _crouchInput = 1f; desiredVertical = 0f; }
+    public void StopMove() { _crouchInput = 0f; desiredVertical = 0f; }
 
     [Header("Joystick/Touch")]
     public JoystickController moveJoyStick;
@@ -113,6 +138,9 @@ public class FreeLookControllerMobile : NetworkBehaviour
         base.OnStartClient();
         if(!IsOwner) { Destroy(this); return; }
 
+        if(cameraPivot == null) cameraPivot = transform.Find("CameraPivot");
+        _avatarCtrl = GetComponent<PcMobileAvatarController>();
+
         if(moveJoyStick == null)
             moveJoyStick = Object.FindFirstObjectByType<JoystickController>();
 
@@ -125,7 +153,11 @@ public class FreeLookControllerMobile : NetworkBehaviour
         if(_mainCamera != null)
         {
             _mainCamera.gameObject.SetActive(true);
+            _mainCamera.enabled = true;
             _mainCamera.tag = "MainCamera";
+            // 프리팹 루트 카메라의 near clip(0.3m) 때문에 가까운 물체가 잘려 보이는 문제 방지
+            if(nearClip > 0f && _mainCamera.nearClipPlane > nearClip)
+                _mainCamera.nearClipPlane = nearClip;
             _cameraReady = true;
             Log("카메라 준비 완료");
         }
@@ -141,10 +173,12 @@ public class FreeLookControllerMobile : NetworkBehaviour
         {
             ClearHoverVisuals();
             HideDropButton();  // ★ 인벤토리 열리면 Drop 버튼 숨기기
+            ReleaseLiftButton();
             return;
         }
 
         Move();
+        HandleLiftButtonTouch();  // 시점·상호작용보다 먼저: 버튼을 누른 손가락은 둘 다에서 제외
         CameraLookTouch();
         HandleHover();
         HandleTouchInteraction();
@@ -161,14 +195,23 @@ public class FreeLookControllerMobile : NetworkBehaviour
     private void Move()
     {
         Vector2 moveInput = (moveJoyStick != null) ? moveJoyStick.InputDirection : Vector2.zero;
-        Vector3 moveDir = transform.right * moveInput.x + transform.forward * moveInput.y;
+        Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+        Vector3 moveDir = transform.right * moveInput.x + flatForward * moveInput.y;
         Vector3 desiredMove = moveDir * moveSpeed;
         currentVelocity = Vector3.Lerp(currentVelocity, desiredMove, Time.deltaTime / moveSmoothTime);
+
+        if(UseAvatarRig)
+        {
+            transform.position += currentVelocity * Time.deltaTime;
+            _planarVelocity = currentVelocity;
+            return;
+        }
 
         float targetVerticalVel = desiredVertical * moveSpeed;
         currentVerticalVelocity = Mathf.Lerp(currentVerticalVelocity, targetVerticalVel, Time.deltaTime / verticalSmoothTime);
 
         transform.position += (currentVelocity + Vector3.up * currentVerticalVelocity) * Time.deltaTime;
+        _planarVelocity = currentVelocity;
     }
 
     private void CameraLookTouch()
@@ -177,6 +220,8 @@ public class FreeLookControllerMobile : NetworkBehaviour
 
         foreach(Touch t in Input.touches)
         {
+            if(t.fingerId == _liftTouchId) continue;
+
             if(lookTouchId == -1 && t.phase == TouchPhase.Began && t.position.x > Screen.width * 0.5f)
             {
                 lookTouchId = t.fingerId;
@@ -188,7 +233,15 @@ public class FreeLookControllerMobile : NetworkBehaviour
                 Vector2 delta = t.position - lastLookTouchPos;
                 rotY += delta.x * lookSensitivity * 0.02f;
                 rotX = Mathf.Clamp(rotX + (delta.y * lookSensitivity * -0.02f), minLookX, maxLookX);
-                transform.rotation = Quaternion.Euler(rotX, rotY, 0f);
+                if(UseAvatarRig)
+                {
+                    transform.rotation = Quaternion.Euler(0f, rotY, 0f);
+                    cameraPivot.localRotation = Quaternion.Euler(rotX, 0f, 0f);
+                }
+                else
+                {
+                    transform.rotation = Quaternion.Euler(rotX, rotY, 0f);
+                }
                 lastLookTouchPos = t.position;
             }
         }
@@ -198,6 +251,52 @@ public class FreeLookControllerMobile : NetworkBehaviour
     // 터치 상호작용
     // ═══════════════════════════════════════════════════════
 
+    // 리프트 버튼은 콜라이더 없는 월드 캔버스 위에 있어 ProcessInteraction 의 레이캐스트로는 맞지 않는다.
+    // 누르는 동안 작동하는 버튼이라 손가락을 추적해 뗄 때 반드시 놓아 준다.
+    private LiftButtonUI _pressedLiftButton;
+    private int _liftTouchId = -1;
+
+    private void HandleLiftButtonTouch()
+    {
+        if(_pressedLiftButton != null)
+        {
+            for(int i = 0; i < Input.touchCount; i++)
+            {
+                Touch held = Input.GetTouch(i);
+                if(held.fingerId == _liftTouchId && held.phase != TouchPhase.Ended && held.phase != TouchPhase.Canceled)
+                    return;
+            }
+            ReleaseLiftButton();
+            return;
+        }
+
+        for(int i = 0; i < Input.touchCount; i++)
+        {
+            Touch t = Input.GetTouch(i);
+            if(t.phase != TouchPhase.Began || t.fingerId == lookTouchId || t.fingerId == _interactionTouchId) continue;
+            if(IsPointerOverUI(t.position)) continue;
+
+            var button = LiftButtonUI.FindAtScreen(_mainCamera, t.position, raycastMaxDistance, transform, out _);
+            if(button == null) continue;
+
+            _pressedLiftButton = button;
+            _liftTouchId = t.fingerId;
+            button.OnPointerDown(null);
+            Log($"리프트 버튼 누름: {button.name}");
+            return;
+        }
+    }
+
+    private void ReleaseLiftButton()
+    {
+        _liftTouchId = -1;
+        if(_pressedLiftButton == null) return;
+
+        _pressedLiftButton.OnPointerUp(null);
+        Log($"리프트 버튼 해제: {_pressedLiftButton.name}");
+        _pressedLiftButton = null;
+    }
+
     private void HandleTouchInteraction()
     {
         if(Input.touchCount == 0) { _interactionTouchId = -1; return; }
@@ -205,6 +304,7 @@ public class FreeLookControllerMobile : NetworkBehaviour
         for(int i = 0; i < Input.touchCount; i++)
         {
             Touch t = Input.GetTouch(i);
+            if(t.fingerId == _liftTouchId) continue;
 
             if(_interactionTouchId == -1 && t.phase == TouchPhase.Began &&
                 t.position.x < Screen.width * 0.5f && t.fingerId != lookTouchId)

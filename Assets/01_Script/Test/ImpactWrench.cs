@@ -43,6 +43,7 @@ public class ImpactWrench : MonoBehaviour
 
     private bool _buttonHeld;
     private bool _wasWorking;
+    private bool _progressShown;   // 이 렌치가 볼트 진행도 UI를 띄운 상태인지
 
     // ── 생명주기 ───────────────────────────────────────────
 
@@ -56,6 +57,8 @@ public class ImpactWrench : MonoBehaviour
         _buttonHeld = false;
         ApplyEffects(false);
         RestoreBoltOutlineForced();
+        // 렌치를 내려놓거나 치워도(비활성화) 볼트 진행도 UI가 남지 않도록 반드시 숨긴다.
+        HideProgress();
     }
 
     private void Update()
@@ -71,12 +74,26 @@ public class ImpactWrench : MonoBehaviour
 
         if (_targetBolt != null)
         {
+            // 볼트가 이미 제거(비활성화/파괴)됐다면 더 이상 대상이 아니다.
+            // 비활성화된 콜라이더는 OnTriggerExit가 호출되지 않아 진행도 UI가 남던 원인.
+            if (!_targetBolt.gameObject.activeInHierarchy)
+            {
+                ClearTarget();
+                return;
+            }
+
             // 실시간 검증: 작업 중 태스크가 바뀌는 상황 대비
             if (!IsCorrectBoltTask(_targetBolt))
             {
-                InteractionProgressBarUI.Instance?.HideBoltProgress();
-                RestoreBoltOutline();
-                _targetBolt = null;
+                ClearTarget();
+                return;
+            }
+
+            // 작업이 끝난 볼트는 대기 상태로 두지 않고 대상에서 해제한다.
+            if (_targetBolt.isloosened)
+            {
+                if (working) TriggerBoltAnimation(_targetBolt.gameObject);
+                ClearTarget();
                 return;
             }
 
@@ -85,35 +102,48 @@ public class ImpactWrench : MonoBehaviour
 
             if (working)
             {
-                if (_targetBolt.isloosened)
-                {
-                    TriggerBoltAnimation(_targetBolt.gameObject);
-                    return;
-                }
-
                 // 렌치 회전 방향은 물리적 일관성을 위해 currentMode 유지 가능 (필요시 수정)
                 float dir = (currentMode == WrenchMode.Unscrew) ? 1f : -1f;
                 _targetBolt.InteractWithTool(dir * rotationSpeed * Time.deltaTime, transform.forward);
 
-                // [작업 중] 
-                InteractionProgressBarUI.Instance?.ShowBoltProgress(
-                    _targetBolt.Progress,
-                    $"{actionName} 중...",
-                    _currentBoltGameObject.name,
-                    GetPlatformInstruction(actionName, true)
-                );
+                // [작업 중]
+                ShowProgress($"{actionName} 중...", GetPlatformInstruction(actionName, true));
             }
             else
             {
                 // [대기 중]
-                InteractionProgressBarUI.Instance?.ShowBoltProgress(
-                    _targetBolt.Progress,
-                    actionName,
-                    _currentBoltGameObject.name,
-                    GetPlatformInstruction(actionName, false)
-                );
+                ShowProgress(actionName, GetPlatformInstruction(actionName, false));
             }
         }
+    }
+
+    // ── 볼트 진행도 UI ──────────────────────────────────────
+
+    private void ShowProgress(string title, string instruction)
+    {
+        var ui = InteractionProgressBarUI.Instance;
+        if (ui == null || _targetBolt == null) return;
+
+        ui.ShowBoltProgress(_targetBolt.Progress, title,
+            _currentBoltGameObject != null ? _currentBoltGameObject.name : _targetBolt.name,
+            instruction);
+        _progressShown = true;
+    }
+
+    private void HideProgress()
+    {
+        if (!_progressShown) return;
+        _progressShown = false;
+        InteractionProgressBarUI.Instance?.HideBoltProgress();
+    }
+
+    /// <summary>현재 볼트 대상 해제 — 아웃라인 복구 + 진행도 UI 숨김.</summary>
+    private void ClearTarget()
+    {
+        RestoreBoltOutline();
+        HideProgress();
+        _targetBolt = null;
+        _currentBoltGameObject = null;
     }
 
     // ── 단계 검증 로직 ──────────────────────────────────────
@@ -209,6 +239,9 @@ public class ImpactWrench : MonoBehaviour
             return;
         }
 
+        // 이미 작업이 끝난 볼트는 대상으로 삼지 않는다 (진행도 UI가 100%로 남는 것 방지)
+        if (detectedBolt.isloosened) return;
+
         // 검증 로직 실행
         if (!IsCorrectBoltTask(detectedBolt)) return;
 
@@ -220,12 +253,7 @@ public class ImpactWrench : MonoBehaviour
         ChangeBoltOutlineColor();
 
         string actionName = _targetBolt.isAssembleMode ? "볼트 체결" : "볼트 분해";
-        InteractionProgressBarUI.Instance?.ShowBoltProgress(
-            _targetBolt.Progress,
-            actionName,
-            other.name,
-            GetPlatformInstruction(actionName, false)
-        );
+        ShowProgress(actionName, GetPlatformInstruction(actionName, false));
     }
 
     private void OnTriggerExit(Collider other)
@@ -233,13 +261,7 @@ public class ImpactWrench : MonoBehaviour
         if (!other.CompareTag("Bolt")) return;
 
         if (_currentBoltGameObject != null && _currentBoltGameObject == other.gameObject)
-        {
-            RestoreBoltOutline();
-            InteractionProgressBarUI.Instance?.HideBoltProgress();
-
-            _targetBolt = null;
-            _currentBoltGameObject = null;
-        }
+            ClearTarget();
     }
 
     private void ChangeBoltOutlineColor()
@@ -297,16 +319,11 @@ public class ImpactWrench : MonoBehaviour
 
     private void TriggerBoltAnimation(GameObject boltGO)
     {
+        // 대상 해제(아웃라인 복구·진행도 UI 숨김)는 호출한 쪽의 ClearTarget()이 담당한다.
         var ca = boltGO.GetComponent<ClickableAnimator>();
         if (ca == null || ca.IsOpen) return;
 
         ca.Open();
-        RestoreBoltOutline();
-
-        InteractionProgressBarUI.Instance?.HideBoltProgress();
-
-        _targetBolt = null;
-        _currentBoltGameObject = null;
     }
 
     private string GetPlatformInstruction(string actionName, bool isWorking)

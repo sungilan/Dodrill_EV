@@ -19,7 +19,7 @@ using UnityEngine.EventSystems;
 /// ╚══════════════════════════════════════════════════════════════════╝
 /// ★ 부착 위치: 플레이어 NetworkObject (캐릭터 프리팹)
 /// </summary>
-public class FreeLookController : NetworkBehaviour
+public class FreeLookController : NetworkBehaviour, IPcLookController
 {
     // ═══════════════════════════════════════════════════════
     // 인스펙터 — FreeLook
@@ -93,6 +93,22 @@ public class FreeLookController : NetworkBehaviour
     private float _desiredVertical = 0f;
     private float _currentVerticalVelocity = 0f;
 
+    // ── 아바타(PcMobileAvatarController) 연동 ──
+    // 루트는 좌우(yaw)만 돌고 상하(pitch)는 cameraPivot만 돈다 → 몸통 아바타가 기울지 않는다.
+    [Header("아바타 (PcMobileAvatarController 연동)")]
+    [Tooltip("카메라 피치를 적용할 피벗. 비워 두면 자식 'CameraPivot'을 찾는다. 없으면 예전처럼 루트 전체를 기울인다.")]
+    [SerializeField] private Transform cameraPivot;
+
+    private Vector3 _planarVelocity = Vector3.zero;
+    private float _crouchInput = 0f;
+    private PcMobileAvatarController _avatarCtrl;
+    public Vector3 CurrentPlanarVelocity => _planarVelocity;
+    public float CurrentPitch => _rotX;
+    public float CrouchInput => _crouchInput;
+    public float MoveSpeed => moveSpeed;
+
+    private bool UseAvatarRig => cameraPivot != null && _avatarCtrl != null;
+
     // ═══════════════════════════════════════════════════════
     // 내부 상태 — 카메라
     // ═══════════════════════════════════════════════════════
@@ -160,6 +176,8 @@ public class FreeLookController : NetworkBehaviour
 
     private void Awake()
     {
+        if (cameraPivot == null) cameraPivot = transform.Find("CameraPivot");
+        _avatarCtrl = GetComponent<PcMobileAvatarController>();
         DisableAllChildCameras();
     }
 
@@ -211,16 +229,24 @@ public class FreeLookController : NetworkBehaviour
         _cameraReady = false;
     }
 
+    // 창 포커스를 잃어도(알트탭·녹화 프로그램·알림 팝업) 손에 든 물체를 놓지 않는다.
+    // 예전에는 _heldObject만 null로 만들어서, 서버/SyncGrab은 여전히 '잡힌 상태'인데
+    // 컨트롤러는 모르는 상태가 되어 물체를 다시 잡거나 내려놓을 수 없게 됐다(= 자주 놓치는 현상).
     private void OnApplicationFocus(bool hasFocus)
     {
         if(!IsOwner || hasFocus) return;
-        _heldObject = null;
+        // 눌려 있던 마우스 UI 상태만 정리
+        if(_pressedLiftButton != null)
+        {
+            _pressedLiftButton.OnPointerUp(new UnityEngine.EventSystems.PointerEventData(
+                UnityEngine.EventSystems.EventSystem.current));
+            _pressedLiftButton = null;
+        }
     }
 
     private void OnApplicationPause(bool isPaused)
     {
-        if(!IsOwner || !isPaused) return;
-        _heldObject = null;
+        // 모바일 백그라운드 전환도 동일하게 물체 상태는 유지
     }
 
     // ═══════════════════════════════════════════════════════
@@ -231,8 +257,24 @@ public class FreeLookController : NetworkBehaviour
     {
         foreach(var cam in GetComponentsInChildren<Camera>(includeInactive: true))
         {
-            cam.gameObject.SetActive(false);
+            // 루트 오브젝트에 카메라가 있는 구버전 프리팹: 오브젝트를 끄면 플레이어 전체(아바타 포함)가 사라진다 → 컴포넌트만 끔
+            if(cam.gameObject == gameObject) cam.enabled = false;
+            else cam.gameObject.SetActive(false);
             cam.tag = "Untagged";
+        }
+    }
+
+    [Header("카메라")]
+    [Tooltip("플레이어 카메라의 near clip(m). 프리팹의 루트 카메라가 0.3m라 손에 든 물체·가까운 모델이 잘려 보이던 문제를 막는다. 0 이하면 프리팹 값을 그대로 사용.")]
+    public float nearClip = 0.03f;
+
+    private void ApplyNearClip(Camera cam)
+    {
+        if(cam == null || nearClip <= 0f) return;
+        if(cam.nearClipPlane > nearClip)
+        {
+            Log($"카메라 near clip {cam.nearClipPlane:F2} → {nearClip:F2}");
+            cam.nearClipPlane = nearClip;
         }
     }
 
@@ -242,8 +284,10 @@ public class FreeLookController : NetworkBehaviour
         if(found == null) { Log("자식 카메라 없음"); return; }
 
         found.gameObject.SetActive(true);
+        found.enabled = true;
         found.tag = "MainCamera";
         _mainCamera = found;
+        ApplyNearClip(found);
 
         foreach(var cam in GetComponentsInChildren<Camera>(includeInactive: true))
         {
@@ -358,8 +402,18 @@ public class FreeLookController : NetworkBehaviour
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
-        Vector3 moveDir = transform.right * x + transform.forward * z;
+        // 앞/뒤는 몸이 바라보는 수평면 기준 (아바타 리그에서는 루트가 기울지 않지만 구 프리팹 대비)
+        Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+        Vector3 moveDir = transform.right * x + flatForward * z;
         Vector3 horizontalVelocity = moveDir * moveSpeed;
+
+        if(UseAvatarRig)
+        {
+            // 수직 자유 비행 대신 크라우치/높이 조절(PcMobileAvatarController)이 담당, 루트 Y는 접지 처리
+            transform.position += horizontalVelocity * Time.deltaTime;
+            _planarVelocity = horizontalVelocity;
+            return;
+        }
 
         float targetVerticalVel = _desiredVertical * moveSpeed;
         _currentVerticalVelocity = Mathf.Lerp(
@@ -369,6 +423,7 @@ public class FreeLookController : NetworkBehaviour
         );
 
         transform.position += (horizontalVelocity + Vector3.up * _currentVerticalVelocity) * Time.deltaTime;
+        _planarVelocity = horizontalVelocity;
     }
 
     private void HandleCameraLook()
@@ -379,7 +434,16 @@ public class FreeLookController : NetworkBehaviour
         _rotX += Input.GetAxis("Mouse Y") * lookSensitivity * -1f;
         _rotX = Mathf.Clamp(_rotX, minLookX, maxLookX);
 
-        transform.eulerAngles = new Vector3(_rotX, transform.eulerAngles.y + y, 0f);
+        if(UseAvatarRig)
+        {
+            // 루트에는 yaw만 (몸이 기울지 않음), 피치는 카메라 피벗에만
+            transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y + y, 0f);
+            cameraPivot.localRotation = Quaternion.Euler(_rotX, 0f, 0f);
+        }
+        else
+        {
+            transform.eulerAngles = new Vector3(_rotX, transform.eulerAngles.y + y, 0f);
+        }
     }
 
     private void HandleVerticalInput()
@@ -409,9 +473,12 @@ public class FreeLookController : NetworkBehaviour
         }
     }
 
-    public void MoveUp() => _desiredVertical = 0.5f;
-    public void MoveDown() => _desiredVertical = -0.5f;
-    public void StopVertical() => _desiredVertical = 0f;
+    // 아바타 리그: Q/E(와 UI 버튼)는 자유 비행이 아니라 높이(크라우치) 방향 입력.
+    //  MoveUp = 일어서기(-1), MoveDown = 낮추기(+1), Stop = 현재 높이 유지(0)
+    // 구 프리팹(아바타 없음)은 기존 수직 비행 그대로.
+    public void MoveUp() { if(UseAvatarRig) { _crouchInput = -1f; _desiredVertical = 0f; } else _desiredVertical = 0.5f; }
+    public void MoveDown() { if(UseAvatarRig) { _crouchInput = 1f; _desiredVertical = 0f; } else _desiredVertical = -0.5f; }
+    public void StopVertical() { _crouchInput = 0f; _desiredVertical = 0f; }
 
     // ═══════════════════════════════════════════════════════
     // 클릭 처리
@@ -644,6 +711,19 @@ public class FreeLookController : NetworkBehaviour
 
         // ── MouseDown: 새 버튼 감지 ──────────────────────────────────
         Ray ray = _mainCamera.ScreenPointToRay(screenPos);
+
+        // 리프트 버튼은 월드 캔버스 위에 있고 콜라이더가 없어 물리 레이캐스트로는 맞지 않는다.
+        // 화면 좌표 ↔ 캔버스 사각형 교차로 직접 판정한다 (EventSystem 경로가 실패해도 동작).
+        var uiLift = LiftButtonUI.FindAtScreen(_mainCamera, screenPos, raycastMaxDistance, transform, out float uiLiftDist);
+        if(uiLift != null)
+        {
+            _pressedLiftButton = uiLift;
+            uiLift.OnPointerDown(new UnityEngine.EventSystems.PointerEventData(
+                UnityEngine.EventSystems.EventSystem.current));
+            Log($"리프트 버튼 누름(UI 판정, {uiLiftDist:F2}m): {uiLift.name}");
+            return true;
+        }
+
         if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance)) return false;
 
         // LiftButtonUI 확인

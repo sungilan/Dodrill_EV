@@ -1,0 +1,91 @@
+using UnityEngine;
+
+/// <summary>
+/// 애니메이션 포즈가 적용된 뒤(모든 LateUpdate보다 먼저, order -100), FinalIK가 풀기 전에
+/// IK "입력"만 준비한다:
+///
+///   1. 크라우치: 힙 낮춤 + LimbIK 발 타깃/가중치 설정 (PcCrouchIK.ApplyPreIK)
+///   2. 머리 타깃 계산 (PcHeadAim.ComputeTarget)
+///
+/// 실제 풀이는 LimbIK/LookAtIK 컴포넌트가 각자의 LateUpdate(기본 order 0)에서 수행한다.
+/// (예전에는 컴포넌트를 끄고 solver.Update()를 직접 불렀으나, 에디터에서
+///  SetSystemInterested 관련 잡음이 있어 표준 방식으로 되돌림.)
+///
+/// 크라우치·머리 각도는 Animator 파라미터(Crouch/HeadPitch)에서 읽으므로
+/// 소유자/원격이 같은 코드로 동작한다. (원격은 NetworkAnimator가 파라미터를 채움)
+/// </summary>
+[DefaultExecutionOrder(-100)]
+public class PcAvatarIKDriver : MonoBehaviour
+{
+    [SerializeField] private Animator anim;
+    [SerializeField] private PcCrouchIK crouch;
+    [SerializeField] private PcHeadAim headAim;
+    [SerializeField] private PcArmReach armReach;
+    [Tooltip("물체를 잡았을 때 손가락을 쥐는 모양 (PcAvatarBuilder 가 만들어 연결)")]
+    [SerializeField] private PcHandGrip handGrip;
+
+    private PcMobileAvatarController _controller;
+
+    // 잡고 있는 물체 (SyncGrab 이 소유권을 잡은 사람에게 넘기는 것을 이용 — 소유자/원격 모두 같은 코드로 동작)
+    private SyncGrab _held;
+    private bool _holdRightHand = true;
+    private float _nextHeldSearch;
+
+    private void Start()
+    {
+        _controller = GetComponentInParent<PcMobileAvatarController>();
+        if (anim == null) anim = GetComponent<Animator>();
+        if (headAim != null) headAim.Configure();
+        if (armReach != null) armReach.Configure();
+    }
+
+    private void LateUpdate()
+    {
+        if (anim == null) return;
+
+        float crouch01 = anim.GetFloat(PcAvatarAnimParams.CrouchHash);
+        float headPitch = anim.GetFloat(PcAvatarAnimParams.HeadPitchHash);
+        bool isOwner = _controller == null || _controller.IsOwnerView;
+        Quaternion bodyRot = _controller != null ? _controller.transform.rotation : transform.rotation;
+
+        float scale = _controller != null ? _controller.AvatarScale : 1f;
+        if (crouch != null) crouch.ApplyPreIK(crouch01, scale);
+        if (headAim != null) headAim.ComputeTarget(isOwner, headPitch, bodyRot);
+        if (armReach != null)
+        {
+            UpdateHold();
+            armReach.Tick(Time.deltaTime);
+            if (handGrip != null)
+                handGrip.ApplyCurl(armReach.HoldUsesRightHand, Mathf.SmoothStep(0f, 1f, armReach.HoldWeight));
+        }
+    }
+
+    /// <summary>이 플레이어가 물체를 잡고 있으면 그 물체 쪽으로 손을 유지하고 손가락을 쥔다.</summary>
+    private void UpdateHold()
+    {
+        if (_controller == null) { armReach.SetHold(false, true, Vector3.zero, Quaternion.identity); return; }
+
+        if (Time.time >= _nextHeldSearch)
+        {
+            _nextHeldSearch = Time.time + 0.1f;
+            var found = SyncGrab.FindHeldBy(_controller.HolderId);
+            if (found != _held)
+            {
+                _held = found;
+                if (_held != null)
+                {
+                    // 잡는 순간 몸 기준으로 물체가 왼쪽에 치우쳐 있으면 왼손, 아니면 오른손 (잡고 있는 동안은 유지)
+                    float lateral = _controller.transform.InverseTransformPoint(_held.GripWorldPoint).x;
+                    _holdRightHand = lateral > -0.15f;
+                }
+            }
+        }
+
+        if (_held == null || !_held.IsGrabbed) { armReach.SetHold(false, _holdRightHand, Vector3.zero, Quaternion.identity); return; }
+
+        Quaternion yaw = Quaternion.Euler(0f, _controller.transform.eulerAngles.y, 0f);
+        bool baked = handGrip != null && handGrip.IsBaked(_holdRightHand);
+        Quaternion rot = baked ? handGrip.HandRotation(_holdRightHand, yaw) : Quaternion.identity;
+        armReach.SetHold(true, _holdRightHand, _held.GripWorldPoint, rot, baked);
+    }
+}

@@ -40,7 +40,19 @@ namespace Autohand {
 
         [UnityEditor.InitializeOnLoadMethod]
         public static void CheckSceneForOldPoses() {
-            if(!loaded) {
+            // 이 메서드는 도메인 리로드마다, 그리고 AssetImportWorker 같은 보조 Unity 프로세스에서도 실행된다.
+            // 거기서 창을 만들면 닫히지 않은 빈 창이 프로세스마다 계속 쌓여 작업 표시줄이 Unity 창으로 가득 찬다.
+            // → 사람이 조작하는 메인 에디터에서만, 리로드가 끝난 뒤(delayCall)에 한 번 검사한다.
+            if(Application.isBatchMode || AssetDatabase.IsAssetImportWorkerProcess())
+                return;
+            EditorApplication.delayCall += CheckSceneForOldPosesDeferred;
+        }
+
+        static void CheckSceneForOldPosesDeferred() {
+            if(loaded) return;
+            loaded = true;   // 예외가 나도 다음 리로드 전까지 다시 열지 않는다
+
+            try {
                 if(window != null)
                     window.Close();
 
@@ -48,14 +60,15 @@ namespace Autohand {
                     return;
 
                 window = GetWindow<AutoHandUpdateDataWizard>("Update Pose Data");
-                if(handSettings.quality == -1 && !handSettings.ignoreSetup)
+                if(handSettings != null && handSettings.quality == -1 && !handSettings.ignoreSetup)
                     window.FindPrefabPoses();
 
                 if(window.FindScenePoses() == 0 && (window.prefabPoses.Count) == 0)
                     window.Close();
-
-                // Mark as loaded so this auto-initialization only happens once.
-                loaded = true;
+            }
+            catch(System.Exception e) {
+                Debug.LogWarning("[AutoHand] 포즈 데이터 검사 중 오류 — 창을 닫습니다: " + e.Message);
+                if(window != null) window.Close();
             }
         }
 

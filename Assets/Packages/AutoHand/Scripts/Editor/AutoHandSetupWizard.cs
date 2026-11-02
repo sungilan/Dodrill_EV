@@ -28,6 +28,9 @@ namespace AutoHand {
         }
 
         static AutoHandSetupWizard() {
+            // 보조 프로세스(AssetImportWorker)·배치 모드에서는 설정 창을 띄우지 않는다 (빈 창이 계속 쌓이는 문제)
+            if(Application.isBatchMode || AssetDatabase.IsAssetImportWorkerProcess())
+                return;
             EditorApplication.update += Start;
         }
 
