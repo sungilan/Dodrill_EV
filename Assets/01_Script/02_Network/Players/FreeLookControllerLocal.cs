@@ -5,24 +5,24 @@ using UnityEngine;
 public class FreeLookControllerLocal : MonoBehaviour
 {
     public bool enableMovement = true;
-    public float moveSpeed = 5f;       // ÀÌµ¿ ¼Óµµ
-    public float lookSensitivity = 2f; // ¸¶¿ì½º °¨µµ
-    public float maxLookX = 80f;       // À§ÂÊ È¸Àü Á¦ÇÑ
-    public float minLookX = -80f;      // ¾Æ·¡ÂÊ È¸Àü Á¦ÇÑ
+    public float moveSpeed = 5f;       // ì´ë™ ì†ë„
+    public float lookSensitivity = 2f; // ë§ˆìš°ìŠ¤ ê°ë„
+    public float maxLookX = 80f;       // ìœ„ìª½ íšŒì „ ì œí•œ
+    public float minLookX = -80f;      // ì•„ë˜ìª½ íšŒì „ ì œí•œ
 
-    // ¼öÁ÷ ÀÌµ¿ ºÎµå·¯¿ò
+    // ìˆ˜ì§ ì´ë™ ë¶€ë“œëŸ¬ì›€
     [Header("Vertical Smooth")]
     public float verticalSmoothTime = 0.12f;
-    private float desiredVertical = 0f;            // ¿ÜºÎ¿¡¼­ ¼³Á¤(»ó½Â:1, ÇÏ°­:-1, Á¤Áö:0)
-    private float currentVerticalVelocity = 0f;    // º¸°£µÈ ¼öÁ÷ ¼Óµµ (m/s)
+    private float desiredVertical = 0f;            // ì™¸ë¶€ì—ì„œ ì„¤ì •(ìƒìŠ¹:1, í•˜ê°•:-1, ì •ì§€:0)
+    private float currentVerticalVelocity = 0f;    // ë³´ê°„ëœ ìˆ˜ì§ ì†ë„ (m/s)
 
-    private float rotX; // Ä«¸Ş¶ó pitch °ª
+    private float rotX; // ì¹´ë©”ë¼ pitch ê°’
 
     void Update()
     {
         Move();
 
-        // ¿ìÅ¬¸¯À» ´©¸£°í ÀÖÀ» ¶§¸¸ Ä«¸Ş¶ó È¸Àü
+        // ìš°í´ë¦­ì„ ëˆ„ë¥´ê³  ìˆì„ ë•Œë§Œ ì¹´ë©”ë¼ íšŒì „
         if (Input.GetMouseButton(1))
         {
             CameraLook();
@@ -55,40 +55,40 @@ public class FreeLookControllerLocal : MonoBehaviour
         Vector3 moveDir = transform.right * x + transform.forward * z;
         Vector3 horizontalVelocity = moveDir * moveSpeed;
 
-        // ¼öÁ÷ ¸ñÇ¥ ¼Óµµ(»ó½Â/ÇÏ°­) °è»ê, moveSpeed °øÀ¯
+        // ìˆ˜ì§ ëª©í‘œ ì†ë„(ìƒìŠ¹/í•˜ê°•) ê³„ì‚°, moveSpeed ê³µìœ 
         float targetVerticalVel = desiredVertical * moveSpeed;
-        // ºÎµå·´°Ô º¸°£
+        // ë¶€ë“œëŸ½ê²Œ ë³´ê°„
         currentVerticalVelocity = Mathf.Lerp(currentVerticalVelocity, targetVerticalVel, Time.deltaTime / Mathf.Max(0.0001f, verticalSmoothTime));
 
-        // À§Ä¡ °»½Å (¼öÆò + ¼öÁ÷)
+        // ìœ„ì¹˜ ê°±ì‹  (ìˆ˜í‰ + ìˆ˜ì§)
         Vector3 delta = (horizontalVelocity + Vector3.up * currentVerticalVelocity) * Time.deltaTime;
         transform.position += delta;
     }
 
     void CameraLook()
     {
-        float y = Input.GetAxis("Mouse X") * lookSensitivity; // ÁÂ¿ì
-        rotX += Input.GetAxis("Mouse Y") * lookSensitivity * -1; // »óÇÏ (¹İÀü)
+        float y = Input.GetAxis("Mouse X") * lookSensitivity; // ì¢Œìš°
+        rotX += Input.GetAxis("Mouse Y") * lookSensitivity * -1; // ìƒí•˜ (ë°˜ì „)
 
         rotX = Mathf.Clamp(rotX, minLookX, maxLookX);
 
-        // È¸Àü Àû¿ë
+        // íšŒì „ ì ìš©
         transform.eulerAngles = new Vector3(rotX, transform.eulerAngles.y + y, 0f);
     }
 
-    // À§·Î »ó½Â (¸Å°³º¯¼ö ¾øÀ½, ³»ºÎ desiredVertical ¼³Á¤)
+    // ìœ„ë¡œ ìƒìŠ¹ (ë§¤ê°œë³€ìˆ˜ ì—†ìŒ, ë‚´ë¶€ desiredVertical ì„¤ì •)
     public void MoveUp()
     {
         desiredVertical = 0.5f;
     }
 
-    // ¾Æ·¡·Î ÇÏ°­ (¸Å°³º¯¼ö ¾øÀ½, ³»ºÎ desiredVertical ¼³Á¤)
+    // ì•„ë˜ë¡œ í•˜ê°• (ë§¤ê°œë³€ìˆ˜ ì—†ìŒ, ë‚´ë¶€ desiredVertical ì„¤ì •)
     public void MoveDown()
     {
         desiredVertical = -0.5f;
     }
 
-    // »ó½Â/ÇÏ°­ ÁßÁö(¿øÇÏ¸é È£Ãâ)
+    // ìƒìŠ¹/í•˜ê°• ì¤‘ì§€(ì›í•˜ë©´ í˜¸ì¶œ)
     public void StopVertical()
     {
         desiredVertical = 0f;

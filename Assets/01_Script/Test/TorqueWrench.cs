@@ -7,7 +7,7 @@ public class TorqueWrench : XRGrabInteractable
 {
     [Header("Torque Config")]
     public float targetTorque = 52f;
-    public float breakTorque = 75f;    // ÀÌ ¼öÄ¡¸¦ ³Ñ±â¸é ºÎ·¯Áü
+    public float breakTorque = 75f;    // ì´ ìˆ˜ì¹˜ë¥¼ ë„˜ê¸°ë©´ ë¶€ëŸ¬ì§
     public float torqueSpeed = 20f;
     public float tolerance = 2f;
 
@@ -21,13 +21,13 @@ public class TorqueWrench : XRGrabInteractable
         if(isSelected && targetBolt != null && !targetBolt.isBroken)
         {
             float triggerValue = 0f;
-            // XRI Æ®¸®°Å ÀÔ·Â °¨Áö (»ç¿ë ÁßÀÎ ÀÔ·Â ¹æ½Ä¿¡ ¸Â°Ô ¼öÁ¤ °¡´É)
+            // XRI íŠ¸ë¦¬ê±° ì…ë ¥ ê°ì§€ (ì‚¬ìš© ì¤‘ì¸ ì…ë ¥ ë°©ì‹ì— ë§ê²Œ ìˆ˜ì • ê°€ëŠ¥)
             if(interactorsSelecting[0] is UnityEngine.XR.Interaction.Toolkit.Interactors.XRRayInteractor ray)
             {
-                // °£´ÜÇÑ ¿¹½Ã·Î ½ºÆäÀÌ½º¹Ù³ª Æ¯Á¤ Å° ÀÔ·ÂÀ» ´ëÃ¼·Î ¾µ ¼ö ÀÖÀ½
+                // ê°„ë‹¨í•œ ì˜ˆì‹œë¡œ ìŠ¤í˜ì´ìŠ¤ë°”ë‚˜ íŠ¹ì • í‚¤ ì…ë ¥ì„ ëŒ€ì²´ë¡œ ì“¸ ìˆ˜ ìˆìŒ
             }
 
-            // ½Ã¹Ä·¹ÀÌ¼Ç¿ë: Æ®¸®°Å¸¦ ´©¸£°í ÀÖ´Ù°í °¡Á¤
+            // ì‹œë®¬ë ˆì´ì…˜ìš©: íŠ¸ë¦¬ê±°ë¥¼ ëˆ„ë¥´ê³  ìˆë‹¤ê³  ê°€ì •
             if(Input.GetKey(KeyCode.Space) || triggerValue > 0.1f)
             {
                 currentTorque += torqueSpeed * Time.deltaTime;
@@ -57,7 +57,7 @@ public class TorqueWrench : XRGrabInteractable
         else display.color = Color.white;
     }
 
-    // º¼Æ®¿¡ µµ±¸¸¦ °®´Ù ´òÀ» ¶§ È£Ãâ (Trigger ÀÌº¥Æ® µî¿¡ ¿¬°á)
+    // ë³¼íŠ¸ì— ë„êµ¬ë¥¼ ê°–ë‹¤ ëŒ”ì„ ë•Œ í˜¸ì¶œ (Trigger ì´ë²¤íŠ¸ ë“±ì— ì—°ê²°)
     public void ConnectToBolt(Bolt bolt)
     {
         if(!bolt.isBroken && bolt.Progress <= 0.05f)

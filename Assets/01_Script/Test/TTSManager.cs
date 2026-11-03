@@ -23,6 +23,14 @@ public class TTSManager : MonoBehaviour
 
     private AudioSource _audioSource;
     private Coroutine _currentCoroutine;
+    private bool _warnedNoKey;
+    private string _lastPlayedFile;
+
+    [Serializable] private class TtsInput { public string text; }
+    [Serializable] private class TtsVoice { public string languageCode; public string name; }
+    [Serializable] private class TtsAudioConfig { public string audioEncoding = "MP3"; public float speakingRate = 0.95f; }
+    [Serializable] private class TtsRequest { public TtsInput input = new TtsInput(); public TtsVoice voice = new TtsVoice(); public TtsAudioConfig audioConfig = new TtsAudioConfig(); }
+    [Serializable] private class TtsResponse { public string audioContent; }
 
     void Awake()
     {
@@ -45,10 +53,19 @@ public class TTSManager : MonoBehaviour
 
     private IEnumerator DownloadAndPlay(string text)
     {
+        // 자리표시자 키로는 요청해도 항상 실패한다 — 불필요한 요청 대신 한 번만 알린다
+        if (string.IsNullOrEmpty(apiKey) || apiKey.StartsWith("YOUR_"))
+        {
+            if (!_warnedNoKey) { _warnedNoKey = true; Debug.LogWarning("[TTS] API 키가 설정되지 않아 음성 안내를 건너뜁니다."); }
+            yield break;
+        }
+
         string url = $"https://texttospeech.googleapis.com/v1/text:synthesize?key={apiKey}";
-        string json = "{\"input\":{\"text\":\"" + text + "\"}," +
-                      "\"voice\":{\"languageCode\":\"" + voiceLanguage + "\",\"name\":\"" + voiceName + "\"}," +
-                      "\"audioConfig\":{\"audioEncoding\":\"MP3\",\"speakingRate\":0.95}}";
+        var body = new TtsRequest();
+        body.input.text = text;
+        body.voice.languageCode = voiceLanguage;
+        body.voice.name = voiceName;
+        string json = JsonUtility.ToJson(body);
 
         using (var req = new UnityWebRequest(url, "POST"))
         {
@@ -59,24 +76,26 @@ public class TTSManager : MonoBehaviour
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                //Debug.LogError($"[TTS] API 오류: {req.error}");
+                Debug.LogWarning($"[TTS] API 오류: {req.error} {req.downloadHandler?.text}");
                 yield break;
             }
 
-            // JSON에서 audioContent(Base64) 추출
-            string response = req.downloadHandler.text;
-            string key = "\"audioContent\": \"";
-            int start = response.IndexOf(key);
-            if (start < 0) { Debug.LogError("[TTS] audioContent 없음"); yield break; }
-            start += key.Length;
-            int end = response.IndexOf("\"", start);
-            string b64 = response.Substring(start, end - start);
+            // 응답 JSON 파싱 (예전에는 '"audioContent": "' 정확한 공백 형식에 의존했다)
+            var resp = JsonUtility.FromJson<TtsResponse>(req.downloadHandler.text);
+            if (resp == null || string.IsNullOrEmpty(resp.audioContent)) { Debug.LogError("[TTS] audioContent 없음"); yield break; }
 
-            // Base64 → MP3 파일 → AudioClip
-            byte[] bytes = Convert.FromBase64String(b64);
-            string path = Application.persistentDataPath + "/tts_guide.mp3";
+            // Base64 -> MP3 파일 -> AudioClip. 요청마다 다른 파일명을 써서 연속 호출 시 덮어쓰기 경합을 피한다.
+            byte[] bytes = Convert.FromBase64String(resp.audioContent);
+            string path = System.IO.Path.Combine(Application.persistentDataPath, $"tts_{Time.frameCount}_{(uint)text.GetHashCode()}.mp3");
             System.IO.File.WriteAllBytes(path, bytes);
             yield return StartCoroutine(LoadAndPlay(path));
+
+            // 이전에 쓰던 임시 파일 정리(방금 재생한 파일은 다음 호출 때 정리)
+            if (!string.IsNullOrEmpty(_lastPlayedFile) && _lastPlayedFile != path)
+            {
+                try { System.IO.File.Delete(_lastPlayedFile); } catch { }
+            }
+            _lastPlayedFile = path;
         }
     }
 

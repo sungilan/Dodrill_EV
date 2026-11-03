@@ -4,15 +4,15 @@ using System.Collections;
 
 // ============================================================
 //  SafetyUIHandler.cs
-//  ¾ÈÀü ¼öÄ¢ À§¹İ ½Ã °æ°í UI + È­¸é È¿°ú.
+//  ì•ˆì „ ìˆ˜ì¹™ ìœ„ë°˜ ì‹œ ê²½ê³  UI + í™”ë©´ íš¨ê³¼.
 //
-//  ¾À ¹èÄ¡:
-//    ºó GameObject ¿¡ ºÎÂø (ÀÌ¸§: _SafetyUIHandler).
-//    warningPanel: World Space Canvas ¶Ç´Â Screen Space Overlay.
-//    ºñ³×Æ®´Â URP Volume ¾ø¾îµµ µ¿ÀÛÇÏµµ·Ï °£´ÜÇÑ ÀÌ¹ÌÁö ±â¹İÀ¸·Î ±¸Çö.
+//  ì”¬ ë°°ì¹˜:
+//    ë¹ˆ GameObject ì— ë¶€ì°© (ì´ë¦„: _SafetyUIHandler).
+//    warningPanel: World Space Canvas ë˜ëŠ” Screen Space Overlay.
+//    ë¹„ë„¤íŠ¸ëŠ” URP Volume ì—†ì–´ë„ ë™ì‘í•˜ë„ë¡ ê°„ë‹¨í•œ ì´ë¯¸ì§€ ê¸°ë°˜ìœ¼ë¡œ êµ¬í˜„.
 //
-//  Å×½ºÆ®:
-//    SafetyUIHandler.Instance.TriggerWarning("Å×½ºÆ® °æ°í");
+//  í…ŒìŠ¤íŠ¸:
+//    SafetyUIHandler.Instance.TriggerWarning("í…ŒìŠ¤íŠ¸ ê²½ê³ ");
 // ============================================================
 
 public class SafetyUIHandler : MonoBehaviour
@@ -20,20 +20,20 @@ public class SafetyUIHandler : MonoBehaviour
     public static SafetyUIHandler Instance { get; private set; }
 
     [Header("UI Elements")]
-    [Tooltip("°æ°í ÆĞ³Î ·çÆ® GameObject")]
+    [Tooltip("ê²½ê³  íŒ¨ë„ ë£¨íŠ¸ GameObject")]
     public GameObject warningPanel;
 
-    [Tooltip("°æ°í ¸Ş½ÃÁö ÅØ½ºÆ® (TMP)")]
+    [Tooltip("ê²½ê³  ë©”ì‹œì§€ í…ìŠ¤íŠ¸ (TMP)")]
     public TextMeshProUGUI warningText;
 
-    [Tooltip("È­¸é °¡ÀåÀÚ¸® »¡°£ ºñ³×Æ® ÀÌ¹ÌÁö (¼±ÅÃ)")]
+    [Tooltip("í™”ë©´ ê°€ì¥ìë¦¬ ë¹¨ê°„ ë¹„ë„¤íŠ¸ ì´ë¯¸ì§€ (ì„ íƒ)")]
     public UnityEngine.UI.Image vignetteImage;
 
-    [Header("¼³Á¤")]
-    [Tooltip("°æ°í Ç¥½Ã Áö¼Ó ½Ã°£ (ÃÊ)")]
+    [Header("ì„¤ì •")]
+    [Tooltip("ê²½ê³  í‘œì‹œ ì§€ì† ì‹œê°„ (ì´ˆ)")]
     public float displayDuration = 3f;
 
-    [Tooltip("ºñ³×Æ® ÃÖ´ë ¾ËÆÄ°ª")]
+    [Tooltip("ë¹„ë„¤íŠ¸ ìµœëŒ€ ì•ŒíŒŒê°’")]
     [Range(0f, 1f)]
     public float vignetteMaxAlpha = 0.5f;
 
@@ -48,11 +48,11 @@ public class SafetyUIHandler : MonoBehaviour
         if(vignetteImage != null) SetVignetteAlpha(0f);
     }
 
-    // ¦¡¦¡ °ø°³ API ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+    // â”€â”€ ê³µê°œ API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// <summary>
-    /// °æ°í ¸Ş½ÃÁö Ç¥½Ã.
-    /// InteractablePart.ShowSafetyWarning() ¿¡¼­ È£Ãâ.
+    /// ê²½ê³  ë©”ì‹œì§€ í‘œì‹œ.
+    /// InteractablePart.ShowSafetyWarning() ì—ì„œ í˜¸ì¶œ.
     /// </summary>
     public void TriggerWarning(string message)
     {
@@ -60,24 +60,24 @@ public class SafetyUIHandler : MonoBehaviour
         _warningCoroutine = StartCoroutine(ShowWarningRoutine(message));
     }
 
-    // ¦¡¦¡ ³»ºÎ ·ÎÁ÷ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+    // â”€â”€ ë‚´ë¶€ ë¡œì§ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private IEnumerator ShowWarningRoutine(string message)
     {
-        // 1. ¸Ş½ÃÁö Ç¥½Ã
+        // 1. ë©”ì‹œì§€ í‘œì‹œ
         if(warningText != null) warningText.text = message;
         if(warningPanel != null) warningPanel.SetActive(true);
 
-        // 2. ºñ³×Æ® ÆäÀÌµå ÀÎ
+        // 2. ë¹„ë„¤íŠ¸ í˜ì´ë“œ ì¸
         yield return StartCoroutine(FadeVignette(0f, vignetteMaxAlpha, 0.2f));
 
-        // 3. ´ë±â
+        // 3. ëŒ€ê¸°
         yield return new WaitForSeconds(displayDuration);
 
-        // 4. ºñ³×Æ® ÆäÀÌµå ¾Æ¿ô
+        // 4. ë¹„ë„¤íŠ¸ í˜ì´ë“œ ì•„ì›ƒ
         yield return StartCoroutine(FadeVignette(vignetteMaxAlpha, 0f, 0.4f));
 
-        // 5. ÆĞ³Î ¼û±è
+        // 5. íŒ¨ë„ ìˆ¨ê¹€
         if(warningPanel != null) warningPanel.SetActive(false);
 
         _warningCoroutine = null;

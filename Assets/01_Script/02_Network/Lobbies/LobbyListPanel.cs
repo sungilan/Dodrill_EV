@@ -17,7 +17,7 @@ public class LobbyListPanel : UIView
     public UnityEvent OnJoinMatch;
     public SerializedDictionary<string, Sprite> carSprites;
 
-    [Header("ΩÊ≥◊¿œ ±‚∫ª ¿ÃπÃ¡ˆ")]
+    [Header("Ïç∏ÎÑ§Ïùº Í∏∞Î≥∏ Ïù¥ÎØ∏ÏßÄ")]
     [SerializeField] private Sprite defaultThumbnail;
 
     protected override void Awake()
@@ -76,7 +76,7 @@ public class LobbyListPanel : UIView
             bool isPlaying = property.TryGetValue("IsPlaying", out var playingVal)
                              && playingVal == "true";
 
-            // scenarioId ≤®≥ª±‚
+            // scenarioId Í∫ºÎÇ¥Í∏∞
             property.TryGetValue("scenarioId", out string scenarioId);
 
             var card = Instantiate(matchViewPrefab);
@@ -84,19 +84,19 @@ public class LobbyListPanel : UIView
             card.transform.localPosition = Vector3.zero;
             card.transform.localScale = Vector3.one;
 
-            // πÊ ¿Ã∏ß
+            // Î∞© Ïù¥Î¶Ñ
             card.matchName.text = property.TryGetValue(Mst.Args.Names.RoomName, out var roomName)
                 ? roomName : "Unknown";
             card.matchName.name = $"gameNameLable_{Mst.Args.Names.RoomName}";
 
-            // ¿Œø¯
-            string maxPlayers = gameInfo.MaxPlayers <= 0 ? "°ƒ" : gameInfo.MaxPlayers.ToString();
-            card.matchPlayers.text = $"¬¸∞°¿Œø¯ : {gameInfo.OnlinePlayers}/{maxPlayers}";
+            // Ïù∏Ïõê
+            string maxPlayers = gameInfo.MaxPlayers <= 0 ? "‚àû" : gameInfo.MaxPlayers.ToString();
+            card.matchPlayers.text = $"Ï∞∏Í∞ÄÏù∏Ïõê : {gameInfo.OnlinePlayers}/{maxPlayers}";
 
-            // ƒ‹≈Ÿ√˜ ¡¶∏Ò + ΩÊ≥◊¿œ
+            // ÏΩòÌÖêÏ∏† Ï†úÎ™© + Ïç∏ÎÑ§Ïùº
             ApplyScenarioInfo(card, scenarioId);
 
-            // ¡¯«‡ ¡ﬂ ø©∫Œ
+            // ÏßÑÌñâ Ï§ë Ïó¨Î∂Ä
             if (isPlaying)
             {
                 card.isPlayingText.gameObject.SetActive(true);
@@ -115,20 +115,20 @@ public class LobbyListPanel : UIView
         }
     }
 
-    // ¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°
-    // scenarioId °Ê ΩÊ≥◊¿œ + ¡¶∏Ò ¿˚øÎ
-    // ¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°¶°
+    // ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+    // scenarioId ‚Üí Ïç∏ÎÑ§Ïùº + Ï†úÎ™© Ï†ÅÏö©
+    // ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
 
     private void ApplyScenarioInfo(MatchView card, string scenarioId)
     {
         if (string.IsNullOrEmpty(scenarioId))
         {
-            if (card.matchContentsName) card.matchContentsName.text = "æÀ ºˆ æ¯¿Ω";
+            if (card.matchContentsName) card.matchContentsName.text = "Ïïå Ïàò ÏóÜÏùå";
             if (card.thumbnail) card.thumbnail.sprite = defaultThumbnail;
             return;
         }
 
-        // DataLoader ∑ŒµÂ øœ∑· ø©∫Œ »Æ¿Œ
+        // DataLoader Î°úÎìú ÏôÑÎ£å Ïó¨Î∂Ä ÌôïÏù∏
         if (ScenarioDataLoader.Instance == null || !ScenarioDataLoader.Instance.IsLoaded)
         {
             if (card.matchContentsName) card.matchContentsName.text = scenarioId;
@@ -147,7 +147,7 @@ public class LobbyListPanel : UIView
             if (entry?.thumbnail != null)
             {
                 card.thumbnail.sprite = entry.thumbnail;
-                // Texture2D °Ê Sprite ∫Ø»Ø
+                // Texture2D ‚Üí Sprite Î≥ÄÌôò
                 //var tex = entry.thumbnail;
                 //card.thumbnail.sprite = Sprite.Create(
                 //    tex,

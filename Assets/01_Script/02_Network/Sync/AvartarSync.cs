@@ -26,28 +26,28 @@ public class AvatarSync : NetworkBehaviour
     [Range(0.005f, 0.1f)]
     private float syncInterval = 0.01f;
 
-    // ¼ÒÀ¯ÀÚ°¡ º¸³¾ Çìµå/¼Õ
+    // ì†Œìœ ìê°€ ë³´ë‚¼ í—¤ë“œ/ì†
     [SerializeField] private Transform syncTargetHead;
     [SerializeField] private Transform syncTargetLeftHand;
     [SerializeField] private Transform syncTargetRightHand;
 
-    // Å¸ÀÎÀÌ À§Ä¡¸¦ Àû¿ëÇÒ Çìµå/¼Õ
+    // íƒ€ì¸ì´ ìœ„ì¹˜ë¥¼ ì ìš©í•  í—¤ë“œ/ì†
     [SerializeField] private Transform applyTargetHead;
     [SerializeField] private Transform applyTargetLeftHand;
     [SerializeField] private Transform applyTargetRightHand;
 
-    // ¼Õ°¡¶ôµµ °°Àº ¹æ½Ä
+    // ì†ê°€ë½ë„ ê°™ì€ ë°©ì‹
     [SerializeField] private SerializedDictionary<FingerType, Transform> syncTargetFingers;
     [SerializeField] private SerializedDictionary<FingerType, Transform> applyTargetFingers;
     [SerializeField] private List<Transform> fingerTargetTransforms;
     [SerializeField] private VRIK vrik;
     [SerializeField] private FingerRig fingerIk;
 
-    // º¸°£¿ë º¯¼ö
+    // ë³´ê°„ìš© ë³€ìˆ˜
     private Vector3 targetHeadPos, targetLeftHandPos, targetRightHandPos;
     private Quaternion targetHeadRot, targetLeftHandRot, targetRightHandRot;
     private List<Vector3> targetFingerPositions = new List<Vector3>();
-    private float smoothTime = 0.1f; // º¸°£ ¼Óµµ Á¶Àı
+    private float smoothTime = 0.1f; // ë³´ê°„ ì†ë„ ì¡°ì ˆ
 
     private Coroutine syncCoroutine;
 
@@ -80,7 +80,7 @@ public class AvatarSync : NetworkBehaviour
                 fingerIk.fingers[index].target = go.transform;
                 index++;
             }
-            // ¼Õ°¡¶ô ¸ñÇ¥ À§Ä¡ ¸®½ºÆ® ÃÊ±âÈ­
+            // ì†ê°€ë½ ëª©í‘œ ìœ„ì¹˜ ë¦¬ìŠ¤íŠ¸ ì´ˆê¸°í™”
             targetFingerPositions.Clear();
             for (int i = 0; i < fingerTargetTransforms.Count; i++)
             {
@@ -99,17 +99,17 @@ public class AvatarSync : NetworkBehaviour
     {
         if (!IsOwner)
         {
-            // Çìµå/¼Õ À§Ä¡ º¸°£
+            // í—¤ë“œ/ì† ìœ„ì¹˜ ë³´ê°„
             applyTargetHead.position = Vector3.Lerp(applyTargetHead.position, targetHeadPos, Time.deltaTime / smoothTime);
             applyTargetLeftHand.position = Vector3.Lerp(applyTargetLeftHand.position, targetLeftHandPos, Time.deltaTime / smoothTime);
             applyTargetRightHand.position = Vector3.Lerp(applyTargetRightHand.position, targetRightHandPos, Time.deltaTime / smoothTime);
 
-            // Çìµå/¼Õ È¸Àü º¸°£
+            // í—¤ë“œ/ì† íšŒì „ ë³´ê°„
             applyTargetHead.rotation = Quaternion.Slerp(applyTargetHead.rotation, targetHeadRot, Time.deltaTime / smoothTime);
             applyTargetLeftHand.rotation = Quaternion.Slerp(applyTargetLeftHand.rotation, targetLeftHandRot, Time.deltaTime / smoothTime);
             applyTargetRightHand.rotation = Quaternion.Slerp(applyTargetRightHand.rotation, targetRightHandRot, Time.deltaTime / smoothTime);
 
-            // ¼Õ°¡¶ô À§Ä¡ º¸°£
+            // ì†ê°€ë½ ìœ„ì¹˜ ë³´ê°„
             for (int i = 0; i < fingerTargetTransforms.Count && i < targetFingerPositions.Count; i++)
             {
                 fingerTargetTransforms[i].position = Vector3.Lerp(fingerTargetTransforms[i].position, targetFingerPositions[i], Time.deltaTime / smoothTime);
@@ -175,7 +175,7 @@ public class AvatarSync : NetworkBehaviour
         targetRightHandPos = rightPos;
         targetRightHandRot = rightRot;
 
-        // ¼Õ°¡¶ô ¸ñÇ¥ À§Ä¡ °»½Å
+        // ì†ê°€ë½ ëª©í‘œ ìœ„ì¹˜ ê°±ì‹ 
         if (targetFingerPositions.Count != fingerList.Count)
         {
             targetFingerPositions.Clear();

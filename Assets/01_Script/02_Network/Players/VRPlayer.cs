@@ -76,6 +76,13 @@ public class VRPlayer : BasePlayer
     private Quaternion[] _leftFingerPose;
     private Quaternion[] _rightFingerPose;
 
+    // 머리·손목 보간 계수(positionLerp/rotationLerp)는 프레임당 고정값이라 30fps 모바일과 72~90Hz Quest 의 수렴 속도가 2~3배 달랐다(A-5).
+    // 인스펙터 값을 '60fps 기준 프레임당 계수'로 보고 실제 dt 에 맞게 환산한다. (손가락은 fingerFollowSpeed 로 이미 시간 기반)
+    private static float Blend(float perFrame60)
+    {
+        return Mathf.Clamp01(1f - Mathf.Pow(1f - Mathf.Clamp01(perFrame60), Time.deltaTime * 60f));
+    }
+
     public override void OnStartClient()
     {
         anchor = GameObject.FindGameObjectWithTag("Anchor")?.transform;
@@ -118,8 +125,8 @@ public class VRPlayer : BasePlayer
                 Vector3 worldHeadPos = anchor.position + anchor.rotation * targetHeadPos;
                 Quaternion worldHeadRot = anchor.rotation * targetHeadRot;
 
-                trackingSetup.applyHead.position = Vector3.Lerp(trackingSetup.applyHead.position, worldHeadPos, positionLerp);
-                trackingSetup.applyHead.rotation = Quaternion.Slerp(trackingSetup.applyHead.rotation, worldHeadRot, rotationLerp);
+                trackingSetup.applyHead.position = Vector3.Lerp(trackingSetup.applyHead.position, worldHeadPos, Blend(positionLerp));
+                trackingSetup.applyHead.rotation = Quaternion.Slerp(trackingSetup.applyHead.rotation, worldHeadRot, Blend(rotationLerp));
 
                 FollowAvatarRoot(trackingSetup.applyHead.position, trackingSetup.applyHead.rotation);
             }
@@ -269,8 +276,8 @@ public class VRPlayer : BasePlayer
             Vector3 targetWristPos = anchor.position + anchor.rotation * wristPos;
             Quaternion targetWristRot = anchor.rotation * wristRot;
 
-            hand.applyWrist.position = Vector3.Lerp(hand.applyWrist.position, targetWristPos, positionLerp);
-            hand.applyWrist.rotation = Quaternion.Slerp(hand.applyWrist.rotation, targetWristRot, rotationLerp);
+            hand.applyWrist.position = Vector3.Lerp(hand.applyWrist.position, targetWristPos, Blend(positionLerp));
+            hand.applyWrist.rotation = Quaternion.Slerp(hand.applyWrist.rotation, targetWristRot, Blend(rotationLerp));
         }
     }
 

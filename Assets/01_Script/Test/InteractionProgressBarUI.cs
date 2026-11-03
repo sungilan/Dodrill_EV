@@ -7,31 +7,31 @@ public class InteractionProgressBarUI : MonoBehaviour
 {
     public static InteractionProgressBarUI Instance;
 
-    [Header("º¼Æ® °¡ÀÌµå¿ë ÆĞ³Î")]
+    [Header("ë³¼íŠ¸ ê°€ì´ë“œìš© íŒ¨ë„")]
     public CanvasGroup boltPanelGroup;
     public Slider boltProgressBar;
     public TextMeshProUGUI boltTaskText;
     public TextMeshProUGUI boltTargetText;
     public TextMeshProUGUI boltInstructionText;
 
-    [Header("¹æÀü Å¸ÀÌ¸Ó¿ë ÆĞ³Î")]
+    [Header("ë°©ì „ íƒ€ì´ë¨¸ìš© íŒ¨ë„")]
     public CanvasGroup timerPanelGroup;
     public TextMeshProUGUI timerText;
 
     private void Awake()
     {
         Instance = this;
-        // ¹®±¸°¡ ±æ¾îÁ®µµ ÆĞ³Î ¹ÛÀ¸·Î Æ¢¾î³ª¿ÀÁö ¾Êµµ·Ï ÀÚµ¿ Å©±â Á¶Àı
+        // ë¬¸êµ¬ê°€ ê¸¸ì–´ì ¸ë„ íŒ¨ë„ ë°–ìœ¼ë¡œ íŠ€ì–´ë‚˜ì˜¤ì§€ ì•Šë„ë¡ ìë™ í¬ê¸° ì¡°ì ˆ
         FitText(boltTaskText, 0.6f);
         FitText(boltTargetText, 0.6f);
         FitText(boltInstructionText, 0.6f);
         FitText(timerText, 0.6f);
-        // ÃÊ±âÈ­: µÑ ´Ù ¼û±è
+        // ì´ˆê¸°í™”: ë‘˜ ë‹¤ ìˆ¨ê¹€
         if(boltPanelGroup != null) boltPanelGroup.alpha = 0;
         //if(timerPanelGroup != null) timerPanelGroup.alpha = 0;
     }
-    // ShowBoltProgress´Â »ç¿ë ÁßÀÎ µµ±¸°¡ ¸Å ÇÁ·¹ÀÓ È£ÃâÇÑ´Ù. È£ÃâÀÌ ²÷±â¸é(µµ±¸ ºñÈ°¼ºÈ­¡¤º¼Æ® Á¦°Å¡¤´Ü°è ÀüÈ¯ µî)
-    // È£ÃâÀÚÀÇ Á¤¸® ÄÚµå¿Í ¹«°üÇÏ°Ô ÆĞ³ÎÀÌ ½º½º·Î »ç¶óÁöµµ·Ï ÇÏ´Â ¾ÈÀüÀåÄ¡.
+    // ShowBoltProgressëŠ” ì‚¬ìš© ì¤‘ì¸ ë„êµ¬ê°€ ë§¤ í”„ë ˆì„ í˜¸ì¶œí•œë‹¤. í˜¸ì¶œì´ ëŠê¸°ë©´(ë„êµ¬ ë¹„í™œì„±í™”Â·ë³¼íŠ¸ ì œê±°Â·ë‹¨ê³„ ì „í™˜ ë“±)
+    // í˜¸ì¶œìì˜ ì •ë¦¬ ì½”ë“œì™€ ë¬´ê´€í•˜ê²Œ íŒ¨ë„ì´ ìŠ¤ìŠ¤ë¡œ ì‚¬ë¼ì§€ë„ë¡ í•˜ëŠ” ì•ˆì „ì¥ì¹˜.
     private const float HideAfterSilence = 0.4f;
     private float _lastShowTime;
     private bool _boltVisible;
@@ -53,7 +53,7 @@ public class InteractionProgressBarUI : MonoBehaviour
     }
 
 
-    // --- º¼Æ® °¡ÀÌµå Á¦¾î ---
+    // --- ë³¼íŠ¸ ê°€ì´ë“œ ì œì–´ ---
     public void ShowBoltProgress(float value, string taskName, string objName, string instruction = "")
     {
         if(boltPanelGroup == null) return;
@@ -61,7 +61,7 @@ public class InteractionProgressBarUI : MonoBehaviour
         _lastShowTime = Time.unscaledTime;
         _boltVisible = true;
 
-        // ÇöÀç º¸ÀÌÁö ¾Ê´Â »óÅÂ¶ó¸é ÆäÀÌµå ÀÎ ½ÃÀÛ
+        // í˜„ì¬ ë³´ì´ì§€ ì•ŠëŠ” ìƒíƒœë¼ë©´ í˜ì´ë“œ ì¸ ì‹œì‘
         if(boltPanelGroup.alpha < 0.1f)
         {
             boltPanelGroup.DOKill();
@@ -70,7 +70,7 @@ public class InteractionProgressBarUI : MonoBehaviour
 
         boltProgressBar.value = value;
         if(boltTaskText != null) boltTaskText.text = taskName;
-        if(boltTargetText != null) boltTargetText.text = $"´ë»ó: {objName}";
+        if(boltTargetText != null) boltTargetText.text = $"ëŒ€ìƒ: {objName}";
         if(boltInstructionText != null) boltInstructionText.text = instruction;
     }
 
@@ -83,7 +83,7 @@ public class InteractionProgressBarUI : MonoBehaviour
         boltPanelGroup.DOFade(0f, 0.2f).SetEase(Ease.InQuad);
     }
 
-    // --- ¹æÀü Å¸ÀÌ¸Ó Á¦¾î ---
+    // --- ë°©ì „ íƒ€ì´ë¨¸ ì œì–´ ---
     public void ShowTimer(string timeStr)
     {
         if(timerPanelGroup == null) return;

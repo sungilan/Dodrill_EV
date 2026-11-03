@@ -7,26 +7,26 @@ public class SlidingPanel : MonoBehaviour
     private RectTransform _rect;
     private CanvasGroup _canvasGroup;
 
-    [Header("°øÅë ¼³Á¤")]
+    [Header("ê³µí†µ ì„¤ì •")]
     public float duration = 0.4f;
     public Ease showEase = Ease.OutBack;
     public Ease hideEase = Ease.InQuad;
 
-    [Header("PC/Mobile (Screen Space Overlay) ¼³Á¤")]
+    [Header("PC/Mobile (Screen Space Overlay) ì„¤ì •")]
     public float hiddenPosX = -1100f;
     public float visiblePosX = 0f;
 
-    [Header("VR (World Space / ºÎ¸ğ ±âÁØ) ¼³Á¤")]
-    [Tooltip("VR¿¡¼­ ÀÌ ÆĞ³ÎÀÇ ±âÁØÀÌ µÉ ºÎ¸ğ ÆĞ³Î")]
+    [Header("VR (World Space / ë¶€ëª¨ ê¸°ì¤€) ì„¤ì •")]
+    [Tooltip("VRì—ì„œ ì´ íŒ¨ë„ì˜ ê¸°ì¤€ì´ ë  ë¶€ëª¨ íŒ¨ë„")]
     public Transform vrParentTransform;
-    [Tooltip("VR ¼û±è À§Ä¡ (ºÎ¸ğ ±âÁØ ·ÎÄÃ ÁÂÇ¥)")]
+    [Tooltip("VR ìˆ¨ê¹€ ìœ„ì¹˜ (ë¶€ëª¨ ê¸°ì¤€ ë¡œì»¬ ì¢Œí‘œ)")]
     public Vector2 vrHiddenPos = new Vector2(0, -500f);
-    [Tooltip("VR ³ëÃâ À§Ä¡ (ºÎ¸ğ ±âÁØ ·ÎÄÃ ÁÂÇ¥)")]
+    [Tooltip("VR ë…¸ì¶œ ìœ„ì¹˜ (ë¶€ëª¨ ê¸°ì¤€ ë¡œì»¬ ì¢Œí‘œ)")]
     public Vector2 vrVisiblePos = Vector2.zero;
 
     private bool _isShown = false;
     public bool startVisible = true;
-    // ±âÁ¸ ¼³Á¤µÈ ÇÃ·§Æû ¸Å´ÏÀúÀÇ IsVRÀ» ÂüÁ¶ÇÏ¼¼¿ä.
+    // ê¸°ì¡´ ì„¤ì •ëœ í”Œë«í¼ ë§¤ë‹ˆì €ì˜ IsVRì„ ì°¸ì¡°í•˜ì„¸ìš”.
     private bool _isVR => GameScenePlatformManager.IsVR;
 
     private void Awake()
@@ -74,18 +74,18 @@ public class SlidingPanel : MonoBehaviour
 
         if(_isVR)
         {
-            // VR: ºÎ¸ğ ³» ·ÎÄÃ ½½¶óÀÌµù
+            // VR: ë¶€ëª¨ ë‚´ ë¡œì»¬ ìŠ¬ë¼ì´ë”©
             _rect.DOAnchorPos(vrVisiblePos, duration).SetEase(showEase);
             _canvasGroup.DOFade(1f, duration);
         }
         else
         {
-            // PC: ±âÁ¸ XÃà ½½¶óÀÌµù
+            // PC: ê¸°ì¡´ Xì¶• ìŠ¬ë¼ì´ë”©
             _rect.DOAnchorPosX(visiblePosX, duration).SetEase(showEase);
             _canvasGroup.DOFade(1f, duration);
         }
 
-        Log("ÆĞ³Î Ç¥½Ã");
+        Log("íŒ¨ë„ í‘œì‹œ");
     }
 
     public void Hide()
@@ -98,18 +98,18 @@ public class SlidingPanel : MonoBehaviour
 
         if(_isVR)
         {
-            // VR: ºÎ¸ğ ³» ·ÎÄÃ ¼û±è
+            // VR: ë¶€ëª¨ ë‚´ ë¡œì»¬ ìˆ¨ê¹€
             _rect.DOAnchorPos(vrHiddenPos, duration).SetEase(hideEase);
             _canvasGroup.DOFade(0f, duration);
         }
         else
         {
-            // PC: ±âÁ¸ XÃà ¼û±è
+            // PC: ê¸°ì¡´ Xì¶• ìˆ¨ê¹€
             _rect.DOAnchorPosX(hiddenPosX, duration).SetEase(hideEase);
             _canvasGroup.DOFade(0f, duration);
         }
 
-        Log("ÆĞ³Î ¼û±è");
+        Log("íŒ¨ë„ ìˆ¨ê¹€");
     }
 
     private void KillTweens()

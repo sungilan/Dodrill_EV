@@ -2,14 +2,14 @@ using UnityEngine;
 
 // ============================================================
 //  CheckpointManager.cs
-//  Á¤ºñ ´Ü°è Ã¼Å©Æ÷ÀÎÆ® ÀúÀå ¹× Àç½ÃÀÛ.
+//  ì •ë¹„ ë‹¨ê³„ ì²´í¬í¬ì¸íŠ¸ ì €ì¥ ë° ì¬ì‹œì‘.
 //
-//  ±âÁ¸ ÆÄÀÏÀÌ ºó MonoBehaviour ¿´À¸¹Ç·Î ¿Ï¼ºº»À¸·Î ±³Ã¼.
+//  ê¸°ì¡´ íŒŒì¼ì´ ë¹ˆ MonoBehaviour ì˜€ìœ¼ë¯€ë¡œ ì™„ì„±ë³¸ìœ¼ë¡œ êµì²´.
 //
-//  »ç¿ë Èå¸§:
-//    1. AIGuideManager.NextStep() È£Ãâ ½Ã SaveCheckpoint(stepIndex) ÀÚµ¿ È£Ãâ
-//    2. »ç°í ¹ß»ı(EmergencyEventManager) ÈÄ Àç½Ãµµ ¹öÆ° ¡æ RestartFromCheckpoint()
-//    3. AIGuideManager.JumpToStep(lastSavedStepIndex) ·Î º¹±Í
+//  ì‚¬ìš© íë¦„:
+//    1. AIGuideManager.NextStep() í˜¸ì¶œ ì‹œ SaveCheckpoint(stepIndex) ìë™ í˜¸ì¶œ
+//    2. ì‚¬ê³  ë°œìƒ(EmergencyEventManager) í›„ ì¬ì‹œë„ ë²„íŠ¼ â†’ RestartFromCheckpoint()
+//    3. AIGuideManager.JumpToStep(lastSavedStepIndex) ë¡œ ë³µê·€
 // ============================================================
 
 public class CheckpointManager : MonoBehaviour
@@ -24,52 +24,52 @@ public class CheckpointManager : MonoBehaviour
         Instance = this;
     }
 
-    // ¦¡¦¡ °ø°³ API ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+    // â”€â”€ ê³µê°œ API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// <summary>
-    /// ÇöÀç ´Ü°è¸¦ Ã¼Å©Æ÷ÀÎÆ®·Î ÀúÀå.
-    /// AIGuideManager.NextStep() ÀÌ È£ÃâµÉ ¶§¸¶´Ù ÀÚµ¿À¸·Î ½ÇÇà.
+    /// í˜„ì¬ ë‹¨ê³„ë¥¼ ì²´í¬í¬ì¸íŠ¸ë¡œ ì €ì¥.
+    /// AIGuideManager.NextStep() ì´ í˜¸ì¶œë  ë•Œë§ˆë‹¤ ìë™ìœ¼ë¡œ ì‹¤í–‰.
     /// </summary>
     public void SaveCheckpoint(int stepIndex)
     {
         _lastSavedStepIndex = stepIndex;
-        Debug.Log($"[Checkpoint] Step {stepIndex} ÀúÀåµÊ");
+        Debug.Log($"[Checkpoint] Step {stepIndex} ì €ì¥ë¨");
     }
 
     /// <summary>
-    /// ¸¶Áö¸· Ã¼Å©Æ÷ÀÎÆ®ºÎÅÍ Àç½ÃÀÛ.
-    /// Àç½Ãµµ ¹öÆ°ÀÇ onClick ¿¡ ¿¬°á.
+    /// ë§ˆì§€ë§‰ ì²´í¬í¬ì¸íŠ¸ë¶€í„° ì¬ì‹œì‘.
+    /// ì¬ì‹œë„ ë²„íŠ¼ì˜ onClick ì— ì—°ê²°.
     /// </summary>
     public void RestartFromCheckpoint()
     {
-        Debug.Log($"[Checkpoint] Step {_lastSavedStepIndex} ¿¡¼­ Àç½ÃÀÛ");
+        Debug.Log($"[Checkpoint] Step {_lastSavedStepIndex} ì—ì„œ ì¬ì‹œì‘");
 
-        // 1. ¾ÀÀÇ ¸ğµç ºÎÇ°/º¼Æ® »óÅÂ ÃÊ±âÈ­
+        // 1. ì”¬ì˜ ëª¨ë“  ë¶€í’ˆ/ë³¼íŠ¸ ìƒíƒœ ì´ˆê¸°í™”
         ResetAllInteractables();
 
-        // 2. °¡ÀÌµå ¸Å´ÏÀú¸¦ ÀúÀåµÈ ´Ü°è·Î º¹±¸
+        // 2. ê°€ì´ë“œ ë§¤ë‹ˆì €ë¥¼ ì €ì¥ëœ ë‹¨ê³„ë¡œ ë³µêµ¬
         var guide = FindFirstObjectByType<AIGuideManager>();
         if(guide != null)
             guide.JumpToStep(_lastSavedStepIndex);
 
-        // 3. ¾ÈÀü »óÅÂµµ ÃÊ±âÈ­ (Àå°©¡¤MSD ´Ù½Ã Âø¿ëÇØ¾ß ÇÔ)
+        // 3. ì•ˆì „ ìƒíƒœë„ ì´ˆê¸°í™” (ì¥ê°‘Â·MSD ë‹¤ì‹œ ì°©ìš©í•´ì•¼ í•¨)
         ElectricSafetyManager.Instance?.ResetSafetyState();
     }
 
     public int LastSavedStepIndex => _lastSavedStepIndex;
 
-    // ¦¡¦¡ ³»ºÎ À¯Æ¿ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+    // â”€â”€ ë‚´ë¶€ ìœ í‹¸ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private void ResetAllInteractables()
     {
-        // ¾ÀÀÇ ¸ğµç º¼Æ® ÃÊ±âÈ­
+        // ì”¬ì˜ ëª¨ë“  ë³¼íŠ¸ ì´ˆê¸°í™”
         //foreach(var bolt in FindObjectsByType<Bolt>(FindObjectsSortMode.None))
             //bolt.ResetBolt();
 
-        // ¾ÀÀÇ ¸ğµç ºÎÇ° ÃÊ±âÈ­
+        // ì”¬ì˜ ëª¨ë“  ë¶€í’ˆ ì´ˆê¸°í™”
         foreach(var part in FindObjectsByType<InteractablePart>(FindObjectsSortMode.None))
             part.ResetPart();
 
-        Debug.Log("[Checkpoint] ¾À ¿ÀºêÁ§Æ® ÃÊ±âÈ­ ¿Ï·á");
+        Debug.Log("[Checkpoint] ì”¬ ì˜¤ë¸Œì íŠ¸ ì´ˆê¸°í™” ì™„ë£Œ");
     }
 }

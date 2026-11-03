@@ -2,12 +2,12 @@ using UnityEngine;
 
 public class SnapZoneTrigger : MonoBehaviour
 {
-    [Tooltip("ÀÌ Æ®¸®°Å¿¡ ¹İÀÀÇØ¾ß ÇÒ ºÎÇ°")]
+    [Tooltip("ì´ íŠ¸ë¦¬ê±°ì— ë°˜ì‘í•´ì•¼ í•  ë¶€í’ˆ")]
     public InteractablePart targetPart;
 
     private void OnTriggerEnter(Collider other)
     {
-        // µé¾î¿Â ¿ÀºêÁ§Æ®°¡ Å¸°Ù ºÎÇ°ÀÌ ¸Â´ÂÁö È®ÀÎ
+        // ë“¤ì–´ì˜¨ ì˜¤ë¸Œì íŠ¸ê°€ íƒ€ê²Ÿ ë¶€í’ˆì´ ë§ëŠ”ì§€ í™•ì¸
         if(targetPart != null && other.gameObject == targetPart.gameObject)
         {
             targetPart.SetInsideSnapZone(true);

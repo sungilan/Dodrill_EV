@@ -9,7 +9,7 @@ using UnityEngine.UI;
 public class VRKeyboardButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [SerializeField] private VRKeyboard keyboard;
-    [SerializeField] private string keyValue;            // ¹öÆ° °ª (¿¹: "A", "1", "@", "BACK")
+    [SerializeField] private string keyValue;            // ë²„íŠ¼ ê°’ (ì˜ˆ: "A", "1", "@", "BACK")
     [SerializeField] private Image image;
     [SerializeField] private Color hoverColor;
     [SerializeField] private Color originColor;
@@ -18,7 +18,7 @@ public class VRKeyboardButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private bool upHover = false;
     private HandTouchButton touchButton;
     private HandTouchEvent touchEvent;
-    // Å¬·¡½º ¸â¹ö·Î Ãß°¡
+    // í´ë˜ìŠ¤ ë©¤ë²„ë¡œ ì¶”ê°€
     private static HangulComposer hangulComposer = new HangulComposer();
 
 
@@ -64,7 +64,7 @@ public class VRKeyboardButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         }
         else if (keyValue == "Enter")
         {
-            Debug.Log("ÀÔ·Â ¿Ï·á: " + keyboard.targetInput.text);
+            Debug.Log("ì…ë ¥ ì™„ë£Œ: " + keyboard.targetInput.text);
             keyboard.gameObject.SetActive(false);
         }
         else if (keyValue == "Up") keyboard.SetUpperCase();
@@ -121,7 +121,7 @@ public class VRKeyboardButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     public void SetUpperOneTime(Action callback)
     {
-        // ÇÑ±Û ½ÖÀÚÀ½/½Ö¸ğÀ½ º¯È¯ Ã³¸®
+        // í•œê¸€ ìŒììŒ/ìŒëª¨ìŒ ë³€í™˜ ì²˜ë¦¬
         if (keyboard.languageState == LanguageState.Hangle)
         {
             keyValue = ConvertHangleShift(keyValue, true);
@@ -161,12 +161,12 @@ public class VRKeyboardButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         textField.text = keyValue;
     }
 
-    // ÇÑ±Û ½ÖÀÚÀ½/½Ö¸ğÀ½ º¯È¯ ÇÔ¼ö
+    // í•œê¸€ ìŒììŒ/ìŒëª¨ìŒ ë³€í™˜ í•¨ìˆ˜
     private string ConvertHangleShift(string value, bool shift)
     {
-        // º¯È¯ ¸ÅÇÎ Å×ÀÌºí
-        string normal = "¤²¤¸¤§¤¡¤µ¤À¤Ä";
-        string shifted = "¤³¤¹¤¨¤¢¤¶¤Â¤Æ";
+        // ë³€í™˜ ë§¤í•‘ í…Œì´ë¸”
+        string normal = "ã…‚ã…ˆã„·ã„±ã……ã…ã…”";
+        string shifted = "ã…ƒã…‰ã„¸ã„²ã…†ã…’ã…–";
 
         Dictionary<char, char> normalToShifted = new Dictionary<char, char>();
         Dictionary<char, char> shiftedToNormal = new Dictionary<char, char>();
@@ -180,7 +180,7 @@ public class VRKeyboardButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         if (string.IsNullOrEmpty(value))
             return value;
 
-        char c = value[0]; // ÇÑ ±ÛÀÚ¸¸ Ã³¸®
+        char c = value[0]; // í•œ ê¸€ìë§Œ ì²˜ë¦¬
         if (shift)
         {
             if (normalToShifted.ContainsKey(c))
@@ -192,7 +192,7 @@ public class VRKeyboardButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
                 return shiftedToNormal[c].ToString();
         }
 
-        // ¸ÅÇÎ ¾È µÈ ±ÛÀÚ´Â ±×´ë·Î ¹İÈ¯
+        // ë§¤í•‘ ì•ˆ ëœ ê¸€ìëŠ” ê·¸ëŒ€ë¡œ ë°˜í™˜
         return value;
     }
 

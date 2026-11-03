@@ -103,9 +103,15 @@ public class SnapGuide : NetworkBehaviour
     /// [주의] FindObjectsByType 비용이 우려되면
     ///        SyncGrab 생성 시 SnapGuide에 등록하는 방식으로 교체 가능.
     /// </summary>
+    private float _nextScanTime;
+
     private void Update()
     {
         if (!IsServerInitialized || _isTriggered.Value) return;
+
+        // 매 프레임 씬 전체 탐색 대신 0.1초 간격으로 (스냅 반응은 체감 차이가 없다)
+        if (Time.unscaledTime < _nextScanTime) return;
+        _nextScanTime = Time.unscaledTime + 0.1f;
 
         SyncGrab[] grabs = FindObjectsByType<SyncGrab>(FindObjectsSortMode.None);
         foreach (SyncGrab grab in grabs)

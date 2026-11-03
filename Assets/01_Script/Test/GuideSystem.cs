@@ -237,11 +237,12 @@ public class GuideSystem : MonoBehaviour
 
         ClearVisualGuides();
 
-        // ✅ 추가: 혹시 남은 Tween 전체 제거 (디버그용으로 매우 강력)
-        DOTween.KillAll();
-
+        // 예전에는 여기서 DOTween.KillAll() 로 씬의 모든 트윈(SyncGrab 날아가기·UI 연출 포함)을 끊었다 -> 가이드가 만든 것만 정리한다
         if(centerGuideGroup != null)
+        {
+            DOTween.Kill(centerGuideGroup);
             centerGuideGroup.DOFade(0f, 0.5f);
+        }
 
         TTSManager.Instance?.Stop();
     }
@@ -767,9 +768,23 @@ public class GuideSystem : MonoBehaviour
         if(_ghostObject != null) _ghostObject.transform.DOShakePosition(1.5f, 0.06f, 12, 90f);
     }
 
+    // id -> 찾은 오브젝트 캐시. 파괴되었거나 비활성이 되면(Unity null / activeInHierarchy) 다시 찾는다.
+    private readonly Dictionary<string, GameObject> _itemFindCache = new Dictionary<string, GameObject>();
+
     private GameObject FindSpawnedItem(string id)
     {
         if(string.IsNullOrEmpty(id)) return null;
+
+        if(_itemFindCache.TryGetValue(id, out var cached) && cached != null && cached.activeInHierarchy)
+            return cached;
+
+        var found = FindSpawnedItemUncached(id);
+        if(found != null) _itemFindCache[id] = found; else _itemFindCache.Remove(id);
+        return found;
+    }
+
+    private GameObject FindSpawnedItemUncached(string id)
+    {
 
         // [핵심 보강 1] 볼트 그룹(BoltGroupCounter)을 최우선으로 탐색
         // 부모인 배터리 팩이 잡히는 것을 원천적으로 차단합니다.
@@ -984,6 +999,8 @@ public class GuideSystem : MonoBehaviour
 
     private void OnDestroy()
     {
-        DOTween.KillAll();
+        // 가이드가 만든 트윈만 정리 (DOTween.KillAll 은 다른 시스템의 트윈까지 끊었다)
+        _currentGuideSequence?.Kill();
+        if(centerGuideGroup != null) DOTween.Kill(centerGuideGroup);
     }
 }

@@ -62,6 +62,10 @@ public class UserStateRow : MonoBehaviour
     public void SetDisplayName(string name, int clientId)
     {
         if (idText == null) return;
-        idText.text = $"Player {clientId + 1}";
+        // 서버가 받아 방송하는 닉네임을 표시(비어 있거나 아직 도착 전이면 예전처럼 Player N)
+        string label = string.IsNullOrWhiteSpace(name) ? $"Player {clientId + 1}" : name;
+        idText.text = label;
+        idText.overflowMode = TextOverflowModes.Ellipsis;   // 긴 닉네임이 칸 밖으로 나가지 않게
+        idText.enableWordWrapping = false;
     }
 }

@@ -10,19 +10,19 @@ public class PlayerEquipmentSync : NetworkBehaviour
     {
         public string prefabId;
 
-        [Header("È°¼ºÈ­/ºñÈ°¼ºÈ­ ¼³Á¤")]
-        [Tooltip("Âø¿ë ½Ã ÄÑÁú ¿ÀºêÁ§Æ®µé (¿¹: Àı¿¬È­, Çï¸ä, ¾È¸éº¸È£±¸)")]
+        [Header("í™œì„±í™”/ë¹„í™œì„±í™” ì„¤ì •")]
+        [Tooltip("ì°©ìš© ì‹œ ì¼œì§ˆ ì˜¤ë¸Œì íŠ¸ë“¤ (ì˜ˆ: ì ˆì—°í™”, í—¬ë©§, ì•ˆë©´ë³´í˜¸êµ¬)")]
         public GameObject[] objectsToActivate;
 
-        [Tooltip("Âø¿ë ½Ã ²¨Áú ¿ø·¡ ¿ÀºêÁ§Æ®µé (¿¹: ±âº» ½Å¹ß, ±âº» Çì¾î)")]
+        [Tooltip("ì°©ìš© ì‹œ êº¼ì§ˆ ì›ë˜ ì˜¤ë¸Œì íŠ¸ë“¤ (ì˜ˆ: ê¸°ë³¸ ì‹ ë°œ, ê¸°ë³¸ í—¤ì–´)")]
         public GameObject[] objectsToDeactivate;
 
-        [Header("¸ÓÅ×¸®¾ó ¼³Á¤ (Àå°© µî)")]
+        [Header("ë¨¸í…Œë¦¬ì–¼ ì„¤ì • (ì¥ê°‘ ë“±)")]
         public SkinnedMeshRenderer targetRenderer;
         public Material equipMaterial;
     }
 
-    [Header("º¸È£±¸ ¸ñ·Ï")]
+    [Header("ë³´í˜¸êµ¬ ëª©ë¡")]
     public List<EquipmentEntry> equipments = new();
 
     private Dictionary<string, Material[]> _originalMaterials = new();
@@ -33,7 +33,7 @@ public class PlayerEquipmentSync : NetworkBehaviour
         base.OnStartClient();
         if(!IsOwner) return;
 
-        Debug.Log("<color=cyan>[Equipment-Internal]</color> Owner ÀÌº¥Æ® ±¸µ¶ ¿Ï·á");
+        Debug.Log("<color=cyan>[Equipment-Internal]</color> Owner ì´ë²¤íŠ¸ êµ¬ë… ì™„ë£Œ");
         InteractionEvents.OnItemGrabbed += HandleItemGrabbed;
     }
 
@@ -48,7 +48,7 @@ public class PlayerEquipmentSync : NetworkBehaviour
     {
         if(!IsOwner) return;
 
-        Debug.Log($"<color=yellow>[Equipment-Step 1]</color> ·ÎÄÃ ±×·¦ °¨ÁöµÊ: {prefabId}");
+        Debug.Log($"<color=yellow>[Equipment-Step 1]</color> ë¡œì»¬ ê·¸ë© ê°ì§€ë¨: {prefabId}");
 
         if(InstanceFinder.ClientManager != null)
         {
@@ -64,7 +64,7 @@ public class PlayerEquipmentSync : NetworkBehaviour
         var entry = FindEntry(prefabId);
         if(entry == null || _equipped.Contains(prefabId)) return;
 
-        Debug.Log($"<color=yellow>[Equipment-Step 3]</color> ¼­¹ö¿¡ RPC ¿äÃ»: {prefabId}");
+        Debug.Log($"<color=yellow>[Equipment-Step 3]</color> ì„œë²„ì— RPC ìš”ì²­: {prefabId}");
         EquipServerRpc(prefabId);
     }
 
@@ -81,7 +81,7 @@ public class PlayerEquipmentSync : NetworkBehaviour
 
         _equipped.Add(prefabId);
 
-        // 1. ¿ÀºêÁ§Æ® È°¼ºÈ­ Ã³¸® (¿©·¯ °³ °¡´É)
+        // 1. ì˜¤ë¸Œì íŠ¸ í™œì„±í™” ì²˜ë¦¬ (ì—¬ëŸ¬ ê°œ ê°€ëŠ¥)
         if(entry.objectsToActivate != null)
         {
             foreach(var obj in entry.objectsToActivate)
@@ -89,12 +89,12 @@ public class PlayerEquipmentSync : NetworkBehaviour
                 if(obj == null) continue;
                 obj.SetActive(true);
 
-                // º»ÀÎ ½Ã¾ß °¡¸² ¹æÁö (·¹ÀÌ¾î º¯°æ)
+                // ë³¸ì¸ ì‹œì•¼ ê°€ë¦¼ ë°©ì§€ (ë ˆì´ì–´ ë³€ê²½)
                 if(IsOwner) SetLayerRecursively(obj, 2);
             }
         }
 
-        // 2. ¿ÀºêÁ§Æ® ºñÈ°¼ºÈ­ Ã³¸® (±³Ã¼µÇ´Â ÆÄÃ÷µé)
+        // 2. ì˜¤ë¸Œì íŠ¸ ë¹„í™œì„±í™” ì²˜ë¦¬ (êµì²´ë˜ëŠ” íŒŒì¸ ë“¤)
         if(entry.objectsToDeactivate != null)
         {
             foreach(var obj in entry.objectsToDeactivate)
@@ -104,7 +104,7 @@ public class PlayerEquipmentSync : NetworkBehaviour
             }
         }
 
-        // 3. ¸ÓÅ×¸®¾ó ±³Ã¼ (Àå°© µî)
+        // 3. ë¨¸í…Œë¦¬ì–¼ êµì²´ (ì¥ê°‘ ë“±)
         if(entry.targetRenderer != null && entry.equipMaterial != null)
         {
             if(!_originalMaterials.ContainsKey(prefabId))
@@ -115,7 +115,7 @@ public class PlayerEquipmentSync : NetworkBehaviour
             entry.targetRenderer.materials = mats;
         }
 
-        Debug.Log($"<color=lime>[Equipment-Final]</color> {prefabId} Âø¿ë ¹× ÆÄÃ÷ ±³Ã¼ ¿Ï·á");
+        Debug.Log($"<color=lime>[Equipment-Final]</color> {prefabId} ì°©ìš© ë° íŒŒì¸  êµì²´ ì™„ë£Œ");
     }
 
     private void SetLayerRecursively(GameObject obj, int newLayer)

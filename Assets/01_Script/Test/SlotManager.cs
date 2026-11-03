@@ -1,27 +1,27 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 
-// SlotManager.cs (°¢ ¸ğµâ ½½·Ô ¿ÀºêÁ§Æ®¿¡ ºÎÂø)
+// SlotManager.cs (ê° ëª¨ë“ˆ ìŠ¬ë¡¯ ì˜¤ë¸Œì íŠ¸ì— ë¶€ì°©)
 public class SlotManager : MonoBehaviour
 {
-    public int slotIndex; // ÀÌ ½½·ÔÀÇ ¹øÈ£
+    public int slotIndex; // ì´ ìŠ¬ë¡¯ì˜ ë²ˆí˜¸
 
     public void OnModuleSnapped(SelectEnterEventArgs args)
     {
-        // ¼ÒÄÏ¿¡ µé¾î¿Â ¿ÀºêÁ§Æ®¿¡¼­ ModulePart ÄÄÆ÷³ÍÆ®¸¦ °¡Á®¿È
+        // ì†Œì¼“ì— ë“¤ì–´ì˜¨ ì˜¤ë¸Œì íŠ¸ì—ì„œ ModulePart ì»´í¬ë„ŒíŠ¸ë¥¼ ê°€ì ¸ì˜´
         ModulePart snappedModule = args.interactableObject.transform.GetComponent<ModulePart>();
 
         if(snappedModule != null)
         {
-            // ¸¸¾à µé¾î¿Â ¸ğµâÀÌ 'Á¤»ó(Spare)' ¸ğµâÀÌ¶ó¸é
+            // ë§Œì•½ ë“¤ì–´ì˜¨ ëª¨ë“ˆì´ 'ì •ìƒ(Spare)' ëª¨ë“ˆì´ë¼ë©´
             if(!snappedModule.isFaulty)
             {
-                Debug.Log($"{slotIndex}¹ø ½½·Ô¿¡ Á¤»ó ¸ğµâ ÀåÂø ¿Ï·á!");
-                // DiagnosticSystem¿¡ ¼ö¸® ¿Ï·á ¾Ë¸² µîÀ» º¸³¾ ¼ö ÀÖ½À´Ï´Ù.
+                Debug.Log($"{slotIndex}ë²ˆ ìŠ¬ë¡¯ì— ì •ìƒ ëª¨ë“ˆ ì¥ì°© ì™„ë£Œ!");
+                // DiagnosticSystemì— ìˆ˜ë¦¬ ì™„ë£Œ ì•Œë¦¼ ë“±ì„ ë³´ë‚¼ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
             }
             else
             {
-                Debug.LogWarning("ºÒ·® ¸ğµâÀ» ´Ù½Ã ³¢¿ì¼Ì½À´Ï´Ù!");
+                Debug.LogWarning("ë¶ˆëŸ‰ ëª¨ë“ˆì„ ë‹¤ì‹œ ë¼ìš°ì…¨ìŠµë‹ˆë‹¤!");
             }
         }
     }

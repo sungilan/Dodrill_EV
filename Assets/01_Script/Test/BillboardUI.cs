@@ -3,17 +3,17 @@ using UnityEngine;
 public class BillboardUI : MonoBehaviour
 {
     public Transform playerCamera;
-    public float distance = 1.5f; // À¯Àú¿ÍÀÇ °Å¸®
+    public float distance = 1.5f; // ìœ ì €ì™€ì˜ ê±°ë¦¬
     public float followSpeed = 5f;
 
     void Update()
     {
-        // 1. Ä«¸Ş¶ó Á¤¸é ÀÏÁ¤ °Å¸® À¯Áö
+        // 1. ì¹´ë©”ë¼ ì •ë©´ ì¼ì • ê±°ë¦¬ ìœ ì§€
         Vector3 targetPos = playerCamera.position + (playerCamera.forward * distance);
         transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * followSpeed);
 
-        // 2. À¯Àú¸¦ Ç×»ó ¹Ù¶óº¸°Ô ÇÔ
+        // 2. ìœ ì €ë¥¼ í•­ìƒ ë°”ë¼ë³´ê²Œ í•¨
         transform.LookAt(playerCamera);
-        transform.Rotate(0, 180, 0); // UI°¡ µÚÁıÈ÷Áö ¾Ê°Ô º¸Á¤
+        transform.Rotate(0, 180, 0); // UIê°€ ë’¤ì§‘íˆì§€ ì•Šê²Œ ë³´ì •
     }
 }

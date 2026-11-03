@@ -7,20 +7,20 @@ public class GameModeManager : MonoBehaviour
 
     [Header("Evaluation Settings")]
     public int totalScore = 100;
-    public int hintPenalty = 5; // ÈùÆ® »ç¿ë ½Ã °¨Á¡
-    public int hintCount = 3; // ÃÖ´ë 3¹ø¸¸ °¡´É
+    public int hintPenalty = 5; // íŒíŠ¸ ì‚¬ìš© ì‹œ ê°ì 
+    public int hintCount = 3; // ìµœëŒ€ 3ë²ˆë§Œ ê°€ëŠ¥
 
     public static GameModeManager Instance;
     void Awake() => Instance = this;
 
-    // Æò°¡ ¸ğµå ¼³Á¤ ½Ã °¡ÀÌµå UI ¼û±è
+    // í‰ê°€ ëª¨ë“œ ì„¤ì • ì‹œ ê°€ì´ë“œ UI ìˆ¨ê¹€
     public void SetMode(PlayMode mode)
     {
         currentMode = mode;
         if(currentMode == PlayMode.Exam)
         {
-            AIGuideManager.Instance.guidePanel.SetActive(false); // °¡ÀÌµå ¼û±è
-            // ¸ğµç ÇÏÀÌ¶óÀÌÆ® Á¦°Å ·ÎÁ÷ È£Ãâ
+            AIGuideManager.Instance.guidePanel.SetActive(false); // ê°€ì´ë“œ ìˆ¨ê¹€
+            // ëª¨ë“  í•˜ì´ë¼ì´íŠ¸ ì œê±° ë¡œì§ í˜¸ì¶œ
         }
     }
 
@@ -31,7 +31,7 @@ public class GameModeManager : MonoBehaviour
             hintCount--;
             totalScore -= hintPenalty;
             AIGuideManager.Instance.ShowTemporaryHint(5f);
-            // UI¿¡ ³²Àº ÈùÆ® °³¼ö Ç¥½Ã ·ÎÁ÷ Ãß°¡ °¡´É
+            // UIì— ë‚¨ì€ íŒíŠ¸ ê°œìˆ˜ í‘œì‹œ ë¡œì§ ì¶”ê°€ ê°€ëŠ¥
         }
     }
 }

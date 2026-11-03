@@ -18,7 +18,7 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI batteryTypeText;
     public TextMeshProUGUI driveTypeText;
     public TextMeshProUGUI rangeText;
-    public Button selectButton; // ÀÎ½ºÆåÅÍ¿¡¼­ '¼±ÅÃ' ¹öÆ° ¿¬°á
+    public Button selectButton; // ì¸ìŠ¤í™í„°ì—ì„œ 'ì„ íƒ' ë²„íŠ¼ ì—°ê²°
 
     [Header("Events")]
     [HideInInspector]
@@ -29,13 +29,13 @@ public class UIManager : MonoBehaviour
 
     void Awake()
     {
-        // ½Ì±ÛÅæ ÃÊ±âÈ­
+        // ì‹±ê¸€í†¤ ì´ˆê¸°í™”
         if(Instance == null) { Instance = this; }
         else { Destroy(gameObject); return; }
 
         if(completionPanel != null) completionPanel.SetActive(false);
 
-        // ¹öÆ° ¸®½º³Ê µî·Ï
+        // ë²„íŠ¼ ë¦¬ìŠ¤ë„ˆ ë“±ë¡
         if(selectButton != null)
         {
             selectButton.onClick.AddListener(ConfirmSelection);
@@ -43,7 +43,7 @@ public class UIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Â÷·® ¼±ÅÃ È­¸éÀÇ UI¸¦ °»½ÅÇÕ´Ï´Ù.
+    /// ì°¨ëŸ‰ ì„ íƒ í™”ë©´ì˜ UIë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
     /// </summary>
     public void UpdateUI(VehicleData data)
     {
@@ -51,35 +51,35 @@ public class UIManager : MonoBehaviour
         _hasData = !string.IsNullOrEmpty(data.modelName);
 
         if(modelNameText != null) modelNameText.text = data.modelName;
-        if(batteryTypeText != null) batteryTypeText.text = $"¹èÅÍ¸®: {data.batteryCapacity}";
-        if(driveTypeText != null) driveTypeText.text = $"±¸µ¿: {data.driveType}";
-        if(rangeText != null) rangeText.text = $"ÁÖÇà°Å¸®: {data.maxRange}";
+        if(batteryTypeText != null) batteryTypeText.text = $"ë°°í„°ë¦¬: {data.batteryCapacity}";
+        if(driveTypeText != null) driveTypeText.text = $"êµ¬ë™: {data.driveType}";
+        if(rangeText != null) rangeText.text = $"ì£¼í–‰ê±°ë¦¬: {data.maxRange}";
 
-        Debug.Log($"<color=cyan>[UI]</color> {data.modelName} Á¤º¸ Ç¥½Ã Áß (HasData: {_hasData})");
+        Debug.Log($"<color=cyan>[UI]</color> {data.modelName} ì •ë³´ í‘œì‹œ ì¤‘ (HasData: {_hasData})");
     }
 
     /// <summary>
-    /// ÃÖÁ¾ ¼±ÅÃ È®Á¤ (¹öÆ° Å¬¸¯ ¶Ç´Â T Å° ÀÔ·Â)
+    /// ìµœì¢… ì„ íƒ í™•ì • (ë²„íŠ¼ í´ë¦­ ë˜ëŠ” T í‚¤ ì…ë ¥)
     /// </summary>
     public void ConfirmSelection()
     {
-        Debug.Log($"<color=white>[Confirm]</color> µ¥ÀÌÅÍ À¯È¿¼º Ã¼Å©: {_hasData}");
+        Debug.Log($"<color=white>[Confirm]</color> ë°ì´í„° ìœ íš¨ì„± ì²´í¬: {_hasData}");
 
         if(_hasData)
         {
-            Debug.Log("<color=green>[Success]</color> Á¤ºñ ÈÆ·Ã ½Ã³ª¸®¿À¸¦ ¿äÃ»ÇÕ´Ï´Ù.");
+            Debug.Log("<color=green>[Success]</color> ì •ë¹„ í›ˆë ¨ ì‹œë‚˜ë¦¬ì˜¤ë¥¼ ìš”ì²­í•©ë‹ˆë‹¤.");
             OnVehicleSelected.Invoke(_currentDisplayData);
         }
         else
         {
-            Debug.LogWarning("<color=red>[Fail]</color> ¼±ÅÃµÈ Â÷·® µ¥ÀÌÅÍ°¡ ¾ø½À´Ï´Ù.");
+            Debug.LogWarning("<color=red>[Fail]</color> ì„ íƒëœ ì°¨ëŸ‰ ë°ì´í„°ê°€ ì—†ìŠµë‹ˆë‹¤.");
         }
     }
 
-    // --- ÈÆ·Ã ÁøÇàµµ °ü·Ã ÇÔ¼öµé ---
+    // --- í›ˆë ¨ ì§„í–‰ë„ ê´€ë ¨ í•¨ìˆ˜ë“¤ ---
     public void UpdateProgress(int current, int total)
     {
-        if(progressText != null) progressText.text = $"ÁøÇàµµ: {current} / {total}";
+        if(progressText != null) progressText.text = $"ì§„í–‰ë„: {current} / {total}";
         if(progressBar != null && total > 0) progressBar.value = (float)current / total;
     }
 
@@ -87,10 +87,10 @@ public class UIManager : MonoBehaviour
 
     private void Update()
     {
-        // Å×½ºÆ®¿ë ´ÜÃàÅ°
+        // í…ŒìŠ¤íŠ¸ìš© ë‹¨ì¶•í‚¤
         if(Input.GetKeyDown(KeyCode.T))
         {
-            Debug.Log("<color=yellow>[Test]</color> T Å° ÀÔ·ÂÀ¸·Î ¼±ÅÃ È®Á¤");
+            Debug.Log("<color=yellow>[Test]</color> T í‚¤ ì…ë ¥ìœ¼ë¡œ ì„ íƒ í™•ì •");
             ConfirmSelection();
         }
     }

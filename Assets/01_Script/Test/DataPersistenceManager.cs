@@ -12,33 +12,48 @@ public class DataPersistenceManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        // ÀúÀå °æ·Î: C:/Users/»ç¿ëÀÚ/AppData/LocalLow/È¸»ç¸í/ÇÁ·ÎÁ§Æ®¸í/EvaluationResults.csv
+        // ì €ì¥ ê²½ë¡œ: C:/Users/ì‚¬ìš©ì/AppData/LocalLow/íšŒì‚¬ëª…/í”„ë¡œì íŠ¸ëª…/EvaluationResults.csv
         filePath = Path.Combine(Application.persistentDataPath, "EvaluationResults.csv");
 
-        // ÆÄÀÏÀÌ ¾øÀ¸¸é Çì´õ »ı¼º
+        // íŒŒì¼ì´ ì—†ìœ¼ë©´ í—¤ë” ìƒì„±
         if(!File.Exists(filePath))
         {
-            File.WriteAllText(filePath, "³¯Â¥,´Ğ³×ÀÓ,ÃÖÁ¾Á¡¼ö,µî±Ş,°¨Á¡»çÀ¯\n");
+            File.WriteAllText(filePath, "ë‚ ì§œ,ë‹‰ë„¤ì„,ìµœì¢…ì ìˆ˜,ë“±ê¸‰,ê°ì ì‚¬ìœ \n");
         }
+    }
+
+    // CSV ì…€: ì‰¼í‘œÂ·ë”°ì˜´í‘œÂ·ì¤„ë°”ê¿ˆì´ ë“¤ì–´ ìˆì–´ë„ ì—´ì´ ê¹¨ì§€ì§€ ì•Šê²Œ ë”°ì˜´í‘œë¡œ ê°ì‹¸ê³  ë‚´ë¶€ ë”°ì˜´í‘œëŠ” ë‘ ë²ˆ ì“´ë‹¤
+    private static string CsvCell(string s)
+    {
+        if(s == null) return "";
+        return "\"" + s.Replace("\"", "\"\"") + "\"";
     }
 
     public void SaveResult(int score, string grade, List<PenaltyLog> logs)
     {
         string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-        string nickname = "ÀÍ»ê½ÃÀÇ ¹æ¶ûÀÚ"; // User Summary ¹İ¿µ
+        // ì˜ˆì „ì—ëŠ” ëª¨ë“  ê¸°ë¡ì— ê°™ì€ ì´ë¦„ì´ ê³ ì •ìœ¼ë¡œ ë“¤ì–´ê°”ë‹¤ -> ë¡œë¹„ì—ì„œ ì •í•œ ì‹¤ì œ ë‹‰ë„¤ì„ì„ ì“´ë‹¤
+        string nickname = string.IsNullOrEmpty(UserInfo.UserName) ? "Unknown" : UserInfo.UserName;
 
-        // °¨Á¡ »çÀ¯µéÀ» ÇÏ³ªÀÇ ¹®ÀÚ¿­·Î °áÇÕ (¿¢¼¿ ¼¿ ±¸ºĞ ¹æÁö¸¦ À§ÇØ ¼¼¹ÌÄİ·Ğ »ç¿ë)
+        // ê°ì  ì‚¬ìœ ë“¤ì„ í•˜ë‚˜ì˜ ë¬¸ìì—´ë¡œ ê²°í•© (ì—‘ì…€ ì…€ êµ¬ë¶„ ë°©ì§€ë¥¼ ìœ„í•´ ì„¸ë¯¸ì½œë¡  ì‚¬ìš©)
         string reasonSummary = "";
         foreach(var log in logs)
         {
             reasonSummary += $"[{log.reason}:-{log.score}];";
         }
 
-        // CSV ÇÑ ÁÙ »ı¼º
-        string newLine = $"{date},{nickname},{score},{grade},\"{reasonSummary}\"\n";
+        // CSV í•œ ì¤„ ìƒì„±
+        string newLine = $"{date},{CsvCell(nickname)},{score},{CsvCell(grade)},{CsvCell(reasonSummary)}\n";
 
-        // ÆÄÀÏ ³¡¿¡ Ãß°¡
-        File.AppendAllText(filePath, newLine);
-        Debug.Log($"¼ºÀû ÀúÀå ¿Ï·á: {filePath}");
+        // íŒŒì¼ ëì— ì¶”ê°€ (ê²½ë¡œ ê¶Œí•œ/ì ê¸ˆìœ¼ë¡œ ì‹¤íŒ¨í•´ë„ ì•±ì´ ë©ˆì¶”ì§€ ì•Šê²Œ)
+        try
+        {
+            File.AppendAllText(filePath, newLine);
+            Debug.Log($"ì„±ì  ì €ì¥ ì™„ë£Œ: {filePath}");
+        }
+        catch(Exception e)
+        {
+            Debug.LogError($"ì„±ì  ì €ì¥ ì‹¤íŒ¨: {filePath}\n{e.Message}");
+        }
     }
 }

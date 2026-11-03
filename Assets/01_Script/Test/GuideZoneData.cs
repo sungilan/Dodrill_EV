@@ -4,21 +4,21 @@ using UnityEngine.Localization.Components;
 
 public class GuideZoneData : MonoBehaviour
 {
-    [Header("°¡ÀÌµå ÆË¾÷ ¼³Á¤")]
+    [Header("ê°€ì´ë“œ íŒì—… ì„¤ì •")]
     public Sprite targetImage;
 
-    // ¸í½ÃÀûÀ¸·Î ÀüÃ¼ ÀÌ¸§À» Àû¾îÁİ´Ï´Ù.
-    [Tooltip("Å¸°Ù ¸íÄª")]
+    // ëª…ì‹œì ìœ¼ë¡œ ì „ì²´ ì´ë¦„ì„ ì ì–´ì¤ë‹ˆë‹¤.
+    [Tooltip("íƒ€ê²Ÿ ëª…ì¹­")]
     public UnityEngine.Localization.LocalizedString targetName;
 
-    [Tooltip("»ó¼¼ °¡ÀÌµå ¹®±¸")]
+    [Tooltip("ìƒì„¸ ê°€ì´ë“œ ë¬¸êµ¬")]
     public UnityEngine.Localization.LocalizedString guideDescription;
 
-    [Header("°¡ÀÌµå ¼³Á¤")]
-    public bool showGuide = true;       // ¸¶Ä¿(È­»ìÇ¥) »ı¼º ¿©ºÎ
+    [Header("ê°€ì´ë“œ ì„¤ì •")]
+    public bool showGuide = true;       // ë§ˆì»¤(í™”ì‚´í‘œ) ìƒì„± ì—¬ë¶€
     public bool showGhost = true;
-    public bool showOutline = true;// °í½ºÆ® ¿ÀºêÁ§Æ® »ı¼º ¿©ºÎ
+    public bool showOutline = true;// ê³ ìŠ¤íŠ¸ ì˜¤ë¸Œì íŠ¸ ìƒì„± ì—¬ë¶€
 
-    [Tooltip("ºñ¾îÀÖÀ¸¸é ÇöÀç ´Ü°èÀÇ spawnObjects Áß Ã¹ ¹øÂ° ¾ÆÀÌÅÛÀ» °í½ºÆ®·Î »ç¿ëÇÕ´Ï´Ù.")]
-    public string customGhostPrefabId;  // Æ¯Á¤ ¿ÀºêÁ§Æ®¸¸ °í½ºÆ®·Î ¶ç¿ì°í ½ÍÀ» ¶§ ÁöÁ¤ (¿¹: "BatteryCover")
+    [Tooltip("ë¹„ì–´ìˆìœ¼ë©´ í˜„ì¬ ë‹¨ê³„ì˜ spawnObjects ì¤‘ ì²« ë²ˆì§¸ ì•„ì´í…œì„ ê³ ìŠ¤íŠ¸ë¡œ ì‚¬ìš©í•©ë‹ˆë‹¤.")]
+    public string customGhostPrefabId;  // íŠ¹ì • ì˜¤ë¸Œì íŠ¸ë§Œ ê³ ìŠ¤íŠ¸ë¡œ ë„ìš°ê³  ì‹¶ì„ ë•Œ ì§€ì • (ì˜ˆ: "BatteryCover")
 }

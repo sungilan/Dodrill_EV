@@ -7,7 +7,7 @@ public class MultimeterProbeSync : MonoBehaviour
     private SyncGrab _syncGrab;
     private MultimeterProbe _probe;
 
-    // º¹±Í¸¦ À§ÇÑ ÃÊ±â ·ÎÄÃ À§Ä¡ ÀúÀå º¯¼ö
+    // ë³µê·€ë¥¼ ìœ„í•œ ì´ˆê¸° ë¡œì»¬ ìœ„ì¹˜ ì €ì¥ ë³€ìˆ˜
     private Vector3 _originLocalPos;
     private Quaternion _originLocalRot;
 
@@ -16,18 +16,18 @@ public class MultimeterProbeSync : MonoBehaviour
         _syncGrab = GetComponent<SyncGrab>();
         _probe = GetComponent<MultimeterProbe>();
 
-        // ¾À ½ÃÀÛ ½Ã º»Ã¼ ¼ÒÄÏ¿¡ ¹èÄ¡µÈ ÇöÀçÀÇ ·ÎÄÃ ÁÂÇ¥¸¦ ±â¾ïÇÕ´Ï´Ù.
+        // ì”¬ ì‹œì‘ ì‹œ ë³¸ì²´ ì†Œì¼“ì— ë°°ì¹˜ëœ í˜„ì¬ì˜ ë¡œì»¬ ì¢Œí‘œë¥¼ ê¸°ì–µí•©ë‹ˆë‹¤.
         _originLocalPos = transform.localPosition;
         _originLocalRot = transform.localRotation;
     }
 
     /// <summary>
-    /// PC¿¡¼­ ´ÜÀÚ¸¦ Å¬¸¯ÇßÀ» ¶§ È£Ãâ. 
-    /// SyncGrabÀÇ ¼ÒÀ¯±ÇÀ» È¹µæÇÑ µÚ ÇØ´ç ÁÂÇ¥·Î ³¯¾Æ°©´Ï´Ù.
+    /// PCì—ì„œ ë‹¨ìë¥¼ í´ë¦­í–ˆì„ ë•Œ í˜¸ì¶œ. 
+    /// SyncGrabì˜ ì†Œìœ ê¶Œì„ íšë“í•œ ë’¤ í•´ë‹¹ ì¢Œí‘œë¡œ ë‚ ì•„ê°‘ë‹ˆë‹¤.
     /// </summary>
     public void FlyToTerminal(MeasurementPoint targetPoint, Vector3 hitPos, Vector3 hitNormal)
     {
-        // ¼­¹ö ¼ÒÀ¯±Ç ¿äÃ» ÈÄ ÀÌµ¿ ½ÇÇà
+        // ì„œë²„ ì†Œìœ ê¶Œ ìš”ì²­ í›„ ì´ë™ ì‹¤í–‰
         _syncGrab.RequestGrab(() => {
             //PerformFly(targetPoint, hitPos, hitNormal);
         });
@@ -37,11 +37,11 @@ public class MultimeterProbeSync : MonoBehaviour
     //{
     //    DOTween.Kill(transform);
 
-    //    // ´ÜÀÚ¿¡ ²ÈÈ÷´Â È¸Àü°ª °è»ê (´ÜÀÚÀÇ Normal ¹İ´ë ¹æÇâ + ¿ÀÇÁ¼Â °áÇÕ)
+    //    // ë‹¨ìì— ê½‚íˆëŠ” íšŒì „ê°’ ê³„ì‚° (ë‹¨ìì˜ Normal ë°˜ëŒ€ ë°©í–¥ + ì˜¤í”„ì…‹ ê²°í•©)
     //    Quaternion targetRot = Quaternion.LookRotation(-hitNormal) * Quaternion.Euler(_syncGrab.holdRotationOffset);
     //    Vector3 finalPos = hitPos + (targetRot * _syncGrab.holdPositionOffset);
 
-    //    // ¾ÆÅ© ÀÌµ¿ ¿¬Ãâ
+    //    // ì•„í¬ ì´ë™ ì—°ì¶œ
     //    Vector3 mid = (transform.position + finalPos) * 0.5f + Vector3.up * 0.2f;
     //    transform.DOPath(new[] { mid, finalPos }, 0.4f, PathType.CatmullRom)
     //        .SetEase(Ease.OutCubic);
@@ -49,31 +49,31 @@ public class MultimeterProbeSync : MonoBehaviour
     //    transform.DORotateQuaternion(targetRot, 0.4f)
     //        .SetEase(Ease.OutCubic)
     //        .OnComplete(() => {
-    //            // µµ´Ş ½Ã ½ÇÁ¦ ÃøÁ¤ ·ÎÁ÷¿¡ ´ÜÀÚ ID ÁÖÀÔ ¹× LCD °»½Å
+    //            // ë„ë‹¬ ì‹œ ì‹¤ì œ ì¸¡ì • ë¡œì§ì— ë‹¨ì ID ì£¼ì… ë° LCD ê°±ì‹ 
     //            _probe.currentTerminalId = targetPoint.terminalId;
     //            _probe.master.EvaluateConnection();
 
-    //            // LNT¸¦ ÅëÇØ ÃÖÁ¾ À§Ä¡ °­Á¦ µ¿±âÈ­
+    //            // LNTë¥¼ í†µí•´ ìµœì¢… ìœ„ì¹˜ ê°•ì œ ë™ê¸°í™”
     //            var lnt = GetComponent<LocalNetworkTransform>();
     //            lnt?.SetTargetPosition(finalPos, targetRot);
     //        });
     //}
 
     /// <summary>
-    /// ¸Å°³º¯¼ö ¾øÀÌ È£Ãâ ½Ã ÃÊ±â ÀúÀåµÈ ·ÎÄÃ À§Ä¡·Î º¹±¸ÇÕ´Ï´Ù.
+    /// ë§¤ê°œë³€ìˆ˜ ì—†ì´ í˜¸ì¶œ ì‹œ ì´ˆê¸° ì €ì¥ëœ ë¡œì»¬ ìœ„ì¹˜ë¡œ ë³µêµ¬í•©ë‹ˆë‹¤.
     /// </summary>
     public void ReturnToSocket()
     {
-        // ¼ÒÀ¯±Ç È®ÀÎ ÈÄ ÀÌµ¿
+        // ì†Œìœ ê¶Œ í™•ì¸ í›„ ì´ë™
         _syncGrab.RequestGrab(() => {
-            // ÃøÁ¤ »óÅÂ ÃÊ±âÈ­
+            // ì¸¡ì • ìƒíƒœ ì´ˆê¸°í™”
             _probe.currentTerminalId = "";
             _probe.master.EvaluateConnection();
 
-            // º»Ã¼ÀÇ ÀÚ½Ä »óÅÂÀÌ¹Ç·Î DOLocalMove »ç¿ë
+            // ë³¸ì²´ì˜ ìì‹ ìƒíƒœì´ë¯€ë¡œ DOLocalMove ì‚¬ìš©
             transform.DOLocalMove(_originLocalPos, 0.3f);
             transform.DOLocalRotateQuaternion(_originLocalRot, 0.3f).OnComplete(() => {
-                // º¹±Í ¿Ï·á ÈÄ ¼ÒÀ¯±Ç ÇØÁ¦ ¹× Kinematic º¹±¸
+                // ë³µê·€ ì™„ë£Œ í›„ ì†Œìœ ê¶Œ í•´ì œ ë° Kinematic ë³µêµ¬
                 _syncGrab.RequestRelease();
             });
         });

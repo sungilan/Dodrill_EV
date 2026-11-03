@@ -49,15 +49,24 @@ public class LobbyPanel : UIView
 
 
 
+    private static LobbyPanel s_instance;
+
     protected override void Awake()
     {
         base.Awake();
+        s_instance = this;
         Mst.Events.AddListener(MstEventKeys.showLobbyView, OnShowLobbyViewEventHandler);
     }
 
     protected override void OnDestroy()
     {
         UnsubscribeLobbyEvents();
+        if(_lobby != null)
+        {
+            _lobby.OnLobbyStateChangeEvent -= OnLobbyStateChange;
+            _lobby.OnLobbyStatusTextChangeEvent -= OnLobbyStatusTextChange;
+        }
+        if(s_instance == this) s_instance = null;
         base.OnDestroy();
     }
 
@@ -102,14 +111,21 @@ public class LobbyPanel : UIView
     {
         if(_lobby != null)
         {
-            _lobby.OnLobbyStateChangeEvent -= null;
-            _lobby.OnLobbyStatusTextChangeEvent -= null;
+            // 예전에는 '-= null' 이라 해제가 안 되어 이벤트가 누수됐다 -> 실제 핸들러를 해제한다
+            if(s_instance != null)
+            {
+                s_instance.UnsubscribeLobbyEvents();
+                _lobby.OnLobbyStateChangeEvent -= s_instance.OnLobbyStateChange;
+                _lobby.OnLobbyStatusTextChangeEvent -= s_instance.OnLobbyStatusTextChange;
+            }
             try { _lobby.Leave(); } catch { }
             _lobby = null;
         }
     }
     private void ResetLobby()
     {
+        if(_lobby == null) return;
+        UnsubscribeLobbyEvents();   // Start()에서 다시 불릴 때 += 가 중복되어 화면 갱신이 여러 번 일어나던 문제
         _lobby.OnMemberJoinedEvent += OnMemberJoined;
         _lobby.OnMemberLeftEvent += OnMemberLeft;
         _lobby.OnMemberReadyStatusChangedEvent += OnMemberReadyStatusChanged;
@@ -142,7 +158,7 @@ public class LobbyPanel : UIView
 
         if(string.IsNullOrEmpty(scenarioId))
         {
-            if(contentTitleText) contentTitleText.text = "�ó����� ����";
+            if(contentTitleText) contentTitleText.text = "시나리오 없음";
             if(thumbnailImage) thumbnailImage.sprite = defaultThumbnail;
             return;
         }
@@ -266,7 +282,10 @@ public class LobbyPanel : UIView
 
     public void OnHideLobbyViewEventHandler()
     {
-        _lobby.Leave();
+        if(_lobby != null)
+        {
+            try { _lobby.Leave(); } catch(Exception e) { Debug.LogWarning($"[LobbyPanel] 로비 나가기 실패: {e.Message}"); }
+        }
         Hide();
         EnsureReturnViewsBound();
         contentsListView?.Show();
@@ -278,15 +297,18 @@ public class LobbyPanel : UIView
     {
         isSet = false;
 
-        if(!isSet)
+        if(!isSet && TryGetLocalMember(out var me))
         {
-            var options = _lobby.Members[Mst.Client.Auth.AccountInfo.Username].Properties;
-            if(!options.ToDictionary().TryGetValue("PlatformType", out string _))
-            {
-                options.Add("PlatformType", Utils.GetPlatformType().ToString());
-                options.Add("UserName", UserInfo.UserName);
-                _lobby.SetMyProperties(options, (s, m) => { isSet = true; });
-            }
+            string platform = Utils.GetPlatformType().ToString();
+            string userName = UserInfo.UserName;
+            var current = me.Properties.ToDictionary();
+            // 값이 없거나 달라졌을 때만 서버에 알린다(플랫폼 변경/재입장 시 목록 표시 오류 방지)
+            if(!current.TryGetValue("PlatformType", out string curPlatform) || curPlatform != platform)
+                _lobby.SetMyProperty("PlatformType", platform, (s, m) => { });
+            if(!string.IsNullOrEmpty(userName) && (!current.TryGetValue("UserName", out string curName) || curName != userName))
+                _lobby.SetMyProperty("UserName", userName, (s, m) => { isSet = true; });
+            else
+                isSet = true;
         }
 
         DrawPlayersList();
@@ -412,15 +434,25 @@ public class LobbyPanel : UIView
         string otherTeam = currentTeam.Equals("A", StringComparison.OrdinalIgnoreCase) ? "B" : "A";
         _lobby.JoinTeam(otherTeam, (isSuccessful, error) =>
         {
-            if(!isSuccessful) Debug.LogError($"Lobby Change Team Error: {error}");
+            if(!isSuccessful) { Debug.LogError($"Lobby Change Team Error: {error}"); ShowNotice($"팀을 바꾸지 못했습니다: {error}"); }
         });
+    }
+
+    // 로비 상태 문구 칸에 사용자에게 보이는 안내를 남긴다 (예전에는 Debug 로그뿐이라 왜 안 되는지 알 수 없었다)
+    private void ShowNotice(string message)
+    {
+        Debug.Log($"[LobbyPanel] {message}");
+        if(statusInfoText != null) statusInfoText.text = message;
     }
 
     public void OnStartGame()
     {
-        bool allReady = _lobby.Members.Values.All(m => m.IsReady);
-        if(!allReady)
+        if(_lobby == null) return;
+        int total = _lobby.Members.Count;
+        int ready = _lobby.Members.Values.Count(m => m.IsReady);
+        if(ready < total)
         {
+            ShowNotice($"아직 준비하지 않은 참가자가 있습니다 ({ready}/{total} 준비 완료)");
             return;
         }
 
@@ -430,6 +462,7 @@ public class LobbyPanel : UIView
             if(!isSuccessful)
             {
                 Debug.LogError($"Set Property Error: {error}");
+                ShowNotice($"시작하지 못했습니다: {error}");
                 Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
                 return;
             }
@@ -438,6 +471,7 @@ public class LobbyPanel : UIView
                 if(!isSuccessful2)
                 {
                     Debug.LogError($"Set Property Error: {error2}");
+                    ShowNotice($"시작하지 못했습니다: {error2}");
                     Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
                     return;
                 }
@@ -446,6 +480,7 @@ public class LobbyPanel : UIView
                     if(!isSuccessful3)
                     {
                         Debug.LogError($"Start Game Error: {error3}");
+                        ShowNotice($"게임을 시작하지 못했습니다: {error3}");
                         Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
                     }
                 });
@@ -467,8 +502,9 @@ public class LobbyPanel : UIView
     private IEnumerator DelayUpdate(LobbyMemberData member, string propertyKey, string propertyValue)
     {
         yield return new WaitForEndOfFrame();
-        if(_lobby.Members[member.Username].Properties.FindByKey(propertyKey) == null)
-            _lobby.Members[member.Username].Properties.Add(propertyKey, propertyValue);
+        if(_lobby == null) yield break;
+        if(_lobby.Members.TryGetValue(member.Username, out var current) && current != null && current.Properties.FindByKey(propertyKey) == null)
+            current.Properties.Add(propertyKey, propertyValue);
         DrawPlayersList();
     }
 }

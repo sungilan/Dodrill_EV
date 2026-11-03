@@ -6,8 +6,8 @@ using UnityEngine.UI;
 [System.Serializable]
 public class PenaltyLog
 {
-    public string reason;   // °¨Á¡ »çÀ¯
-    public int score;       // °¨Á¡µÈ Á¡¼ö
+    public string reason;   // ê°ì  ì‚¬ìœ 
+    public int score;       // ê°ì ëœ ì ìˆ˜
 }
 
 public class EvaluationReport : MonoBehaviour
@@ -18,35 +18,35 @@ public class EvaluationReport : MonoBehaviour
     public TextMeshProUGUI finalScoreText;
     public TextMeshProUGUI gradeText;
     public TextMeshProUGUI logListText;
-    public Image scoreFillImage; // ¿øÇü Fill Image
+    public Image scoreFillImage; // ì›í˜• Fill Image
 
     private List<PenaltyLog> penaltyLogs = new List<PenaltyLog>();
     private int currentScore = 100;
 
     void Awake() => Instance = this;
 
-    // °¨Á¡ ¹ß»ı ½Ã È£Ãâ (ScoreManager³ª °¢ ½ºÅ©¸³Æ®¿¡¼­ È£Ãâ)
+    // ê°ì  ë°œìƒ ì‹œ í˜¸ì¶œ (ScoreManagerë‚˜ ê° ìŠ¤í¬ë¦½íŠ¸ì—ì„œ í˜¸ì¶œ)
     public void AddPenalty(string reason, int penalty)
     {
         currentScore -= penalty;
         currentScore = Mathf.Clamp(currentScore, 0, 100);
 
         penaltyLogs.Add(new PenaltyLog { reason = reason, score = penalty });
-        Debug.Log($"[°¨Á¡] {reason} : -{penalty}Á¡");
+        Debug.Log($"[ê°ì ] {reason} : -{penalty}ì ");
     }
 
-    // ½Ã³ª¸®¿À Á¾·á ½Ã UI Ç¥½Ã
+    // ì‹œë‚˜ë¦¬ì˜¤ ì¢…ë£Œ ì‹œ UI í‘œì‹œ
     public void ShowReport()
     {
         gameObject.SetActive(true);
 
-        // 1. Á¡¼ö ¹× µî±Ş °è»ê
+        // 1. ì ìˆ˜ ë° ë“±ê¸‰ ê³„ì‚°
         finalScoreText.text = currentScore.ToString();
         scoreFillImage.fillAmount = currentScore / 100f;
         gradeText.text = CalculateGrade(currentScore);
         gradeText.color = GetGradeColor(gradeText.text);
 
-        // 2. °¨Á¡ ¸®½ºÆ® Ãâ·Â
+        // 2. ê°ì  ë¦¬ìŠ¤íŠ¸ ì¶œë ¥
         logListText.text = "";
         foreach(var log in penaltyLogs)
         {
@@ -59,19 +59,19 @@ public class EvaluationReport : MonoBehaviour
         if(score >= 90) return "S";
         if(score >= 80) return "A";
         if(score >= 70) return "B";
-        return "F (Àç½ÃÇè)";
+        return "F (ì¬ì‹œí—˜)";
     }
 
     private Color GetGradeColor(string grade)
     {
         if(grade == "S") return Color.cyan;
-        if(grade == "F (Àç½ÃÇè)") return Color.red;
+        if(grade == "F (ì¬ì‹œí—˜)") return Color.red;
         return Color.white;
     }
 
     public void ConfirmAndSave()
     {
         DataPersistenceManager.Instance.SaveResult(currentScore, CalculateGrade(currentScore), penaltyLogs);
-        // ¸ŞÀÎ ¸Ş´º·Î ÀÌµ¿ÇÏ°Å³ª Á¾·á
+        // ë©”ì¸ ë©”ë‰´ë¡œ ì´ë™í•˜ê±°ë‚˜ ì¢…ë£Œ
     }
 }

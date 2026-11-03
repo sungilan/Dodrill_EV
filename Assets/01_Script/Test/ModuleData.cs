@@ -1,14 +1,14 @@
-// ModuleData.cs (°¢ ¸ğµâ ¿ÀºêÁ§Æ®¿¡ ºÎÂø)
+// ModuleData.cs (ê° ëª¨ë“ˆ ì˜¤ë¸Œì íŠ¸ì— ë¶€ì°©)
 using UnityEngine;
 
 public class ModuleData : MonoBehaviour
 {
-    public float voltage = 3.8f; // Á¤»ó Àü¾Ğ
-    public bool isFaulty = false; // ºÒ·® ¿©ºÎ
+    public float voltage = 3.8f; // ì •ìƒ ì „ì••
+    public bool isFaulty = false; // ë¶ˆëŸ‰ ì—¬ë¶€
 
     public void SetAsFaulty()
     {
         isFaulty = true;
-        voltage = 1.2f; // ºÒ·® ½Ã Àü¾Ğ ±Ş¶ô
+        voltage = 1.2f; // ë¶ˆëŸ‰ ì‹œ ì „ì•• ê¸‰ë½
     }
 }

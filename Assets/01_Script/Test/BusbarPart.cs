@@ -1,4 +1,4 @@
-// BusbarPart.cs (InteractablePart¸¦ »ó¼Ó¹Ş°Å³ª À¯»çÇÏ°Ô ±¸¼º)
+// BusbarPart.cs (InteractablePartë¥¼ ìƒì†ë°›ê±°ë‚˜ ìœ ì‚¬í•˜ê²Œ êµ¬ì„±)
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
@@ -6,12 +6,12 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 public class BusbarPart : InteractablePart
 {
     [Header("Busbar Specific")]
-    public List<Bolt> mountingBolts; // ¹ö½º¹Ù¸¦ °íÁ¤ÇÏ´Â 2~4°³ÀÇ º¼Æ®
-    public GameObject linkedModule;   // ÀÌ ¹ö½º¹Ù°¡ µ¤°í ÀÖ´Â ¸ğµâ
+    public List<Bolt> mountingBolts; // ë²„ìŠ¤ë°”ë¥¼ ê³ ì •í•˜ëŠ” 2~4ê°œì˜ ë³¼íŠ¸
+    public GameObject linkedModule;   // ì´ ë²„ìŠ¤ë°”ê°€ ë®ê³  ìˆëŠ” ëª¨ë“ˆ
 
     void Update()
     {
-        // ¸ğµç º¼Æ®°¡ Ç®·È´ÂÁö ½Ç½Ã°£ Ã¼Å©
+        // ëª¨ë“  ë³¼íŠ¸ê°€ í’€ë ¸ëŠ”ì§€ ì‹¤ì‹œê°„ ì²´í¬
         CheckAllBoltsLoosened();
     }
 
@@ -27,14 +27,14 @@ public class BusbarPart : InteractablePart
             }
         }
 
-        // ¸ğµç º¼Æ®°¡ Ç®¸®¸é ±×·¦(Grab) È°¼ºÈ­
+        // ëª¨ë“  ë³¼íŠ¸ê°€ í’€ë¦¬ë©´ ê·¸ë©(Grab) í™œì„±í™”
         //grabInteractable.enabled = readyToLift;
     }
 
-    // ¹ö½º¹Ù°¡ Á¦°ÅµÇ¾úÀ» ¶§ È£ÃâµÇ´Â ÀÌº¥Æ®
+    // ë²„ìŠ¤ë°”ê°€ ì œê±°ë˜ì—ˆì„ ë•Œ í˜¸ì¶œë˜ëŠ” ì´ë²¤íŠ¸
     public void OnBusbarRemoved()
     {
-        // ÀÌÁ¦ ¹Ø¿¡ ÀÖ´Â ¸ğµâÀ» µé¾î ¿Ã¸± ¼ö ÀÖµµ·Ï ¸ğµâÀÇ Àá±İ ÇØÁ¦
+        // ì´ì œ ë°‘ì— ìˆëŠ” ëª¨ë“ˆì„ ë“¤ì–´ ì˜¬ë¦´ ìˆ˜ ìˆë„ë¡ ëª¨ë“ˆì˜ ì ê¸ˆ í•´ì œ
         linkedModule.GetComponent<ModulePart>().UnlockModuleFromBusbar();
     }
 }

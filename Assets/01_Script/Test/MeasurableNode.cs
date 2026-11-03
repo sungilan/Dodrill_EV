@@ -4,6 +4,6 @@ public enum Polarity { Positive, Negative }
 
 public class MeasurableNode : MonoBehaviour
 {
-    public Polarity nodePolarity; // ÀÌ ÁöÁ¡ÀÌ +ÀÎÁö -ÀÎÁö ¼³Á¤
-    public float voltageValue = 3.8f; // ÀÌ ³ëµå°¡ °¡Áø Àü¾Ğ°ª (¸ğµâ ±âÁØ)
+    public Polarity nodePolarity; // ì´ ì§€ì ì´ +ì¸ì§€ -ì¸ì§€ ì„¤ì •
+    public float voltageValue = 3.8f; // ì´ ë…¸ë“œê°€ ê°€ì§„ ì „ì••ê°’ (ëª¨ë“ˆ ê¸°ì¤€)
 }

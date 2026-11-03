@@ -3,14 +3,14 @@ using DG.Tweening;
 
 public class BatteryJack : MonoBehaviour
 {
-    public Transform supportPlate; // ¹èÅÍ¸®¸¦ ¹ŞÄ¡´Â ÆÇ
-    public float raiseHeight = 1.2f; // ¹èÅÍ¸®¿¡ ´ê´Â ³ôÀÌ
-    public float lowerHeight = 0.1f; // ¿ÏÀüÈ÷ ³»¸° ³ôÀÌ
+    public Transform supportPlate; // ë°°í„°ë¦¬ë¥¼ ë°›ì¹˜ëŠ” íŒ
+    public float raiseHeight = 1.2f; // ë°°í„°ë¦¬ì— ë‹¿ëŠ” ë†’ì´
+    public float lowerHeight = 0.1f; // ì™„ì „íˆ ë‚´ë¦° ë†’ì´
 
-    private GameObject attachedBattery; // ÇöÀç ¹ŞÄ¡°í ÀÖ´Â ¹èÅÍ¸®
+    private GameObject attachedBattery; // í˜„ì¬ ë°›ì¹˜ê³  ìˆëŠ” ë°°í„°ë¦¬
     private bool isRaised = false;
 
-    // 1. ¹èÅÍ¸® ÀèÀ» ¹èÅÍ¸® ¹ØÀ¸·Î ÀÌµ¿½ÃÅ² ÈÄ »ó½Â ¹öÆ° Å¬¸¯
+    // 1. ë°°í„°ë¦¬ ì­ì„ ë°°í„°ë¦¬ ë°‘ìœ¼ë¡œ ì´ë™ì‹œí‚¨ í›„ ìƒìŠ¹ ë²„íŠ¼ í´ë¦­
     public void RaiseJack()
     {
         supportPlate.DOLocalMoveY(raiseHeight, 3f).OnComplete(() => {
@@ -19,31 +19,31 @@ public class BatteryJack : MonoBehaviour
         });
     }
 
-    // 2. ÆÇÀÌ ¿Ã¶ó°¬À» ¶§ À§¿¡ ¹èÅÍ¸®°¡ ÀÖ´ÂÁö Æ®¸®°Å·Î È®ÀÎ
+    // 2. íŒì´ ì˜¬ë¼ê°”ì„ ë•Œ ìœ„ì— ë°°í„°ë¦¬ê°€ ìˆëŠ”ì§€ íŠ¸ë¦¬ê±°ë¡œ í™•ì¸
     private void CheckForBatteryContact()
     {
-        // Raycast³ª Trigger¸¦ »ç¿ëÇÏ¿© »ó´Ü¿¡ ¹èÅÍ¸® ¸Ş½¬°¡ ÀÖ´ÂÁö È®ÀÎ
+        // Raycastë‚˜ Triggerë¥¼ ì‚¬ìš©í•˜ì—¬ ìƒë‹¨ì— ë°°í„°ë¦¬ ë©”ì‰¬ê°€ ìˆëŠ”ì§€ í™•ì¸
         RaycastHit hit;
         if(Physics.Raycast(supportPlate.position, Vector3.up, out hit, 0.2f))
         {
             if(hit.collider.CompareTag("BatteryPack"))
             {
                 attachedBattery = hit.collider.gameObject;
-                // ¹èÅÍ¸®¸¦ ÀèÀÇ ÀÚ½ÄÀ¸·Î ¼³Á¤ÇÏ¿© ÇÔ²² ¿òÁ÷ÀÌ°Ô ÇÔ
+                // ë°°í„°ë¦¬ë¥¼ ì­ì˜ ìì‹ìœ¼ë¡œ ì„¤ì •í•˜ì—¬ í•¨ê»˜ ì›€ì§ì´ê²Œ í•¨
                 attachedBattery.transform.SetParent(supportPlate);
-                Debug.Log("¹èÅÍ¸®°¡ ¾ÈÀüÇÏ°Ô Àè¿¡ °íÁ¤µÇ¾ú½À´Ï´Ù.");
+                Debug.Log("ë°°í„°ë¦¬ê°€ ì•ˆì „í•˜ê²Œ ì­ì— ê³ ì •ë˜ì—ˆìŠµë‹ˆë‹¤.");
             }
         }
     }
 
-    // 3. º¼Æ®°¡ ´Ù Ç®¸° ÈÄ ÇÏ°­ ¹öÆ° Å¬¸¯
+    // 3. ë³¼íŠ¸ê°€ ë‹¤ í’€ë¦° í›„ í•˜ê°• ë²„íŠ¼ í´ë¦­
     public void LowerJack()
     {
         if(attachedBattery != null)
         {
-            // ¹èÅÍ¸®ÆÑÀÇ ½ºÅ©¸³Æ®¿¡¼­ "Å»°Å ¿Ï·á" »óÅÂ¸¦ È®ÀÎÇÏ´Â ·ÎÁ÷ ÇÊ¿ä
+            // ë°°í„°ë¦¬íŒ©ì˜ ìŠ¤í¬ë¦½íŠ¸ì—ì„œ "íƒˆê±° ì™„ë£Œ" ìƒíƒœë¥¼ í™•ì¸í•˜ëŠ” ë¡œì§ í•„ìš”
             supportPlate.DOLocalMoveY(lowerHeight, 5f).SetEase(Ease.OutBounce);
-            Debug.Log("¹èÅÍ¸® ÇÏ°­ Áß...");
+            Debug.Log("ë°°í„°ë¦¬ í•˜ê°• ì¤‘...");
         }
     }
 }

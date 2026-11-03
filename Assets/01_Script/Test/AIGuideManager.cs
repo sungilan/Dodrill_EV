@@ -10,10 +10,10 @@ public class AIGuideManager : MonoBehaviour
     [Header("UI Elements")]
     public TextMeshProUGUI guideTitleText;
     public TextMeshProUGUI guideInstructionText;
-    public GameObject guidePanel; // À¯Àú ½Ã¼±À» µû¶ó´Ù´Ï´Â ÆĞ³Î
+    public GameObject guidePanel; // ìœ ì € ì‹œì„ ì„ ë”°ë¼ë‹¤ë‹ˆëŠ” íŒ¨ë„
 
     [Header("Guide Settings")]
-    public List<GuideStep> steps; // °¢ ´Ü°èº° Á¤º¸ ¸®½ºÆ®
+    public List<GuideStep> steps; // ê° ë‹¨ê³„ë³„ ì •ë³´ ë¦¬ìŠ¤íŠ¸
     private int currentStepIndex = 0;
 
     [System.Serializable]
@@ -21,37 +21,37 @@ public class AIGuideManager : MonoBehaviour
     {
         public string title;
         public string instruction;
-        public GameObject targetObject; // ÇÏÀÌ¶óÀÌÆ®ÇÒ ´ë»ó ºÎÇ°
-        public AudioClip voiceOver;     // °¡ÀÌµå À½¼º
+        public GameObject targetObject; // í•˜ì´ë¼ì´íŠ¸í•  ëŒ€ìƒ ë¶€í’ˆ
+        public AudioClip voiceOver;     // ê°€ì´ë“œ ìŒì„±
     }
 
     void Awake() => Instance = this;
 
     void Start()
     {
-        UpdateStep(0); // Ã¹ ¹øÂ° ´Ü°è ½ÃÀÛ
+        UpdateStep(0); // ì²« ë²ˆì§¸ ë‹¨ê³„ ì‹œì‘
     }
 
     public void StartGuide()
     {
-        // 1. ÃÊ±â ÀÎµ¦½º ¼³Á¤
+        // 1. ì´ˆê¸° ì¸ë±ìŠ¤ ì„¤ì •
         currentStepIndex = 0;
 
-        // 2. °¡ÀÌµå UI ÆĞ³Î È°¼ºÈ­
+        // 2. ê°€ì´ë“œ UI íŒ¨ë„ í™œì„±í™”
         if(guidePanel != null)
         {
             guidePanel.SetActive(true);
         }
 
-        // 3. Ã¹ ¹øÂ° ´Ü°è(index 0) µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¹× Ãâ·Â
+        // 3. ì²« ë²ˆì§¸ ë‹¨ê³„(index 0) ë°ì´í„° ì—…ë°ì´íŠ¸ ë° ì¶œë ¥
         //if(steps != null && steps.Count > 0)
         //{
         //    UpdateStep(currentStepIndex);
-        //    Debug.Log("[°¡ÀÌµå] ½Ã³ª¸®¿À°¡ ½ÃÀÛµÇ¾ú½À´Ï´Ù. Ã¹ ¹øÂ° ´Ü°è·Î ÀÌµ¿ÇÕ´Ï´Ù.");
+        //    Debug.Log("[ê°€ì´ë“œ] ì‹œë‚˜ë¦¬ì˜¤ê°€ ì‹œì‘ë˜ì—ˆìŠµë‹ˆë‹¤. ì²« ë²ˆì§¸ ë‹¨ê³„ë¡œ ì´ë™í•©ë‹ˆë‹¤.");
         //}
         //else
         //{
-        //    Debug.LogError("[°¡ÀÌµå] µî·ÏµÈ GuideStepÀÌ ¾ø½À´Ï´Ù! ¸®½ºÆ®¸¦ È®ÀÎÇÏ¼¼¿ä.");
+        //    Debug.LogError("[ê°€ì´ë“œ] ë“±ë¡ëœ GuideStepì´ ì—†ìŠµë‹ˆë‹¤! ë¦¬ìŠ¤íŠ¸ë¥¼ í™•ì¸í•˜ì„¸ìš”.");
         //}
     }
 
@@ -74,7 +74,7 @@ public class AIGuideManager : MonoBehaviour
         //guideTitleText.text = step.title;
         //guideInstructionText.text = step.instruction;
 
-        //// TTS È£Ãâ: Áö½Ã¹® ÅØ½ºÆ®¸¦ À½¼ºÀ¸·Î ÀĞ¾îÁÜ
+        //// TTS í˜¸ì¶œ: ì§€ì‹œë¬¸ í…ìŠ¤íŠ¸ë¥¼ ìŒì„±ìœ¼ë¡œ ì½ì–´ì¤Œ
         //if(TTSManager.Instance != null)
         //{
         //    TTSManager.Instance.Speak(step.instruction);
@@ -85,14 +85,14 @@ public class AIGuideManager : MonoBehaviour
 
     private void HighlightObject(GameObject obj)
     {
-        // ºÎÇ°¿¡ Outline È¿°ú¸¦ ÁÖ°Å³ª È­»ìÇ¥ ¾ÆÀÌÄÜÀ» ¶ç¿ì´Â ·ÎÁ÷
-        Debug.Log($"[°¡ÀÌµå] ´ÙÀ½ ¸ñÇ¥: {obj.name}");
+        // ë¶€í’ˆì— Outline íš¨ê³¼ë¥¼ ì£¼ê±°ë‚˜ í™”ì‚´í‘œ ì•„ì´ì½˜ì„ ë„ìš°ëŠ” ë¡œì§
+        Debug.Log($"[ê°€ì´ë“œ] ë‹¤ìŒ ëª©í‘œ: {obj.name}");
     }
 
     private void FinishGuide()
     {
-        guideTitleText.text = "°¡ÀÌµå Á¾·á";
-        guideInstructionText.text = "ÀÌÁ¦ ½ÇÀü Á¤ºñ¸¦ ½ÃÀÛÇÏ¼¼¿ä!";
+        guideTitleText.text = "ê°€ì´ë“œ ì¢…ë£Œ";
+        guideInstructionText.text = "ì´ì œ ì‹¤ì „ ì •ë¹„ë¥¼ ì‹œì‘í•˜ì„¸ìš”!";
         Invoke("HidePanel", 3f);
     }
 
@@ -100,7 +100,7 @@ public class AIGuideManager : MonoBehaviour
 
     public void ShowTemporaryHint(float duration)
     {
-        // ÀÌ¹Ì ÈùÆ®°¡ Ç¥½Ã ÁßÀÌ¶ó¸é ±âÁ¸ ÄÚ·çÆ¾ Áß´Ü
+        // ì´ë¯¸ íŒíŠ¸ê°€ í‘œì‹œ ì¤‘ì´ë¼ë©´ ê¸°ì¡´ ì½”ë£¨í‹´ ì¤‘ë‹¨
         if(hintCoroutine != null) StopCoroutine(hintCoroutine);
 
         hintCoroutine = StartCoroutine(HintRoutine(duration));
@@ -108,21 +108,21 @@ public class AIGuideManager : MonoBehaviour
 
     private IEnumerator HintRoutine(float duration)
     {
-        // 1. °¡ÀÌµå ÆĞ³Î°ú ÇÏÀÌ¶óÀÌÆ® È°¼ºÈ­
+        // 1. ê°€ì´ë“œ íŒ¨ë„ê³¼ í•˜ì´ë¼ì´íŠ¸ í™œì„±í™”
         guidePanel.SetActive(true);
 
-        // ÇöÀç ´Ü°èÀÇ ´ë»ó ¿ÀºêÁ§Æ®°¡ ÀÖ´Ù¸é ÇÏÀÌ¶óÀÌÆ® ÄÑ±â (¿¹: Outline ½ºÅ©¸³Æ® È°¼ºÈ­)
+        // í˜„ì¬ ë‹¨ê³„ì˜ ëŒ€ìƒ ì˜¤ë¸Œì íŠ¸ê°€ ìˆë‹¤ë©´ í•˜ì´ë¼ì´íŠ¸ ì¼œê¸° (ì˜ˆ: Outline ìŠ¤í¬ë¦½íŠ¸ í™œì„±í™”)
         var currentTarget = steps[currentStepIndex].targetObject;
         if(currentTarget != null)
         {
-            // ´ë»ó ¿ÀºêÁ§Æ®ÀÇ ¿Ü°û¼±ÀÌ³ª È­»ìÇ¥ µîÀ» È°¼ºÈ­ÇÏ´Â ·ÎÁ÷
+            // ëŒ€ìƒ ì˜¤ë¸Œì íŠ¸ì˜ ì™¸ê³½ì„ ì´ë‚˜ í™”ì‚´í‘œ ë“±ì„ í™œì„±í™”í•˜ëŠ” ë¡œì§
             SetHighlight(currentTarget, true);
         }
 
-        // 2. Á¤ÇØÁø ½Ã°£ µ¿¾È ´ë±â
+        // 2. ì •í•´ì§„ ì‹œê°„ ë™ì•ˆ ëŒ€ê¸°
         yield return new WaitForSeconds(duration);
 
-        // 3. ´Ù½Ã ¼û±â±â (Æò°¡ ¸ğµåÀÏ ¶§¸¸)
+        // 3. ë‹¤ì‹œ ìˆ¨ê¸°ê¸° (í‰ê°€ ëª¨ë“œì¼ ë•Œë§Œ)
         if(GameModeManager.Instance.currentMode == GameModeManager.PlayMode.Exam)
         {
             guidePanel.SetActive(false);
@@ -132,12 +132,12 @@ public class AIGuideManager : MonoBehaviour
         hintCoroutine = null;
     }
 
-    // ÇÏÀÌ¶óÀÌÆ® Á¦¾î º¸Á¶ ÇÔ¼ö
+    // í•˜ì´ë¼ì´íŠ¸ ì œì–´ ë³´ì¡° í•¨ìˆ˜
     private void SetHighlight(GameObject obj, bool active)
     {
-        // ¿©±â¿¡ »ç¿ë ÁßÀÎ ÇÏÀÌ¶óÀÌÆ® ¿¡¼Â(¿¹: Outline.cs)ÀÇ È°¼ºÈ­ ÄÚµå¸¦ ³ÖÀ¸¼¼¿ä.
-        // ¿¹: obj.GetComponent<Outline>().enabled = active;
-        Debug.Log($"[ÈùÆ®] {obj.name} ÇÏÀÌ¶óÀÌÆ®: {active}");
+        // ì—¬ê¸°ì— ì‚¬ìš© ì¤‘ì¸ í•˜ì´ë¼ì´íŠ¸ ì—ì…‹(ì˜ˆ: Outline.cs)ì˜ í™œì„±í™” ì½”ë“œë¥¼ ë„£ìœ¼ì„¸ìš”.
+        // ì˜ˆ: obj.GetComponent<Outline>().enabled = active;
+        Debug.Log($"[íŒíŠ¸] {obj.name} í•˜ì´ë¼ì´íŠ¸: {active}");
     }
 
     public void JumpToStep(int index)
@@ -146,7 +146,7 @@ public class AIGuideManager : MonoBehaviour
 
         currentStepIndex = index;
 
-        // --- ºÎÇ° »óÅÂ º¹±¸ ·ÎÁ÷ ½ÃÀÛ ---
+        // --- ë¶€í’ˆ ìƒíƒœ ë³µêµ¬ ë¡œì§ ì‹œì‘ ---
         for(int i = 0; i < steps.Count; i++)
         {
             GameObject target = steps[i].targetObject;
@@ -157,17 +157,17 @@ public class AIGuideManager : MonoBehaviour
 
             if(i < index)
             {
-                // ÇöÀç µµ´ŞÇÑ ´Ü°èº¸´Ù ÀÌÀü ´Ü°è ºÎÇ°µéÀº '¿Ï·á(Á¦°Å)' »óÅÂ·Î °­Á¦ ¼¼ÆÃ
-                // (¿¹: ºĞÇØ ½Ã³ª¸®¿À¶ó¸é Removed, Á¶¸³ ½Ã³ª¸®¿À¶ó¸é Assembled)
+                // í˜„ì¬ ë„ë‹¬í•œ ë‹¨ê³„ë³´ë‹¤ ì´ì „ ë‹¨ê³„ ë¶€í’ˆë“¤ì€ 'ì™„ë£Œ(ì œê±°)' ìƒíƒœë¡œ ê°•ì œ ì„¸íŒ…
+                // (ì˜ˆ: ë¶„í•´ ì‹œë‚˜ë¦¬ì˜¤ë¼ë©´ Removed, ì¡°ë¦½ ì‹œë‚˜ë¦¬ì˜¤ë¼ë©´ Assembled)
                 //part.ForceSetState(InteractablePart.PartState.Detached);
             }
             else if(i == index)
             {
-                // ÇöÀç ´Ù½Ã ½ÃÀÛÇØ¾ß ÇÏ´Â ´Ü°èÀÇ ºÎÇ°Àº 'ÃÊ±âÈ­'
+                // í˜„ì¬ ë‹¤ì‹œ ì‹œì‘í•´ì•¼ í•˜ëŠ” ë‹¨ê³„ì˜ ë¶€í’ˆì€ 'ì´ˆê¸°í™”'
                 part.ResetPart();
             }
         }
-        // --- ºÎÇ° »óÅÂ º¹±¸ ·ÎÁ÷ ³¡ ---
+        // --- ë¶€í’ˆ ìƒíƒœ ë³µêµ¬ ë¡œì§ ë ---
 
         UpdateStep(currentStepIndex);
     }

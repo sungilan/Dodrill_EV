@@ -45,7 +45,7 @@ public class LoginPanel : UIView
         AuthBehaviour.Instance.SignInAsGuest(() =>
         {
             warningText.gameObject.SetActive(true);
-            warningText.text = "¼­¹ö¿ÍÀÇ ¿¬°áÀ» È®ÀÎÇÏ¼¼¿ä.";
+            warningText.text = "ì„œë²„ì™€ì˜ ì—°ê²°ì„ í™•ì¸í•˜ì„¸ìš”.";
         });
     }
 

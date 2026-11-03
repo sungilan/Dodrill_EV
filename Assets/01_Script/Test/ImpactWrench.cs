@@ -7,6 +7,10 @@ using XRAirpotrSecurity;
 // ============================================================
 public class ImpactWrench : MonoBehaviour
 {
+    // 매 프레임 Utils.GetPlatformType()(XR 설정 조회)을 부르던 것을 한 번만 조회하도록 캐시 (D-24)
+    private PlatformType? _cachedPlatform;
+    private PlatformType CachedPlatform => _cachedPlatform ??= Utils.GetPlatformType();
+
     public enum WrenchMode { Unscrew, Screw }
 
     [Header("설정")]
@@ -64,7 +68,7 @@ public class ImpactWrench : MonoBehaviour
     private void Update()
     {
         // 입력 상태 확인
-        if (Utils.GetPlatformType() == PlatformType.PC)
+        if (CachedPlatform == PlatformType.PC)
         {
             _buttonHeld = Input.GetKey(workKey);
         }
@@ -328,7 +332,7 @@ public class ImpactWrench : MonoBehaviour
 
     private string GetPlatformInstruction(string actionName, bool isWorking)
     {
-        PlatformType platform = Utils.GetPlatformType();
+        PlatformType platform = CachedPlatform;
         if (isWorking)
         {
             return platform switch

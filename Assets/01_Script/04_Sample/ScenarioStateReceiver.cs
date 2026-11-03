@@ -1,3 +1,4 @@
+using DoDrill.Training;
 using FishNet;
 using FishNet.Transporting;
 using UnityEngine;
@@ -91,7 +92,29 @@ public class ScenarioStateReceiver : MonoBehaviour
 #if UNITY_EDITOR
         Debug.Log($"[ScenarioStateReceiver] Task[{broadcast.currentTask.taskIndex}] 상태: {broadcast.currentTask.status}");
 #endif
+        SaveContentProgress(broadcast.currentTask, broadcast.totalTaskCount);
         OnTaskStateUpdated?.Invoke(broadcast);
+    }
+
+    // 콘텐츠 목록 카드의 진행률(D-17): 예전에는 ScenarioDataLoader 의 초기값(0) 말고는 저장하는 곳이 없어 항상 0% 였다.
+    // 새 단계가 시작되면(Running) 그 앞의 단계는 모두 끝난 것이므로 completed = taskIndex, 마지막 단계가 끝나면 전부 완료로 기록한다.
+    // 기록은 기기 로컬(progress.json)이고 각 플레이어가 자기 기기에 남긴다.
+    private void SaveContentProgress(TaskState state, int total)
+    {
+        var mgr = ScenarioProgressManager.Instance;
+        string id = CurrentScenario != null ? CurrentScenario.scenarioId : null;
+        if(mgr == null || string.IsNullOrEmpty(id) || total <= 0) return;
+
+        int completed;
+        if(state.status == TaskStatus.Running) completed = state.taskIndex;
+        else if(state.status == TaskStatus.Completed) completed = state.taskIndex + 1;
+        else return;
+
+        completed = Mathf.Clamp(completed, 0, total);
+        // 이미 더 많이 진행한 기록이 있으면(재도전 시작 등) 덮어써서 줄이지 않는다
+        var prev = mgr.GetProgress(id);
+        if(prev != null && prev.totalTasks == total && prev.completedTasks > completed) return;
+        mgr.SaveProgress(id, completed, total);
     }
 
     private void OnReceiveSnapshot(ScenarioSnapshotBroadcast broadcast, Channel channel)

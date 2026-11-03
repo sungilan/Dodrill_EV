@@ -2,21 +2,21 @@ using UnityEngine;
 
 public class LiftAnimationEventHandler : MonoBehaviour
 {
-    public string taskId; // ÀÎ½ºÆåÅÍ¿¡¼­ ÇöÀç ´Ü°è ID ¼³Á¤ (¿¹: BatteryJack_Lowering)
+    public string taskId; // ì¸ìŠ¤í™í„°ì—ì„œ í˜„ì¬ ë‹¨ê³„ ID ì„¤ì • (ì˜ˆ: BatteryJack_Lowering)
     private VehiclePartsManager _partsManager;
 
-    // ÇÁ·ÎÆÛÆ¼¸¦ ÅëÇØ ¾ÈÀüÇÏ°Ô Á¢±Ù
+    // í”„ë¡œí¼í‹°ë¥¼ í†µí•´ ì•ˆì „í•˜ê²Œ ì ‘ê·¼
     private VehiclePartsManager PartsManager
     {
         get
         {
-            // Ã£Àº ÀûÀÌ ¾ø°Å³ª, Ã£¾Ò´Âµ¥ ÆÄ±«µÇ¾ú´Ù¸é ´Ù½Ã ½Ãµµ
+            // ì°¾ì€ ì ì´ ì—†ê±°ë‚˜, ì°¾ì•˜ëŠ”ë° íŒŒê´´ë˜ì—ˆë‹¤ë©´ ë‹¤ì‹œ ì‹œë„
             if(_partsManager == null)
             {
                 _partsManager = GameObject.FindAnyObjectByType<VehiclePartsManager>(FindObjectsInactive.Include);
 
                 if(_partsManager == null)
-                    Debug.LogWarning("[LiftEvent] VehiclePartsManager¸¦ ¾À¿¡¼­ Ã£À» ¼ö ¾ø½À´Ï´Ù.");
+                    Debug.LogWarning("[LiftEvent] VehiclePartsManagerë¥¼ ì”¬ì—ì„œ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
             }
             return _partsManager;
         }
@@ -27,7 +27,7 @@ public class LiftAnimationEventHandler : MonoBehaviour
         if(PartsManager != null)
         {
             PartsManager.HideBattery();
-            Debug.Log("<color=yellow>[LiftEvent]</color> ¹èÅÍ¸® ¼û±â±â ½ÇÇà");
+            Debug.Log("<color=yellow>[LiftEvent]</color> ë°°í„°ë¦¬ ìˆ¨ê¸°ê¸° ì‹¤í–‰");
         }
     }
 
@@ -36,16 +36,16 @@ public class LiftAnimationEventHandler : MonoBehaviour
         if(PartsManager != null)
         {
             PartsManager.ShowBattery();
-            Debug.Log("<color=yellow>[LiftEvent]</color> ¹èÅÍ¸® Ç¥½Ã ½ÇÇà");
+            Debug.Log("<color=yellow>[LiftEvent]</color> ë°°í„°ë¦¬ í‘œì‹œ ì‹¤í–‰");
         }
     }
 
-    // ¾Ö´Ï¸ŞÀÌ¼Ç Å¸ÀÓ¶óÀÎ ³¡ºÎºĞ¿¡ ÀÌ ÇÔ¼ö¸¦ ÀÌº¥Æ®·Î µî·ÏÇÏ¼¼¿ä
+    // ì• ë‹ˆë©”ì´ì…˜ íƒ€ì„ë¼ì¸ ëë¶€ë¶„ì— ì´ í•¨ìˆ˜ë¥¼ ì´ë²¤íŠ¸ë¡œ ë“±ë¡í•˜ì„¸ìš”
     public void OnLiftAnimationComplete()
     {
         if(!string.IsNullOrEmpty(taskId))
         {
-            Debug.Log($"<color=lime>[LiftEvent]</color> ¾Ö´Ï¸ŞÀÌ¼Ç ¿Ï·á! ½ÅÈ£ ¼Û½Å: {taskId}");
+            Debug.Log($"<color=lime>[LiftEvent]</color> ì• ë‹ˆë©”ì´ì…˜ ì™„ë£Œ! ì‹ í˜¸ ì†¡ì‹ : {taskId}");
             InteractionEvents.FireTaskConfirmed(taskId);
         }
     }

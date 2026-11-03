@@ -57,7 +57,7 @@ public class SoundManager
             audioSource.clip = audioClip;
             audioSource.Play();
 
-            // BGMÀº ·çÇÁ°¡ ±âº»ÀûÀ¸·Î ¼³Á¤µÇ¾î ÀÖÀ¸¹Ç·Î Äİ¹éÀ» È£ÃâÇÏÁö ¾ÊÀ½
+            // BGMì€ ë£¨í”„ê°€ ê¸°ë³¸ì ìœ¼ë¡œ ì„¤ì •ë˜ì–´ ìˆìœ¼ë¯€ë¡œ ì½œë°±ì„ í˜¸ì¶œí•˜ì§€ ì•ŠìŒ
             if (!audioSource.loop && onComplete != null)
             {
                 Managers.Instance.StartCoroutine(WaitForSoundToEnd(audioSource, onComplete));
@@ -70,7 +70,7 @@ public class SoundManager
             audioSource.pitch = pitch;
             audioSource.PlayOneShot(audioClip, volume);
 
-            // È¿°úÀ½Àº PlayOneShotÀÌ¹Ç·Î º°µµÀÇ AudioSource¸¦ ÃßÀûÇÒ ÇÊ¿ä ¾øÀ½
+            // íš¨ê³¼ìŒì€ PlayOneShotì´ë¯€ë¡œ ë³„ë„ì˜ AudioSourceë¥¼ ì¶”ì í•  í•„ìš” ì—†ìŒ
             if (onComplete != null)
             {
                 Managers.Instance.StartCoroutine(WaitForSoundToEnd(audioClip.length, onComplete));
@@ -102,7 +102,7 @@ public class SoundManager
             audioSource.clip = audioClip;
             audioSource.Play();
 
-            // BGMÀº ·çÇÁ°¡ ±âº»ÀûÀ¸·Î ¼³Á¤µÇ¾î ÀÖÀ¸¹Ç·Î Äİ¹éÀ» È£ÃâÇÏÁö ¾ÊÀ½
+            // BGMì€ ë£¨í”„ê°€ ê¸°ë³¸ì ìœ¼ë¡œ ì„¤ì •ë˜ì–´ ìˆìœ¼ë¯€ë¡œ ì½œë°±ì„ í˜¸ì¶œí•˜ì§€ ì•ŠìŒ
             if (!audioSource.loop && onComplete != null)
             {
                 Managers.Instance.StartCoroutine(WaitForSoundToEnd(audioSource, onComplete));
@@ -115,7 +115,7 @@ public class SoundManager
             audioSource.pitch = pitch;
             audioSource.PlayOneShot(audioClip);
 
-            // È¿°úÀ½Àº PlayOneShotÀÌ¹Ç·Î º°µµÀÇ AudioSource¸¦ ÃßÀûÇÒ ÇÊ¿ä ¾øÀ½
+            // íš¨ê³¼ìŒì€ PlayOneShotì´ë¯€ë¡œ ë³„ë„ì˜ AudioSourceë¥¼ ì¶”ì í•  í•„ìš” ì—†ìŒ
             if (onComplete != null)
             {
                 Managers.Instance.StartCoroutine(WaitForSoundToEnd(audioClip.length, onComplete));
@@ -222,10 +222,10 @@ public class SoundManager
     }
     public void PlayBgmPingPong()
     {
-        string[] bgmPaths = { "War1", "War2", "War3" }; // BGM °æ·Î ¹è¿­
-        int currentIndex = 0; // ÇöÀç Àç»ı ÁßÀÎ BGM ÀÎµ¦½º
+        string[] bgmPaths = { "War1", "War2", "War3" }; // BGM ê²½ë¡œ ë°°ì—´
+        int currentIndex = 0; // í˜„ì¬ ì¬ìƒ ì¤‘ì¸ BGM ì¸ë±ìŠ¤
 
-        // ÄÚ·çÆ¾ ½ÃÀÛ
+        // ì½”ë£¨í‹´ ì‹œì‘
         Managers.Instance.StartCoroutine(PlayBgmSequence());
 
         IEnumerator PlayBgmSequence()
@@ -233,16 +233,16 @@ public class SoundManager
             while (true)
             {
                 string currentPath = bgmPaths[currentIndex];
-                Play(currentPath, Define.Sound.Bgm); // BGM Àç»ı
+                Play(currentPath, Define.Sound.Bgm); // BGM ì¬ìƒ
 
-                // ÇöÀç BGMÀÇ ±æÀÌ¸¦ °¡Á®¿Í ´ë±â
+                // í˜„ì¬ BGMì˜ ê¸¸ì´ë¥¼ ê°€ì ¸ì™€ ëŒ€ê¸°
                 AudioClip currentClip = GetOrAddAudioClip(currentPath, Define.Sound.Bgm);
                 if (currentClip != null)
                 {
                     yield return new WaitForSeconds(currentClip.length);
                 }
 
-                // ´ÙÀ½ BGMÀ¸·Î ÀÌµ¿ (¼øÈ¯)
+                // ë‹¤ìŒ BGMìœ¼ë¡œ ì´ë™ (ìˆœí™˜)
                 currentIndex = (currentIndex + 1) % bgmPaths.Length;
             }
         }

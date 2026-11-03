@@ -4,16 +4,16 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 public class LiftingTool : XRGrabInteractable
 {
-    public Transform attachPoint; // ¸ğµâ°ú ¸Â´êÀ» ³¡ºÎºĞ
-    public bool isLocked = false; // Àá±İ ·¹¹ö »óÅÂ
-    private InteractablePart targetModule; // ÇöÀç °áÇÕµÈ ¸ğµâ
+    public Transform attachPoint; // ëª¨ë“ˆê³¼ ë§ë‹¿ì„ ëë¶€ë¶„
+    public bool isLocked = false; // ì ê¸ˆ ë ˆë²„ ìƒíƒœ
+    private InteractablePart targetModule; // í˜„ì¬ ê²°í•©ëœ ëª¨ë“ˆ
 
-    // 1. ¸ğµâ ±ÙÃ³¿¡ µµ±¸¸¦ °¡Á®°¡¸é È£Ãâ (Trigger)
+    // 1. ëª¨ë“ˆ ê·¼ì²˜ì— ë„êµ¬ë¥¼ ê°€ì ¸ê°€ë©´ í˜¸ì¶œ (Trigger)
     private void OnTriggerEnter(Collider other)
     {
         if(other.CompareTag("ModuleSlot") && targetModule == null)
         {
-            // µµ±¸¸¦ ¸ğµâ ¼ÒÄÏ À§Ä¡¿¡ 'Âø' ºÙÀÓ (Snap)
+            // ë„êµ¬ë¥¼ ëª¨ë“ˆ ì†Œì¼“ ìœ„ì¹˜ì— 'ì°©' ë¶™ì„ (Snap)
             SnapToModule(other.transform.parent.GetComponent<InteractablePart>());
         }
     }
@@ -21,12 +21,12 @@ public class LiftingTool : XRGrabInteractable
     private void SnapToModule(InteractablePart module)
     {
         targetModule = module;
-        // µµ±¸ÀÇ À§Ä¡¸¦ ¸ğµâÀÇ ¼ÒÄÏ À§Ä¡·Î °íÁ¤
+        // ë„êµ¬ì˜ ìœ„ì¹˜ë¥¼ ëª¨ë“ˆì˜ ì†Œì¼“ ìœ„ì¹˜ë¡œ ê³ ì •
         //transform.position = module.assemblyTarget.position + Vector3.up * 0.2f;
-        // [»ç¿îµå] 'Ã¶ÄÀ' °áÇÕÀ½
+        // [ì‚¬ìš´ë“œ] 'ì² ì»¥' ê²°í•©ìŒ
     }
 
-    // 2. Àá±İ ·¹¹ö ÀÛµ¿ (VR ¹öÆ°ÀÌ³ª Æ®¸®°Å ÀÔ·Â)
+    // 2. ì ê¸ˆ ë ˆë²„ ì‘ë™ (VR ë²„íŠ¼ì´ë‚˜ íŠ¸ë¦¬ê±° ì…ë ¥)
     public void ToggleLock()
     {
         if(targetModule == null) return;
@@ -34,10 +34,10 @@ public class LiftingTool : XRGrabInteractable
         isLocked = !isLocked;
         if(isLocked)
         {
-            // µµ±¸¿Í ¸ğµâÀ» ÇÏ³ª·Î ¹­À½ (Parenting)
+            // ë„êµ¬ì™€ ëª¨ë“ˆì„ í•˜ë‚˜ë¡œ ë¬¶ìŒ (Parenting)
             targetModule.transform.SetParent(this.transform);
             targetModule.GetComponent<Rigidbody>().isKinematic = true;
-            Debug.Log("¸ğµâÀÌ ¸®ÇÁÆÃ Åø¿¡ Àá±İ °íÁ¤µÇ¾ú½À´Ï´Ù.");
+            Debug.Log("ëª¨ë“ˆì´ ë¦¬í”„íŒ… íˆ´ì— ì ê¸ˆ ê³ ì •ë˜ì—ˆìŠµë‹ˆë‹¤.");
         }
         else
         {

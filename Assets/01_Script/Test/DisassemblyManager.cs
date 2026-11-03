@@ -30,7 +30,7 @@ public class DisassemblyManager : MonoBehaviour
 
         foreach(var part in allParts)
         {
-            // À§Ä¡°¡ ¸Â°í(Assembled) + ¸ğµç º¼Æ®°¡ Á¤»ó Ã¼°áµÊ(Tightened)
+            // ìœ„ì¹˜ê°€ ë§ê³ (Assembled) + ëª¨ë“  ë³¼íŠ¸ê°€ ì •ìƒ ì²´ê²°ë¨(Tightened)
             if(part.currentState == InteractablePart.PartState.Assembled && part.IsAllBoltsTightened())
             {
                 completedCount++;

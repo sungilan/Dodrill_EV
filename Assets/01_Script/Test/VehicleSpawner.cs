@@ -6,49 +6,49 @@ using FishNet.Object.Synchronizing;
 
 public class VehicleSpawner : NetworkBehaviour
 {
-    public Transform spawnPoint;        // Â÷·®ÀÌ ¼ÒÈ¯µÉ À§Ä¡
-    public GameObject selectedPrefab;   // À¯Àú°¡ ¼±ÅÃÇÑ Â÷·® ÇÁ¸®ÆÕ (PrefabManager¿¡ µî·Ï ÇÊ¼ö)
+    public Transform spawnPoint;        // ì°¨ëŸ‰ì´ ì†Œí™˜ë  ìœ„ì¹˜
+    public GameObject selectedPrefab;   // ìœ ì €ê°€ ì„ íƒí•œ ì°¨ëŸ‰ í”„ë¦¬íŒ¹ (PrefabManagerì— ë“±ë¡ í•„ìˆ˜)
 
-    // ÇÇ½¬³İ 4.0 ¹æ½ÄÀÇ SyncVar ¼±¾ğ
+    // í”¼ì‰¬ë„· 4.0 ë°©ì‹ì˜ SyncVar ì„ ì–¸
     private readonly SyncVar<GameObject> _spawnedVehicle = new SyncVar<GameObject>();
 
-    // ¼­¹ö°¡ ½ÃÀÛµÉ ¶§ ÀÚµ¿À¸·Î ½ºÆùÇÏ°í ½Í´Ù¸é OnStartServer¸¦ »ç¿ëÇÕ´Ï´Ù.
+    // ì„œë²„ê°€ ì‹œì‘ë  ë•Œ ìë™ìœ¼ë¡œ ìŠ¤í°í•˜ê³  ì‹¶ë‹¤ë©´ OnStartServerë¥¼ ì‚¬ìš©í•©ë‹ˆë‹¤.
     public override void OnStartServer()
     {
         base.OnStartServer();
         SpawnAndInitialize();
     }
 
-    [Server] // ¼­¹ö ±ÇÀ§·Î¸¸ ½ÇÇà
+    [Server] // ì„œë²„ ê¶Œìœ„ë¡œë§Œ ì‹¤í–‰
     public void SpawnAndInitialize()
     {
         if(selectedPrefab == null || spawnPoint == null) return;
 
-        // 1. Â÷·® »ı¼º ¹× ³×Æ®¿öÅ© ½ºÆù
+        // 1. ì°¨ëŸ‰ ìƒì„± ë° ë„¤íŠ¸ì›Œí¬ ìŠ¤í°
         GameObject vehicle = Instantiate(selectedPrefab, spawnPoint.position, spawnPoint.rotation);
 
-        // ÇÇ½¬³İ ¼­¹ö ¸Å´ÏÀú¸¦ ÅëÇÑ ½ºÆù (ÀÌ¶§ ¸ğµç Å¬¶óÀÌ¾ğÆ®¿¡ »ı¼ºµÊ)
+        // í”¼ì‰¬ë„· ì„œë²„ ë§¤ë‹ˆì €ë¥¼ í†µí•œ ìŠ¤í° (ì´ë•Œ ëª¨ë“  í´ë¼ì´ì–¸íŠ¸ì— ìƒì„±ë¨)
         InstanceFinder.ServerManager.Spawn(vehicle);
 
         vehicle.name = "Target_Vehicle";
         _spawnedVehicle.Value = vehicle;
 
-        // 2. ¼­¹ö Ãø ¸Å´ÏÀú¿¡ ºÎÇ° µî·Ï
-        // (ÁÖÀÇ: Å¬¶óÀÌ¾ğÆ®¿¡¼­µµ µî·ÏÀÌ ÇÊ¿äÇÏ´Ù¸é º°µµÀÇ ·ÎÁ÷ÀÌ³ª °¢ ºÎÇ°ÀÇ OnStartClient È°¿ë ±ÇÀå)
+        // 2. ì„œë²„ ì¸¡ ë§¤ë‹ˆì €ì— ë¶€í’ˆ ë“±ë¡
+        // (ì£¼ì˜: í´ë¼ì´ì–¸íŠ¸ì—ì„œë„ ë“±ë¡ì´ í•„ìš”í•˜ë‹¤ë©´ ë³„ë„ì˜ ë¡œì§ì´ë‚˜ ê° ë¶€í’ˆì˜ OnStartClient í™œìš© ê¶Œì¥)
         RegisterPartsOnServer(vehicle);
     }
 
     [Server]
     private void RegisterPartsOnServer(GameObject vehicle)
     {
-        // ¼ÒÈ¯µÈ Â÷·® ³»ºÎÀÇ ¸ğµç InteractablePart Ã£±â
+        // ì†Œí™˜ëœ ì°¨ëŸ‰ ë‚´ë¶€ì˜ ëª¨ë“  InteractablePart ì°¾ê¸°
         InteractablePart[] parts = vehicle.GetComponentsInChildren<InteractablePart>();
 
-        // 3. DisassemblyManager(¼­¹ö Ãø)¿¡ ¸®½ºÆ® Àü´Ş
+        // 3. DisassemblyManager(ì„œë²„ ì¸¡)ì— ë¦¬ìŠ¤íŠ¸ ì „ë‹¬
         if(DisassemblyManager.Instance != null)
         {
             DisassemblyManager.Instance.allParts = new List<InteractablePart>(parts);
-            Debug.Log($"<color=cyan>[¼­¹ö Àü¿ë]</color> {parts.Length}°³ÀÇ Á¤ºñ ºÎÇ°ÀÌ µî·ÏµÇ¾ú½À´Ï´Ù.");
+            Debug.Log($"<color=cyan>[ì„œë²„ ì „ìš©]</color> {parts.Length}ê°œì˜ ì •ë¹„ ë¶€í’ˆì´ ë“±ë¡ë˜ì—ˆìŠµë‹ˆë‹¤.");
         }
     }
 }

@@ -43,8 +43,8 @@ public class VRPlayerEditor : Editor
                 if (finger.applyBones[i] != null && finger.trackingBones[i] != null)
                 {
                     Undo.RecordObject(finger.applyBones[i], "Apply Finger Transform");
-                    finger.applyBones[i].position = finger.trackingBones[i].position; // ¿ùµå ±âÁØ À§Ä¡
-                    finger.applyBones[i].rotation = finger.trackingBones[i].rotation; // ¿ùµå ±âÁØ È¸Àü
+                    finger.applyBones[i].position = finger.trackingBones[i].position; // ì›”ë“œ ê¸°ì¤€ ìœ„ì¹˜
+                    finger.applyBones[i].rotation = finger.trackingBones[i].rotation; // ì›”ë“œ ê¸°ì¤€ íšŒì „
                 }
             }
         }

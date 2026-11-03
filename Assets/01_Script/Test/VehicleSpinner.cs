@@ -13,13 +13,13 @@ namespace ER.Selection
         [Header("Spawn Settings")]
         [SerializeField] private Transform spawnPoint;
 
-        // ¡Ú ÇÇ½¬³İ 4.0 ¹æ½Ä: [SyncVar] ´ë½Å readonly SyncVar<T> »ç¿ë
-        // ¼±¾ğ ½ÃÁ¡¿¡ ¹İµå½Ã ÃÊ±âÈ­ÇØ¾ß ÇÏ¸ç, °ª ¼öÁ¤Àº .Value¸¦ ÅëÇØ ÇÕ´Ï´Ù.
+        // â˜… í”¼ì‰¬ë„· 4.0 ë°©ì‹: [SyncVar] ëŒ€ì‹  readonly SyncVar<T> ì‚¬ìš©
+        // ì„ ì–¸ ì‹œì ì— ë°˜ë“œì‹œ ì´ˆê¸°í™”í•´ì•¼ í•˜ë©°, ê°’ ìˆ˜ì •ì€ .Valueë¥¼ í†µí•´ í•©ë‹ˆë‹¤.
         private readonly SyncVar<GameObject> _currentVehicleModel = new SyncVar<GameObject>();
 
         private void Update()
         {
-            // SyncVarÀÇ °ªÀ» ÀĞÀ» ¶§´Â .Value¸¦ »ç¿ëÇÕ´Ï´Ù.
+            // SyncVarì˜ ê°’ì„ ì½ì„ ë•ŒëŠ” .Valueë¥¼ ì‚¬ìš©í•©ë‹ˆë‹¤.
             if(_currentVehicleModel.Value != null)
             {
                 _currentVehicleModel.Value.transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime);
@@ -35,13 +35,13 @@ namespace ER.Selection
             {
                 GameObject instance = Instantiate(vehiclePrefab, spawnPoint.position, spawnPoint.rotation);
 
-                // ºÎ¸ğ ¼³Á¤
+                // ë¶€ëª¨ ì„¤ì •
                 instance.transform.SetParent(spawnPoint);
 
-                // ³×Æ®¿öÅ© ½ºÆù
+                // ë„¤íŠ¸ì›Œí¬ ìŠ¤í°
                 InstanceFinder.ServerManager.Spawn(instance);
 
-                // ¡Ú °ª ÇÒ´ç ½Ã .Value »ç¿ë
+                // â˜… ê°’ í• ë‹¹ ì‹œ .Value ì‚¬ìš©
                 _currentVehicleModel.Value = instance;
             }
         }

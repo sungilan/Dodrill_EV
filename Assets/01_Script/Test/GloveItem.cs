@@ -2,30 +2,30 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
-public class GloveItem : XRGrabInteractable // XRI ±×·¦ »ó¼Ó
+public class GloveItem : XRGrabInteractable // XRI ê·¸ë© ìƒì†
 {
     [Header("Glove Settings")]
-    public float equipDistance = 0.15f; // ¼Õ°úÀÇ °Å¸® (15cm)
+    public float equipDistance = 0.15f; // ì†ê³¼ì˜ ê±°ë¦¬ (15cm)
     private bool isBeingHeld = false;
-    private Transform handTransform; // Àâ°í ÀÖ´Â ¼Õ
+    private Transform handTransform; // ì¡ê³  ìˆëŠ” ì†
 
     protected override void Awake()
     {
         base.Awake();
-        // Àå°© ¾ÆÀÌÅÛÀÇ ÇÇ¹ş(Pivot)À» ¼Õ¸ñ ºÎºĞ¿¡ ¸ÂÃß´Â °ÍÀÌ ÀÚ¿¬½º·´½À´Ï´Ù.
+        // ì¥ê°‘ ì•„ì´í…œì˜ í”¼ë²—(Pivot)ì„ ì†ëª© ë¶€ë¶„ì— ë§ì¶”ëŠ” ê²ƒì´ ìì—°ìŠ¤ëŸ½ìŠµë‹ˆë‹¤.
     }
 
-    // [XRI ÀÌº¥Æ®] À¯Àú°¡ Àå°©À» Àâ¾ÒÀ» ¶§ È£Ãâ
+    // [XRI ì´ë²¤íŠ¸] ìœ ì €ê°€ ì¥ê°‘ì„ ì¡ì•˜ì„ ë•Œ í˜¸ì¶œ
     protected override void OnSelectEntered(SelectEnterEventArgs args)
     {
         base.OnSelectEntered(args);
         isBeingHeld = true;
 
-        // ÀâÀº ¼Õ(Interactor)ÀÇ À§Ä¡¸¦ ÀúÀå
+        // ì¡ì€ ì†(Interactor)ì˜ ìœ„ì¹˜ë¥¼ ì €ì¥
         handTransform = args.interactorObject.transform;
     }
 
-    // [XRI ÀÌº¥Æ®] À¯Àú°¡ Àå°©À» ³õ¾ÒÀ» ¶§ È£Ãâ
+    // [XRI ì´ë²¤íŠ¸] ìœ ì €ê°€ ì¥ê°‘ì„ ë†“ì•˜ì„ ë•Œ í˜¸ì¶œ
     protected override void OnSelectExited(SelectExitEventArgs args)
     {
         base.OnSelectExited(args);
@@ -43,7 +43,7 @@ public class GloveItem : XRGrabInteractable // XRI ±×·¦ »ó¼Ó
 
     private void CheckEquipDistance()
     {
-        // Àå°©°ú ½ÇÁ¦ ¼Õ(ÄÁÆ®·Ñ·¯) À§Ä¡ »çÀÌÀÇ °Å¸® °è»ê
+        // ì¥ê°‘ê³¼ ì‹¤ì œ ì†(ì»¨íŠ¸ë¡¤ëŸ¬) ìœ„ì¹˜ ì‚¬ì´ì˜ ê±°ë¦¬ ê³„ì‚°
         float distance = Vector3.Distance(transform.position, handTransform.position);
 
         if(distance < equipDistance)
@@ -54,16 +54,16 @@ public class GloveItem : XRGrabInteractable // XRI ±×·¦ »ó¼Ó
 
     private void EquipGloves()
     {
-        // 1. ¾ÈÀü °ü¸®ÀÚ »óÅÂ ¾÷µ¥ÀÌÆ®
+        // 1. ì•ˆì „ ê´€ë¦¬ì ìƒíƒœ ì—…ë°ì´íŠ¸
         ElectricSafetyManager.Instance.isGlovesEquipped = true;
-        Debug.Log("Àı¿¬ Àå°©À» Âø¿ëÇß½À´Ï´Ù. °íÀü¾Ğ ºÎÇ°À» ¸¸Áú ¼ö ÀÖ½À´Ï´Ù.");
+        Debug.Log("ì ˆì—° ì¥ê°‘ì„ ì°©ìš©í–ˆìŠµë‹ˆë‹¤. ê³ ì „ì•• ë¶€í’ˆì„ ë§Œì§ˆ ìˆ˜ ìˆìŠµë‹ˆë‹¤.");
 
-        // 2. [»ç¿îµå] Àå°© ³¢´Â '½»' ÇÏ´Â ¼Ò¸® Àç»ı
+        // 2. [ì‚¬ìš´ë“œ] ì¥ê°‘ ë¼ëŠ” 'ìŠ¥' í•˜ëŠ” ì†Œë¦¬ ì¬ìƒ
 
-        // 3. ¼Õ ¸ğµ¨ º¯°æ ·ÎÁ÷ (¾Æ·¡ 2¹ø Âü°í)
+        // 3. ì† ëª¨ë¸ ë³€ê²½ ë¡œì§ (ì•„ë˜ 2ë²ˆ ì°¸ê³ )
         //HandVisualManager.Instance.ChangeToGloveVisual();
 
-        // 4. ¾ÆÀÌÅÛ Á¦°Å (Âø¿ëÇßÀ¸¹Ç·Î ¿ùµå¿¡¼­ »ç¶óÁü)
+        // 4. ì•„ì´í…œ ì œê±° (ì°©ìš©í–ˆìœ¼ë¯€ë¡œ ì›”ë“œì—ì„œ ì‚¬ë¼ì§)
         gameObject.SetActive(false);
     }
 }

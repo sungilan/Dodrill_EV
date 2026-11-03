@@ -8,29 +8,29 @@ public class HeldItemUI : MonoBehaviour
 {
     public static HeldItemUI Instance { get; private set; }
 
-    [Header("UI ¿ä¼Ò ¿¬°á")]
-    [Tooltip("¾Æ¹«°Íµµ ¾È µé°í ÀÖÀ» ¶§ ¼û±æ ÀüÃ¼ UI ÆĞ³Î")]
+    [Header("UI ìš”ì†Œ ì—°ê²°")]
+    [Tooltip("ì•„ë¬´ê²ƒë„ ì•ˆ ë“¤ê³  ìˆì„ ë•Œ ìˆ¨ê¸¸ ì „ì²´ UI íŒ¨ë„")]
     public GameObject uiContainer;
-    public Image itemIcon;         // Áß¾ÓÀÇ ºÎÇ° ÀÌ¹ÌÁö
-    public TMP_Text itemNameText;  // ÇÏ´ÜÀÇ ºÎÇ° ÀÌ¸§ ÅØ½ºÆ®
+    public Image itemIcon;         // ì¤‘ì•™ì˜ ë¶€í’ˆ ì´ë¯¸ì§€
+    public TMP_Text itemNameText;  // í•˜ë‹¨ì˜ ë¶€í’ˆ ì´ë¦„ í…ìŠ¤íŠ¸
 
-    [Header("·ÎÄÃ¶óÀÌÂ¡ ¼³Á¤")]
-    [Tooltip("¾ÆÀÌÅÛ ÀÌ¸§ÀÌ ÀúÀåµÈ ·ÎÄÃ¶óÀÌÁ¦ÀÌ¼Ç Å×ÀÌºí ÀÌ¸§ (¿¹: ItemTable)")]
+    [Header("ë¡œì»¬ë¼ì´ì§• ì„¤ì •")]
+    [Tooltip("ì•„ì´í…œ ì´ë¦„ì´ ì €ì¥ëœ ë¡œì»¬ë¼ì´ì œì´ì…˜ í…Œì´ë¸” ì´ë¦„ (ì˜ˆ: ItemTable)")]
     public string tableName = "ItemTable";
 
-    [Header("º¸°ü ¹öÆ°")]
-    [Tooltip("PC ¸¶¿ì½º Å¬¸¯ ¶Ç´Â VR ¹İ´ë ¼Õ ·¹ÀÌÀú·Î Å¬¸¯ÇÒ º¸°ü ¹öÆ°")]
+    [Header("ë³´ê´€ ë²„íŠ¼")]
+    [Tooltip("PC ë§ˆìš°ìŠ¤ í´ë¦­ ë˜ëŠ” VR ë°˜ëŒ€ ì† ë ˆì´ì €ë¡œ í´ë¦­í•  ë³´ê´€ ë²„íŠ¼")]
     public Button storeButton;
 
-    // ÇöÀç µé°í ÀÖ´Â ¿ÀºêÁ§Æ®¸¦ ÀÓ½Ã·Î ÃßÀûÇÏ±â À§ÇÑ º¯¼ö
+    // í˜„ì¬ ë“¤ê³  ìˆëŠ” ì˜¤ë¸Œì íŠ¸ë¥¼ ì„ì‹œë¡œ ì¶”ì í•˜ê¸° ìœ„í•œ ë³€ìˆ˜
     private GameObject _currentHeldObj;
 
     private void Awake()
     {
         Instance = this;
-        ClearUI(); // Ã³À½¿£ ºó¼ÕÀÌ¹Ç·Î UI ¼û±è
+        ClearUI(); // ì²˜ìŒì—” ë¹ˆì†ì´ë¯€ë¡œ UI ìˆ¨ê¹€
 
-        // ¹öÆ°¿¡ ÀÎº¥Åä¸® º¸°ü ÇÔ¼ö ¿¬°á
+        // ë²„íŠ¼ì— ì¸ë²¤í† ë¦¬ ë³´ê´€ í•¨ìˆ˜ ì—°ê²°
         if(storeButton != null)
         {
             storeButton.onClick.AddListener(StoreCurrentItemToInventory);
@@ -38,7 +38,7 @@ public class HeldItemUI : MonoBehaviour
     }
 
     /// <summary>
-    /// ¾ÆÀÌÅÛÀ» Àâ¾ÒÀ» ¶§ È£ÃâµÇ¾î UI¸¦ °»½ÅÇÕ´Ï´Ù.
+    /// ì•„ì´í…œì„ ì¡ì•˜ì„ ë•Œ í˜¸ì¶œë˜ì–´ UIë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
     /// </summary>
     public void UpdateUI(GameObject heldObj)
     {
@@ -54,17 +54,17 @@ public class HeldItemUI : MonoBehaviour
         string localizedName = "";
         Sprite icon = null;
 
-        // 1. PartDataSO¿¡¼­ µ¥ÀÌÅÍ °¡Á®¿À±â ½Ãµµ
+        // 1. PartDataSOì—ì„œ ë°ì´í„° ê°€ì ¸ì˜¤ê¸° ì‹œë„
         var attachment = heldObj.GetComponent<FreeModePartAttachment>();
         if(attachment != null && attachment.partData != null)
         {
-            // [¼öÁ¤] PartDataÀÇ ID¸¦ Å°·Î »ç¿ëÇÏ¿© ·ÎÄÃ¶óÀÌÂ¡ ÅØ½ºÆ®¸¦ °¡Á®¿É´Ï´Ù.
+            // [ìˆ˜ì •] PartDataì˜ IDë¥¼ í‚¤ë¡œ ì‚¬ìš©í•˜ì—¬ ë¡œì»¬ë¼ì´ì§• í…ìŠ¤íŠ¸ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
             localizedName = GetLocalizedText(attachment.partData.prefabId);
             icon = attachment.partData.icon;
         }
         else
         {
-            // 2. TaskItemÀÎ °æ¿ìÀÇ Æú¹é
+            // 2. TaskItemì¸ ê²½ìš°ì˜ í´ë°±
             var taskItem = heldObj.GetComponent<TaskItem>();
             if(taskItem != null)
             {
@@ -72,10 +72,10 @@ public class HeldItemUI : MonoBehaviour
             }
         }
 
-        // ¸¸¾à ·ÎÄÃ¶óÀÌÂ¡¿¡ ½ÇÆĞÇÏ¸é ¿ÀºêÁ§Æ® ÀÌ¸§À» ±×´ë·Î »ç¿ë (¹æ¾î ÄÚµå)
+        // ë§Œì•½ ë¡œì»¬ë¼ì´ì§•ì— ì‹¤íŒ¨í•˜ë©´ ì˜¤ë¸Œì íŠ¸ ì´ë¦„ì„ ê·¸ëŒ€ë¡œ ì‚¬ìš© (ë°©ì–´ ì½”ë“œ)
         if(string.IsNullOrEmpty(localizedName)) localizedName = heldObj.name;
 
-        // UI ÅØ½ºÆ® ¹× ÀÌ¹ÌÁö Àû¿ë
+        // UI í…ìŠ¤íŠ¸ ë° ì´ë¯¸ì§€ ì ìš©
         if(itemNameText != null) itemNameText.text = localizedName;
 
         if(itemIcon != null)
@@ -93,19 +93,19 @@ public class HeldItemUI : MonoBehaviour
     }
 
     /// <summary>
-    /// ·ÎÄÃ¶óÀÌÁ¦ÀÌ¼Ç Å×ÀÌºí¿¡¼­ Å°¿¡ ¸Â´Â ¹ø¿ª ¹®±¸¸¦ °¡Á®¿É´Ï´Ù.
+    /// ë¡œì»¬ë¼ì´ì œì´ì…˜ í…Œì´ë¸”ì—ì„œ í‚¤ì— ë§ëŠ” ë²ˆì—­ ë¬¸êµ¬ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
     /// </summary>
     private string GetLocalizedText(string key)
     {
         if(string.IsNullOrEmpty(key)) return null;
 
-        // µ¿±â ¹æ½ÄÀ¸·Î Å×ÀÌºí¿¡¼­ ¹®±¸¸¦ °¡Á®¿É´Ï´Ù.
-        // LocalizationSettings.StringDatabase¸¦ ÅëÇØ ¼³Á¤µÈ ¾ğ¾î¿¡ ¸Â´Â °ªÀ» ¹İÈ¯ÇÕ´Ï´Ù.
+        // ë™ê¸° ë°©ì‹ìœ¼ë¡œ í…Œì´ë¸”ì—ì„œ ë¬¸êµ¬ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
+        // LocalizationSettings.StringDatabaseë¥¼ í†µí•´ ì„¤ì •ëœ ì–¸ì–´ì— ë§ëŠ” ê°’ì„ ë°˜í™˜í•©ë‹ˆë‹¤.
         return LocalizationSettings.StringDatabase.GetLocalizedString(tableName, key);
     }
 
     /// <summary>
-    /// ¾ÆÀÌÅÛÀ» ³»·Á³õ¾ÒÀ» ¶§ UI¸¦ ¼û±é´Ï´Ù.
+    /// ì•„ì´í…œì„ ë‚´ë ¤ë†“ì•˜ì„ ë•Œ UIë¥¼ ìˆ¨ê¹ë‹ˆë‹¤.
     /// </summary>
     public void ClearUI()
     {
@@ -114,14 +114,14 @@ public class HeldItemUI : MonoBehaviour
     }
 
     /// <summary>
-    /// [º¸°ü] ¹öÆ°À» ´­·¶À» ¶§ ½ÇÇàµÇ´Â ÇÙ½É ÇÔ¼ö (VR / PC °ø¿ë)
+    /// [ë³´ê´€] ë²„íŠ¼ì„ ëˆŒë €ì„ ë•Œ ì‹¤í–‰ë˜ëŠ” í•µì‹¬ í•¨ìˆ˜ (VR / PC ê³µìš©)
     /// </summary>
     public void StoreCurrentItemToInventory()
     {
         if(_currentHeldObj == null) return;
 
-        // ¡Ú [ÇÙ½É 1] ÀÌº¥Æ® ¿¬¼â·Î ÀÎÇØ _currentHeldObj°¡ Áãµµ »õµµ ¸ğ¸£°Ô nullÀÌ µÉ ¼ö ÀÖÀ¸¹Ç·Î, 
-        // ¾ÈÀüÇÏ°Ô Áö¿ª º¯¼ö(targetObj)¿¡ ¹é¾÷ÇØ µÓ´Ï´Ù.
+        // â˜… [í•µì‹¬ 1] ì´ë²¤íŠ¸ ì—°ì‡„ë¡œ ì¸í•´ _currentHeldObjê°€ ì¥ë„ ìƒˆë„ ëª¨ë¥´ê²Œ nullì´ ë  ìˆ˜ ìˆìœ¼ë¯€ë¡œ, 
+        // ì•ˆì „í•˜ê²Œ ì§€ì—­ ë³€ìˆ˜(targetObj)ì— ë°±ì—…í•´ ë‘¡ë‹ˆë‹¤.
         GameObject targetObj = _currentHeldObj;
 
         var part = targetObj.GetComponent<InteractablePart>();
@@ -129,30 +129,30 @@ public class HeldItemUI : MonoBehaviour
 
         if(part != null && EVInventoryUI.Instance != null)
         {
-            // ¡Ú [ÇÙ½É 2] ³õ´Â ¼ø°£(RequestRelease) ½ºÄÉÀÏÀÌ ²¿ÀÏ ¼ö ÀÖÀ¸¹Ç·Î 
-            // ¼ÒÀ¯±ÇÀ» ¹İ³³ÇÏ±â Àü¿¡ ½ºÄÉÀÏ ¿øº¹À» '°¡Àå ¸ÕÀú' ½ÇÇàÇÕ´Ï´Ù.
+            // â˜… [í•µì‹¬ 2] ë†“ëŠ” ìˆœê°„(RequestRelease) ìŠ¤ì¼€ì¼ì´ ê¼¬ì¼ ìˆ˜ ìˆìœ¼ë¯€ë¡œ 
+            // ì†Œìœ ê¶Œì„ ë°˜ë‚©í•˜ê¸° ì „ì— ìŠ¤ì¼€ì¼ ì›ë³µì„ 'ê°€ì¥ ë¨¼ì €' ì‹¤í–‰í•©ë‹ˆë‹¤.
             targetObj.transform.localScale = Vector3.one;
 
-            // 1. [VR Àü¿ë] AutoHand °­Á¦ ³õ±â (VR ¼Õ¿¡¼­ ¹°°Ç ºĞ¸®)
+            // 1. [VR ì „ìš©] AutoHand ê°•ì œ ë†“ê¸° (VR ì†ì—ì„œ ë¬¼ê±´ ë¶„ë¦¬)
             var grabbable = targetObj.GetComponent<Autohand.Grabbable>();
             if(grabbable != null) grabbable.ForceHandsRelease();
 
-            // 2. [PC Àü¿ë] PC È¦µå ÃßÀû ÁßÁö ¹× ¼­¹ö ¼ÒÀ¯±Ç ÇØÁ¦
+            // 2. [PC ì „ìš©] PC í™€ë“œ ì¶”ì  ì¤‘ì§€ ë° ì„œë²„ ì†Œìœ ê¶Œ í•´ì œ
             var syncGrab = targetObj.GetComponent<SyncGrab>();
             if(syncGrab != null)
             {
                 syncGrab.StopPCHold();
-                // ÀÌ ÇÔ¼ö°¡ ½ÇÇàµÇ¸é¼­ ¿¬¼âÀûÀ¸·Î ClearUI()°¡ ºÒ·Áµµ targetObj´Â ¹«»çÇÕ´Ï´Ù.
+                // ì´ í•¨ìˆ˜ê°€ ì‹¤í–‰ë˜ë©´ì„œ ì—°ì‡„ì ìœ¼ë¡œ ClearUI()ê°€ ë¶ˆë ¤ë„ targetObjëŠ” ë¬´ì‚¬í•©ë‹ˆë‹¤.
                 syncGrab.RequestRelease();
             }
 
-            // 3. ¹Ù´Ú¿¡ ¶³¾îÁö±â Àü¿¡ ÀÎº¥Åä¸® ÆĞ³Î·Î ¾ÈÀüÇÏ°Ô ÀÌµ¿
+            // 3. ë°”ë‹¥ì— ë–¨ì–´ì§€ê¸° ì „ì— ì¸ë²¤í† ë¦¬ íŒ¨ë„ë¡œ ì•ˆì „í•˜ê²Œ ì´ë™
             EVInventoryUI.Instance.AddPart(part, data);
 
-            // 4. ÀÛ¾÷ÀÌ ³¡³µÀ¸¹Ç·Î ¿ìÃø UI ÆĞ³Î È®½ÇÇÏ°Ô ´İ±â
+            // 4. ì‘ì—…ì´ ëë‚¬ìœ¼ë¯€ë¡œ ìš°ì¸¡ UI íŒ¨ë„ í™•ì‹¤í•˜ê²Œ ë‹«ê¸°
             ClearUI();
 
-            Debug.Log("[HeldItemUI] ¹öÆ° Å¬¸¯À¸·Î ÀÎº¥Åä¸®¿¡ º¸°ü ¿Ï·á");
+            Debug.Log("[HeldItemUI] ë²„íŠ¼ í´ë¦­ìœ¼ë¡œ ì¸ë²¤í† ë¦¬ì— ë³´ê´€ ì™„ë£Œ");
         }
     }
 }

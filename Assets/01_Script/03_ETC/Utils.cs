@@ -22,19 +22,19 @@ namespace XRAirpotrSecurity
 
             try
             {
-                // ISO 8601 ÆÄ½Ì
+                // ISO 8601 íŒŒì‹±
                 DateTimeOffset dto = DateTimeOffset.Parse(isoString, null, DateTimeStyles.RoundtripKind);
 
-                // ÇÑ±¹ ½Ã°£ ±âÁØÀ¸·Î º¯È¯ (¿ø·¡ +09:00ÀÌ¸é ÀÌ¹Ì KST)
+                // í•œêµ­ ì‹œê°„ ê¸°ì¤€ìœ¼ë¡œ ë³€í™˜ (ì›ë˜ +09:00ì´ë©´ ì´ë¯¸ KST)
                 DateTime localTime = dto.LocalDateTime;
 
-                // "tt"´Â AM/PM ¡æ ¿ÀÀü/¿ÀÈÄ
-                string formatted = localTime.ToString("yyyy³â M¿ù dÀÏ tt h½Ã mmºĞ", CultureInfo.CreateSpecificCulture("ko-KR"));
+                // "tt"ëŠ” AM/PM â†’ ì˜¤ì „/ì˜¤í›„
+                string formatted = localTime.ToString("yyyyë…„ Mì›” dì¼ tt hì‹œ mmë¶„", CultureInfo.CreateSpecificCulture("ko-KR"));
                 return formatted;
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError("³¯Â¥ º¯È¯ ½ÇÆĞ: " + ex.Message);
+                UnityEngine.Debug.LogError("ë‚ ì§œ ë³€í™˜ ì‹¤íŒ¨: " + ex.Message);
                 return isoString;
             }
         }
@@ -49,7 +49,7 @@ namespace XRAirpotrSecurity
             if (XRGeneralSettings.Instance != null &&
                 XRGeneralSettings.Instance.Manager != null &&
                 XRGeneralSettings.Instance.Manager.isInitializationComplete &&
-                XRGeneralSettings.Instance.Manager.activeLoader != null)   // ÃÊ±âÈ­ '½Ãµµ Á¾·á'¸¸À¸·Î´Â VRÀÌ ¾Æ´Ô - ·Î´õ°¡ ½ÇÁ¦·Î ¶°¾ß VR
+                XRGeneralSettings.Instance.Manager.activeLoader != null)   // ì´ˆê¸°í™” 'ì‹œë„ ì¢…ë£Œ'ë§Œìœ¼ë¡œëŠ” VRì´ ì•„ë‹˜ - ë¡œë”ê°€ ì‹¤ì œë¡œ ë– ì•¼ VR
             {
                 return PlatformType.VR;
             }
@@ -75,7 +75,7 @@ namespace XRAirpotrSecurity
 #endif
         }
         /// <summary>
-        /// float ÃÊ ´ÜÀ§¸¦ "MM:SS.ss" ÇüÅÂ·Î º¯È¯
+        /// float ì´ˆ ë‹¨ìœ„ë¥¼ "MM:SS.ss" í˜•íƒœë¡œ ë³€í™˜
         /// </summary>
         public static string ToClockFormat(float time)
         {

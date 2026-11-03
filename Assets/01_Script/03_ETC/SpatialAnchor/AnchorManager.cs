@@ -17,7 +17,7 @@ public class AnchorManager : MonoBehaviour
     private TrackableId currentTrackableId;
 
 #if !UNITY_SERVER && (UNITY_ANDROID || UNITY_EDITOR) && (ENABLE_VR || ENABLE_OPENXR)
-    public ARAnchor currentAnchor; // ÃÖ½Å ¾ŞÄ¿¸¸ ÃßÀû
+    public ARAnchor currentAnchor; // ìµœì‹  ì•µì»¤ë§Œ ì¶”ì 
 #endif
 
     private void OnEnable() => ARSession.stateChanged += OnARSessionStateChanged;
@@ -49,14 +49,14 @@ public class AnchorManager : MonoBehaviour
     }
 
 
-    // ¾ŞÄ¿ »ı¼º & °øÀ¯
+    // ì•µì»¤ ìƒì„± & ê³µìœ 
     public async void CreateStartupAnchor(Pose position, Action<string> successCallback)
     {
         Debug.Log("ds");
 #if !UNITY_SERVER && (UNITY_ANDROID || UNITY_EDITOR) && (ENABLE_VR || ENABLE_OPENXR)
         SetSharedAnchorsGroupIdSafe();
         Debug.Log("ds2");
-        // ±âÁ¸ ¾ŞÄ¿ ÀÖÀ¸¸é »èÁ¦
+        // ê¸°ì¡´ ì•µì»¤ ìˆìœ¼ë©´ ì‚­ì œ
         if (currentAnchor != null)
         {
             Destroy(currentAnchor.gameObject);
@@ -68,7 +68,7 @@ public class AnchorManager : MonoBehaviour
         if (anchor != null)
         {
             currentAnchor = anchor;
-            Debug.Log("¾ŞÄ¿ ÁØºñ ¿Ï·á!");
+            Debug.Log("ì•µì»¤ ì¤€ë¹„ ì™„ë£Œ!");
             //ShareAnchorsAsync(anchorManager, anchors);
             ShareAnchorAsync(anchor, successCallback);
             UserInfo.anchorSetted = true;
@@ -83,14 +83,14 @@ public class AnchorManager : MonoBehaviour
     {
         if (anchorManager?.subsystem is MetaOpenXRAnchorSubsystem meta)
         {
-            // Ç×»ó »õ GUID ¹ß±Ş
+            // í•­ìƒ ìƒˆ GUID ë°œê¸‰
             meta.sharedAnchorsGroupId = new SerializableGuid(Guid.NewGuid());
             UserInfo.anchorGUID = meta.sharedAnchorsGroupId.guid.ToString();
-            Debug.Log("Shared Anchors Group ID »õ·Î »ı¼º ¿Ï·á: " + meta.sharedAnchorsGroupId);
+            Debug.Log("Shared Anchors Group ID ìƒˆë¡œ ìƒì„± ì™„ë£Œ: " + meta.sharedAnchorsGroupId);
         }
         else
         {
-            Debug.LogWarning("MetaOpenXRAnchorSubsystem ÁØºñ ¾È µÊ");
+            Debug.LogWarning("MetaOpenXRAnchorSubsystem ì¤€ë¹„ ì•ˆ ë¨");
         }
     }
 #endif
@@ -102,7 +102,7 @@ public class AnchorManager : MonoBehaviour
             Guid guid = Guid.Parse(newGuid);
             var groupId = new SerializableGuid(guid);
             meta.sharedAnchorsGroupId = groupId;
-            Debug.Log("Shared Anchors Group ID È£½ºÆ® Guid·Î µ¿±âÈ­ ¿Ï·á : " + meta.sharedAnchorsGroupId);
+            Debug.Log("Shared Anchors Group ID í˜¸ìŠ¤íŠ¸ Guidë¡œ ë™ê¸°í™” ì™„ë£Œ : " + meta.sharedAnchorsGroupId);
             Debug.Log("running state : " + meta.running);
         }
 #endif
@@ -117,12 +117,12 @@ public class AnchorManager : MonoBehaviour
 
             if (result.status.IsSuccess())
             {
-                Debug.Log("¾ŞÄ¿ »ı¼º ¼º°ø: " + result.value.trackableId);
+                Debug.Log("ì•µì»¤ ìƒì„± ì„±ê³µ: " + result.value.trackableId);
                 return result.value;
             }
             else
             {
-                Debug.LogError("¾ŞÄ¿ »ı¼º ½ÇÆĞ: " + result.status);
+                Debug.LogError("ì•µì»¤ ìƒì„± ì‹¤íŒ¨: " + result.status);
                 return null;
             }
         }
@@ -139,13 +139,13 @@ public class AnchorManager : MonoBehaviour
 
         if (resultStatus.IsError())
         {
-            Debug.LogError("¾ŞÄ¿ °øÀ¯ ½ÇÆĞ");
-            successCallback?.Invoke("¾ŞÄ¿ °øÀ¯ ½ÇÆĞ");
+            Debug.LogError("ì•µì»¤ ê³µìœ  ì‹¤íŒ¨");
+            successCallback?.Invoke("ì•µì»¤ ê³µìœ  ì‹¤íŒ¨");
         }
         else
         {
-            Debug.Log($"¾ŞÄ¿ °øÀ¯ ¼º°ø : {anchor.name}");
-            successCallback?.Invoke("¾ŞÄ¿ °øÀ¯ ¼º°ø");
+            Debug.Log($"ì•µì»¤ ê³µìœ  ì„±ê³µ : {anchor.name}");
+            successCallback?.Invoke("ì•µì»¤ ê³µìœ  ì„±ê³µ");
         }
     }
 

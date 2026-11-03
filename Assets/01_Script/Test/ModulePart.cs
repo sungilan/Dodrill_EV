@@ -1,54 +1,54 @@
 using UnityEngine;
 
-public class ModulePart : InteractablePart // »ó¼Ó
+public class ModulePart : InteractablePart // ìƒì†
 {
     [Header("Module Specific")]
     public bool isBusbarRemoved = false;
-    public bool isFaulty = false;  // ºÒ·® ¿©ºÎ
-    public float voltage = 3.8f;   // Àü¾Ğ °ª
-    public int slotIndex;          // ¹èÅÍ¸® ÆÑ ³» ¸î ¹øÂ° ½½·ÔÀÎÁö (0~15 µî)
+    public bool isFaulty = false;  // ë¶ˆëŸ‰ ì—¬ë¶€
+    public float voltage = 3.8f;   // ì „ì•• ê°’
+    public int slotIndex;          // ë°°í„°ë¦¬ íŒ© ë‚´ ëª‡ ë²ˆì§¸ ìŠ¬ë¡¯ì¸ì§€ (0~15 ë“±)
 
-    // »õ ¸ğµâ·Î ±³Ã¼µÇ¾úÀ» ¶§ µ¥ÀÌÅÍ¸¦ ÃÊ±âÈ­ÇÏ´Â ÇÔ¼ö
+    // ìƒˆ ëª¨ë“ˆë¡œ êµì²´ë˜ì—ˆì„ ë•Œ ë°ì´í„°ë¥¼ ì´ˆê¸°í™”í•˜ëŠ” í•¨ìˆ˜
     public void ReplaceWithNewData()
     {
         isFaulty = false;
-        voltage = 3.8f; // Á¤»ó Àü¾ĞÀ¸·Î º¹±¸
-        Debug.Log($"{slotIndex}¹ø ½½·Ô ¸ğµâÀÌ »õ°ÍÀ¸·Î ±³Ã¼µÇ¾ú½À´Ï´Ù.");
+        voltage = 3.8f; // ì •ìƒ ì „ì••ìœ¼ë¡œ ë³µêµ¬
+        Debug.Log($"{slotIndex}ë²ˆ ìŠ¬ë¡¯ ëª¨ë“ˆì´ ìƒˆê²ƒìœ¼ë¡œ êµì²´ë˜ì—ˆìŠµë‹ˆë‹¤.");
     }
 
-    // ¹ö½º¹Ù°¡ Á¦°ÅµÉ ¶§ È£ÃâµÉ ÇÔ¼ö
+    // ë²„ìŠ¤ë°”ê°€ ì œê±°ë  ë•Œ í˜¸ì¶œë  í•¨ìˆ˜
     public void UnlockModuleFromBusbar()
     {
         isBusbarRemoved = true;
-        Debug.Log($"{gameObject.name}: ¹ö½º¹Ù°¡ Á¦°ÅµÇ¾î ÃßÃâ ÁØºñ ¿Ï·á.");
+        Debug.Log($"{gameObject.name}: ë²„ìŠ¤ë°”ê°€ ì œê±°ë˜ì–´ ì¶”ì¶œ ì¤€ë¹„ ì™„ë£Œ.");
     }
 
-    // ¸®ÇÁÆÃ ÅøÀÌ ÃßÃâÀ» ½ÃµµÇÒ ¶§ Ã¼Å©ÇÏ´Â ÇÔ¼ö
+    // ë¦¬í”„íŒ… íˆ´ì´ ì¶”ì¶œì„ ì‹œë„í•  ë•Œ ì²´í¬í•˜ëŠ” í•¨ìˆ˜
     public bool CanLift()
     {
         if(!isBusbarRemoved)
         {
             if(SafetyUIHandler.Instance != null)
-                SafetyUIHandler.Instance.TriggerWarning("¹ö½º¹Ù¸¦ ¸ÕÀú Á¦°ÅÇØ¾ß ÇÕ´Ï´Ù!");
+                SafetyUIHandler.Instance.TriggerWarning("ë²„ìŠ¤ë°”ë¥¼ ë¨¼ì € ì œê±°í•´ì•¼ í•©ë‹ˆë‹¤!");
             return false;
         }
         return true;
     }
 
-    // [¿À¹ö¶óÀÌµå] ºÎÇ°ÀÌ ÀâÇûÀ» ¶§ Ãß°¡ ·ÎÁ÷ÀÌ ÇÊ¿äÇÏ´Ù¸é »ç¿ë
+    // [ì˜¤ë²„ë¼ì´ë“œ] ë¶€í’ˆì´ ì¡í˜”ì„ ë•Œ ì¶”ê°€ ë¡œì§ì´ í•„ìš”í•˜ë‹¤ë©´ ì‚¬ìš©
     //protected override void OnSelectEntered(UnityEngine.XR.Interaction.Toolkit.SelectEnterEventArgs args)
     //{
-    //    // ¸®ÇÁÆÃ Åø ¾øÀÌ ¸Ç¼ÕÀ¸·Î ÀâÀ¸·Á ÇÒ ¶§ÀÇ °æ°í ·ÎÁ÷ µîÀ» ¿©±â¿¡ Ãß°¡ °¡´É
+    //    // ë¦¬í”„íŒ… íˆ´ ì—†ì´ ë§¨ì†ìœ¼ë¡œ ì¡ìœ¼ë ¤ í•  ë•Œì˜ ê²½ê³  ë¡œì§ ë“±ì„ ì—¬ê¸°ì— ì¶”ê°€ ê°€ëŠ¥
     //    if(!CanLift()) return;
 
     //    base.OnSelectEntered(args);
     //}
     private void OnCollisionEnter(Collision collision)
     {
-        // ÀÏÁ¤ ¼Óµµ(Impact) ÀÌ»óÀ¸·Î ¹Ù´ÚÀÌ³ª Â÷Ã¼¿¡ ºÎµúÇûÀ» ¶§
+        // ì¼ì • ì†ë„(Impact) ì´ìƒìœ¼ë¡œ ë°”ë‹¥ì´ë‚˜ ì°¨ì²´ì— ë¶€ë”ªí˜”ì„ ë•Œ
         if(collision.relativeVelocity.magnitude > 5.0f)
         {
-            //EmergencyEventManager.Instance.TriggerThermalRunaway("¹èÅÍ¸® ¸ğµâ ¹°¸®Àû Ãæ°İÀ¸·Î ÀÎÇÑ ¼¿ ÆÄ¼Õ");
+            //EmergencyEventManager.Instance.TriggerThermalRunaway("ë°°í„°ë¦¬ ëª¨ë“ˆ ë¬¼ë¦¬ì  ì¶©ê²©ìœ¼ë¡œ ì¸í•œ ì…€ íŒŒì†");
         }
     }
 }

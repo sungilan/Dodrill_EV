@@ -15,15 +15,15 @@ namespace ER.Selection
 
         private void Start()
         {
-            Debug.Log("<color=cyan>[System]</color> Â÷·® ¼±ÅÃ ÄÁÆ®·Ñ·¯ ÃÊ±âÈ­");
+            Debug.Log("<color=cyan>[System]</color> ì°¨ëŸ‰ ì„ íƒ ì»¨íŠ¸ë¡¤ëŸ¬ ì´ˆê¸°í™”");
 
-            // 1. ÀÌº¥Æ® ¸®½º³Ê µî·Ï (UIManager°¡ Awake¿¡¼­ Instance¸¦ ¸¸µç ÈÄ ½ÇÇàµÊ)
+            // 1. ì´ë²¤íŠ¸ ë¦¬ìŠ¤ë„ˆ ë“±ë¡ (UIManagerê°€ Awakeì—ì„œ Instanceë¥¼ ë§Œë“  í›„ ì‹¤í–‰ë¨)
             if(UIManager.Instance != null)
             {
                 UIManager.Instance.OnVehicleSelected.AddListener(OnConfirmSelection);
             }
 
-            // 2. ÃÊ±â µ¥ÀÌÅÍ ·Îµå
+            // 2. ì´ˆê¸° ë°ì´í„° ë¡œë“œ
             if(vehicleList != null && vehicleList.Count > 0)
             {
                 _currentIndex = 0;
@@ -51,7 +51,7 @@ namespace ER.Selection
 
             if(spinner != null) spinner.SpawnVehicle(data.modelPrefab);
 
-            // ÅëÇÕµÈ UIManager¸¦ ÅëÇØ UI °»½Å
+            // í†µí•©ëœ UIManagerë¥¼ í†µí•´ UI ê°±ì‹ 
             if(UIManager.Instance != null)
             {
                 UIManager.Instance.UpdateUI(data);
@@ -65,19 +65,19 @@ namespace ER.Selection
 
         private void StartTraining(VehicleData data)
         {
-            // 1. Àü½Ã¿ë ¸ğµ¨ »èÁ¦ (ºÎ¸ğÀÎ Spinner°¡ ²¨Áö±â Àü¿¡ »èÁ¦ÇÏ´Â °Ô ¾ÈÀüÇÕ´Ï´Ù)
+            // 1. ì „ì‹œìš© ëª¨ë¸ ì‚­ì œ (ë¶€ëª¨ì¸ Spinnerê°€ êº¼ì§€ê¸° ì „ì— ì‚­ì œí•˜ëŠ” ê²Œ ì•ˆì „í•©ë‹ˆë‹¤)
             if(spinner != null)
             {
                 spinner.ClearModel();
             }
 
-            // 2. StartupManager¿¡ ÈÆ·Ã ½ÃÀÛ ¾Ë¸² (¿©±â¼­ Spawner°¡ »õ ¸ğµ¨ »ı¼º)
+            // 2. StartupManagerì— í›ˆë ¨ ì‹œì‘ ì•Œë¦¼ (ì—¬ê¸°ì„œ Spawnerê°€ ìƒˆ ëª¨ë¸ ìƒì„±)
             if(StartupManager.Instance != null)
             {
                 StartupManager.Instance.InitializeTraining(data);
             }
 
-            // 3. ¼±ÅÃ UI ¿ÀºêÁ§Æ® ºñÈ°¼ºÈ­ (ÀÌÁ¦ ¸¶À½³õ°í ²¨µµ µË´Ï´Ù)
+            // 3. ì„ íƒ UI ì˜¤ë¸Œì íŠ¸ ë¹„í™œì„±í™” (ì´ì œ ë§ˆìŒë†“ê³  êº¼ë„ ë©ë‹ˆë‹¤)
             this.gameObject.SetActive(false);
         }
     }

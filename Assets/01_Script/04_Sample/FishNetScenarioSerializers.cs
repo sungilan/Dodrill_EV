@@ -89,6 +89,11 @@ public static class FishNetScenarioSerializers
         writer.WriteUtf8String(value.prefabId ?? string.Empty);
         writer.WriteUtf8String(value.spawnPointId ?? string.Empty);
         writer.WriteUtf8String(value.guideId ?? string.Empty);
+        // 예전에는 아래 4개를 보내지 않아 클라이언트가 항상 기본값(showGuide=true 등)을 받았다
+        writer.WriteUtf8String(value.targetGuideId ?? string.Empty);
+        writer.WriteBoolean(value.showGuide);
+        writer.WriteBoolean(value.persist);
+        writer.WriteBoolean(value.attachToSpawnPoint);
     }
 
     public static SpawnBundle ReadSpawnBundle(this Reader reader)
@@ -98,6 +103,10 @@ public static class FishNetScenarioSerializers
             prefabId = reader.ReadUtf8String(),
             spawnPointId = reader.ReadUtf8String(),
             guideId = reader.ReadUtf8String(),
+            targetGuideId = reader.ReadUtf8String(),
+            showGuide = reader.ReadBoolean(),
+            persist = reader.ReadBoolean(),
+            attachToSpawnPoint = reader.ReadBoolean(),
         };
     }
 
@@ -117,6 +126,12 @@ public static class FishNetScenarioSerializers
         writer.WriteInt32(list.Count);
         foreach (var bundle in list)
             writer.WriteSpawnBundle(bundle);
+
+        // despawnObjectIds (null -> 빈 목록)
+        var despawn = value.despawnObjectIds ?? new List<string>();
+        writer.WriteInt32(despawn.Count);
+        foreach (var id in despawn)
+            writer.WriteUtf8String(id ?? string.Empty);
     }
 
     public static TaskDef ReadTaskDef(this Reader reader)
@@ -127,6 +142,7 @@ public static class FishNetScenarioSerializers
             timeout = reader.ReadSingle(),
             completionMode = reader.ReadUtf8String(),
             spawnObjects = new List<SpawnBundle>(),
+            despawnObjectIds = new List<string>(),
         };
 
         int count = reader.ReadInt32();
@@ -135,6 +151,13 @@ public static class FishNetScenarioSerializers
         {
             for (int i = 0; i < count; i++)
                 task.spawnObjects.Add(reader.ReadSpawnBundle());
+        }
+
+        int despawnCount = reader.ReadInt32();
+        if (despawnCount > 0)
+        {
+            for (int i = 0; i < despawnCount; i++)
+                task.despawnObjectIds.Add(reader.ReadUtf8String());
         }
 
         return task;

@@ -1,20 +1,20 @@
 using UnityEngine;
-using TMPro; // TextMeshPro ¶óÀÌºê·¯¸® ÇÊ¼ö
+using TMPro; // TextMeshPro ë¼ì´ë¸ŒëŸ¬ë¦¬ í•„ìˆ˜
 using UnityEngine.UI;
 using UnityEngine.Events;
 
 namespace ER.Selection
 {
-    // Â÷·® µ¥ÀÌÅÍ¸¦ ´ã´Â °£´ÜÇÑ ±¸Á¶Ã¼ (SO·Î ´ëÃ¼ °¡´É)
+    // ì°¨ëŸ‰ ë°ì´í„°ë¥¼ ë‹´ëŠ” ê°„ë‹¨í•œ êµ¬ì¡°ì²´ (SOë¡œ ëŒ€ì²´ ê°€ëŠ¥)
     [System.Serializable]
     public struct VehicleData
     {
         public string modelName;
-        public string batteryCapacity; // ¿¹: "77.4 kWh"
-        public string driveType;       // ¿¹: "AWD (»ç·û±¸µ¿)"
-        public string maxRange;        // ¿¹: "480 km"
+        public string batteryCapacity; // ì˜ˆ: "77.4 kWh"
+        public string driveType;       // ì˜ˆ: "AWD (ì‚¬ë¥œêµ¬ë™)"
+        public string maxRange;        // ì˜ˆ: "480 km"
         //public string description;
-        public GameObject modelPrefab; // Spinner°¡ »ç¿ëÇÒ ÇÁ¸®ÆÕ
+        public GameObject modelPrefab; // Spinnerê°€ ì‚¬ìš©í•  í”„ë¦¬íŒ¹
     }
 
     public class VehicleInfoUIManager : MonoBehaviour
@@ -26,17 +26,17 @@ namespace ER.Selection
         [SerializeField] private TextMeshProUGUI rangeText;
 
         [Header("Interaction Components")]
-        [SerializeField] private Button selectButton; // VR ·¹ÀÌÀú·Î Å¬¸¯ÇÒ ¹öÆ°
+        [SerializeField] private Button selectButton; // VR ë ˆì´ì €ë¡œ í´ë¦­í•  ë²„íŠ¼
 
         [Header("Events")]
-        [Tooltip("»ç¿ëÀÚ°¡ '¼±ÅÃ ¿Ï·á' ¹öÆ°À» ´­·¶À» ¶§ ¹ß»ı")]
+        [Tooltip("ì‚¬ìš©ìê°€ 'ì„ íƒ ì™„ë£Œ' ë²„íŠ¼ì„ ëˆŒë €ì„ ë•Œ ë°œìƒ")]
         public UnityEvent<VehicleData> OnVehicleSelected;
 
         private VehicleData _currentData;
 
         private void Awake()
         {
-            // 1. ¹öÆ° ¸®½º³Ê µî·Ï
+            // 1. ë²„íŠ¼ ë¦¬ìŠ¤ë„ˆ ë“±ë¡
             if(selectButton != null)
             {
                 selectButton.onClick.AddListener(ConfirmSelection);
@@ -44,28 +44,28 @@ namespace ER.Selection
         }
 
         /// <summary>
-        /// UI µ¥ÀÌÅÍ¸¦ °»½ÅÇÕ´Ï´Ù.
+        /// UI ë°ì´í„°ë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
         /// </summary>
-        /// <param name="data">Ç¥½ÃÇÒ Â÷·® µ¥ÀÌÅÍ</param>
+        /// <param name="data">í‘œì‹œí•  ì°¨ëŸ‰ ë°ì´í„°</param>
         public void UpdateUI(VehicleData data)
         {
             _currentData = data;
 
-            // 2. TMP ÄÄÆ÷³ÍÆ®¿¡ µ¥ÀÌÅÍ ÁÖÀÔ
+            // 2. TMP ì»´í¬ë„ŒíŠ¸ì— ë°ì´í„° ì£¼ì…
             if(modelNameText != null) modelNameText.text = data.modelName;
-            if(batteryTypeText != null) batteryTypeText.text = $"¹èÅÍ¸®: {data.batteryCapacity}";
-            if(driveTypeText != null) driveTypeText.text = $"±¸µ¿: {data.driveType}";
-            if(rangeText != null) rangeText.text = $"ÁÖÇà°Å¸®: {data.maxRange}";
+            if(batteryTypeText != null) batteryTypeText.text = $"ë°°í„°ë¦¬: {data.batteryCapacity}";
+            if(driveTypeText != null) driveTypeText.text = $"êµ¬ë™: {data.driveType}";
+            if(rangeText != null) rangeText.text = $"ì£¼í–‰ê±°ë¦¬: {data.maxRange}";
         }
 
         /// <summary>
-        /// »ç¿ëÀÚ°¡ ¼±ÅÃ ¿Ï·á ¹öÆ°À» ´­·¶À» ¶§ È£ÃâµË´Ï´Ù.
+        /// ì‚¬ìš©ìê°€ ì„ íƒ ì™„ë£Œ ë²„íŠ¼ì„ ëˆŒë €ì„ ë•Œ í˜¸ì¶œë©ë‹ˆë‹¤.
         /// </summary>
         private void ConfirmSelection()
         {
-            Debug.Log($"<color=lime>[Selection]</color> {_currentData.modelName} ¼±ÅÃ ¿Ï·á!");
+            Debug.Log($"<color=lime>[Selection]</color> {_currentData.modelName} ì„ íƒ ì™„ë£Œ!");
 
-            // 3. ½Ã³ª¸®¿À ¸Å´ÏÀú µî¿¡ ¼±ÅÃµÈ µ¥ÀÌÅÍ¸¦ ³Ñ°ÜÁÖ¸ç ÈÆ·Ã ½ÃÀÛ
+            // 3. ì‹œë‚˜ë¦¬ì˜¤ ë§¤ë‹ˆì € ë“±ì— ì„ íƒëœ ë°ì´í„°ë¥¼ ë„˜ê²¨ì£¼ë©° í›ˆë ¨ ì‹œì‘
             OnVehicleSelected?.Invoke(_currentData);
         }
     }

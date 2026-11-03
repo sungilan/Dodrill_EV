@@ -1,14 +1,14 @@
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
-using PinePie.SimpleJoystick; // Á¶ÀÌ½ºÆ½ ³×ÀÓ½ºÆäÀÌ½º Ãß°¡
+using PinePie.SimpleJoystick; // ì¡°ì´ìŠ¤í‹± ë„¤ì„ìŠ¤í˜ì´ìŠ¤ ì¶”ê°€
 
 public class KeyboardVisualizer : MonoBehaviour
 {
     [System.Serializable]
     public struct KeyVisualData
     {
-        public string keyName;   // "W", "A", "S", "D" µî ±¸ºĞ¿ë ÀÌ¸§
+        public string keyName;   // "W", "A", "S", "D" ë“± êµ¬ë¶„ìš© ì´ë¦„
         public KeyCode code;
         public Image targetImage;
         public Sprite onSprite;
@@ -19,14 +19,14 @@ public class KeyboardVisualizer : MonoBehaviour
     public KeyVisualData[] keys;
 
     [Header("Joystick Settings")]
-    public JoystickController joystick; // ÀÎ½ºÆåÅÍ¿¡¼­ JoystickController ¿¬°á
-    [Range(0.1f, 1.0f)] public float threshold = 0.5f; // ¾ó¸¶³ª ¹Ğ¾úÀ» ¶§ È°¼ºÈ­ÇÒÁö
+    public JoystickController joystick; // ì¸ìŠ¤í™í„°ì—ì„œ JoystickController ì—°ê²°
+    [Range(0.1f, 1.0f)] public float threshold = 0.5f; // ì–¼ë§ˆë‚˜ ë°€ì—ˆì„ ë•Œ í™œì„±í™”í• ì§€
 
     [Header("Animation Settings")]
     public float duration = 0.1f;
     public float pressedScale = 1.1f;
 
-    // ÇöÀç °¢ Å°ÀÇ »óÅÂ¸¦ ÃßÀû (Áßº¹ ¾Ö´Ï¸ŞÀÌ¼Ç ¹æÁö)
+    // í˜„ì¬ ê° í‚¤ì˜ ìƒíƒœë¥¼ ì¶”ì  (ì¤‘ë³µ ì• ë‹ˆë©”ì´ì…˜ ë°©ì§€)
     private bool[] isKeyPressed;
 
     void Start()
@@ -42,7 +42,7 @@ public class KeyboardVisualizer : MonoBehaviour
         {
             bool currentState = CheckInput(keys[i], joyDir);
 
-            // »óÅÂ°¡ º¯ÇßÀ» ¶§¸¸ ºñÁÖ¾ó ¾÷µ¥ÀÌÆ® (DOKill Áßº¹ ¹æÁö)
+            // ìƒíƒœê°€ ë³€í–ˆì„ ë•Œë§Œ ë¹„ì£¼ì–¼ ì—…ë°ì´íŠ¸ (DOKill ì¤‘ë³µ ë°©ì§€)
             if(currentState != isKeyPressed[i])
             {
                 isKeyPressed[i] = currentState;
@@ -51,13 +51,13 @@ public class KeyboardVisualizer : MonoBehaviour
         }
     }
 
-    // Å°º¸µå¿Í Á¶ÀÌ½ºÆ½ ÀÔ·ÂÀ» µ¿½Ã¿¡ Ã¼Å©
+    // í‚¤ë³´ë“œì™€ ì¡°ì´ìŠ¤í‹± ì…ë ¥ì„ ë™ì‹œì— ì²´í¬
     bool CheckInput(KeyVisualData data, Vector2 joyDir)
     {
-        // 1. Å°º¸µå ÀÔ·Â Ã¼Å©
+        // 1. í‚¤ë³´ë“œ ì…ë ¥ ì²´í¬
         if(Input.GetKey(data.code)) return true;
 
-        // 2. Á¶ÀÌ½ºÆ½ ÀÔ·Â Ã¼Å© (keyName ±âÁØ)
+        // 2. ì¡°ì´ìŠ¤í‹± ì…ë ¥ ì²´í¬ (keyName ê¸°ì¤€)
         if(string.IsNullOrEmpty(data.keyName)) return false;
 
         switch(data.keyName.ToUpper())

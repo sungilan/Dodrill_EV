@@ -1,21 +1,21 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 
-public class MSDPart : InteractablePart // ±âÁ¸ ·ÎÁ÷ »ó¼Ó
+public class MSDPart : InteractablePart // ê¸°ì¡´ ë¡œì§ ìƒì†
 {
     [Header("MSD Specific")]
-    public GameObject powerOffEffect; // Â÷´Ü ½Ã ºÒ ²¨Áö´Â ¿¬Ãâ µî
+    public GameObject powerOffEffect; // ì°¨ë‹¨ ì‹œ ë¶ˆ êº¼ì§€ëŠ” ì—°ì¶œ ë“±
 
-    // ºÎÇ°ÀÌ ¿ÏÀüÈ÷ Å»°ÅµÇ¾úÀ» ¶§ È£Ãâ (±âÁ¸ OnPartReleased ¼öÁ¤ ¶Ç´Â È®Àå)
+    // ë¶€í’ˆì´ ì™„ì „íˆ íƒˆê±°ë˜ì—ˆì„ ë•Œ í˜¸ì¶œ (ê¸°ì¡´ OnPartReleased ìˆ˜ì • ë˜ëŠ” í™•ì¥)
     public void OnMSDDetached()
     {
         if(currentState == PartState.Detached)
         {
             ElectricSafetyManager.Instance.isMSDRemoved = true;
-            Debug.Log("°íÀü¾Ğ Àü¿øÀÌ Â÷´ÜµÇ¾ú½À´Ï´Ù.");
+            Debug.Log("ê³ ì „ì•• ì „ì›ì´ ì°¨ë‹¨ë˜ì—ˆìŠµë‹ˆë‹¤.");
 
             if(powerOffEffect != null) powerOffEffect.SetActive(true);
-            // [»ç¿îµå] Àü¿ø Â÷´ÜµÇ´Â 'ÁöÀ×- Å¹' ¼Ò¸® Àç»ı
+            // [ì‚¬ìš´ë“œ] ì „ì› ì°¨ë‹¨ë˜ëŠ” 'ì§€ì‰- íƒ' ì†Œë¦¬ ì¬ìƒ
         }
     }
 }
