@@ -145,6 +145,58 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
             moveJoyStick = Object.FindFirstObjectByType<JoystickController>();
 
         StartCoroutine(InitCamera());
+        StartCoroutine(EnsureUiTouchInput());
+    }
+
+    // ───────────────────────────────────────────────────────
+    // UI 터치 보강 (모바일에서 버튼이 거의 안 눌리던 문제)
+    //  ① 이 컨트롤러는 시선·이동·상호작용을 레거시 Input.touches 로 읽는데, Game 씬의 EventSystem 은 Input System UI 모듈이라
+    //     같은 손가락을 두 입력 시스템이 따로 해석한다 -> 모바일에서는 레거시 터치 기반 StandaloneInputModule 로 맞춘다.
+    //  ② 오버레이 캔버스 중 GraphicRaycaster 가 없는 곳(TaskProgressUI_Mobile 등)은 버튼이 아예 터치를 못 받으므로 추가한다.
+    // ───────────────────────────────────────────────────────
+    private IEnumerator EnsureUiTouchInput()
+    {
+        for(int i = 0; i < 40; i++)
+        {
+            var es = EventSystem.current;
+            if(es != null) { UseLegacyTouchModule(es); break; }
+            yield return new WaitForSeconds(0.25f);
+        }
+
+        // UI 는 플랫폼 설정 뒤에 켜지는 경우가 있어 한동안 반복해서 점검
+        for(int i = 0; i < 24; i++)
+        {
+            EnsureRaycasters();
+            yield return new WaitForSeconds(2.5f);
+        }
+    }
+
+    private void UseLegacyTouchModule(EventSystem es)
+    {
+        if(!Application.isMobilePlatform) return;   // 에디터·PC 에서는 기존 모듈 유지
+
+        StandaloneInputModule legacy = es.GetComponent<StandaloneInputModule>();
+        bool changed = false;
+        foreach(var m in es.GetComponents<BaseInputModule>())
+        {
+            if(m == null || m is StandaloneInputModule) continue;
+            if(m.GetType().Name == "InputSystemUIInputModule" && m.enabled) { m.enabled = false; changed = true; }
+        }
+        if(legacy == null) { legacy = es.gameObject.AddComponent<StandaloneInputModule>(); changed = true; }
+        if(!legacy.enabled) { legacy.enabled = true; changed = true; }
+        if(changed) Log("UI 입력 모듈을 레거시 터치(StandaloneInputModule)로 전환");
+    }
+
+    private void EnsureRaycasters()
+    {
+        foreach(var c in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if(!c.isRootCanvas || c.renderMode == RenderMode.WorldSpace) continue;
+            if(c.GetComponent<GraphicRaycaster>() != null) continue;
+            if(c.GetComponentInChildren<Selectable>(true) == null && c.GetComponentInChildren<ScrollRect>(true) == null) continue;
+            c.gameObject.AddComponent<GraphicRaycaster>();
+            Log($"GraphicRaycaster 없는 캔버스에 추가: {c.name}");
+        }
     }
 
     private IEnumerator InitCamera()
@@ -158,6 +210,9 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
             // 프리팹 루트 카메라의 near clip(0.3m) 때문에 가까운 물체가 잘려 보이는 문제 방지
             if(nearClip > 0f && _mainCamera.nearClipPlane > nearClip)
                 _mainCamera.nearClipPlane = nearClip;
+            // PcMobileAvatarController 가 모든 카메라를 꺼 두므로 'UI' 카메라(자식)도 다시 켠다
+            foreach(var cam in GetComponentsInChildren<Camera>(true))
+                if(cam.gameObject.name.Contains("UI")) cam.gameObject.SetActive(true);
             _cameraReady = true;
             Log("카메라 준비 완료");
         }
@@ -214,6 +269,14 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         _planarVelocity = currentVelocity;
     }
 
+    // 오른쪽 절반은 시선 회전 영역이지만, 짧게 톡 치면(이동 거의 없음) 상호작용으로 처리한다.
+    // (예전에는 상호작용이 화면 '왼쪽 절반'에서만 됐고 조이스틱과 겹쳐 터치가 잘 안 먹었다)
+    private const float TapMaxSeconds = 0.30f;
+    private const float TapMaxMovePixels = 28f;
+    private float _lookTouchStartTime;
+    private Vector2 _lookTouchStartPos;
+    private bool _lookTouchMoved;
+
     private void CameraLookTouch()
     {
         if(Input.touchCount == 0) { lookTouchId = -1; return; }
@@ -222,14 +285,32 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         {
             if(t.fingerId == _liftTouchId) continue;
 
-            if(lookTouchId == -1 && t.phase == TouchPhase.Began && t.position.x > Screen.width * 0.5f)
+            // 시선 손가락이 떼어졌는데 다른 손가락(조이스틱)이 남아 있으면 ID 가 안 풀려 다음 시선 조작이 막히던 문제
+            if(t.fingerId == lookTouchId && (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled))
+            {
+                bool isTap = t.phase == TouchPhase.Ended && !_lookTouchMoved && Time.time - _lookTouchStartTime <= TapMaxSeconds;
+                lookTouchId = -1;
+                if(isTap && _cameraReady)
+                {
+                    SpawnTouchVisual(t.position);
+                    Managers.Sound.Play(touchSound);
+                    if(!DetectDoubleTap(t.position)) ProcessInteraction(t.position);
+                }
+                continue;
+            }
+
+            if(lookTouchId == -1 && t.phase == TouchPhase.Began && t.position.x > Screen.width * 0.5f && !IsPointerOverUI(t.position))
             {
                 lookTouchId = t.fingerId;
                 lastLookTouchPos = t.position;
+                _lookTouchStartPos = t.position;
+                _lookTouchStartTime = Time.time;
+                _lookTouchMoved = false;
             }
 
             if(t.fingerId == lookTouchId && t.phase == TouchPhase.Moved)
             {
+                if((t.position - _lookTouchStartPos).sqrMagnitude > TapMaxMovePixels * TapMaxMovePixels) _lookTouchMoved = true;
                 Vector2 delta = t.position - lastLookTouchPos;
                 rotY += delta.x * lookSensitivity * 0.02f;
                 rotX = Mathf.Clamp(rotX + (delta.y * lookSensitivity * -0.02f), minLookX, maxLookX);
@@ -311,12 +392,12 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
             {
                 _interactionTouchId = t.fingerId;
 
-                // ★ 더블 탭 카운트 증가
-                DetectDoubleTap(t.position);
+                // ★ 더블 탭 카운트 증가 — 더블 탭(내려놓기)이면 같은 탭으로 다시 집기/상호작용이 걸리지 않게 건너뛴다
+                bool isDouble = DetectDoubleTap(t.position);
 
                 SpawnTouchVisual(t.position);
                 Managers.Sound.Play(touchSound);
-                ProcessInteraction(t.position);
+                if(!isDouble) ProcessInteraction(t.position);
             }
 
             if(t.fingerId == _interactionTouchId && (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled))
@@ -332,7 +413,7 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
     /// 두 번째 탭 (0.3초 이내, 거리 100픽셀 이내): 더블 탭 실행
     /// 시간 초과 또는 거리 초과: 리셋
     /// </summary>
-    private void DetectDoubleTap(Vector2 tapPos)
+    private bool DetectDoubleTap(Vector2 tapPos)
     {
         float timeSinceLastTap = Time.time - _lastTapTime;
         float distanceSinceLastTap = Vector2.Distance(tapPos, _lastTapPos);
@@ -344,7 +425,7 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
             _lastTapTime = Time.time;
             _lastTapPos = tapPos;
             Log($"[DoubleTap] 첫 번째 탭 @ {tapPos}");
-            return;
+            return false;
         }
 
         // ★ 두 번째 탭 (조건 확인)
@@ -357,7 +438,7 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
                 _lastTapTime = Time.time;
                 _lastTapPos = tapPos;
                 Log($"[DoubleTap] 시간 초과, 리셋");
-                return;
+                return false;
             }
 
             // 거리 초과: 리셋
@@ -367,14 +448,16 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
                 _lastTapTime = Time.time;
                 _lastTapPos = tapPos;
                 Log($"[DoubleTap] 거리 초과, 리셋");
-                return;
+                return false;
             }
 
             // ★ 성공: 더블 탭!
             _tapCount = 0;
             Log($"[DoubleTap] 더블 탭 감지! 내려놓기 실행");
             DropHeldObject();
+            return true;
         }
+        return false;
     }
 
     /// <summary>
@@ -992,7 +1075,15 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         foreach(var r in _uiRaycastResults)
         {
             Canvas c = r.gameObject.GetComponentInParent<Canvas>();
-            if(c != null && c.renderMode != RenderMode.WorldSpace) return true;
+            if(c == null || c.renderMode == RenderMode.WorldSpace) continue;
+
+            // 버튼·슬라이더·스크롤·조이스틱은 항상 UI 로 취급
+            if(r.gameObject.GetComponentInParent<Selectable>() != null || r.gameObject.GetComponentInParent<ScrollRect>() != null
+               || r.gameObject.GetComponentInParent<JoystickController>() != null) return true;
+
+            // 눈에 보이는 패널만 막는다 — 투명한(알파 ~0) 레이캐스트 영역은 3D 터치를 통과시킨다
+            var g = r.gameObject.GetComponent<Graphic>();
+            if(g != null && g.color.a * g.canvasRenderer.GetInheritedAlpha() > 0.05f) return true;
         }
         return false;
     }

@@ -43,6 +43,10 @@ public class PcMobileAvatarController : NetworkBehaviour
     [Tooltip("자기 카메라가 머리 안쪽을 보는 문제 방지 — 소유자에서만 ShadowsOnly로 전환(그림자는 유지). 보통 아바타 머리 SkinnedMeshRenderer.")]
     [SerializeField] private Renderer[] hideRenderersForOwner;
 
+    [Header("소유자 시점: 아래를 볼 때 윗옷 숨김 (모바일)")]
+    [Tooltip("카메라가 몸통 안에 있어, 아래를 보면 윗옷의 안쪽(뒷면 컬링으로 찢어진 천처럼 보임)이 화면을 가린다. 이 각도 이상 내려다보면 윗옷을 그림자 전용으로 바꾼다(장갑은 유지).")]
+    [SerializeField] private float hideUniformLookDownDeg = 32f;
+
     [Header("루트 접지")]
     [SerializeField] private bool pinRootToGround = true;
     [SerializeField] private LayerMask groundMask = ~0;
@@ -52,6 +56,11 @@ public class PcMobileAvatarController : NetworkBehaviour
 
     private IPcLookController _look;
     private float _crouch01;
+    private Renderer[] _uniformRenderers;
+    private bool _uniformHidden;
+
+    /// <summary>아바타 Animator (닉네임 태그가 머리 위치를 찾을 때 사용).</summary>
+    public Animator AvatarAnimator => avatarAnimator;
 
     /// <summary>이 인스턴스가 로컬 소유자 시점인지 (IK 드라이버가 참조).</summary>
     public bool IsOwnerView => base.IsOwner;
@@ -74,20 +83,52 @@ public class PcMobileAvatarController : NetworkBehaviour
 
     private void Awake()
     {
+        // 프리팹의 카메라는 켜진 채로 저장돼 있다. 소유자만 자기 카메라를 켜야 하는데, 모바일 컨트롤러는 원격 복사본에서 아무것도 하지 않아
+        // 'PC 화면에 모바일 플레이어의 머리 속 카메라가 겹쳐 그려지는' 문제가 있었다 -> 모든 복사본에서 일단 끄고 소유자 컨트롤러가 다시 켠다.
+        DisableCameras();
+
         _look = lookControllerBehaviour as IPcLookController;
         if (_look == null && lookControllerBehaviour != null)
             Debug.LogWarning($"[PcMobileAvatarController] lookControllerBehaviour가 IPcLookController를 구현하지 않습니다: {lookControllerBehaviour.GetType().Name}", this);
+    }
+
+    private void DisableCameras()
+    {
+        foreach (var cam in GetComponentsInChildren<Camera>(true))
+        {
+            // 카메라가 루트 오브젝트에 붙은 구버전 프리팹은 오브젝트를 끄면 플레이어 전체가 사라지므로 컴포넌트만 끈다
+            if (cam.gameObject == gameObject) cam.enabled = false;
+            else cam.gameObject.SetActive(false);
+            cam.tag = "Untagged";
+        }
     }
 
     public override void OnStartClient()
     {
         base.OnStartClient();
 
+        // 가까이 다가가면 머리 등이 사라지는 문제 대비: IK로 움직인 본이 애니메이터 경계 밖으로 나가도 렌더러가 컬링되지 않게
+        if (avatarAnimator != null)
+            foreach (var smr in avatarAnimator.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                smr.updateWhenOffscreen = true;
+
+        // 원격(비소유) 복사본은 카메라·오디오 리스너를 끈 채로 둔다 (OnStartClient 시점에 다시 켜졌더라도 보장)
+        if (!base.IsOwner) DisableCameras();
+
         // 소유자: 자기 카메라에 자기 머리 안쪽이 보이지 않도록 지정 렌더러를 그림자 전용으로.
         if (base.IsOwner && hideRenderersForOwner != null)
         {
             foreach (var r in hideRenderersForOwner)
                 if (r != null) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+        }
+
+        // 소유자(모바일 시점 컨트롤러일 때만): 윗옷 렌더러를 찾아 둔다
+        if (base.IsOwner && lookControllerBehaviour is FreeLockControllerMobile && avatarAnimator != null)
+        {
+            var list = new System.Collections.Generic.List<Renderer>();
+            foreach (var r in avatarAnimator.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (r.name.Contains("Uniform")) list.Add(r);
+            _uniformRenderers = list.ToArray();
         }
 
         // 소유자: 어떤 상호작용이든(3D 클릭 + UI 버튼 + 확인 버튼 등) 손 뻗기 재생.
@@ -151,6 +192,20 @@ public class PcMobileAvatarController : NetworkBehaviour
             avatarAnimator.SetFloat(PcAvatarAnimParams.CrouchHash, Mathf.Clamp01(_crouch01));
             if (_look != null)
                 avatarAnimator.SetFloat(PcAvatarAnimParams.HeadPitchHash, _look.CurrentPitch);
+        }
+
+        // ── 아래를 볼 때 윗옷 숨김 (모바일) ───────────
+        if (_uniformRenderers != null && _uniformRenderers.Length > 0 && cameraPivot != null)
+        {
+            float downSin = Mathf.Sin(hideUniformLookDownDeg * Mathf.Deg2Rad);
+            float down = -cameraPivot.forward.y;
+            bool want = _uniformHidden ? down > downSin - 0.08f : down > downSin;   // 경계에서 깜빡이지 않게 히스테리시스
+            if (want != _uniformHidden)
+            {
+                _uniformHidden = want;
+                var mode = want ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly : UnityEngine.Rendering.ShadowCastingMode.On;
+                foreach (var r in _uniformRenderers) if (r != null) r.shadowCastingMode = mode;
+            }
         }
 
         // ── 로코모션 블렌드 트리 ──────────────────────

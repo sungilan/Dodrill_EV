@@ -66,11 +66,74 @@ public class WorldHoverLabel : MonoBehaviour
         transform.forward = _cam.transform.forward;
     }
 
+    private static Sprite s_roundedSprite;
+
+    /// <summary>둥근 모서리 + 얇은 테두리의 9-슬라이스 스프라이트를 코드로 만든다(프로젝트 스프라이트에 의존하지 않음).</summary>
+    private static Sprite RoundedSprite()
+    {
+        if (s_roundedSprite != null) return s_roundedSprite;
+        const int S = 64; const float R = 18f;
+        var tex = new Texture2D(S, S, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        var px = new Color32[S * S];
+        for (int y = 0; y < S; y++)
+            for (int x = 0; x < S; x++)
+            {
+                // 모서리 원까지의 거리로 알파 계산
+                float cx = Mathf.Clamp(x + 0.5f, R, S - R), cy = Mathf.Clamp(y + 0.5f, R, S - R);
+                float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(cx, cy));
+                float a = Mathf.Clamp01(R - d + 0.5f);
+                float edge = Mathf.Clamp01(1f - Mathf.Abs(d - (R - 1.5f)));   // 가장자리 1.5px 링 = 테두리
+                byte v = (byte)Mathf.RoundToInt(Mathf.Lerp(255f, 255f, edge));
+                // 안쪽은 흰색(색상은 Image.color 로), 테두리는 더 밝게 보이도록 알파만 키운다
+                float alpha = a * Mathf.Lerp(0.88f, 1f, edge);
+                px[y * S + x] = new Color32(v, v, v, (byte)Mathf.RoundToInt(alpha * 255f));
+            }
+        tex.SetPixels32(px); tex.Apply();
+        s_roundedSprite = Sprite.Create(tex, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(R, R, R, R));
+        return s_roundedSprite;
+    }
+
     /// <summary>텍스트 설정. FreeLookController에서 호출.</summary>
     public void SetText(string objName, string actionMsg)
     {
+        if (labelText == null) labelText = GetComponentInChildren<TextMeshProUGUI>(true);
         if (labelText == null) return;
-        labelText.text = $"<b>{objName}</b>\n<size=80%><color=#AAFFAA>{actionMsg}</color></size>";
+
+        // 내부 ID(Hood_Latch_Point 등)는 표시 이름으로 바꾼다
+        string title = HoverNameFormatter.Format(objName);
+        bool busy = !string.IsNullOrEmpty(actionMsg) && actionMsg.Contains("사용 중");
+        string actionColor = busy ? "#FFB454" : "#8FD3FF";
+
+        labelText.richText = true;
+        labelText.color = Color.white;
+        labelText.enableAutoSizing = false;
+        labelText.fontSize = 20f;
+        labelText.alignment = TextAlignmentOptions.Center;
+        labelText.textWrappingMode = TextWrappingModes.NoWrap;
+        labelText.text = string.IsNullOrEmpty(actionMsg)
+            ? $"<b>{title}</b>"
+            : $"<b>{title}</b>\n<size=68%><color={actionColor}>{actionMsg}</color></size>";
+
+        // 배경: 어두운 둥근 카드
+        var panelImg = background != null ? background : GetComponentInChildren<UnityEngine.UI.Image>(true);
+        if (panelImg != null)
+        {
+            panelImg.sprite = RoundedSprite();
+            panelImg.type = UnityEngine.UI.Image.Type.Sliced;
+            panelImg.color = new Color(0.055f, 0.09f, 0.15f, 0.86f);
+            panelImg.raycastTarget = false;
+        }
+
+        // 글자 양에 맞춰 카드 크기 조절
+        var canvas = GetComponentInChildren<Canvas>(true);
+        if (canvas != null)
+        {
+            Vector2 pref = labelText.GetPreferredValues(labelText.text);
+            var crt = (RectTransform)canvas.transform;
+            crt.sizeDelta = new Vector2(Mathf.Max(110f, pref.x + 44f), pref.y + 24f);
+            var trt = labelText.rectTransform;
+            trt.offsetMin = new Vector2(10f, 6f); trt.offsetMax = new Vector2(-10f, -6f);
+        }
     }
 
 #if UNITY_EDITOR

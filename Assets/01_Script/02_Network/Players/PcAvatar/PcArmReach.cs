@@ -51,6 +51,10 @@ public class PcArmReach : MonoBehaviour
         _holding = holding;
         if (!holding) return;
 
+        // 잡기 시작할 때 같은 손으로 뻗기가 진행 중이면 뻗기를 끝낸다 — 안 그러면 뻗기가 끝나며 가중치가 0으로 돌아가
+        // 잡은 손이 기본 자세로 갔다가 다시 돌아오는 '왔다갔다'가 생긴다.
+        if (_active != null && _active == (useRightHand ? rightArm : leftArm)) _active = null;
+
         // 손 쪽이 바뀌면(가중치가 남아 있을 때) 이전 손은 먼저 풀리도록 새 손은 0부터 올린다
         if (_holdUsesRight != useRightHand) { _holdW = 0f; _holdUsesRight = useRightHand; }
 
@@ -105,7 +109,7 @@ public class PcArmReach : MonoBehaviour
         var arm = local.x >= 0f ? rightArm : leftArm;
         if (arm == null) arm = rightArm != null ? rightArm : leftArm;
         // 물체를 잡고 있는 손으로는 뻗지 않는다 — 반대 손으로
-        if (_holdW > 0.05f)
+        if (_holding || _holdW > 0.05f)
         {
             var holdArm = _holdUsesRight ? rightArm : leftArm;
             var other = _holdUsesRight ? leftArm : rightArm;

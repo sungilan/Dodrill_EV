@@ -17,6 +17,12 @@ namespace DoDrill
         // ★ [v4 수정]: [SyncVar] 속성을 제거하고 readonly SyncVar<T> 객체로 선언합니다.
         private readonly SyncVar<string> _syncNickname = new SyncVar<string>();
 
+        /// <summary>이 플레이어의 (플랫폼 접두어 포함) 동기화된 닉네임. 아직 안 왔으면 빈 문자열</summary>
+        public string Nickname => _syncNickname.Value ?? string.Empty;
+
+        /// <summary>닉네임이 도착/변경될 때. 미니맵 라벨 등이 '로컬 유저 이름'이 아니라 각 플레이어 자신의 이름을 쓰도록 한다.</summary>
+        public event System.Action<string> NicknameChanged;
+
         public override void OnStartClient()
         {
             base.OnStartClient();
@@ -53,6 +59,7 @@ namespace DoDrill
         private void OnNicknameChanged(string prev, string next, bool asServer)
         {
             UpdateNameTagUI(next);
+            NicknameChanged?.Invoke(next);
         }
 
         private void UpdateNameTagUI(string nickname)
@@ -89,6 +96,35 @@ namespace DoDrill
                               : UserInfo.UserName;
 
             return $"{platformPrefix} {userName}";
+        }
+
+        [Header("닉네임 태그 위치")]
+        [Tooltip("머리 본 위로 올릴 높이(m, 아바타 스케일 곱). 프리팹의 캔버스는 허리 높이(0.6m)에 있어 몸통 중간에 떠 보였다.")]
+        [SerializeField] private float nameTagAboveHead = 0.34f;
+        [Tooltip("태그 월드 크기 배율(거리와 무관). 1=프리팹 값")]
+        [SerializeField] private float nameTagScale = 0.8f;
+
+        private PcMobileAvatarController _avatar;
+        private Transform _head;
+        private bool _headSearched;
+        private Vector3 _tagBaseScale;
+
+        private void LateUpdate()
+        {
+            if(_nameTagCanvas == null) return;
+            if(!_headSearched)
+            {
+                _headSearched = true;
+                _avatar = GetComponent<PcMobileAvatarController>();
+                var anim = _avatar != null ? _avatar.AvatarAnimator : null;
+                if(anim != null && anim.isHuman) _head = anim.GetBoneTransform(HumanBodyBones.Head);
+                _tagBaseScale = _nameTagCanvas.transform.localScale;
+                if(_head != null) _nameTagCanvas.transform.localScale = _tagBaseScale * nameTagScale;
+            }
+            if(_head == null) return;   // VR 등 아바타가 없으면 프리팹 위치 유지
+            float s = _avatar != null ? _avatar.AvatarScale : 1f;
+            Vector3 p = _head.position + Vector3.up * (nameTagAboveHead * s);
+            _nameTagCanvas.transform.position = p;
         }
 
         private void Update()

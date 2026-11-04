@@ -834,6 +834,35 @@ public class SyncGrab : NetworkBehaviour
     public Transform gripPoint;
     private Renderer[] _gripRenderers;
 
+    /// <summary>
+    /// 이 클라이언트가 소유한(=내) 플레이어의 HoldPoint. 모든 클라이언트에는 접속자 수만큼 플레이어 복사본이 있고 각각 HoldPoint 가 있어서
+    /// GameObject.FindWithTag("HoldPoint") 는 아무 복사본이나 돌려준다 -> 모바일이 잡은 태블릿이 PC 플레이어 쪽으로 날아가던 원인.
+    /// </summary>
+    public static Transform FindLocalHoldPoint()
+    {
+        Transform fallback = null;
+        foreach(var go in GameObject.FindGameObjectsWithTag("HoldPoint"))
+        {
+            if(go == null) continue;
+            var nob = go.GetComponentInParent<NetworkObject>();
+            if(nob != null && nob.IsOwner) return go.transform;
+            if(nob == null && fallback == null) fallback = go.transform;   // 네트워크 오브젝트가 아닌 씬 고정 HoldPoint(테스트 씬 등)
+        }
+        return fallback;
+    }
+
+    /// <summary>holdPoint 가 비었거나 남의 플레이어 것이면 내 HoldPoint 로 교체한다.</summary>
+    private void EnsureOwnHoldPoint()
+    {
+        if(holdPoint != null)
+        {
+            var nob = holdPoint.GetComponentInParent<NetworkObject>();
+            if(nob == null || nob.IsOwner) return;   // 씬 고정 또는 내 것
+        }
+        var mine = FindLocalHoldPoint();
+        if(mine != null) holdPoint = mine;
+    }
+
     /// <summary>해당 클라이언트가 지금 잡고 있는 물체(없으면 null). 소유권이 잡은 사람에게 넘어가므로 Owner 로 판별한다.</summary>
     public static SyncGrab FindHeldBy(int clientId)
     {
@@ -949,13 +978,8 @@ public class SyncGrab : NetworkBehaviour
             Debug.LogWarning($"[SyncGrab] {name}: TaskItem 컴포넌트 없음");
         }
 
-        // holdPoint 자동 탐색 (인스펙터 미연결 시)
-        if(holdPoint == null)
-        {
-            var hp = GameObject.FindWithTag("HoldPoint");
-            if(hp != null) holdPoint = hp.transform;
-            else Debug.LogWarning($"[SyncGrab] {name}: holdPoint 미연결 & Tag='HoldPoint' 오브젝트 없음");
-        }
+        // holdPoint 는 잡는 순간 내 플레이어 것으로 다시 정한다(EnsureOwnHoldPoint). 시작 시점엔 내 플레이어가 아직 없을 수 있다.
+        if(holdPoint == null) EnsureOwnHoldPoint();
 
         // SyncVar 콜백 등록
         _isKinematic.OnChange += OnKinematicChanged;
@@ -1147,21 +1171,12 @@ public class SyncGrab : NetworkBehaviour
 
         GuideSystem.Instance?.OnItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
 
+        // 클릭 시점에 항상 '내' 플레이어의 HoldPoint 로 맞춘다 (FindWithTag 는 다른 플레이어 복사본을 돌려줄 수 있음)
+        EnsureOwnHoldPoint();
         if(holdPoint == null)
         {
-            // 1. 캐릭터 프리팹 내부나 씬에서 'HoldPoint' 태그를 가진 오브젝트 탐색
-            var hp = GameObject.FindWithTag("HoldPoint");
-            if(hp != null)
-            {
-                holdPoint = hp.transform;
-                Debug.Log($"[SyncGrab] {name}: 클릭 시점에 holdPoint를 자동 탐색하여 할당했습니다.");
-            }
-            else
-            {
-                // 2. 태그로도 못 찾았을 경우 에러 로그를 남기고 중단 (최소한의 방어선)
-                Debug.LogError($"[SyncGrab] {name}: 씬 내에 'HoldPoint' 태그를 가진 오브젝트가 없어 동작을 취소합니다.");
-                return;
-            }
+            Debug.LogError($"[SyncGrab] {name}: 내 플레이어의 'HoldPoint' 를 찾지 못해 동작을 취소합니다.");
+            return;
         }
 
         RequestGrab(() => PCFlyTo(holdPoint.position, holdPoint.rotation));

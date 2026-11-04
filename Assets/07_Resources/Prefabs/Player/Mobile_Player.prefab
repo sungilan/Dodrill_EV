@@ -136,6 +136,8 @@ MonoBehaviour:
   _uiCamera: {fileID: 4764585132354983989}
   _nameTagCanvas: {fileID: 7623610385688241231}
   _nameText: {fileID: 3549846535634333510}
+  nameTagAboveHead: 0.34
+  nameTagScale: 0.8
 --- !u!65 &8847257515468506263
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -316,6 +318,7 @@ MonoBehaviour:
   - {fileID: 6877281111251669098}
   - {fileID: 8832685476001186854}
   - {fileID: 1256996610048580516}
+  hideUniformLookDownDeg: 32
   pinRootToGround: 0
   groundMask:
     serializedVersion: 2
@@ -1131,6 +1134,10 @@ PrefabInstance:
     - target: {fileID: 2034179033855149247, guid: 8fc0909805568a740b4f204e7e07e051, type: 3}
       propertyPath: m_Layer
       value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2034179033855149247, guid: 8fc0909805568a740b4f204e7e07e051, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8006052255771564513, guid: 8fc0909805568a740b4f204e7e07e051, type: 3}
       propertyPath: m_Layer

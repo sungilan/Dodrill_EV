@@ -51,6 +51,7 @@ public class MiniMapComponent : MonoBehaviour
 
     private int _myClientId = -1;
     private bool _isPlayer = false;
+    private DoDrill.PlayerUISetup _nickSource;
 
     // 플레이어 여부를 판단하는 프로퍼티
     private bool IsPlayerCheck => _isPlayer || gameObject.CompareTag("Player") || gameObject.name.Contains("Player");
@@ -72,6 +73,14 @@ public class MiniMapComponent : MonoBehaviour
             // [핵심] 리스트가 갱신될 때마다 이름을 다시 찾아서 업데이트하도록 이벤트 구독
             NetworkedSessionUserList.OnPlayersBroadcastReceived += HandlePlayersBroadcast;
 
+            // 각 플레이어 프리팹의 동기화 닉네임을 구독한다 (예전에는 모든 플레이어가 '내 로컬 이름'으로 표시돼 PC/모바일을 구분할 수 없었다)
+            _nickSource = GetComponentInParent<DoDrill.PlayerUISetup>();
+            if(_nickSource != null)
+            {
+                _nickSource.NicknameChanged += UpdateMapName;
+                if(_isRegistered && !string.IsNullOrEmpty(_nickSource.Nickname)) UpdateMapName(_nickSource.Nickname);
+            }
+
             // 이미 등록된 상태에서 다시 활성화되었다면 세션 정보로 이름 갱신 시도
             //if(_isRegistered) UpdateMapNameWithSession();
         }
@@ -82,6 +91,7 @@ public class MiniMapComponent : MonoBehaviour
         if(IsPlayerCheck)
         {
             NetworkedSessionUserList.OnPlayersBroadcastReceived -= HandlePlayersBroadcast;
+            if(_nickSource != null) { _nickSource.NicknameChanged -= UpdateMapName; _nickSource = null; }
         }
         StopBlinking();
     }
@@ -138,7 +148,11 @@ public class MiniMapComponent : MonoBehaviour
         if(IsPlayerCheck)
         {
             // 1. 등록 시점에는 일단 폴백 이름(로컬 유저네임 혹은 기본값)으로 설정
-            finalName = !string.IsNullOrEmpty(UserInfo.UserName) ? UserInfo.UserName : $"Player {_myClientId}";
+            //    (소유자가 아닌 복사본에 내 UserName 을 붙이던 것이 'PC/모바일 구분 안 됨'의 한 원인)
+            var nick = _nickSource != null ? _nickSource.Nickname : null;
+            if(!string.IsNullOrEmpty(nick)) finalName = nick;
+            else if(_nickSource != null) finalName = $"Player {_myClientId}"; // 닉네임 도착 전 임시 — NicknameChanged 로 곧 교체됨
+            else finalName = !string.IsNullOrEmpty(UserInfo.UserName) ? UserInfo.UserName : $"Player {_myClientId}";
 
             // 2. 만약 이미 세션 리스트가 도착해 있다면 즉시 이름 교체 시도
             var userList = Object.FindFirstObjectByType<NetworkedSessionUserList>();

@@ -24,6 +24,13 @@ public class PcCrouchIK : MonoBehaviour
     [SerializeField] private float footProbeUp = 0.5f;
     [SerializeField] private float footProbeDown = 1.5f;
     [SerializeField] private float footYOffset = 0.02f;
+    [Header("가상 바닥")]
+    [Tooltip("바닥 충돌체가 없거나(이 프로젝트의 정비소 씬은 바닥 콜라이더가 없다) 발 아래에서 못 찾을 때, 플레이어 루트 높이를 바닥으로 보고 발을 붙인다.\n"
+             + "끄면 예전처럼 충돌체만 사용 -> 충돌체가 없을 때 무릎이 안 굽고 몸만 가라앉는다.")]
+    [SerializeField] private bool useVirtualGround = true;
+    [Tooltip("가상 바닥 사용 시: 레이가 맞은 면이 루트보다 이만큼(m, 스케일 곱) 이상 높으면 책상·보닛 같은 것으로 보고 무시")]
+    [SerializeField] private float maxStepUp = 0.35f;
+
     [Tooltip("서 있을 때도 유지할 최소 접지 가중치(0이면 크라우치 때만 IK)")]
     [SerializeField] [Range(0f, 1f)] private float groundBaseWeight = 0f;
     [SerializeField] [Range(0f, 1f)] private float footRotationFactor = 0.5f;
@@ -52,8 +59,18 @@ public class PcCrouchIK : MonoBehaviour
         float down = footProbeDown * scale;
         Vector3 origin = foot.position + Vector3.up * up;
 
-        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit,
-                up + down, groundMask, QueryTriggerInteraction.Ignore))
+        bool found = Physics.Raycast(origin, Vector3.down, out RaycastHit hit,
+                up + down, groundMask, QueryTriggerInteraction.Ignore);
+
+        // 충돌체가 없거나, 맞은 곳이 발보다 한참 위(차체·선반 등)면 루트 높이의 가상 바닥을 쓴다
+        if (useVirtualGround && (!found || hit.point.y > transform.position.y + maxStepUp * scale))
+        {
+            hit.point = new Vector3(foot.position.x, transform.position.y, foot.position.z);
+            hit.normal = Vector3.up;
+            found = true;
+        }
+
+        if (found)
         {
             float w = Mathf.Max(crouch01, groundBaseWeight);
             s.IKPosition = hit.point + Vector3.up * (footYOffset * scale);

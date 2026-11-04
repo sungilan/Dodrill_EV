@@ -30,6 +30,9 @@ public class PcAvatarIKDriver : MonoBehaviour
     private SyncGrab _held;
     private bool _holdRightHand = true;
     private float _nextHeldSearch;
+    private float _lastHeldSeen = -10f;
+    [Tooltip("잡고 있다는 판정이 잠깐(소유권 전환·동기화 지연) 끊겨도 이 시간(초) 동안은 잡은 자세를 유지한다. 짧게 끊길 때마다 손이 기본 자세로 왔다갔다 하던 것을 막는다.")]
+    [SerializeField] private float holdGraceSeconds = 0.5f;
 
     private void Start()
     {
@@ -69,6 +72,9 @@ public class PcAvatarIKDriver : MonoBehaviour
         {
             _nextHeldSearch = Time.time + 0.1f;
             var found = SyncGrab.FindHeldBy(_controller.HolderId);
+            if (found != null) _lastHeldSeen = Time.time;
+            // 잠깐 안 보이는 것이면 직전 물체를 유지
+            if (found == null && _held != null && Time.time - _lastHeldSeen < holdGraceSeconds) found = _held;
             if (found != _held)
             {
                 _held = found;
@@ -81,7 +87,8 @@ public class PcAvatarIKDriver : MonoBehaviour
             }
         }
 
-        if (_held == null || !_held.IsGrabbed) { armReach.SetHold(false, _holdRightHand, Vector3.zero, Quaternion.identity); return; }
+        bool graceOk = _held != null && Time.time - _lastHeldSeen < holdGraceSeconds;
+        if (_held == null || (!_held.IsGrabbed && !graceOk)) { armReach.SetHold(false, _holdRightHand, Vector3.zero, Quaternion.identity); return; }
 
         Quaternion yaw = Quaternion.Euler(0f, _controller.transform.eulerAngles.y, 0f);
         bool baked = handGrip != null && handGrip.IsBaked(_holdRightHand);
