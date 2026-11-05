@@ -146,6 +146,13 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
 
         StartCoroutine(InitCamera());
         StartCoroutine(EnsureUiTouchInput());
+        MobileHeightButtons.Show(this);   // 서기/앉기 버튼 (PC 의 Q/E)
+    }
+
+    public override void OnStopClient()
+    {
+        base.OnStopClient();
+        if(IsOwner) { MobileHeightButtons.Hide(); MobileWorkButton.SetVisible(false); }
     }
 
     // ───────────────────────────────────────────────────────

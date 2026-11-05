@@ -58,6 +58,15 @@ public class SlidingPanel : MonoBehaviour
         }
     }
 
+    // 숨김 상태인데 다른 스크립트(예: TaskListPanel 의 대화 중 흐림 효과 — 같은 CanvasGroup 의 alpha 를 1 로 되돌린다)가
+    // 알파를 올려 'VR 에서 내려 둔 미션 리스트가 계속 보이던' 문제 방지: 숨김 중에는 알파 0 을 유지한다.
+    private void LateUpdate()
+    {
+        if(_isShown || _canvasGroup == null) return;
+        if(_canvasGroup.alpha > 0f && !DOTween.IsTweening(_canvasGroup))
+            _canvasGroup.alpha = 0f;
+    }
+
     public void TogglePanel()
     {
         if(_isShown) Hide();

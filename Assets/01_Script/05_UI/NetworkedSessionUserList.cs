@@ -99,8 +99,40 @@ public class NetworkedSessionUserList : MonoBehaviour
         var list = msg.players ?? new List<SessionPlayerEntry>();
         Debug.Log($"[UserList][OnPlayersListReceived] players={list.Count} activePlayerId={msg.activePlayerId}");
 
+        // '진행자' 는 서버에서 태스크 하나가 끝날 때까지 유지되므로(대기·관전 중에도 노란 표시가 계속 켜져 있던 문제),
+        // 새 진행자가 정해진 뒤 ActiveHighlightSeconds 동안만 노랗게 보여 준다.
+        if (msg.activePlayerId != _lastBroadcastActiveId)
+        {
+            _lastBroadcastActiveId = msg.activePlayerId;
+            _activeSince = Time.unscaledTime;
+        }
+        _highlightExpired = msg.activePlayerId >= 0 && Time.unscaledTime - _activeSince >= ActiveHighlightSeconds;
+
         RebuildUi(list.OrderBy(e => e.clientId).ToList(), msg.activePlayerId);
+        if (_highlightExpired) ClearHighlight();
         OnPlayersBroadcastReceived?.Invoke(msg);
+    }
+
+    private const float ActiveHighlightSeconds = 4f;
+    private int _lastBroadcastActiveId = -2;
+    private float _activeSince;
+    private bool _highlightExpired;
+
+    private void Update()
+    {
+        if (_lastBroadcastActiveId < 0 || _highlightExpired) return;
+        if (Time.unscaledTime - _activeSince < ActiveHighlightSeconds) return;
+        _highlightExpired = true;
+        ClearHighlight();
+    }
+
+    private void ClearHighlight()
+    {
+        foreach (var go in _spawnedRows)
+        {
+            if (go == null) continue;
+            if (go.TryGetComponent<UserStateRow>(out var row)) row.UpdateHighlight(-1);
+        }
     }
 
     //private void RebuildUi(List<SessionPlayerEntry> ordered, int activePlayerId)
@@ -245,7 +277,7 @@ public class NetworkedSessionUserList : MonoBehaviour
         Debug.LogWarning("[UserList] 닉네임 전송 타임아웃");
     }
 
-    private static string ResolveLocalDisplayName()
+    internal static string ResolveLocalDisplayName()
     {
         if (!string.IsNullOrWhiteSpace(UserInfo.UserName))
             return UserInfo.UserName.Trim();
@@ -255,7 +287,7 @@ public class NetworkedSessionUserList : MonoBehaviour
         return null;
     }
 
-    private static byte PlatformToByte(PlatformType pt)
+    internal static byte PlatformToByte(PlatformType pt)
     {
         switch (pt)
         {

@@ -66,6 +66,7 @@ public class WorldHoverLabel : MonoBehaviour
         transform.forward = _cam.transform.forward;
     }
 
+    private bool _onTopApplied;
     private static Sprite s_roundedSprite;
 
     /// <summary>둥근 모서리 + 얇은 테두리의 9-슬라이스 스프라이트를 코드로 만든다(프로젝트 스프라이트에 의존하지 않음).</summary>
@@ -93,6 +94,39 @@ public class WorldHoverLabel : MonoBehaviour
         return s_roundedSprite;
     }
 
+    /// <summary>호버 라벨과 같은 어두운 둥근 카드 배경을 다른 월드 UI(가이드 설명 등)에도 적용한다.</summary>
+    public static void StyleCard(UnityEngine.UI.Image img)
+    {
+        if (img == null) return;
+        img.sprite = RoundedSprite();
+        img.type = UnityEngine.UI.Image.Type.Sliced;
+        img.color = new Color(0.055f, 0.09f, 0.15f, 0.86f);
+        img.raycastTarget = false;
+    }
+
+    /// <summary>
+    /// 월드 스페이스 UI 가 차체 등 3D 모델에 가려지지 않고 항상 보이게 한다(깊이 테스트 끔).
+    /// 후드 래치처럼 차 안쪽에 있는 지점의 안내가 모델 뒤로 숨던 문제.
+    /// </summary>
+    public static void DrawOnTop(GameObject root)
+    {
+        if (root == null) return;
+        foreach (var g in root.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
+        {
+            if (g is TMP_Text t)
+            {
+                var m = t.fontMaterial;                       // 인스턴스 복사본
+                if (m != null && m.HasProperty("unity_GUIZTestMode")) m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+            }
+            else
+            {
+                var m = new Material(g.materialForRendering);
+                if (m.HasProperty("unity_GUIZTestMode")) m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+                g.material = m;
+            }
+        }
+    }
+
     /// <summary>텍스트 설정. FreeLookController에서 호출.</summary>
     public void SetText(string objName, string actionMsg)
     {
@@ -116,13 +150,9 @@ public class WorldHoverLabel : MonoBehaviour
 
         // 배경: 어두운 둥근 카드
         var panelImg = background != null ? background : GetComponentInChildren<UnityEngine.UI.Image>(true);
-        if (panelImg != null)
-        {
-            panelImg.sprite = RoundedSprite();
-            panelImg.type = UnityEngine.UI.Image.Type.Sliced;
-            panelImg.color = new Color(0.055f, 0.09f, 0.15f, 0.86f);
-            panelImg.raycastTarget = false;
-        }
+        StyleCard(panelImg);
+
+        if (!_onTopApplied) { _onTopApplied = true; DrawOnTop(gameObject); }
 
         // 글자 양에 맞춰 카드 크기 조절
         var canvas = GetComponentInChildren<Canvas>(true);

@@ -112,7 +112,9 @@ public class PlayerSpawnner : NetworkBehaviour
             return;
         }
 
-        GameObject playerInstance = Instantiate(prefab, transform.position, transform.rotation);
+        // 모두 같은 자리에 생성돼 서로의 머리·몸 속에서 시작하던 문제 → 먼저 들어온 사람 수에 따라 옆으로 비켜 세운다
+        Vector3 spawnPos = transform.position + transform.rotation * SpawnOffset(CountSpawnedOthers());
+        GameObject playerInstance = Instantiate(prefab, spawnPos, transform.rotation);
 
         // 구 PC/모바일 프리팹은 루트가 곧 카메라라 0.7m 띄워 생성. 아바타 리그 프리팹은 루트가 바닥이고 눈높이는 CameraPivot이 담당.
         if(type != PlatformType.VR && playerInstance.GetComponent<PcMobileAvatarController>() == null)
@@ -131,6 +133,36 @@ public class PlayerSpawnner : NetworkBehaviour
 
         _spawnedPlayer = netObj;
         _playerSpawned.Value = true;
+    }
+
+    // 스폰 위치 기준 좌우·뒤로 늘어서는 자리(스포너 로컬 좌표, m). 첫 사람은 원래 자리.
+    private static readonly Vector3[] SpawnSlots =
+    {
+        new Vector3(0f, 0f, 0f),
+        new Vector3(0.9f, 0f, 0f),
+        new Vector3(-0.9f, 0f, 0f),
+        new Vector3(0f, 0f, -0.9f),
+        new Vector3(0.9f, 0f, -0.9f),
+        new Vector3(-0.9f, 0f, -0.9f),
+        new Vector3(1.8f, 0f, 0f),
+        new Vector3(-1.8f, 0f, 0f),
+    };
+
+    private static Vector3 SpawnOffset(int index)
+    {
+        return SpawnSlots[Mathf.Abs(index) % SpawnSlots.Length];
+    }
+
+    /// <summary>이 스포너 말고, 이미 플레이어를 만들어 둔 스포너 수(서버에서만 의미 있음).</summary>
+    private int CountSpawnedOthers()
+    {
+        int n = 0;
+        foreach(var s in FindObjectsByType<PlayerSpawnner>(FindObjectsSortMode.None))
+        {
+            if(s == this) continue;
+            if(s._spawnedPlayer != null && s._spawnedPlayer.IsSpawned) n++;
+        }
+        return n;
     }
 
     private GameObject ResolvePlayerPrefab(PlatformType type)

@@ -42,10 +42,31 @@ public class MapObject : MonoBehaviour
 
         // --- [수정] 텍스트 및 아이콘 정방향 유지 보강 ---
         // 부모인 sprRect가 회전하더라도 텍스트는 항상 월드 기준 0도를 유지합니다.
-        if(labelRect != null)
+        KeepLabelUpright();
+    }
+
+    // 이름표가 '플레이어 방향 따라 빙글 도는' 문제(특히 VR 의 기울어진 월드 스페이스 미니맵): 월드 회전 0 으로 두면 평면과 어긋나고,
+    // 회전하는 아이콘의 자식이라 위치도 아이콘 둘레를 돈다 → 아이콘 회전을 매 프레임 거꾸로 걸어 평면에 고정한다.
+    private bool _labelBaseSet;
+    private Vector3 _labelBasePos;
+
+    void LateUpdate()
+    {
+        KeepLabelUpright();
+    }
+
+    void KeepLabelUpright()
+    {
+        if(labelRect == null || sprRect == null) return;
+        if(!_labelBaseSet)
         {
-            labelRect.rotation = Quaternion.identity;
+            _labelBaseSet = true;
+            _labelBasePos = labelRect.localPosition;
         }
+        float z = -sprRect.localEulerAngles.z;
+        var counter = Quaternion.Euler(0f, 0f, z);
+        labelRect.localRotation = counter;
+        labelRect.localPosition = counter * _labelBasePos;
     }
 
     public void SetMiniMapEntityValues(MiniMapController controller, MiniMapEntity mme, GameObject attachedGO, Camera renderCamera, GameObject parentPanelGO)

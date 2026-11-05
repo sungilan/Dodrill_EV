@@ -53,6 +53,8 @@ public class PcMobileAvatarController : NetworkBehaviour
     [SerializeField] private float groundProbeUp = 1.0f;
     [SerializeField] private float groundProbeDown = 3.0f;
     [SerializeField] private float rootYOffset = 0f;
+    [Tooltip("접지 레이캐스트가 직전 높이보다 이만큼(m, 스케일 곱) 이상 높은 면(차체 밑면·리프트 팔·공구 위 등)에 맞으면 바닥이 아니라고 보고 무시. 차 아래에서 아바타가 공중에 뜨던 문제 대비.")]
+    [SerializeField] private float maxGroundStepUp = 0.35f;
 
     private IPcLookController _look;
     private float _crouch01;
@@ -107,6 +109,9 @@ public class PcMobileAvatarController : NetworkBehaviour
     {
         base.OnStartClient();
 
+        // 다른 사람 화면에서 이 아바타가 든 물체가 손에 붙어 보이게 한다
+        if (GetComponent<HeldObjectHandAttach>() == null) gameObject.AddComponent<HeldObjectHandAttach>();
+
         // 가까이 다가가면 머리 등이 사라지는 문제 대비: IK로 움직인 본이 애니메이터 경계 밖으로 나가도 렌더러가 컬링되지 않게
         if (avatarAnimator != null)
             foreach (var smr in avatarAnimator.GetComponentsInChildren<SkinnedMeshRenderer>(true))
@@ -122,8 +127,8 @@ public class PcMobileAvatarController : NetworkBehaviour
                 if (r != null) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
         }
 
-        // 소유자(모바일 시점 컨트롤러일 때만): 윗옷 렌더러를 찾아 둔다
-        if (base.IsOwner && lookControllerBehaviour is FreeLockControllerMobile && avatarAnimator != null)
+        // 소유자(PC·모바일 모두): 윗옷 렌더러를 찾아 둔다 — 카메라가 몸통 안에 있어 내려다보면 윗옷 안쪽(속이 뚫려 보이는 면)이 화면을 가린다
+        if (base.IsOwner && avatarAnimator != null)
         {
             var list = new System.Collections.Generic.List<Renderer>();
             foreach (var r in avatarAnimator.GetComponentsInChildren<SkinnedMeshRenderer>(true))
@@ -150,8 +155,29 @@ public class PcMobileAvatarController : NetworkBehaviour
         InteractionEvents.OnItemGrabbed -= OnAnyInteraction;
     }
 
-    private void OnAnyInteraction(string _) => ReachForward();
-    private void OnAnyZone(string _, string __) => ReachForward();
+    // InteractionEvents 는 정적 이벤트라, 다른 사람(VR 등)의 행동이 이 클라이언트에서도 발행되면(구역 트리거·완료 알림 등)
+    // 내 아바타도 같이 팔을 뻗었다. 내가 방금 직접 입력(클릭·터치·키)했을 때만 손을 뻗는다.
+    private const float OwnInputWindow = 1.5f;
+    private float _lastOwnInputTime = -10f;
+    private bool _legacyInputBroken;
+
+    private void PollOwnInput()
+    {
+        if (_legacyInputBroken) { _lastOwnInputTime = Time.unscaledTime; return; }   // 입력을 읽을 수 없으면 예전처럼 항상 허용
+        try
+        {
+            bool pressed = Input.anyKeyDown;
+            for (int i = 0; !pressed && i < Input.touchCount; i++)
+                if (Input.GetTouch(i).phase == TouchPhase.Began) pressed = true;
+            if (pressed) _lastOwnInputTime = Time.unscaledTime;
+        }
+        catch (System.InvalidOperationException) { _legacyInputBroken = true; }
+    }
+
+    private bool OwnInputRecently => Time.unscaledTime - _lastOwnInputTime < OwnInputWindow;
+
+    private void OnAnyInteraction(string _) { if (OwnInputRecently) ReachForward(); }
+    private void OnAnyZone(string _, string __) { if (OwnInputRecently) ReachForward(); }
 
     /// <summary>타깃 좌표가 없는 상호작용(UI 버튼 등)에서 — 시선 앞쪽으로 손을 뻗는 제스처.</summary>
     public void ReachForward()
@@ -167,6 +193,7 @@ public class PcMobileAvatarController : NetworkBehaviour
     private void Update()
     {
         if (!base.IsOwner) return;
+        PollOwnInput();
         float dt = Time.deltaTime;
 
         // ── 크라우치 적분 ─────────────────────────────
@@ -224,6 +251,9 @@ public class PcMobileAvatarController : NetworkBehaviour
     /// <summary>소유자의 시점 컨트롤러가 상호작용 클릭 시 호출. 로컬 즉시 재생 + 원격 동기화.</summary>
     public void RequestReach(Vector3 worldPoint)
     {
+        // 드릴·렌치를 작동 중일 때는 반대 손 뻗기를 생략 (F 를 누르는 것도 ‘행동’으로 잡혀 반대 손이 같이 움직이던 문제)
+        if (ImpactWrench.RecentlyWorking) return;
+
         if (armReach != null) armReach.Reach(worldPoint, AvatarScale);
         if (base.IsClientInitialized && base.IsOwner)
             ReachServerRpc(worldPoint);
@@ -256,6 +286,9 @@ public class PcMobileAvatarController : NetworkBehaviour
             // 자기 자신(루트/아바타에 달린 콜라이더)에 맞으면 무시 — 안 그러면
             // 루트 Y가 자기 콜라이더 위로 튕겨 올라가며 상하로 진동한다.
             if (h.collider != null && h.collider.transform.IsChildOf(transform)) continue;
+            // 잡을 수 있는 물건·다른 플레이어(NetworkObject)와 직전 높이보다 한참 위의 면은 바닥이 아니다
+            if (h.collider != null && h.collider.GetComponentInParent<NetworkObject>() != null) continue;
+            if (h.point.y > transform.position.y + maxGroundStepUp * s) continue;
             if (h.distance < bestDist)
             {
                 bestDist = h.distance;

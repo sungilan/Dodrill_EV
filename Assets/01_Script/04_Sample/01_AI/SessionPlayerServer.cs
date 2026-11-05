@@ -126,7 +126,7 @@ public class SessionPlayerServer : MonoBehaviour
         _players[clientId] = new SessionPlayerEntry
         {
             clientId = clientId,
-            displayName = $"Player {clientId}",
+            displayName = $"Player {clientId + 1}",   // UserStateRow·완료 알림의 기본 표기와 같은 번호 규칙
             platform = 1
         };
         _pendingNicknameCoroutines[clientId] = StartCoroutine(NicknameTimeout(clientId));
@@ -148,7 +148,7 @@ public class SessionPlayerServer : MonoBehaviour
 
         string name = msg.displayName;
         if (string.IsNullOrWhiteSpace(name))
-            name = $"Player {id}";
+            name = $"Player {id + 1}";
         else
         {
             name = name.Trim();

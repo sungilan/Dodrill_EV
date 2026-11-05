@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 7391898898711164932}
   - component: {fileID: 3066194377794055998}
   - component: {fileID: 6124593991742450098}
+  - component: {fileID: 3237916824296303461}
   m_Layer: 8
   m_Name: Mobile_Player
   m_TagString: Untagged
@@ -348,6 +349,47 @@ MonoBehaviour:
   _interpolation: 2
   _clientAuthoritative: 1
   _sendToOwner: 0
+--- !u!114 &3237916824296303461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 206669820842534176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76e060d33c4336546a51e4f16eda5b1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerEquipmentSync
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 7513439500318563725}
+  _networkObjectCache: {fileID: 0}
+  equipments:
+  - prefabId: FaceShield
+    objectsToActivate:
+    - {fileID: 6497860271230598396}
+    - {fileID: 3764155699297053919}
+    objectsToDeactivate:
+    - {fileID: 8974207283375022111}
+    targetRenderer: {fileID: 0}
+    equipMaterial: {fileID: 0}
+  - prefabId: InsulatedGloves
+    objectsToActivate: []
+    objectsToDeactivate: []
+    targetRenderer: {fileID: 5162448633833404929}
+    equipMaterial: {fileID: 2100000, guid: 5874b28730677d041ad4f711fb092ab4, type: 2}
+  - prefabId: InsulatedShoes
+    objectsToActivate:
+    - {fileID: 167679696719747737}
+    objectsToDeactivate:
+    - {fileID: 6255234629718093737}
+    targetRenderer: {fileID: 0}
+    equipMaterial: {fileID: 0}
+  - prefabId: SafetyGlasses
+    objectsToActivate: []
+    objectsToDeactivate: []
+    targetRenderer: {fileID: 0}
+    equipMaterial: {fileID: 0}
 --- !u!1 &314091367877228519
 GameObject:
   m_ObjectHideFlags: 0
@@ -1223,6 +1265,11 @@ SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 392271121615531154, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
   m_PrefabInstance: {fileID: 358429183563342271}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &167679696719747737 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 480428007453604646, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
+  m_PrefabInstance: {fileID: 358429183563342271}
+  m_PrefabAsset: {fileID: 0}
 --- !u!137 &1256996610048580516 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 1551730522332199451, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
@@ -1244,6 +1291,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 440ee371307bfa94e94986b7c0ab8233, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PcLocomotionAnimator
+--- !u!1 &3764155699297053919 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3514376556828020064, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
+  m_PrefabInstance: {fileID: 358429183563342271}
+  m_PrefabAsset: {fileID: 0}
 --- !u!137 &4718343946075354426 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 5008998532775056517, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
@@ -1260,6 +1312,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b0003b7fdd22d84408f386167606cbe2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PcArmReach
+--- !u!137 &5162448633833404929 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 4854272229824404414, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
+  m_PrefabInstance: {fileID: 358429183563342271}
+  m_PrefabAsset: {fileID: 0}
 --- !u!137 &5568582489916538819 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 5313949819717443196, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
@@ -1268,6 +1325,16 @@ SkinnedMeshRenderer:
 --- !u!137 &5625948641996167523 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 5398134847076628700, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
+  m_PrefabInstance: {fileID: 358429183563342271}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6255234629718093737 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5924040765800746518, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
+  m_PrefabInstance: {fileID: 358429183563342271}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6497860271230598396 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6833205336942288195, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
   m_PrefabInstance: {fileID: 358429183563342271}
   m_PrefabAsset: {fileID: 0}
 --- !u!137 &6877281111251669098 stripped
@@ -1283,5 +1350,10 @@ Animator:
 --- !u!137 &8832685476001186854 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 9110049587055338905, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
+  m_PrefabInstance: {fileID: 358429183563342271}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8974207283375022111 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8679470622308794784, guid: 55739ca46ec2a1d49b7dfcb0efc66848, type: 3}
   m_PrefabInstance: {fileID: 358429183563342271}
   m_PrefabAsset: {fileID: 0}

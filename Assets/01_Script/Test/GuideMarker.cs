@@ -113,6 +113,14 @@ public class GuideMarker : MonoBehaviour
         if (nameCanvas != null)
             if (!nameCanvas.GetComponent<GuideLabelBillboard>())
                 nameCanvas.gameObject.AddComponent<GuideLabelBillboard>();
+
+        // 설명 배경을 호버 라벨(‘후드 래치’)과 같은 둥근 어두운 카드로, 차체에 가려지지 않게
+        if (nameCanvas != null)
+        {
+            foreach (var img in nameCanvas.GetComponentsInChildren<UnityEngine.UI.Image>(true))
+                WorldHoverLabel.StyleCard(img);
+            WorldHoverLabel.DrawOnTop(nameCanvas);
+        }
     }
 
     /// <summary>넛지: 화살표 흔들기</summary>

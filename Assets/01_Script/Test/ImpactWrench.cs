@@ -47,6 +47,26 @@ public class ImpactWrench : MonoBehaviour
 
     private bool _buttonHeld;
     private bool _wasWorking;
+    private SyncGrab _sync;
+    private bool _mobileButtonShown;
+
+    // 내가 작업(F/버튼)을 누르고 있는 렌치가 있는지 — 아바타가 ‘작업 중 반대 손 뻗기’를 생략하는 데 쓴다
+    private static int s_workingCount;
+    private static float s_lastWorkTime = -10f;
+    public static bool RecentlyWorking => s_workingCount > 0 || Time.unscaledTime - s_lastWorkTime < 0.8f;
+
+    /// <summary>
+    /// 이 렌치를 '내가' 들고 있는가. 렌치는 모든 클라이언트에 같은 물체로 존재하므로, 다른 사람이 든 렌치가
+    /// 볼트에 닿아도 내 화면에 안내(‘F 키를 눌러…’)가 뜨지 않도록 한다.
+    /// </summary>
+    private bool IsLocalHeld
+    {
+        get
+        {
+            if(_sync == null) _sync = GetComponentInParent<SyncGrab>();
+            return _sync == null || (_sync.IsOwner && _sync.IsGrabbed);
+        }
+    }
     private bool _progressShown;   // 이 렌치가 볼트 진행도 UI를 띄운 상태인지
 
     // ── 생명주기 ───────────────────────────────────────────
@@ -60,6 +80,7 @@ public class ImpactWrench : MonoBehaviour
     {
         _buttonHeld = false;
         ApplyEffects(false);
+        SetMobileButton(false);
         RestoreBoltOutlineForced();
         // 렌치를 내려놓거나 치워도(비활성화) 볼트 진행도 UI가 남지 않도록 반드시 숨긴다.
         HideProgress();
@@ -67,14 +88,30 @@ public class ImpactWrench : MonoBehaviour
 
     private void Update()
     {
+        // 다른 사람이 든(또는 아무도 안 든) 렌치는 내 입력·안내와 무관하다
+        if (!IsLocalHeld)
+        {
+            if (_targetBolt != null) ClearTarget();
+            _buttonHeld = false;
+            ApplyEffects(false);
+            SetMobileButton(false);
+            return;
+        }
+
         // 입력 상태 확인
         if (CachedPlatform == PlatformType.PC)
         {
             _buttonHeld = Input.GetKey(workKey);
         }
+        else if (CachedPlatform == PlatformType.Mobile)
+        {
+            _buttonHeld = MobileWorkButton.IsHeld;
+        }
+        SetMobileButton(_targetBolt != null);
 
         bool working = _buttonHeld;
         ApplyEffects(working);
+        if (working) s_lastWorkTime = Time.unscaledTime;
 
         if (_targetBolt != null)
         {
@@ -217,6 +254,8 @@ public class ImpactWrench : MonoBehaviour
     {
         if (working == _wasWorking) return;
         _wasWorking = working;
+        if (working) s_workingCount++;
+        else { s_workingCount = Mathf.Max(0, s_workingCount - 1); s_lastWorkTime = Time.unscaledTime; }
 
         if (wrenchAnimator != null)
             wrenchAnimator.SetBool(IsWorkingHash, working);
@@ -230,9 +269,26 @@ public class ImpactWrench : MonoBehaviour
 
     // ── 볼트 감지 (OnTriggerEnter/Exit) ────────────────────
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other) => TryAcquire(other);
+
+    // 렌치를 든 뒤에 이미 볼트 안에 들어가 있는 경우(날아오는 중 진입)도 잡도록
+    private void OnTriggerStay(Collider other)
+    {
+        if (_targetBolt == null) TryAcquire(other);
+    }
+
+    private void SetMobileButton(bool show)
+    {
+        if (CachedPlatform != PlatformType.Mobile) return;
+        if (show == _mobileButtonShown) return;
+        _mobileButtonShown = show;
+        MobileWorkButton.SetVisible(show);
+    }
+
+    private void TryAcquire(Collider other)
     {
         if (!other.CompareTag("Bolt")) return;
+        if (!IsLocalHeld) return;
 
         Debug.Log($"<color=white>[ImpactWrench]</color> 볼트 충돌 감지: {other.name}. 검증 시작...");
 
@@ -339,7 +395,7 @@ public class ImpactWrench : MonoBehaviour
             {
                 PlatformType.VR => "트리거를 계속 당겨 작업을 완료하세요.",
                 PlatformType.PC => $"{workKey} 키를 계속 눌러 작업을 완료하세요.",
-                PlatformType.Mobile => "버튼을 계속 터치하여 작업을 완료하세요.",
+                PlatformType.Mobile => "작업 버튼을 계속 누르고 있어 작업을 완료하세요.",
                 _ => "작업을 완료할 때까지 유지하세요."
             };
         }
@@ -349,7 +405,7 @@ public class ImpactWrench : MonoBehaviour
             {
                 PlatformType.VR => $"트리거를 당겨 {actionName}를 시작하세요.",
                 PlatformType.PC => $"{workKey} 키를 눌러 {actionName}를 시작하세요.",
-                PlatformType.Mobile => $"터치하여 {actionName}를 시작하세요.",
+                PlatformType.Mobile => $"화면의 작업 버튼을 눌러 {actionName}를 시작하세요.",
                 _ => $"{actionName}를 시작하세요."
             };
         }

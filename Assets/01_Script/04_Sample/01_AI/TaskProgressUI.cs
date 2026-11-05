@@ -84,6 +84,7 @@ namespace DoDrill.Training
             FitText(_moduleText, 0.7f);
             FitText(_boltProgressText, 0.7f);
             SetupCompactLayout();
+            FixToastLayout();
 
             // 시작 시 알림창을 확실히 숨김
             if(_notifCanvasGroup != null)
@@ -92,6 +93,36 @@ namespace DoDrill.Training
                 _notifCanvasGroup.interactable = false;
                 _notifCanvasGroup.blocksRaycasts = false;
             }
+        }
+
+        /// <summary>
+        /// ‘~가 ~를 완료하였습니다’ 알림: 글이 3줄로 늘어나 위쪽 체크 아이콘과 겹치던 것을 막는다
+        /// (패널을 조금 키우고 아이콘은 위, 글은 아래 영역에 두며 자동 크기 + 말줄임).
+        /// </summary>
+        private void FixToastLayout()
+        {
+            if (_notifCanvasGroup == null || _notifText == null) return;
+            var prt = _notifCanvasGroup.GetComponent<RectTransform>();
+            if (prt == null) return;
+
+            float w = Mathf.Max(prt.sizeDelta.x, 460f);
+            prt.sizeDelta = new Vector2(w, 200f);
+
+            foreach (Transform child in prt)
+            {
+                if (child == _notifText.transform || child.GetComponent<Image>() == null) continue;
+                ((RectTransform)child).anchoredPosition = new Vector2(0f, 64f);   // 체크 아이콘: 위쪽
+            }
+
+            var trt = _notifText.rectTransform;
+            trt.anchoredPosition = new Vector2(0f, -30f);
+            trt.sizeDelta = new Vector2(w - 28f, 112f);
+            _notifText.alignment = TextAlignmentOptions.Center;
+            float max = _notifText.fontSize;
+            _notifText.enableAutoSizing = true;
+            _notifText.fontSizeMax = max;
+            _notifText.fontSizeMin = Mathf.Max(14f, max * 0.6f);
+            _notifText.overflowMode = TextOverflowModes.Ellipsis;
         }
 
         private void Start()
@@ -326,6 +357,8 @@ namespace DoDrill.Training
         private const float PanelWidth = 420f;
         private const float PanelPad = 16f;
         private const float DescTop = 62f;
+        private const float DescFontSize = 22f;
+        private const float ProgressFontSize = 20f;
         private bool _compact;
         private Image _barFill;
 
@@ -356,20 +389,24 @@ namespace DoDrill.Training
                 }
                 var pr = _progressText.rectTransform;
                 pr.anchorMin = new Vector2(0f, 0f); pr.anchorMax = new Vector2(0f, 1f); pr.pivot = new Vector2(0f, 0.5f);
-                pr.anchoredPosition = Vector2.zero; pr.sizeDelta = new Vector2(150f, 0f);
+                pr.anchoredPosition = new Vector2(pr.parent == prt ? PanelPad : 0f, 0f); pr.sizeDelta = new Vector2(150f, 0f);   // 패널 바로 아래면 안쪽 여백
                 _progressText.textWrappingMode = TextWrappingModes.NoWrap;
                 _progressText.overflowMode = TextOverflowModes.Ellipsis;
                 _progressText.enableAutoSizing = true;
-                _progressText.fontSizeMax = Mathf.Max(_progressText.fontSizeMax, _progressText.fontSize);
-                _progressText.fontSizeMin = Mathf.Max(10f, _progressText.fontSizeMax * 0.6f);
+                // PC 는 너무 크고 모바일은 너무 작던 것: 프리팹마다 달랐던 글자 크기를 한 값으로 통일한다(캔버스 배율은 각 플랫폼이 알아서 적용)
+                _progressText.fontSizeMax = ProgressFontSize;
+                _progressText.fontSizeMin = 14f;
+                _progressText.fontSize = ProgressFontSize;
             }
             if (_statusText != null)
             {
                 var sr = _statusText.rectTransform;
                 sr.anchorMin = new Vector2(1f, 0f); sr.anchorMax = new Vector2(1f, 1f); sr.pivot = new Vector2(1f, 0.5f);
-                sr.anchoredPosition = Vector2.zero; sr.sizeDelta = new Vector2(150f, 0f);
+                sr.anchoredPosition = new Vector2(sr.parent == prt ? -PanelPad : 0f, 0f); sr.sizeDelta = new Vector2(150f, 0f);   // ‘진행 중’ 이 패널 오른쪽 밖으로 나가던 것: 안쪽 여백
                 _statusText.alignment = TextAlignmentOptions.MidlineRight;
                 _statusText.textWrappingMode = TextWrappingModes.NoWrap;
+                _statusText.enableAutoSizing = false;
+                _statusText.fontSize = ProgressFontSize;
             }
             // 모듈 ID/제목 줄은 숨긴다(설명 문장이 핵심, 내부 ID 노출 방지)
             if (_moduleText != null) _moduleText.gameObject.SetActive(false);
@@ -387,6 +424,7 @@ namespace DoDrill.Training
                 _descriptionText.textWrappingMode = TextWrappingModes.Normal;
                 _descriptionText.overflowMode = TextOverflowModes.Overflow;
                 _descriptionText.enableAutoSizing = false;   // 높이를 글 양에 맞추므로 글자 크기는 고정
+                _descriptionText.fontSize = DescFontSize;
                 _descriptionText.alignment = TextAlignmentOptions.TopLeft;
                 var dr = _descriptionText.rectTransform;
                 dr.anchorMin = dr.anchorMax = new Vector2(0f, 1f); dr.pivot = new Vector2(0f, 1f);

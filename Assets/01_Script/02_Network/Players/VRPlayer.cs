@@ -1,4 +1,5 @@
 using FishNet.Object;
+using FishNet.Transporting;
 using RootMotion.FinalIK;
 using System;
 using System.Collections.Generic;
@@ -87,6 +88,9 @@ public class VRPlayer : BasePlayer
     {
         anchor = GameObject.FindGameObjectWithTag("Anchor")?.transform;
 
+        // 다른 사람 화면에서 이 아바타가 든 물체가 손에 붙어 보이게 한다
+        if (GetComponent<HeldObjectHandAttach>() == null) gameObject.AddComponent<HeldObjectHandAttach>();
+
         if (IsOwner)
         {
             Destroy(applyAvatar);
@@ -99,7 +103,24 @@ public class VRPlayer : BasePlayer
                 applyAvatar.SetActive(true);
                 Destroy(go);
             }
+
+            // 접속 직후 추적 값이 오기 전에는 아바타가 스폰 지점에서 몸이 늘어나고 뚫린 채 보였다 → 첫 값을 받아 자세를 맞춘 뒤에 보이게 한다
+            if (applyAvatar != null)
+            {
+                _avatarRenderers = applyAvatar.GetComponentsInChildren<Renderer>(true);
+                SetAvatarVisible(false);
+            }
         }
+    }
+
+    private Renderer[] _avatarRenderers;
+    private bool _gotData;
+    private int _showCountdown = -1;
+
+    private void SetAvatarVisible(bool visible)
+    {
+        if (_avatarRenderers == null) return;
+        foreach (var r in _avatarRenderers) if (r != null) r.enabled = visible;
     }
 
     private void Start()
@@ -120,6 +141,14 @@ public class VRPlayer : BasePlayer
                 if (anchor == null) return;
             }
 
+            if (!_gotData) return;
+
+            if (_snapPending)
+            {
+                _snapPending = false;
+                SnapToTargets();
+            }
+
             if (trackingSetup.applyHead != null)
             {
                 Vector3 worldHeadPos = anchor.position + anchor.rotation * targetHeadPos;
@@ -133,9 +162,14 @@ public class VRPlayer : BasePlayer
 
             ApplyWristSmooth(trackingSetup.leftHand, targetLeftWristPos, targetLeftWristRot);
             ApplyWristSmooth(trackingSetup.rightHand, targetRightWristPos, targetRightWristRot);
+
+            // 스냅 후 두 프레임 지나(IK 가 한 번 풀린 뒤) 아바타를 보이게 한다
+            if (_showCountdown > 0 && --_showCountdown == 0) SetAvatarVisible(true);
+            DebugRemote();
             return;
         }
 
+        DebugOwner();
         syncTimer += Time.deltaTime;
         if (syncTimer >= syncInterval)
         {
@@ -166,7 +200,102 @@ public class VRPlayer : BasePlayer
     private Transform _avatarRoot;
     private float _avatarFloorY;
 
-    private void FollowAvatarRoot(Vector3 headPos, Quaternion headRot)
+    private bool _snapPending;
+
+    // 처음 받은 값으로 머리·손·아바타 루트를 바로 맞춘다(보간으로 날아오지 않게)
+    private void SnapToTargets()
+    {
+        if (anchor == null) return;
+        if (trackingSetup.applyHead != null)
+        {
+            trackingSetup.applyHead.position = anchor.position + anchor.rotation * targetHeadPos;
+            trackingSetup.applyHead.rotation = anchor.rotation * targetHeadRot;
+            FollowAvatarRoot(trackingSetup.applyHead.position, trackingSetup.applyHead.rotation, true);
+        }
+        if (trackingSetup.leftHand.applyWrist != null)
+        {
+            trackingSetup.leftHand.applyWrist.position = anchor.position + anchor.rotation * targetLeftWristPos;
+            trackingSetup.leftHand.applyWrist.rotation = anchor.rotation * targetLeftWristRot;
+        }
+        if (trackingSetup.rightHand.applyWrist != null)
+        {
+            trackingSetup.rightHand.applyWrist.position = anchor.position + anchor.rotation * targetRightWristPos;
+            trackingSetup.rightHand.applyWrist.rotation = anchor.rotation * targetRightWristRot;
+        }
+    }
+
+    // ── 체형 보정 ──
+    // 원격 아바타는 접속자의 실제 키·팔 길이와 상관없는 고정 체형이라, 손 목표(실제 손 위치)에 팔이 닿지 않거나 남아
+    // 팔이 구부정하게 접히고 잡은 물건이 손에서 떨어져 허공에 떠 보였다. VRIKCalibrator 와 같은 방식으로
+    // 아바타 눈높이가 접속자의 (관측된 최대) 눈높이와 맞도록 루트 크기를 맞춘다.
+    [Header("원격 아바타 체형 보정")]
+    [SerializeField] private bool matchAvatarHeight = true;
+    [SerializeField] private Vector2 avatarScaleRange = new Vector2(0.75f, 1.35f);
+    private Vector3 _avatarBaseScale = Vector3.one;
+    private float _avatarEyeAtBase;
+    private float _maxHeadHeight;
+    private Transform _avatarHeadBone;
+
+    private void MatchAvatarHeight()
+    {
+        if (!matchAvatarHeight || _avatarRoot == null || _avatarHeadBone == null) return;
+        // 앉거나 웅크려 있을 때를 키로 오인하지 않도록 지금까지 본 가장 높은 머리 높이를 쓴다(아바타 부모가 바닥 기준이라 가정)
+        _maxHeadHeight = Mathf.Max(_maxHeadHeight, targetHeadPos.y);
+        if (_maxHeadHeight < 1.0f || _avatarEyeAtBase < 0.5f) return;
+        float factor = Mathf.Clamp(_maxHeadHeight / _avatarEyeAtBase, avatarScaleRange.x, avatarScaleRange.y);
+        float cur = _avatarRoot.localScale.y / Mathf.Max(0.0001f, _avatarBaseScale.y);
+        if (Mathf.Abs(factor - cur) < 0.03f) return;
+        float next = Mathf.Lerp(cur, factor, 1f - Mathf.Exp(-3f * Time.deltaTime));
+        _avatarRoot.localScale = _avatarBaseScale * next;
+    }
+
+    // ── 몸통 추종 개선 (2026-11-05) ──
+    // 예전: 아바타 루트를 매 프레임 머리의 수평 위치로 옮겨 허리를 숙여도 몸이 머리 밑으로 따라와 '쪼그림'이 됐고,
+    //       루트가 계속 움직여 발 걸음이 끊임없이 나왔다.
+    // 지금: ① 머리가 루트에서 일정 범위(앞 0.35 / 뒤 0.15 / 옆 0.2 m) 안이면 루트를 그대로 두어 척추가 굽게 하고, 범위를 넘을 때만 따라간다
+    //       ② 몸 방향도 머리 방향과 35° 이상 벌어질 때만 돌린다 ③ 바닥 높이를 아바타 발 밑 레이캐스트로 갱신
+    //       ④ VRIK minHeadHeight(0.8→0.3)·stepThreshold(0.4→0.5) 조정
+    [Header("원격 아바타 몸통 추종 — 범위/바닥")]
+    [SerializeField] private float leanForward = 0.35f;
+    [SerializeField] private float leanBackward = 0.15f;
+    [SerializeField] private float leanSide = 0.2f;
+    [SerializeField] private float yawDeadZoneDeg = 35f;
+    [SerializeField] private bool probeFloor = true;
+    [SerializeField] private LayerMask floorMask = ~0;
+    [SerializeField] private float floorProbeUp = 0.4f;
+    [SerializeField] private float floorProbeDown = 1.2f;
+    [SerializeField] private float floorMaxDeviation = 0.6f;
+    [SerializeField] private float minHeadHeightOverride = 0.3f;
+    [SerializeField] private float stepThresholdOverride = 0.5f;
+
+    private VRIK _vrik;
+    private float _floorBaseY;
+    private float _nextFloorProbe;
+    private string _floorHitName = "-";
+    private static readonly RaycastHit[] s_floorHits = new RaycastHit[12];
+
+    private void ProbeFloor()
+    {
+        if (!probeFloor || _avatarRoot == null || Time.unscaledTime < _nextFloorProbe) return;
+        _nextFloorProbe = Time.unscaledTime + 0.1f;
+
+        Vector3 o = new Vector3(_avatarRoot.position.x, _avatarFloorY + floorProbeUp, _avatarRoot.position.z);
+        int n = Physics.RaycastNonAlloc(o, Vector3.down, s_floorHits, floorProbeUp + floorProbeDown, floorMask, QueryTriggerInteraction.Ignore);
+        float best = float.MaxValue; float y = 0f; bool found = false;
+        for (int i = 0; i < n; i++)
+        {
+            var c = s_floorHits[i].collider;
+            if (c == null || c.transform.IsChildOf(transform)) continue;
+            // 다른 플레이어·잡을 수 있는 물건(NetworkObject)은 바닥이 아니다
+            if (c.GetComponentInParent<NetworkObject>() != null) continue;
+            if (s_floorHits[i].distance < best) { best = s_floorHits[i].distance; y = s_floorHits[i].point.y; found = true; _floorHitName = c.name; }
+        }
+        if (!found) { _floorHitName = "none"; return; }
+        y = Mathf.Clamp(y, _floorBaseY - floorMaxDeviation, _floorBaseY + floorMaxDeviation);
+        _avatarFloorY = Mathf.Lerp(_avatarFloorY, y, 0.5f);
+    }
+
+    private void FollowAvatarRoot(Vector3 headPos, Quaternion headRot, bool snap = false)
     {
         if (!followAvatarRoot || applyAvatar == null) return;
 
@@ -174,44 +303,215 @@ public class VRPlayer : BasePlayer
         {
             var vrik = applyAvatar.GetComponentInChildren<VRIK>(true);
             if (vrik == null) { followAvatarRoot = false; return; }
+            _vrik = vrik;
             _avatarRoot = vrik.references.root != null ? vrik.references.root : vrik.transform;
-            _avatarFloorY = _avatarRoot.position.y;     // 처음 위치의 높이 = 바닥
+            _avatarFloorY = _avatarRoot.position.y;     // 처음 위치의 높이 = 바닥(이후 레이캐스트로 보정)
+            _floorBaseY = _avatarFloorY;
+            _avatarBaseScale = _avatarRoot.localScale;
+            _avatarHeadBone = vrik.references.head;
+            if (_avatarHeadBone != null)
+                _avatarEyeAtBase = (_avatarHeadBone.position.y - _avatarRoot.position.y) + 0.08f * Mathf.Max(0.01f, _avatarRoot.lossyScale.y);
+
+            vrik.solver.spine.minHeadHeight = minHeadHeightOverride;
+            vrik.solver.locomotion.stepThreshold = stepThresholdOverride;
+            CacheArmLengths();
         }
+
+        MatchAvatarHeight();
+        ProbeFloor();
 
         float dt = Time.deltaTime;
-        Vector3 target = new Vector3(headPos.x, _avatarFloorY, headPos.z);
-        _avatarRoot.position = Vector3.Lerp(_avatarRoot.position, target, 1f - Mathf.Exp(-rootFollowSpeed * dt));
+        float sc = Mathf.Max(0.01f, _avatarRoot.lossyScale.y);
 
-        // 위/아래를 보고 있으면 forward 의 수평 성분이 작아 방향이 튀므로 충분히 클 때만 회전
-        Vector3 fwd = Vector3.ProjectOnPlane(headRot * Vector3.forward, Vector3.up);
-        if (fwd.sqrMagnitude > 0.05f)
+        Vector3 headFwd = Vector3.ProjectOnPlane(headRot * Vector3.forward, Vector3.up);
+        bool headFwdOk = headFwd.sqrMagnitude > 0.05f;   // 위/아래를 볼 때는 수평 성분이 작아 방향이 튄다
+
+        // ── 방향: 머리와 yawDeadZoneDeg 이상 벌어질 때만 돌린다 ──
+        Vector3 rootFwd = Vector3.ProjectOnPlane(_avatarRoot.forward, Vector3.up).normalized;
+        if (headFwdOk)
         {
-            Quaternion want = Quaternion.LookRotation(fwd.normalized, Vector3.up);
-            _avatarRoot.rotation = Quaternion.Slerp(_avatarRoot.rotation, want, 1f - Mathf.Exp(-rootTurnSpeed * dt));
+            headFwd.Normalize();
+            Quaternion want;
+            if (snap) want = Quaternion.LookRotation(headFwd, Vector3.up);
+            else
+            {
+                float delta = Vector3.SignedAngle(rootFwd, headFwd, Vector3.up);
+                float over = Mathf.Abs(delta) - yawDeadZoneDeg;
+                if (over <= 0f) want = _avatarRoot.rotation;
+                else want = Quaternion.AngleAxis(Mathf.Sign(delta) * over, Vector3.up) * _avatarRoot.rotation;
+            }
+            _avatarRoot.rotation = snap ? want : Quaternion.Slerp(_avatarRoot.rotation, want, 1f - Mathf.Exp(-rootTurnSpeed * dt));
+            rootFwd = Vector3.ProjectOnPlane(_avatarRoot.forward, Vector3.up).normalized;
+        }
+
+        // ── 위치: 머리가 범위를 벗어난 만큼만 따라간다 ──
+        Vector3 rp = _avatarRoot.position;
+        Vector3 target;
+        if (snap)
+        {
+            target = new Vector3(headPos.x, _avatarFloorY, headPos.z);
+        }
+        else
+        {
+            Vector3 right = Vector3.Cross(Vector3.up, rootFwd);
+            Vector3 d = new Vector3(headPos.x - rp.x, 0f, headPos.z - rp.z);
+            float lf = Vector3.Dot(d, rootFwd);
+            float lr = Vector3.Dot(d, right);
+            float cf = Mathf.Clamp(lf, -leanBackward * sc, leanForward * sc);
+            float cr = Mathf.Clamp(lr, -leanSide * sc, leanSide * sc);
+            Vector3 xz = new Vector3(headPos.x, 0f, headPos.z) - rootFwd * cf - right * cr;
+            target = new Vector3(xz.x, _avatarFloorY, xz.z);
+        }
+
+        if (snap) { _avatarRoot.position = target; }
+        else
+        {
+            float k = 1f - Mathf.Exp(-rootFollowSpeed * dt);
+            Vector3 np = Vector3.Lerp(rp, new Vector3(target.x, rp.y, target.z), k);
+            np.y = Mathf.Lerp(rp.y, target.y, 1f - Mathf.Exp(-12f * dt));
+            _avatarRoot.position = np;
         }
     }
+
+    // ── 디버그 로그 (2026-11-05) ────────────────────────────────────────
+    // 헤드셋에서 자세 문제의 실제 원인(머리 높이·몸통 거리·팔이 닿는지·갱신 지연)을 확정하기 위한 로그. 2초마다 한 줄.
+    // 보는 법: Quest = adb logcat -s Unity | PC = Player.log,  접두어 [VRDebug]
+    [Header("디버그")]
+    [SerializeField] private bool debugLog = true;
+    [SerializeField] private float debugInterval = 2f;
+    private float _nextDebug;
+    private float _lastRxTime;
+    private int _rxCount;
+    private float _rxWindowStart;
+    private float _rxHz;
+    private float _armLenL, _armLenR;
+
+    private void CacheArmLengths()
+    {
+        if (_vrik == null) return;
+        var r = _vrik.references;
+        _armLenL = ChainLen(r.leftUpperArm, r.leftForearm, r.leftHand);
+        _armLenR = ChainLen(r.rightUpperArm, r.rightForearm, r.rightHand);
+    }
+
+    private static float ChainLen(Transform a, Transform b, Transform c)
+    {
+        if (a == null || b == null || c == null) return 0f;
+        return Vector3.Distance(a.position, b.position) + Vector3.Distance(b.position, c.position);
+    }
+
+    private void CountRx()
+    {
+        _lastRxTime = Time.unscaledTime;
+        _rxCount++;
+        if (Time.unscaledTime - _rxWindowStart >= 2f)
+        {
+            _rxHz = _rxCount / Mathf.Max(0.01f, Time.unscaledTime - _rxWindowStart);
+            _rxCount = 0; _rxWindowStart = Time.unscaledTime;
+        }
+    }
+
+    private void DebugRemote()
+    {
+        if (!debugLog || Time.unscaledTime < _nextDebug) return;
+        _nextDebug = Time.unscaledTime + Mathf.Max(0.5f, debugInterval);
+        if (_avatarRoot == null || trackingSetup.applyHead == null) return;
+
+        Vector3 hp = trackingSetup.applyHead.position;
+        Vector3 rp = _avatarRoot.position;
+        Vector3 fwd = Vector3.ProjectOnPlane(_avatarRoot.forward, Vector3.up).normalized;
+        Vector3 d = new Vector3(hp.x - rp.x, 0f, hp.z - rp.z);
+        float scale = _avatarRoot.localScale.y / Mathf.Max(0.0001f, _avatarBaseScale.y);
+        float yawDiff = Vector3.SignedAngle(fwd, Vector3.ProjectOnPlane(trackingSetup.applyHead.forward, Vector3.up), Vector3.up);
+
+        string armL = ArmInfo(_vrik != null ? _vrik.references.leftUpperArm : null, trackingSetup.leftHand.applyWrist, _armLenL);
+        string armR = ArmInfo(_vrik != null ? _vrik.references.rightUpperArm : null, trackingSetup.rightHand.applyWrist, _armLenR);
+
+        var held = SyncGrab.FindHeldBy(OwnerId);
+        string heldInfo = "-";
+        if (held != null)
+        {
+            Vector3 g = held.GripWorldPoint;
+            float dl = trackingSetup.leftHand.applyWrist != null ? Vector3.Distance(g, trackingSetup.leftHand.applyWrist.position) : -1f;
+            float dr = trackingSetup.rightHand.applyWrist != null ? Vector3.Distance(g, trackingSetup.rightHand.applyWrist.position) : -1f;
+            heldInfo = $"{held.name} gripToWristL={dl:F2} R={dr:F2}";
+        }
+
+        Debug.Log($"[VRDebug][remote owner={OwnerId}] headH={hp.y - _avatarFloorY:F2}m (maxSeen={_maxHeadHeight:F2}) scale={scale:F2} " +
+                  $"floorY={_avatarFloorY:F2}(hit={_floorHitName}) headToRoot fwd={Vector3.Dot(d, fwd):F2} side={Vector3.Dot(d, Vector3.Cross(Vector3.up, fwd)):F2} yawDiff={yawDiff:F0} " +
+                  $"arm L[{armL}] R[{armR}] held[{heldInfo}] rx={_rxHz:F0}Hz age={(Time.unscaledTime - _lastRxTime) * 1000f:F0}ms");
+    }
+
+    private static string ArmInfo(Transform shoulder, Transform target, float len)
+    {
+        if (shoulder == null || target == null) return "n/a";
+        float dist = Vector3.Distance(shoulder.position, target.position);
+        return $"reach {dist:F2}/{len:F2}{(len > 0.01f && dist > len * 1.02f ? " OVER" : "")}";
+    }
+
+    private void DebugOwner()
+    {
+        if (!debugLog || Time.unscaledTime < _nextDebug) return;
+        _nextDebug = Time.unscaledTime + Mathf.Max(0.5f, debugInterval);
+        Transform anchorT = anchor != null ? anchor : transform;
+        if (trackingSetup.trackingHead == null) return;
+        Vector3 h = trackingSetup.trackingHead.position - anchorT.position;
+        Vector3 l = trackingSetup.leftHand.trackingWrist != null ? trackingSetup.leftHand.trackingWrist.position - anchorT.position : Vector3.zero;
+        Vector3 r = trackingSetup.rightHand.trackingWrist != null ? trackingSetup.rightHand.trackingWrist.position - anchorT.position : Vector3.zero;
+        Debug.Log($"[VRDebug][owner] headY={h.y:F2}m (anchor-relative) wristL=({l.x:F2},{l.y:F2},{l.z:F2}) wristR=({r.x:F2},{r.y:F2},{r.z:F2}) " +
+                  $"R-wrist={(trackingSetup.rightHand.trackingWrist != null ? trackingSetup.rightHand.trackingWrist.name : "null")} anchor={(anchor != null ? "ok" : "MISSING")} send={1f / Mathf.Max(0.001f, syncInterval):F0}Hz");
+    }
+
+    // ── 추적 데이터 전송 (2026-11-05 개선) ──
+    // 예전: 머리·양 손목·손가락 48개 회전(약 0.8KB)을 40Hz 로 '신뢰 전송' 한 덩어리로 보냄 → 약 30KB/s, 패킷이 하나 늦으면
+    //       뒤 데이터가 줄줄이 막혀(head-of-line blocking) 와이파이 Quest 에서 아바타가 끊기고 뒤늦게 몰려 움직였다.
+    // 지금: ① 머리·손목(약 70B)은 비신뢰 채널로 40Hz — 유실돼도 다음 값이 곧 오므로 무해 ② 손가락은 신뢰 채널로 12.5Hz,
+    //       바뀐 것이 없으면 0.5초마다 한 번만(약 85% 감소)
+    [Header("손가락 전송")]
+    [SerializeField] private float fingerSendInterval = 0.08f;
+    [SerializeField] private float fingerKeepAlive = 0.5f;
+    [SerializeField] private float fingerChangeDeg = 0.7f;
+    private float _fingerTimer;
+    private float _fingerLastSent;
+    private Quaternion[] _lastSentFingersL, _lastSentFingersR;
 
     public void SendTrackingData()
     {
         if (!IsOwner) return;
         Transform anchorT = anchor != null ? anchor : transform;
+        Quaternion inv = Quaternion.Inverse(anchorT.rotation);
 
-        // Head
-        Vector3 headPos = trackingSetup.trackingHead ? Quaternion.Inverse(anchorT.rotation) * (trackingSetup.trackingHead.position - anchorT.position) : Vector3.zero;
-        Quaternion headRot = trackingSetup.trackingHead ? Quaternion.Inverse(anchorT.rotation) * trackingSetup.trackingHead.rotation : Quaternion.identity;
+        Vector3 headPos = trackingSetup.trackingHead ? inv * (trackingSetup.trackingHead.position - anchorT.position) : Vector3.zero;
+        Quaternion headRot = trackingSetup.trackingHead ? inv * trackingSetup.trackingHead.rotation : Quaternion.identity;
+        Vector3 leftWristPos = trackingSetup.leftHand.trackingWrist ? inv * (trackingSetup.leftHand.trackingWrist.position - anchorT.position) : Vector3.zero;
+        Quaternion leftWristRot = trackingSetup.leftHand.trackingWrist ? inv * trackingSetup.leftHand.trackingWrist.rotation : Quaternion.identity;
+        Vector3 rightWristPos = trackingSetup.rightHand.trackingWrist ? inv * (trackingSetup.rightHand.trackingWrist.position - anchorT.position) : Vector3.zero;
+        Quaternion rightWristRot = trackingSetup.rightHand.trackingWrist ? inv * trackingSetup.rightHand.trackingWrist.rotation : Quaternion.identity;
 
-        // Left Hand
-        Vector3 leftWristPos = trackingSetup.leftHand.trackingWrist ? Quaternion.Inverse(anchorT.rotation) * (trackingSetup.leftHand.trackingWrist.position - anchorT.position) : Vector3.zero;
-        Quaternion leftWristRot = trackingSetup.leftHand.trackingWrist ? Quaternion.Inverse(anchorT.rotation) * trackingSetup.leftHand.trackingWrist.rotation : Quaternion.identity;
-        Quaternion[] leftFingerRots = GetFingerLocalRotations(trackingSetup.leftHand);
+        SendPoseToServer(headPos, headRot, leftWristPos, leftWristRot, rightWristPos, rightWristRot);
 
-        // Right Hand
-        Vector3 rightWristPos = trackingSetup.rightHand.trackingWrist ? Quaternion.Inverse(anchorT.rotation) * (trackingSetup.rightHand.trackingWrist.position - anchorT.position) : Vector3.zero;
-        Quaternion rightWristRot = trackingSetup.rightHand.trackingWrist ? Quaternion.Inverse(anchorT.rotation) * trackingSetup.rightHand.trackingWrist.rotation : Quaternion.identity;
-        Quaternion[] rightFingerRots = GetFingerLocalRotations(trackingSetup.rightHand);
+        _fingerTimer += syncInterval;
+        if (_fingerTimer >= fingerSendInterval)
+        {
+            _fingerTimer = 0f;
+            Quaternion[] l = GetFingerLocalRotations(trackingSetup.leftHand);
+            Quaternion[] r = GetFingerLocalRotations(trackingSetup.rightHand);
+            bool changed = FingersChanged(l, _lastSentFingersL) || FingersChanged(r, _lastSentFingersR);
+            if (changed || Time.unscaledTime - _fingerLastSent >= fingerKeepAlive)
+            {
+                _fingerLastSent = Time.unscaledTime;
+                _lastSentFingersL = l; _lastSentFingersR = r;
+                SendFingersToServer(l, r);
+            }
+        }
+    }
 
-        ApplyTrackingToServer(headPos, headRot, leftWristPos, leftWristRot, leftFingerRots,
-                              rightWristPos, rightWristRot, rightFingerRots);
+    private bool FingersChanged(Quaternion[] now, Quaternion[] last)
+    {
+        if (last == null || now == null || last.Length != now.Length) return true;
+        for (int i = 0; i < now.Length; i++)
+            if (Quaternion.Angle(now[i], last[i]) > fingerChangeDeg) return true;
+        return false;
     }
 
     private Quaternion[] GetFingerLocalRotations(HandData hand)
@@ -223,42 +523,45 @@ public class VRPlayer : BasePlayer
         return rots.ToArray();
     }
 
-    [ServerRpc(RequireOwnership = true)]
-    private void ApplyTrackingToServer(
-        Vector3 headPos, Quaternion headRot,
-        Vector3 leftWristPos, Quaternion leftWristRot, Quaternion[] leftFingerRots,
-        Vector3 rightWristPos, Quaternion rightWristRot, Quaternion[] rightFingerRots)
+    // 머리·손목: 비신뢰(유실돼도 다음 값이 곧 옴)
+    [ServerRpc(RequireOwnership = true, Channel = Channel.Unreliable)]
+    private void SendPoseToServer(Vector3 headPos, Quaternion headRot,
+                                  Vector3 leftWristPos, Quaternion leftWristRot,
+                                  Vector3 rightWristPos, Quaternion rightWristRot)
     {
-        ApplyTrackingToClients(headPos, headRot, leftWristPos, leftWristRot, leftFingerRots,
-                               rightWristPos, rightWristRot, rightFingerRots);
+        PosToClients(headPos, headRot, leftWristPos, leftWristRot, rightWristPos, rightWristRot);
     }
 
-    [ObserversRpc(ExcludeOwner = true)]
-    private void ApplyTrackingToClients(
-        Vector3 headPos, Quaternion headRot,
-        Vector3 leftWristPos, Quaternion leftWristRot, Quaternion[] leftFingerRots,
-        Vector3 rightWristPos, Quaternion rightWristRot, Quaternion[] rightFingerRots)
+    [ObserversRpc(ExcludeOwner = true, Channel = Channel.Unreliable)]
+    private void PosToClients(Vector3 headPos, Quaternion headRot,
+                              Vector3 leftWristPos, Quaternion leftWristRot,
+                              Vector3 rightWristPos, Quaternion rightWristRot)
     {
         if (anchor == null)
         {
             anchor = GameObject.FindGameObjectWithTag("Anchor")?.transform;
             return;
         }
-        ApplyTrackingData(headPos, headRot, leftWristPos, leftWristRot, leftFingerRots,
-                          rightWristPos, rightWristRot, rightFingerRots);
-    }
-
-    private void ApplyTrackingData(
-        Vector3 headPos, Quaternion headRot,
-        Vector3 leftWristPos, Quaternion leftWristRot, Quaternion[] leftFingerRots,
-        Vector3 rightWristPos, Quaternion rightWristRot, Quaternion[] rightFingerRots)
-    {
+        if (!_gotData) { _gotData = true; _snapPending = true; _showCountdown = 3; _rxWindowStart = Time.unscaledTime; }
+        CountRx();
         targetHeadPos = headPos;
         targetHeadRot = headRot;
         targetLeftWristPos = leftWristPos;
         targetLeftWristRot = leftWristRot;
         targetRightWristPos = rightWristPos;
         targetRightWristRot = rightWristRot;
+    }
+
+    // 손가락: 신뢰(느리게, 바뀔 때만)
+    [ServerRpc(RequireOwnership = true)]
+    private void SendFingersToServer(Quaternion[] leftFingerRots, Quaternion[] rightFingerRots)
+    {
+        FingersToClients(leftFingerRots, rightFingerRots);
+    }
+
+    [ObserversRpc(ExcludeOwner = true, BufferLast = true)]
+    private void FingersToClients(Quaternion[] leftFingerRots, Quaternion[] rightFingerRots)
+    {
         targetLeftFingerRots = leftFingerRots;
         targetRightFingerRots = rightFingerRots;
     }

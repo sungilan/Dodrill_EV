@@ -9,7 +9,8 @@ using UnityEngine.XR;
 /// </summary>
 public static class FrameRateSetup
 {
-    private const int MobileTargetFps = 60;
+    // 60 → 30: 발열의 가장 큰 원인이었다(공군 프로젝트에서 확인). 실제 고정은 MobileRuntimeOptimizer 가 매 프레임 보장한다.
+    private const int MobileTargetFps = 30;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Apply()

@@ -30,6 +30,9 @@ namespace DoDrill
             // ★ [v4 수정]: 콜백 등록 방식이 OnChange += 로 변경되었습니다.
             _syncNickname.OnChange += OnNicknameChanged;
 
+            // 내 이름표는 내 화면에서 보이지 않게 한다(가까이 있어 화면을 가득 덮던 문제). 남에게는 그대로 보인다.
+            if(IsOwner && _nameTagCanvas != null) _nameTagCanvas.gameObject.SetActive(false);
+
             if(IsOwner)
             {
                 SetupUICamera();
@@ -107,6 +110,7 @@ namespace DoDrill
         private PcMobileAvatarController _avatar;
         private Transform _head;
         private bool _headSearched;
+        private bool _isVrHead;
         private Vector3 _tagBaseScale;
 
         private void LateUpdate()
@@ -118,12 +122,21 @@ namespace DoDrill
                 _avatar = GetComponent<PcMobileAvatarController>();
                 var anim = _avatar != null ? _avatar.AvatarAnimator : null;
                 if(anim != null && anim.isHuman) _head = anim.GetBoneTransform(HumanBodyBones.Head);
+                // VR 원격 아바타: 머리 본 대신 머리 추적 대상(applyHead)을 쓴다 — 예전엔 이름표 높이가 플레이어마다 제각각이었다
+                if(_head == null && !IsOwner)
+                {
+                    var vr = GetComponent<VRPlayer>();
+                    if(vr != null && vr.trackingSetup != null) _head = vr.trackingSetup.applyHead;
+                    if(_head != null) _isVrHead = true;
+                }
                 _tagBaseScale = _nameTagCanvas.transform.localScale;
                 if(_head != null) _nameTagCanvas.transform.localScale = _tagBaseScale * nameTagScale;
             }
-            if(_head == null) return;   // VR 등 아바타가 없으면 프리팹 위치 유지
+            if(_head == null) return;   // 아바타가 없으면 프리팹 위치 유지
             float s = _avatar != null ? _avatar.AvatarScale : 1f;
-            Vector3 p = _head.position + Vector3.up * (nameTagAboveHead * s);
+            // 머리 본(턱~정수리 중간)과 카메라(눈) 기준 머리 추적 대상의 높이가 달라 VR 은 조금 더 낮게 둔다
+            float up = _isVrHead ? nameTagAboveHead * 0.85f : nameTagAboveHead * s;
+            Vector3 p = _head.position + Vector3.up * up;
             _nameTagCanvas.transform.position = p;
         }
 

@@ -308,7 +308,7 @@ MonoBehaviour:
         - {fileID: 1999640447591337262}
     rightHand:
       applyWrist: {fileID: 9189068767106158085}
-      trackingWrist: {fileID: 8999001249670131858}
+      trackingWrist: {fileID: 6726596063175587491}
       fingers:
       - fingerName: 1
         applyBones:
@@ -382,6 +382,12 @@ MonoBehaviour:
   syncInterval: 0.025
   positionLerp: 0.33
   rotationLerp: 0.33
+  fingerFollowSpeed: 18
+  followAvatarRoot: 1
+  rootFollowSpeed: 10
+  rootTurnSpeed: 6
+  matchAvatarHeight: 1
+  avatarScaleRange: {x: 0.75, y: 1.35}
 --- !u!114 &5392141778661552114
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -455,6 +461,8 @@ MonoBehaviour:
   _uiCamera: {fileID: 3601804879763561468}
   _nameTagCanvas: {fileID: 5108148438515906391}
   _nameText: {fileID: 2192371399232552030}
+  nameTagAboveHead: 0.34
+  nameTagScale: 0.8
 --- !u!114 &3168414929683191907
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26450,7 +26458,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d619012772bc7049b46e7220feee5a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  currentAnchor: {fileID: 0}
 --- !u!1 &6823756768971634918
 GameObject:
   m_ObjectHideFlags: 0

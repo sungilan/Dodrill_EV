@@ -45,6 +45,14 @@ public class PcArmReach : MonoBehaviour
     public float HoldWeight => _holdW;
     public bool HoldUsesRightHand => _holdUsesRight;
 
+    /// <summary>해당 손(손목 본). 없으면 null.</summary>
+    public Transform HandTransform(bool right)
+    {
+        var arm = right ? rightArm : leftArm;
+        if (arm == null || arm.solver == null || arm.solver.bone3 == null) return null;
+        return arm.solver.bone3.transform;
+    }
+
     /// <summary>매 프레임: 잡고 있으면 true + 손이 가야 할 월드 위치/회전. 잡지 않으면 false.</summary>
     public void SetHold(bool holding, bool useRightHand, Vector3 worldPos, Quaternion handRot, bool useRotation = true)
     {

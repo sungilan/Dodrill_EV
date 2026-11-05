@@ -148,7 +148,7 @@
       },
       {
         "moduleId": "DischargeWait",
-        "timeout": 240,
+        "timeout": 30,
         "completionMode": "AnyPlayer",
         "spawnObjects": []
       },
@@ -757,20 +757,20 @@
           },
           {
             "key": "guideText",
-            "ko": "MSD 탈거 후에도 인버터 캐패시터에 수백 볼트가 남습니다. 전압이 완전히 방전될 때까지 절대 작업을 진행하지 마세요. 캐패시터가 완전히 방전되도록 3분 이상 대기해야 합니다.",
+            "ko": "MSD 탈거 후에도 인버터 캐패시터에 수백 볼트가 남습니다. 전압이 완전히 방전될 때까지 절대 작업을 진행하지 마세요. 실제 정비환경에서는 캐패시터 방전을 위해 3분 이상 대기해야 하며, 교육 진행 편의를 위해 여기서는 10초만 대기합니다.",
             "en": "Even after MSD removal, inverter capacitors retain hundreds of volts. Never proceed until fully discharged. Waiting at least 3 minutes is mandatory.",
             "vi": "Ngay cả sau khi tháo MSD, tụ điện biến tần vẫn giữ hàng trăm volt. Không bao giờ tiến hành cho đến khi phóng hết. Phải chờ ít nhất 3 phút."
           },
           {
             "key": "subguideText",
-            "ko": "대기 시간: 3분 이상 | 이후 전압계로 30V 이하 확인 후 다음 단계 진행",
+            "ko": "실제 대기 시간: 3분 이상 (교육용 10초) | 이후 전압계로 30V 이하 확인 후 다음 단계 진행",
             "en": "Wait time: min. 3 min | Then confirm 30V or less with voltmeter before proceeding",
             "vi": "Thời gian chờ: tối thiểu 3 phút | Sau đó xác nhận từ 30V trở xuống trước khi tiếp tục"
           },
           {
             "key": "waitSeconds",
-            "ko": "180",
-            "en": "180"
+            "ko": "10",
+            "en": "10"
           },
           {
             "key": "resultNote",

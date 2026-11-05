@@ -137,6 +137,8 @@ public class CreateNewLobbyPanel : UIView
         options.Add(Mst.Args.Names.LobbyId, "Game");
         options.Add(Mst.Args.Names.RoomMaxConnections, currentMaxPlayer);
         options.Add("scenarioId", SelectedScenarioId); // ← 추가
+        // 방 목록 카드에 '호스트 이름' 이 자리표시 문구로만 보이던 문제: 방장 이름을 방 속성에 실어 보낸다(이전 빌드로 만든 방은 비어 있음)
+        if (!string.IsNullOrWhiteSpace(UserInfo.UserName)) options.Add("hostName", UserInfo.UserName.Trim());
 
         if (!string.IsNullOrEmpty(Password))
             options.Add(Mst.Args.Names.RoomPassword, Password);
