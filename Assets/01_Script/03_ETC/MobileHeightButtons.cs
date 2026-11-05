@@ -58,6 +58,7 @@ public static class MobileHeightButtons
         lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
         lrt.offsetMin = lrt.offsetMax = Vector2.zero;
         var t = lg.AddComponent<TMPro.TextMeshProUGUI>();
+        var kf = MobileWorkButton.KoreanFont(); if (kf != null) t.font = kf;
         t.text = label;
         t.alignment = TMPro.TextAlignmentOptions.Center;
         t.fontSize = 34;

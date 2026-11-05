@@ -45,6 +45,14 @@ public class PcArmReach : MonoBehaviour
     public float HoldWeight => _holdW;
     public bool HoldUsesRightHand => _holdUsesRight;
 
+    // 디버그: 뻗기 호출 횟수/현재 뻗는 팔/잡기 목표가 팔 길이에 잘렸는지
+    public int DbgReachCount { get; private set; }
+    public int DbgHoldSideFlips { get; private set; }
+    public bool DbgReaching => _active != null;
+    public bool DbgHoldClamped { get; private set; }
+    public float DbgHoldDist { get; private set; }
+    public float DbgArmLen { get; private set; }
+
     /// <summary>해당 손(손목 본). 없으면 null.</summary>
     public Transform HandTransform(bool right)
     {
@@ -64,7 +72,7 @@ public class PcArmReach : MonoBehaviour
         if (_active != null && _active == (useRightHand ? rightArm : leftArm)) _active = null;
 
         // 손 쪽이 바뀌면(가중치가 남아 있을 때) 이전 손은 먼저 풀리도록 새 손은 0부터 올린다
-        if (_holdUsesRight != useRightHand) { _holdW = 0f; _holdUsesRight = useRightHand; }
+        if (_holdUsesRight != useRightHand) { _holdW = 0f; _holdUsesRight = useRightHand; DbgHoldSideFlips++; }
 
         // 팔 길이를 넘는 위치는 팔이 닿는 데까지만 (손이 허공에서 뻗어 어색해지는 것 방지)
         var arm = useRightHand ? rightArm : leftArm;
@@ -75,7 +83,9 @@ public class PcArmReach : MonoBehaviour
             if (useRightHand) len = ArmLength(arm, ref _armLenRight); else len = ArmLength(arm, ref _armLenLeft);
             Vector3 d = worldPos - shoulder;
             float max = len * 0.97f;
-            if (len > 0.01f && d.magnitude > max) worldPos = shoulder + d.normalized * max;
+            DbgHoldDist = d.magnitude; DbgArmLen = len;
+            DbgHoldClamped = len > 0.01f && d.magnitude > max;
+            if (DbgHoldClamped) worldPos = shoulder + d.normalized * max;
         }
         _holdPos = worldPos;
         _holdRot = handRot;
@@ -113,6 +123,7 @@ public class PcArmReach : MonoBehaviour
     /// <summary>리치 시작. worldPoint = 클릭이 맞은 지점. scale = 아바타 월드 스케일.</summary>
     public void Reach(Vector3 worldPoint, float scale = 1f)
     {
+        DbgReachCount++;
         Vector3 local = bodyRef != null ? bodyRef.InverseTransformPoint(worldPoint) : worldPoint;
         var arm = local.x >= 0f ? rightArm : leftArm;
         if (arm == null) arm = rightArm != null ? rightArm : leftArm;

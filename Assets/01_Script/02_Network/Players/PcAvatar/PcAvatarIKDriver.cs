@@ -88,11 +88,46 @@ public class PcAvatarIKDriver : MonoBehaviour
         }
 
         bool graceOk = _held != null && Time.time - _lastHeldSeen < holdGraceSeconds;
-        if (_held == null || (!_held.IsGrabbed && !graceOk)) { armReach.SetHold(false, _holdRightHand, Vector3.zero, Quaternion.identity); return; }
+        if (_held == null || (!_held.IsGrabbed && !graceOk))
+        {
+            armReach.SetHold(false, _holdRightHand, Vector3.zero, Quaternion.identity);
+            DebugHold(false);
+            return;
+        }
 
         Quaternion yaw = Quaternion.Euler(0f, _controller.transform.eulerAngles.y, 0f);
         bool baked = handGrip != null && handGrip.IsBaked(_holdRightHand);
         Quaternion rot = baked ? handGrip.HandRotation(_holdRightHand, yaw) : Quaternion.identity;
         armReach.SetHold(true, _holdRightHand, _held.GripWorldPoint, rot, baked);
+        DebugHold(true);
+    }
+
+    // ── 디버그 ([HoldDebug]) — 원격 화면에서 '잡은 자세 ↔ 기본 자세'가 왔다갔다 하는 원인을 가리기 위한 기록 ──
+    [Header("디버그")]
+    [SerializeField] private bool debugLog = true;
+    [SerializeField] private float debugInterval = 1f;
+    private float _dbgNext;
+    private bool _dbgLastHolding;
+    private int _dbgToggles;
+    private int _dbgLastReach;
+
+    private void DebugHold(bool holding)
+    {
+        if (!debugLog || _controller == null || _controller.IsOwnerView) return;
+
+        bool changed = holding != _dbgLastHolding;
+        if (changed) _dbgToggles++;
+        _dbgLastHolding = holding;
+        if (!changed && Time.unscaledTime < _dbgNext) return;
+        _dbgNext = Time.unscaledTime + debugInterval;
+
+        int reach = armReach.DbgReachCount;
+        string heldInfo = _held == null ? "held=null" :
+            $"held={_held.name} grabbed={_held.IsGrabbed} ownerId={(_held.Owner != null && _held.Owner.IsValid ? _held.Owner.ClientId : -1)}";
+        float speed = anim != null ? anim.GetFloat(PcAvatarAnimParams.SpeedHash) : -1f;
+        Debug.Log($"[HoldDebug] holderId={_controller.HolderId} holding={holding}{(changed ? " (변경)" : "")} toggles={_dbgToggles} {heldInfo} " +
+                  $"hand={(armReach.HoldUsesRightHand ? "R" : "L")} flips={armReach.DbgHoldSideFlips} holdW={armReach.HoldWeight:F2} " +
+                  $"reach+={reach - _dbgLastReach} reaching={armReach.DbgReaching} dist={armReach.DbgHoldDist:F2}/{armReach.DbgArmLen:F2} clamped={armReach.DbgHoldClamped} speed={speed:F2}");
+        _dbgLastReach = reach;
     }
 }

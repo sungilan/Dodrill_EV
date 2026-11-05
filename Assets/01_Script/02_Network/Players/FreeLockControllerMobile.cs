@@ -147,6 +147,20 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         StartCoroutine(InitCamera());
         StartCoroutine(EnsureUiTouchInput());
         MobileHeightButtons.Show(this);   // 서기/앉기 버튼 (PC 의 Q/E)
+        EnlargeJoystick(1.5f);
+    }
+
+    /// <summary>조이스틱이 작아 1.5배로 키운다. 왼쪽·아래 모서리를 고정해 화면 밖으로 나가지 않게 한다(터치 범위·반지름은 로컬 단위라 함께 커진다).</summary>
+    private void EnlargeJoystick(float factor)
+    {
+        if(moveJoyStick == null || moveJoyStick.joystickBase == null) return;
+        var b = moveJoyStick.joystickBase;
+        if(b.localScale.x > 1.01f) return;   // 이미 키움(중복 방지)
+        var before = new Vector3[4]; b.GetWorldCorners(before);
+        b.localScale *= factor;
+        var after = new Vector3[4]; b.GetWorldCorners(after);
+        b.position += before[0] - after[0];
+        Log($"조이스틱 {factor}배 확대");
     }
 
     public override void OnStopClient()

@@ -390,6 +390,7 @@ namespace DoDrill.Training
                 var pr = _progressText.rectTransform;
                 pr.anchorMin = new Vector2(0f, 0f); pr.anchorMax = new Vector2(0f, 1f); pr.pivot = new Vector2(0f, 0.5f);
                 pr.anchoredPosition = new Vector2(pr.parent == prt ? PanelPad : 0f, 0f); pr.sizeDelta = new Vector2(150f, 0f);   // 패널 바로 아래면 안쪽 여백
+                _progressText.margin = Vector4.zero;
                 _progressText.textWrappingMode = TextWrappingModes.NoWrap;
                 _progressText.overflowMode = TextOverflowModes.Ellipsis;
                 _progressText.enableAutoSizing = true;
@@ -404,6 +405,8 @@ namespace DoDrill.Training
                 sr.anchorMin = new Vector2(1f, 0f); sr.anchorMax = new Vector2(1f, 1f); sr.pivot = new Vector2(1f, 0.5f);
                 sr.anchoredPosition = new Vector2(sr.parent == prt ? -PanelPad : 0f, 0f); sr.sizeDelta = new Vector2(150f, 0f);   // ‘진행 중’ 이 패널 오른쪽 밖으로 나가던 것: 안쪽 여백
                 _statusText.alignment = TextAlignmentOptions.MidlineRight;
+                // 씬의 ‘진행 중’ 글자에 오른쪽 여백이 -26.9 로 들어 있어 글자가 상자 밖(패널 밖)으로 튀어나왔다 → 여백 0
+                _statusText.margin = Vector4.zero;
                 _statusText.textWrappingMode = TextWrappingModes.NoWrap;
                 _statusText.enableAutoSizing = false;
                 _statusText.fontSize = ProgressFontSize;

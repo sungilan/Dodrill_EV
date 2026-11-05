@@ -51,6 +51,7 @@ public class LobbyListPanel : UIView
 
     private void ClearGamesList()
     {
+        ClearEmptyNotice();
         if (listContainer)
             foreach (Transform tr in listContainer)
                 Destroy(tr.gameObject);
@@ -172,29 +173,65 @@ public class LobbyListPanel : UIView
         var pos = rt.anchoredPosition; pos.x += rt.pivot.x * dw; rt.anchoredPosition = pos;   // 왼쪽 가장자리는 고정
     }
 
-    // 방이 하나도 없을 때: 안내 문구 + 뒤로 가기 (모바일에서 상단 버튼이 화면 밖이면 돌아갈 방법이 없었다)
+    // 방이 하나도 없을 때: 패널 가운데에 안내 문구, 하단 가운데에 작은 '뒤로 가기'
+    // (모바일에서 상단 버튼이 화면 밖이면 돌아갈 방법이 없었다). 목록 레이아웃과 상관없이 패널 기준으로 배치한다.
+    private readonly List<GameObject> _emptyNoticeObjs = new();
+
+    private RectTransform FindPanelRoot()
+    {
+        Transform t = listContainer != null ? listContainer.parent : null;
+        while (t != null)
+        {
+            if (t.GetComponent<VerticalLayoutGroup>() != null && t.GetComponent<Image>() != null) return (RectTransform)t;
+            t = t.parent;
+        }
+        return transform as RectTransform;
+    }
+
+    private void ClearEmptyNotice()
+    {
+        foreach (var g in _emptyNoticeObjs) if (g != null) Destroy(g);
+        _emptyNoticeObjs.Clear();
+    }
+
     private void ShowEmptyNotice()
     {
         if (listContainer == null || matchViewPrefab == null) return;
+        ClearEmptyNotice();
+        var panel = FindPanelRoot();
+
         var go = new GameObject("EmptyNotice", typeof(RectTransform));
-        go.transform.SetParent(listContainer, false);
-        var le = go.AddComponent<LayoutElement>(); le.minHeight = 140; le.preferredHeight = 140; le.minWidth = 600; le.preferredWidth = 900;
+        go.transform.SetParent(panel, false);
+        go.AddComponent<LayoutElement>().ignoreLayout = true;
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = new Vector2(0f, 10f); rt.sizeDelta = new Vector2(900f, 160f);
         var tmp = go.AddComponent<TextMeshProUGUI>();
         if (matchViewPrefab.matchName != null) tmp.font = matchViewPrefab.matchName.font;
         tmp.text = "생성된 훈련방이 없습니다.\n<size=70%><color=#9AA4B2>새로고침하거나 뒤로 가서 방을 만들어 주세요.</color></size>";
         tmp.alignment = TextAlignmentOptions.Center; tmp.fontSize = 34; tmp.color = Color.white; tmp.raycastTarget = false;
+        _emptyNoticeObjs.Add(go);
 
-        // 위쪽의 '뒤로 가기' 버튼을 복제해 목록 안에도 둔다(저장된 onClick 동작이 그대로 복사된다)
+        // 위쪽의 '뒤로 가기' 버튼을 복제해 하단 가운데에 작게 둔다(저장된 onClick 동작이 그대로 복사된다)
         Button back = null;
         foreach (var b in GetComponentsInChildren<Button>(true))
             if (b.name == "BTN_Back") { back = b; break; }
         if (back != null)
         {
-            var clone = Instantiate(back.gameObject, listContainer, false);
+            var clone = Instantiate(back.gameObject, panel, false);
             clone.name = "BTN_Back_Empty";
+            clone.SetActive(true);
+            var cle = clone.GetComponent<LayoutElement>() ?? clone.AddComponent<LayoutElement>(); cle.ignoreLayout = true;
             var crt = (RectTransform)clone.transform;
-            crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0.5f);
-            var cle = clone.GetComponent<LayoutElement>() ?? clone.AddComponent<LayoutElement>(); cle.minHeight = 72; cle.preferredHeight = 72; cle.minWidth = 200; cle.preferredWidth = 200;
+            crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0f); crt.pivot = new Vector2(0.5f, 0f);
+            crt.anchoredPosition = new Vector2(0f, 44f); crt.sizeDelta = new Vector2(230f, 58f);
+            foreach (var label in clone.GetComponentsInChildren<TMP_Text>(true))
+            {
+                float max = label.fontSize;
+                label.enableAutoSizing = true; label.fontSizeMax = max; label.fontSizeMin = Mathf.Max(14f, max * 0.6f);
+                label.textWrappingMode = TextWrappingModes.NoWrap; label.overflowMode = TextOverflowModes.Ellipsis;
+            }
+            _emptyNoticeObjs.Add(clone);
         }
     }
 
@@ -225,10 +262,10 @@ public class LobbyListPanel : UIView
         return s_placeholder;
     }
 
+    // 카드에는 호스트 이름까지만 보인다(콘텐츠 이름 [P0AA6]… 은 글자가 잘려 보여서 표시하지 않음)
     private static string HostLine(string host, string contentName)
     {
-        string h = string.IsNullOrWhiteSpace(host) ? "호스트 -" : $"호스트 {host}";
-        return string.IsNullOrWhiteSpace(contentName) ? h : $"{h}  ·  {contentName}";
+        return string.IsNullOrWhiteSpace(host) ? "호스트 -" : $"호스트 {host}";
     }
 
     private void ApplyScenarioInfo(MatchView card, string scenarioId, string host = null)

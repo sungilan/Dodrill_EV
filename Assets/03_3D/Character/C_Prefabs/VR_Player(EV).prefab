@@ -388,6 +388,24 @@ MonoBehaviour:
   rootTurnSpeed: 6
   matchAvatarHeight: 1
   avatarScaleRange: {x: 0.75, y: 1.35}
+  leanForward: 0.35
+  leanBackward: 0.15
+  leanSide: 0.2
+  yawDeadZoneDeg: 35
+  probeFloor: 1
+  floorMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  floorProbeUp: 0.4
+  floorProbeDown: 1.2
+  floorMaxDeviation: 0.6
+  minHeadHeightOverride: 0.3
+  stepThresholdOverride: 0.5
+  debugLog: 1
+  debugInterval: 2
+  fingerSendInterval: 0.08
+  fingerKeepAlive: 0.5
+  fingerChangeDeg: 0.7
 --- !u!114 &5392141778661552114
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26396,7 +26414,7 @@ MonoBehaviour:
   m_Camera: {fileID: 1827779733380334318}
   m_OriginBaseGameObject: {fileID: 1146176946009180658}
   m_CameraFloorOffsetObject: {fileID: 6814944052237803124}
-  m_RequestedTrackingOriginMode: 0
+  m_RequestedTrackingOriginMode: 2
   m_CameraYOffset: 1.3
 --- !u!114 &75468936792890276
 MonoBehaviour:
@@ -26458,6 +26476,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d619012772bc7049b46e7220feee5a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentAnchor: {fileID: 0}
 --- !u!1 &6823756768971634918
 GameObject:
   m_ObjectHideFlags: 0

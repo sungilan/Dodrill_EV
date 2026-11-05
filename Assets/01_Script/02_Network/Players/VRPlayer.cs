@@ -458,7 +458,16 @@ public class VRPlayer : BasePlayer
         Vector3 h = trackingSetup.trackingHead.position - anchorT.position;
         Vector3 l = trackingSetup.leftHand.trackingWrist != null ? trackingSetup.leftHand.trackingWrist.position - anchorT.position : Vector3.zero;
         Vector3 r = trackingSetup.rightHand.trackingWrist != null ? trackingSetup.rightHand.trackingWrist.position - anchorT.position : Vector3.zero;
-        Debug.Log($"[VRDebug][owner] headY={h.y:F2}m (anchor-relative) wristL=({l.x:F2},{l.y:F2},{l.z:F2}) wristR=({r.x:F2},{r.y:F2},{r.z:F2}) " +
+        // 머리 높이가 실제 키(바닥 기준)인지, 시작 자세 기준(Device)인지 가르기 위한 정보
+        string originMode = "n/a";
+        try
+        {
+            var subs = new System.Collections.Generic.List<UnityEngine.XR.XRInputSubsystem>();
+            UnityEngine.SubsystemManager.GetSubsystems(subs);
+            if (subs.Count > 0) originMode = $"{subs[0].GetTrackingOriginMode()}/supported={subs[0].GetSupportedTrackingOriginModes()}";
+        }
+        catch { }
+        Debug.Log($"[VRDebug][owner] trackingOrigin={originMode} headY={h.y:F2}m (anchor-relative)wristL=({l.x:F2},{l.y:F2},{l.z:F2}) wristR=({r.x:F2},{r.y:F2},{r.z:F2}) " +
                   $"R-wrist={(trackingSetup.rightHand.trackingWrist != null ? trackingSetup.rightHand.trackingWrist.name : "null")} anchor={(anchor != null ? "ok" : "MISSING")} send={1f / Mathf.Max(0.001f, syncInterval):F0}Hz");
     }
 
@@ -488,7 +497,7 @@ public class VRPlayer : BasePlayer
         Vector3 rightWristPos = trackingSetup.rightHand.trackingWrist ? inv * (trackingSetup.rightHand.trackingWrist.position - anchorT.position) : Vector3.zero;
         Quaternion rightWristRot = trackingSetup.rightHand.trackingWrist ? inv * trackingSetup.rightHand.trackingWrist.rotation : Quaternion.identity;
 
-        SendPoseToServer(headPos, headRot, leftWristPos, leftWristRot, rightWristPos, rightWristRot);
+        SendPoseToServer(headPos, headRot, leftWristPos, leftWristRot, rightWristPos, rightWristRot, Channel.Unreliable);
 
         _fingerTimer += syncInterval;
         if (_fingerTimer >= fingerSendInterval)
@@ -524,18 +533,21 @@ public class VRPlayer : BasePlayer
     }
 
     // 머리·손목: 비신뢰(유실돼도 다음 값이 곧 옴)
-    [ServerRpc(RequireOwnership = true, Channel = Channel.Unreliable)]
+    // (이 FishNet 버전은 채널을 특성이 아니라 마지막 매개변수 Channel 로 지정한다)
+    [ServerRpc(RequireOwnership = true)]
     private void SendPoseToServer(Vector3 headPos, Quaternion headRot,
                                   Vector3 leftWristPos, Quaternion leftWristRot,
-                                  Vector3 rightWristPos, Quaternion rightWristRot)
+                                  Vector3 rightWristPos, Quaternion rightWristRot,
+                                  Channel channel = Channel.Reliable)
     {
-        PosToClients(headPos, headRot, leftWristPos, leftWristRot, rightWristPos, rightWristRot);
+        PosToClients(headPos, headRot, leftWristPos, leftWristRot, rightWristPos, rightWristRot, Channel.Unreliable);
     }
 
-    [ObserversRpc(ExcludeOwner = true, Channel = Channel.Unreliable)]
+    [ObserversRpc(ExcludeOwner = true)]
     private void PosToClients(Vector3 headPos, Quaternion headRot,
                               Vector3 leftWristPos, Quaternion leftWristRot,
-                              Vector3 rightWristPos, Quaternion rightWristRot)
+                              Vector3 rightWristPos, Quaternion rightWristRot,
+                              Channel channel = Channel.Reliable)
     {
         if (anchor == null)
         {

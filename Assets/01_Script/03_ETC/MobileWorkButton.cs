@@ -54,6 +54,7 @@ public static class MobileWorkButton
         lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
         lrt.offsetMin = lrt.offsetMax = Vector2.zero;
         var label = labelGo.AddComponent<TMPro.TextMeshProUGUI>();
+        var kf = KoreanFont(); if (kf != null) label.font = kf;
         label.text = "작업\n<size=60%>누르고 있기</size>";
         label.alignment = TMPro.TextAlignmentOptions.Center;
         label.fontSize = 56;
@@ -65,6 +66,24 @@ public static class MobileWorkButton
         AddEntry(trigger, EventTriggerType.PointerDown, () => { IsHeld = true; img.color = new Color(0.95f, 0.55f, 0.10f, 0.95f); });
         AddEntry(trigger, EventTriggerType.PointerUp, () => { IsHeld = false; img.color = new Color(0.10f, 0.45f, 0.85f, 0.88f); });
         AddEntry(trigger, EventTriggerType.PointerExit, () => { IsHeld = false; img.color = new Color(0.10f, 0.45f, 0.85f, 0.88f); });
+    }
+
+    private static TMPro.TMP_FontAsset _font;
+
+    /// <summary>
+    /// 한글이 있는 TMP 글꼴. 코드로 만든 글자는 기본 글꼴(한글 없음)이라 ‘서기/앉기/작업’ 이 □□ 로 나왔다
+    /// → 프로젝트 UI 가 쓰는 Pretendard 를 찾아 쓴다.
+    /// </summary>
+    internal static TMPro.TMP_FontAsset KoreanFont()
+    {
+        if (_font != null) return _font;
+        foreach (var f in Resources.FindObjectsOfTypeAll<TMPro.TMP_FontAsset>())
+            if (f != null && f.name.IndexOf("Pretendard", System.StringComparison.OrdinalIgnoreCase) >= 0) { _font = f; break; }
+        if (_font == null)
+            foreach (var t in Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (t != null && t.font != null && t.text != null && System.Text.RegularExpressions.Regex.IsMatch(t.text, "[가-힣]")) { _font = t.font; break; }
+        if (_font == null) _font = TMPro.TMP_Settings.defaultFontAsset;
+        return _font;
     }
 
     internal static void AddEntry(EventTrigger trigger, EventTriggerType type, System.Action action)
