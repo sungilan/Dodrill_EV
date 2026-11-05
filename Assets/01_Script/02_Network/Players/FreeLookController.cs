@@ -773,7 +773,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         if (!clicked) return;
 
         // ★ UI 블로킹 체크
-        if (IsPointerOverUI(clickPos)) return;
+        if (IsPointerOverUI(clickPos)) { FallbackUIClick(clickPos); return; }
 
         // ── 1. 월드 UI 버튼(리프트 등) 처리 ──
         if (HandleWorldSpaceUIClick(clickPos))
@@ -1009,6 +1009,39 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// PC 빌드에서 화면 UI 버튼(가이드 '확인', 상단 아이콘)이 눌리지 않던 문제 대비.
+    /// UI 레이캐스트에는 버튼이 잡히는데 현재 EventSystem 입력 모듈이 포인터를 추적하지 못하고 있으면
+    /// (모듈 비활성·액션 꺼짐·다른 EventSystem 이 current 인 경우) 클릭 이벤트를 직접 전달한다.
+    /// 모듈이 정상이면 아무 것도 하지 않아 두 번 눌리는 일은 없다.
+    /// </summary>
+    private void FallbackUIClick(Vector2 screenPos)
+    {
+        var es = EventSystem.current;
+        if (es == null) return;
+
+        bool moduleTracks = es.currentInputModule != null && es.currentInputModule.isActiveAndEnabled
+                            && es.IsPointerOverGameObject();
+        if (moduleTracks) return;
+
+        GameObject top = null;
+        foreach (var r in _uiRaycastResults)
+        {
+            var c = r.gameObject.GetComponentInParent<Canvas>();
+            if (c != null && c.renderMode != RenderMode.WorldSpace) { top = r.gameObject; break; }
+        }
+        if (top == null) return;
+
+        var handler = ExecuteEvents.GetEventHandler<IPointerClickHandler>(top);
+        Debug.Log($"[UI 입력] 모듈이 클릭을 못 받음 → 직접 전달: {GetGameObjectPath(top)} " +
+                  $"(ES={es.name}, module={(es.currentInputModule ? es.currentInputModule.GetType().Name : "없음")}, handler={(handler ? handler.name : "없음")})");
+        if (handler == null) return;
+
+        var data = new PointerEventData(es) { position = screenPos, button = PointerEventData.InputButton.Left,
+                                              pointerPress = handler, rawPointerPress = top, clickCount = 1 };
+        ExecuteEvents.Execute(handler, data, ExecuteEvents.pointerClickHandler);
     }
 
     /// <summary>디버그용 — UI 위일 때 어떤 오브젝트인지 이름 반환</summary>

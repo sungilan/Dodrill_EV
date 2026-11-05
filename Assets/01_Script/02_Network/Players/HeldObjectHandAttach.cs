@@ -25,6 +25,7 @@ public class HeldObjectHandAttach : MonoBehaviour
     private SyncGrab _held;
     private float _nextSearch;
     private Vector3 _saved;
+    private Transform _appliedTo;
     private bool _applied;
 
     private void Awake()
@@ -75,7 +76,11 @@ public class HeldObjectHandAttach : MonoBehaviour
 
     private void Apply()
     {
-        _applied = false;
+        // 한 프레임에 카메라가 여러 대(UI 오버레이 카메라 등) 그려지면 begin 이 연달아 불릴 수 있다.
+        // 되돌리기 전에 다시 옮기면 '옮겨진 위치'를 원래 위치로 저장해 버려서, 주인이 가만히 있는 동안
+        // (네트워크 위치 갱신이 없을 때) 물체가 매 프레임 조금씩 밀려 수백 m 까지 날아갔다.
+        // → 손 IK 가 그 물체를 쫓다 팔이 펴져서 '움직일 때만 잡은 자세가 보이던' 원인.
+        Restore();
         if (!IsRemote) return;
 
         if (Time.unscaledTime >= _nextSearch)
@@ -87,8 +92,12 @@ public class HeldObjectHandAttach : MonoBehaviour
 
         if (!TryGetHandPoint(out Vector3 hand)) return;
 
-        _saved = _held.transform.position;
-        _held.transform.position = _saved + (hand - _held.GripWorldPoint);
+        Vector3 delta = hand - _held.GripWorldPoint;
+        if (delta.sqrMagnitude > 2f * 2f) return;   // 손과 2m 넘게 떨어진 물체는 아직 동기화 전 — 붙이지 않는다
+
+        _appliedTo = _held.transform;
+        _saved = _appliedTo.position;
+        _appliedTo.position = _saved + delta;
         _applied = true;
     }
 
@@ -96,7 +105,8 @@ public class HeldObjectHandAttach : MonoBehaviour
     {
         if (!_applied) return;
         _applied = false;
-        if (_held != null) _held.transform.position = _saved;
+        if (_appliedTo != null) _appliedTo.position = _saved;
+        _appliedTo = null;
     }
 
     private bool TryGetHandPoint(out Vector3 hand)

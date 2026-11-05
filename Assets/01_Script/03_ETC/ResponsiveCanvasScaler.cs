@@ -78,9 +78,16 @@ public class ResponsiveCanvasScaler : MonoBehaviour
         var all = FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         if (all.Length == 0) return;
 
+        // 현재 활성 씬(게임 씬)에 있는 것을 먼저 고른다. 로비 플레이어 프리팹에 딸린 EventSystem_01 은
+        // 로비 전환 때 같이 꺼지거나 사라질 수 있어 후순위.
         EventSystem keep = null;
+        var active = SceneManager.GetActiveScene();
         foreach (var es in all)
-            if (es.enabled && HasPointerModule(es)) { keep = es; break; }
+            if (es.gameObject.scene == active && HasPointerModule(es)) { keep = es; break; }
+        if (keep == null)
+            foreach (var es in all)
+                if (es.enabled && HasPointerModule(es)) { keep = es; break; }
+        if (keep != null && !keep.enabled) keep.enabled = true;
 
         if (keep == null)
         {

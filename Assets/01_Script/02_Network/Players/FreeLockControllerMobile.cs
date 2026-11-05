@@ -734,7 +734,12 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
 
     private void HandleHover()
     {
-        if(_heldObject != null) return;
+        // 물체를 잡은 뒤에도 잡기 직전의 '○○ 터치하여 집기' 라벨이 남아 있던 문제 → 잡는 순간 지운다
+        if(_heldObject != null)
+        {
+            if(_worldLabel != null || _lastHoveredCol != null) { ClearHoverVisuals(); _lastHoveredCol = null; }
+            return;
+        }
 
         Vector2 screenPoint = (Input.touchCount > 0) ?
                               Input.GetTouch(0).position :

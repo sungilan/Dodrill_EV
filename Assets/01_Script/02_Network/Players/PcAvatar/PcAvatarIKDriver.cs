@@ -98,7 +98,14 @@ public class PcAvatarIKDriver : MonoBehaviour
         Quaternion yaw = Quaternion.Euler(0f, _controller.transform.eulerAngles.y, 0f);
         bool baked = handGrip != null && handGrip.IsBaked(_holdRightHand);
         Quaternion rot = baked ? handGrip.HandRotation(_holdRightHand, yaw) : Quaternion.identity;
-        armReach.SetHold(true, _holdRightHand, _held.GripWorldPoint, rot, baked);
+        // 물체 위치가 몸에서 한참 떨어져 있으면(동기화 지연·잘못된 위치) 그쪽으로 팔을 쭉 펴지 말고
+        // 몸 앞 가슴 높이에 든 자세를 유지한다. 가만히 서 있을 때 팔이 펴져 기본 자세처럼 보이던 문제 방지.
+        Vector3 target = _held.GripWorldPoint;
+        Transform body = _controller.transform;
+        float s = Mathf.Max(0.01f, _controller.AvatarScale);
+        if ((target - body.position).sqrMagnitude > (1.6f * s) * (1.6f * s))
+            target = body.position + body.up * (1.05f * s) + body.forward * (0.35f * s) + body.right * ((_holdRightHand ? 0.18f : -0.18f) * s);
+        armReach.SetHold(true, _holdRightHand, target, rot, baked);
         DebugHold(true);
     }
 

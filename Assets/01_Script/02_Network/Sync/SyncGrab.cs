@@ -1039,6 +1039,13 @@ public class SyncGrab : NetworkBehaviour
         ServerForceReset();
     }
 
+    // 내가 잡아서 소유권을 받거나 잃으면 물리 상태를 다시 맞춘다(VR 손 잡기는 소유자만 물리 사용)
+    public override void OnOwnershipClient(NetworkConnection prevOwner)
+    {
+        base.OnOwnershipClient(prevOwner);
+        ApplyKinematic(_isKinematic.Value);
+    }
+
     // ══════════════════════════════════════════════════════
     // Kinematic 적용
     // ══════════════════════════════════════════════════════
@@ -1047,6 +1054,12 @@ public class SyncGrab : NetworkBehaviour
     private void ApplyKinematic(bool isKinematic)
     {
         if(_rb == null) return;
+
+        // 누가 잡고 있는 동안, 잡은 사람(소유자)이 아닌 쪽(서버·다른 클라이언트)에서는 물리를 끈다.
+        // 예전: 잡기 RPC 에서 _isGrabbed=true(중력 끔) 뒤에 ServerSetKinematic(false)가 중력을 다시 켜서
+        //       서버·관찰자 화면에서 잡힌 물체가 자유낙하(수 초에 수백 m) → 잡은 사람이 가만히 있으면
+        //       남의 화면에서 팔이 아래로 펴져 '기본 자세'처럼 보였다(움직일 때만 위치가 되돌아와 잡은 자세).
+        if(!isKinematic && _isGrabbed.Value && !IsOwner) isKinematic = true;
 
         if(isKinematic)
         {
@@ -1616,8 +1629,9 @@ public class SyncGrab : NetworkBehaviour
     private void OnIsGrabbedChanged(bool prev, bool next, bool asServer)
     {
         TrackHeld(next);
-        // 잡힘 상태가 변할 때, 만약 Kinematic이 풀려있다면 중력 상태를 즉시 동기화합니다.
-        if(!_isKinematic.Value && _rb != null)
+        // 잡힘 상태가 바뀌면 물리 상태를 다시 맞춘다(소유자가 아닌 쪽은 잡힌 동안 kinematic, 놓으면 원래 값)
+        ApplyKinematic(_isKinematic.Value);
+        if(!_isKinematic.Value && _rb != null && !_rb.isKinematic)
         {
             _rb.useGravity = !next;
         }

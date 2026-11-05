@@ -528,7 +528,11 @@ public class GuideSystem : MonoBehaviour
                         if(existingItem?.GetComponent<NoneHighlight>() == null)
                         {
                             var markerGO = SpawnMarker(pos, GetDisplayName(bundle.prefabId), spawnGuideColor, false);
-                            if(markerGO != null) _spawnMarkers[bundle.prefabId] = markerGO.gameObject;
+                            if(markerGO != null)
+                            {
+                                markerGO.Follow(existingItem != null ? existingItem.transform : spPt.transform);
+                                _spawnMarkers[bundle.prefabId] = markerGO.gameObject;
+                            }
                         }
                     }
                 }
@@ -606,6 +610,7 @@ public class GuideSystem : MonoBehaviour
                 {
                     Debug.Log($"<color=cyan>[Guide-Success]</color> {markerTargetGO.name} 지점에 마커 생성 완료");
                     marker.Setup(label, targetGuideColor, !isBoltTask && markerTargetGO.GetComponent<NoneHighlight>() == null);
+                    marker.Follow(markerTargetGO.transform);
                     _targetMarker = marker;
                     if(boltGroup != null) StartCoroutine(UpdateBoltProgressRoutine(marker, boltGroup));
                 }

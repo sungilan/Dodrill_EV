@@ -230,7 +230,9 @@ public class VRPlayer : BasePlayer
     // 아바타 눈높이가 접속자의 (관측된 최대) 눈높이와 맞도록 루트 크기를 맞춘다.
     [Header("원격 아바타 체형 보정")]
     [SerializeField] private bool matchAvatarHeight = true;
-    [SerializeField] private Vector2 avatarScaleRange = new Vector2(0.75f, 1.35f);
+    [SerializeField] private Vector2 avatarScaleRange = new Vector2(0.8f, 1.15f);
+    [Tooltip("아바타 차렷 자세에서 루트~머리뼈 높이(m, 스케일 1 기준). 정비사 모델 1.638")]
+    [SerializeField] private float restHeadHeight = 1.638f;
     private Vector3 _avatarBaseScale = Vector3.one;
     private float _avatarEyeAtBase;
     private float _maxHeadHeight;
@@ -310,7 +312,14 @@ public class VRPlayer : BasePlayer
             _avatarBaseScale = _avatarRoot.localScale;
             _avatarHeadBone = vrik.references.head;
             if (_avatarHeadBone != null)
-                _avatarEyeAtBase = (_avatarHeadBone.position.y - _avatarRoot.position.y) + 0.08f * Mathf.Max(0.01f, _avatarRoot.lossyScale.y);
+            {
+                // 첫 프레임 측정값은 이미 VRIK 가 머리를 끌어내린(웅크린) 상태일 수 있다 → 기준 눈높이가 낮게 잡혀
+                // 아바타가 1.3배까지 커지고, 큰 몸으로 낮은 머리를 맞추느라 등이 굽고 팔이 접혔다.
+                // 차렷 자세(프리팹 기본) 머리 높이를 하한으로 쓴다.
+                float lossy = Mathf.Max(0.01f, _avatarRoot.lossyScale.y);
+                float measured = _avatarHeadBone.position.y - _avatarRoot.position.y;
+                _avatarEyeAtBase = Mathf.Max(measured, restHeadHeight * lossy) + 0.08f * lossy;
+            }
 
             vrik.solver.spine.minHeadHeight = minHeadHeightOverride;
             vrik.solver.locomotion.stepThreshold = stepThresholdOverride;

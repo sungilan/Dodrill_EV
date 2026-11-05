@@ -138,7 +138,46 @@ namespace DoDrill
             float up = _isVrHead ? nameTagAboveHead * 0.85f : nameTagAboveHead * s;
             Vector3 p = _head.position + Vector3.up * up;
             _nameTagCanvas.transform.position = p;
+
+            // 가까이 다가가면 이름표가 화면을 가득 덮던 문제: 가까울수록 비례해서 작게(멀면 원래 크기)
+            var cam = Camera.main;
+            if(cam != null && _head != null)
+            {
+                float d = Vector3.Distance(cam.transform.position, p);
+                float k = Mathf.Clamp(d / NameTagFullSizeDistance, 0.25f, 1f);
+                _nameTagCanvas.transform.localScale = _tagBaseScale * nameTagScale * k;
+                HideIfCameraInside(cam.transform.position);
+            }
         }
+
+        // ── 다른 플레이어 몸 안으로 카메라가 들어가면 화면이 그 아바타 옷 색(파랑)으로 가득 차던 문제 ──
+        // 내 카메라가 남의 몸(발~머리 선분) 가까이 들어가면 그 아바타만 내 화면에서 잠깐 안 그린다.
+        private Renderer[] _bodyRenderers;
+        private bool _bodyHidden;
+
+        private void HideIfCameraInside(Vector3 camPos)
+        {
+            if(IsOwner || _head == null) return;
+            if(_bodyRenderers == null)
+            {
+                var list = new System.Collections.Generic.List<Renderer>();
+                foreach(var r in GetComponentsInChildren<Renderer>(true))
+                    if(_nameTagCanvas == null || !r.transform.IsChildOf(_nameTagCanvas.transform)) list.Add(r);
+                _bodyRenderers = list.ToArray();
+            }
+            Vector3 top = _head.position;
+            Vector3 bottom = new Vector3(top.x, transform.position.y, top.z);
+            Vector3 seg = top - bottom;
+            float t = seg.sqrMagnitude > 1e-4f ? Mathf.Clamp01(Vector3.Dot(camPos - bottom, seg) / seg.sqrMagnitude) : 0f;
+            float dist = Vector3.Distance(camPos, bottom + seg * t);
+            float s = _avatar != null ? _avatar.AvatarScale : 1f;
+            bool hide = _bodyHidden ? dist < 0.42f * s : dist < 0.35f * s;   // 경계에서 깜빡이지 않게 여유
+            if(hide == _bodyHidden) return;
+            _bodyHidden = hide;
+            foreach(var r in _bodyRenderers) if(r != null) r.forceRenderingOff = hide;
+        }
+
+        private const float NameTagFullSizeDistance = 2.5f;
 
         private void Update()
         {

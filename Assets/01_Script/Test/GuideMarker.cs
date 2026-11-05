@@ -35,6 +35,17 @@ public class GuideMarker : MonoBehaviour
     private Vector3 _baseScale = Vector3.one;
     private bool _baseScaleSaved;
 
+    // 대상이 움직이면(리프트 상승·하강 등) 마커도 같이 따라가도록 처음 간격을 유지한다
+    private Transform _followTarget;
+    private Vector3 _followOffset;
+
+    /// <summary>대상 물체를 따라다니게 한다. 생성 시점의 위치 차이를 그대로 유지.</summary>
+    public void Follow(Transform target)
+    {
+        _followTarget = target;
+        if (target != null) _followOffset = transform.position - target.position;
+    }
+
     private void Awake()
     {
         _baseScale = transform.localScale;
@@ -44,6 +55,9 @@ public class GuideMarker : MonoBehaviour
     // 가까이서 보면 화살표·라벨이 화면을 가득 채워 시야를 가리던 문제 방지
     private void LateUpdate()
     {
+        if (_followTarget != null)
+            transform.position = _followTarget.position + _followOffset;
+
         var cam = Camera.main;
         if (cam == null || referenceDistance <= 0f) return;
         if (!_baseScaleSaved) { _baseScale = transform.localScale; _baseScaleSaved = true; }

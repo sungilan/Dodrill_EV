@@ -67,11 +67,16 @@ public class MultimeterMaster : MonoBehaviour
     {
         // 싱글톤 선택적 — 여러 대 있을 수 있으므로 약한 참조
         if (Instance == null) Instance = this;
+        MobileMeterReadout.Register(this);   // 모바일: 화면에 측정값을 크게 띄우는 패널
     }
+
+    /// <summary>결함 화면(빨간 배경)이 떠 있는지 — 모바일 확대 패널이 같은 색을 따라 쓴다.</summary>
+    public bool IsShowingFault => _faultyCanvasGroup != null && _faultyCanvasGroup.alpha > 0.5f;
 
     private void OnDestroy()
     {
         if (Instance == this) Instance = null;
+        MobileMeterReadout.Unregister(this);
     }
 
     // ── 다이얼 콜백 ──────────────────────────

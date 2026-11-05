@@ -42,6 +42,8 @@ public class PcMobileAvatarController : NetworkBehaviour
     [Header("소유자 시점에서 숨길 렌더러")]
     [Tooltip("자기 카메라가 머리 안쪽을 보는 문제 방지 — 소유자에서만 ShadowsOnly로 전환(그림자는 유지). 보통 아바타 머리 SkinnedMeshRenderer.")]
     [SerializeField] private Renderer[] hideRenderersForOwner;
+    [Tooltip("내 화면에서는 장갑(손)만 그리고 나머지 몸은 그림자만 남긴다.")]
+    [SerializeField] private bool ownerHandsOnly = true;
 
     [Header("소유자 시점: 아래를 볼 때 윗옷 숨김 (모바일)")]
     [Tooltip("카메라가 몸통 안에 있어, 아래를 보면 윗옷의 안쪽(뒷면 컬링으로 찢어진 천처럼 보임)이 화면을 가린다. 이 각도 이상 내려다보면 윗옷을 그림자 전용으로 바꾼다(장갑은 유지).")]
@@ -134,6 +136,15 @@ public class PcMobileAvatarController : NetworkBehaviour
             foreach (var r in avatarAnimator.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 if (r.name.Contains("Uniform")) list.Add(r);
             _uniformRenderers = list.ToArray();
+
+            // 내 화면에서는 손(장갑)만 보이게: 카메라 아래로 내 머리·어깨·소매가 비치던 문제.
+            // 몸은 그림자만 남기고(바닥 그림자는 유지), 다른 사람 화면의 내 아바타는 그대로 보인다.
+            if (ownerHandsOnly)
+            {
+                foreach (var r in avatarAnimator.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                    if (!r.name.Contains("Glove")) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+                _uniformRenderers = new Renderer[0];   // 아래를 볼 때 윗옷 숨김/표시 토글이 다시 켜지 않게
+            }
         }
 
         // 소유자: 어떤 상호작용이든(3D 클릭 + UI 버튼 + 확인 버튼 등) 손 뻗기 재생.

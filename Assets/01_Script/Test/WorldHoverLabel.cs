@@ -64,7 +64,16 @@ public class WorldHoverLabel : MonoBehaviour
 
         // 카메라 방향으로 정면 고정 (Billboard)
         transform.forward = _cam.transform.forward;
+
+        // 가까이서 보면 라벨이 화면을 가득 채우던 문제(모바일 'GDS 진단기 / 터치하여 집기'): 가까울수록 작게
+        if (!_scaleSaved) { _baseScale = transform.localScale; _scaleSaved = true; }
+        float d = Vector3.Distance(_cam.transform.position, transform.position);
+        transform.localScale = _baseScale * Mathf.Clamp(d / FullSizeDistance, 0.3f, 1f);
     }
+
+    private const float FullSizeDistance = 1.8f;
+    private Vector3 _baseScale = Vector3.one;
+    private bool _scaleSaved;
 
     private bool _onTopApplied;
     private static Sprite s_roundedSprite;
