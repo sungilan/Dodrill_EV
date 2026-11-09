@@ -1629,6 +1629,9 @@ public class SyncGrab : NetworkBehaviour
     private void OnIsGrabbedChanged(bool prev, bool next, bool asServer)
     {
         TrackHeld(next);
+        // 누군가(다른 클라이언트 포함)가 잡았으면 이 화면의 '여기 있음' 가이드 마커도 치운다.
+        // 예전에는 잡은 클라이언트에서만 치워서, 다른 사람 화면에는 마커가 잡기 전 자리에 계속 남았다.
+        if(next) GuideSystem.Instance?.OnItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
         // 잡힘 상태가 바뀌면 물리 상태를 다시 맞춘다(소유자가 아닌 쪽은 잡힌 동안 kinematic, 놓으면 원래 값)
         ApplyKinematic(_isKinematic.Value);
         if(!_isKinematic.Value && _rb != null && !_rb.isKinematic)

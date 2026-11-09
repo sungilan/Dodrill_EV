@@ -390,8 +390,75 @@ public class ScenarioRunner : MonoBehaviour
     {
         if (!_isRunning) return;
         if (signal.taskIndex != _currentTaskState.taskIndex) return;
+
+        // 보호구처럼 '사람마다' 해야 하는 단계: 누가 집었는지 서버가 연결(conn)의 ClientId 로 직접 센다.
+        // (예전에는 한 명만 집어도 모두가 다음 단계로 넘어갔다)
+        if (_currentModule is GrabAllItemsModule perPlayer && perPlayer.PerPlayer)
+        {
+            HandlePerPlayerGrab(conn, signal, perPlayer);
+            return;
+        }
+
         RegisterActivePlayer(conn, signal.clientId);
         InteractionEvents.FireItemGrabbed(signal.itemId);
+    }
+
+    private void HandlePerPlayerGrab(NetworkConnection conn, ItemGrabbedSignal signal, GrabAllItemsModule module)
+    {
+        // 클라이언트가 보낸 clientId 는 믿지 않는다 — 서버가 아는 연결의 ClientId 만 쓴다
+        if (conn == null || !conn.IsValid) return;
+        int id = conn.ClientId;
+        var required = GetConnectedClientIds();
+
+        var result = module.NotifyGrabbedBy(id, signal.itemId, required);
+        if (result == GrabAllItemsModule.GrabResult.Ignored) return;
+
+        RegisterActivePlayer(conn, signal.clientId);
+
+        if (result == GrabAllItemsModule.GrabResult.PlayerCompleted)
+        {
+            _completedClients.Add(id);   // 완료한 사람 목록(TaskState.completedClientIds)으로 클라이언트에 알림
+            BroadcastState();
+        }
+
+        // 아직 끝나지 않은 사람이 있으면: 방금 착용한 사람 손의 아이템을 치우고 같은 자리에 새 아이템을 놓는다.
+        // 아이템이 한 개뿐이면 한 명이 들고 있는 동안 다른 사람이 집을 수 없어 다음 단계로 못 간다.
+        if (result != GrabAllItemsModule.GrabResult.Counted && !module.IsCompleted)
+            ReplaceHeldItem(id, signal.itemId);
+    }
+
+    /// <summary>clientId 가 지금 들고 있는 itemId 아이템을 치우고 새 아이템을 스폰한다.</summary>
+    private void ReplaceHeldItem(int clientId, string itemId)
+    {
+        if (_spawner == null || _data == null) return;
+
+        foreach (var grab in FindObjectsByType<SyncGrab>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+        {
+            if (grab == null || !grab.IsGrabbed) continue;
+            // 같은 착용 신호가 두 번 오는 경우(브리지 + 장비 동기화)에 방금 치운 아이템을 또 치우고 새로 놓지 않게
+            if (grab.NetworkObject == null || !grab.NetworkObject.IsSpawned) continue;
+            if (grab.Owner == null || !grab.Owner.IsValid || grab.Owner.ClientId != clientId) continue;
+            var item = grab.GetComponent<TaskItem>();
+            if (item == null || item.prefabId != itemId) continue;
+
+            var taskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
+            _spawner.ReplaceTaskItem(taskDef, grab.NetworkObject, itemId);
+            Debug.Log($"[ScenarioRunner] Client#{clientId} 이(가) 착용한 {itemId} 을(를) 치우고 다음 사람용으로 새로 배치");
+            return;
+        }
+    }
+
+    /// <summary>지금 접속 중인 모든 클라이언트 ID (excludeId 는 방금 나간 사람)</summary>
+    private List<int> GetConnectedClientIds(int excludeId = -1)
+    {
+        var list = new List<int>();
+        if (InstanceFinder.ServerManager == null) return list;
+        foreach (var kv in InstanceFinder.ServerManager.Clients)
+        {
+            var c = kv.Value;
+            if (c != null && c.IsValid && c.ClientId != excludeId) list.Add(c.ClientId);
+        }
+        return list;
     }
 
     private void OnReceiveTaskConfirm(NetworkConnection conn, TaskConfirmSignal signal, Channel channel)
@@ -680,7 +747,16 @@ public class ScenarioRunner : MonoBehaviour
     private void OnClientDisconnected(NetworkConnection conn, RemoteConnectionStateArgs args)
     {
         if (args.ConnectionState == RemoteConnectionState.Stopped)
+        {
             _connectedClientCount = Mathf.Max(0, InstanceFinder.ServerManager.Clients.Count);
+
+            // 나간 사람 때문에 '모두 착용' 조건이 이미 충족되는 경우를 놓치지 않게 다시 확인
+            if (_isRunning && _currentModule is GrabAllItemsModule perPlayer && perPlayer.PerPlayer)
+            {
+                _completedClients.Remove(conn.ClientId);
+                perPlayer.Recheck(GetConnectedClientIds(conn.ClientId));
+            }
+        }
     }
 
     // ── 시나리오 종료 ─────────────────────────

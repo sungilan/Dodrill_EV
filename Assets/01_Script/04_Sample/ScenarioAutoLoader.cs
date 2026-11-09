@@ -44,7 +44,13 @@ public class ScenarioAutoLoader : MonoBehaviour
         // MST RoomOptions에서 scenarioId 꺼내기
         string scenarioId = autoLoadScenarioId;
 
-        if (Mst.Server.Rooms != null)
+        if (SoloModeLauncher.IsSolo)
+        {
+            // 혼자 하기: 방 옵션(MST)이 없으므로 고정 시나리오로 시작 (씬의 폴백 ID 는 옛 시나리오일 수 있다)
+            scenarioId = SoloModeLauncher.ScenarioId;
+            Debug.Log($"[AutoLoader] 혼자 하기 시나리오: {scenarioId}");
+        }
+        else if (Mst.Server.Rooms != null)
         {
             var roomOptions = Mst.Args.AsString("scenarioId", string.Empty);
             if (!string.IsNullOrEmpty(roomOptions))

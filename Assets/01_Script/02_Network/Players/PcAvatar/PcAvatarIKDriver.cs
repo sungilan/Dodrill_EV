@@ -105,6 +105,7 @@ public class PcAvatarIKDriver : MonoBehaviour
         float s = Mathf.Max(0.01f, _controller.AvatarScale);
         if ((target - body.position).sqrMagnitude > (1.6f * s) * (1.6f * s))
             target = body.position + body.up * (1.05f * s) + body.forward * (0.35f * s) + body.right * ((_holdRightHand ? 0.18f : -0.18f) * s);
+        _dbgTarget = target;
         armReach.SetHold(true, _holdRightHand, target, rot, baked);
         DebugHold(true);
     }
@@ -112,11 +113,20 @@ public class PcAvatarIKDriver : MonoBehaviour
     // ── 디버그 ([HoldDebug]) — 원격 화면에서 '잡은 자세 ↔ 기본 자세'가 왔다갔다 하는 원인을 가리기 위한 기록 ──
     [Header("디버그")]
     [SerializeField] private bool debugLog = true;
-    [SerializeField] private float debugInterval = 1f;
+    [SerializeField] private float debugInterval = 0.5f;
     private float _dbgNext;
+    private Vector3 _dbgTarget;
+    private LocalNetworkTransform _dbgLnt;
+    private SyncGrab _dbgLntFor;
     private bool _dbgLastHolding;
     private int _dbgToggles;
     private int _dbgLastReach;
+
+    private static string L(Transform body, Vector3 world)
+    {
+        Vector3 p = body.InverseTransformPoint(world);
+        return $"({p.x:F2},{p.y:F2},{p.z:F2})";
+    }
 
     private void DebugHold(bool holding)
     {
@@ -132,9 +142,23 @@ public class PcAvatarIKDriver : MonoBehaviour
         string heldInfo = _held == null ? "held=null" :
             $"held={_held.name} grabbed={_held.IsGrabbed} ownerId={(_held.Owner != null && _held.Owner.IsValid ? _held.Owner.ClientId : -1)}";
         float speed = anim != null ? anim.GetFloat(PcAvatarAnimParams.SpeedHash) : -1f;
+
+        // 위치 진단: 전부 '이 아바타 몸 기준 좌표'(x=오른쪽, y=위, z=앞)로 찍는다.
+        //  tablet = 물체의 실제 transform, net = 서버에서 받은 목표 위치, grip = 손이 가려는 점(렌더러 중심), tgt = IK 에 넘긴 최종 목표,
+        //  hand = 잡은 손 손목, ikW = 잡은 손 LimbIK 가중치, arm = 뻗기 중인 손
+        string pos = "";
+        if (_held != null && _controller != null)
+        {
+            Transform b = _controller.transform;
+            if (_dbgLntFor != _held) { _dbgLntFor = _held; _dbgLnt = _held.GetComponent<LocalNetworkTransform>(); }
+            Transform hand = armReach.HandTransform(armReach.HoldUsesRightHand);
+            pos = $" tablet={L(b, _held.transform.position)} net={(_dbgLnt != null ? (_dbgLnt.DebugHasReceived ? L(b, _dbgLnt.DebugNetworkWorldPos) : "none") : "noLNT")} " +
+                  $"grip={L(b, _held.GripWorldPoint)} tgt={L(b, _dbgTarget)} hand={(hand != null ? L(b, hand.position) : "null")} ikW={armReach.DbgIkWeight:F2} arm={armReach.DbgActiveArm} " +
+                  $"yaw={b.eulerAngles.y:F0} pitch={(anim != null ? anim.GetFloat(PcAvatarAnimParams.HeadPitchHash) : -1f):F0}";
+        }
         Debug.Log($"[HoldDebug] holderId={_controller.HolderId} holding={holding}{(changed ? " (변경)" : "")} toggles={_dbgToggles} {heldInfo} " +
                   $"hand={(armReach.HoldUsesRightHand ? "R" : "L")} flips={armReach.DbgHoldSideFlips} holdW={armReach.HoldWeight:F2} " +
-                  $"reach+={reach - _dbgLastReach} reaching={armReach.DbgReaching} dist={armReach.DbgHoldDist:F2}/{armReach.DbgArmLen:F2} clamped={armReach.DbgHoldClamped} speed={speed:F2}");
+                  $"reach+={reach - _dbgLastReach} reaching={armReach.DbgReaching} dist={armReach.DbgHoldDist:F2}/{armReach.DbgArmLen:F2} clamped={armReach.DbgHoldClamped} speed={speed:F2}{pos}");
         _dbgLastReach = reach;
     }
 }

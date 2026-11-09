@@ -37,6 +37,10 @@ public class LocalNetworkTransform : NetworkBehaviour
     [Tooltip("true: Owner는 서버 전송만, Observer 보간 수신 없음")]
     public bool ownerSendOnly = false;
 
+    // 디버그([HoldDebug]): 서버에서 받은 목표 위치(월드)와 수신 여부
+    public Vector3 DebugNetworkWorldPos => AnchorPos + AnchorRot * networkLocalPos;
+    public bool DebugHasReceived => hasReceivedNetworkTransform;
+
     private bool _hasExternalTarget;
     private Vector3 _targetPos;
     private Quaternion _targetRot;

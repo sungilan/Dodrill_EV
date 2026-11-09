@@ -52,6 +52,10 @@ public class PcArmReach : MonoBehaviour
     public bool DbgHoldClamped { get; private set; }
     public float DbgHoldDist { get; private set; }
     public float DbgArmLen { get; private set; }
+    /// <summary>잡은 손 LimbIK 의 현재 위치 가중치(0 이면 IK 가 꺼져 팔이 기본 자세).</summary>
+    public float DbgIkWeight { get { var a = _holdUsesRight ? rightArm : leftArm; return a != null ? a.solver.IKPositionWeight : -1f; } }
+    /// <summary>뻗기 동작 중인 손(없으면 "-")</summary>
+    public string DbgActiveArm => _active == null ? "-" : (_active == rightArm ? "R" : "L");
 
     /// <summary>해당 손(손목 본). 없으면 null.</summary>
     public Transform HandTransform(bool right)

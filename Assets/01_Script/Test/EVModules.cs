@@ -46,6 +46,7 @@ public class InsulationFaultCheckModule : GrabZoneTaskModule
 public class LOTO_GlovesModule : GrabAllItemsModule
 {
     public override string ModuleId => "LOTO_Gloves";
+    public override bool PerPlayer => true;   // 보호구는 접속자 각자가 착용해야 다음 단계로 넘어간다
 }
 
 public class PRA_RemovalModule : GrabAllItemsModule
@@ -561,11 +562,13 @@ public class MSD_ReinstallModule : ConfirmTaskModule
     public class LOTO_FaceShieldModule : GrabAllItemsModule
     {
         public override string ModuleId => "LOTO_FaceShield";
+        public override bool PerPlayer => true;   // 접속자 각자 착용해야 다음 단계
     }
 
     public class LOTO_ShoesModule : GrabAllItemsModule
     {
         public override string ModuleId => "LOTO_Shoes";
+        public override bool PerPlayer => true;   // 접속자 각자 착용해야 다음 단계
     }
 // ──────────────────────────────────────────────────────────────
 //  절연 저항 측정 4단계 (현대 정비 매뉴얼 기준)

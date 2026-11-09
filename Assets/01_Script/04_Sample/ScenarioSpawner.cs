@@ -421,7 +421,30 @@ public class ScenarioSpawner : NetworkBehaviour
     }
 
     /// <summary>
-    /// Task 종료 시 호출. 
+    /// [서버] 보호구처럼 '사람마다 하나씩' 필요한 아이템용: 방금 착용한 사람 손에 있던 아이템을 치우고,
+    /// 같은 자리에 새 아이템을 하나 다시 놓는다(아직 착용하지 않은 다음 사람이 집을 수 있게).
+    /// </summary>
+    public void ReplaceTaskItem(TaskDef taskDef, NetworkObject old, string prefabId)
+    {
+        if(!InstanceFinder.IsServerStarted) return;
+
+        if(old != null)
+        {
+            _activeObjects.Remove(old);
+            SafeDespawn(old);
+        }
+
+        if(taskDef?.spawnObjects == null) return;
+        foreach(var bundle in taskDef.spawnObjects)
+        {
+            if(bundle.prefabId != prefabId) continue;
+            SpawnBundle(bundle, 0f);
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Task 종료 시 호출.
     /// 1. despawnObjectIds에 명시된 persist 오브젝트 삭제
     /// 2. 일반 오브젝트 삭제 및 새로 생긴 persist 오브젝트 이관
     /// </summary>
