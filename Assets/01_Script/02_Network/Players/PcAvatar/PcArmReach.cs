@@ -117,6 +117,76 @@ public class PcArmReach : MonoBehaviour
     {
         Zero(leftArm);
         Zero(rightArm);
+        if (!_snapHooked)
+        {
+            _snapHooked = true;
+            if (rightArm != null) rightArm.solver.OnPostUpdate += OnRightPostIK;
+            if (leftArm != null) leftArm.solver.OnPostUpdate += OnLeftPostIK;
+        }
+    }
+
+    // ── 본인 화면: 팔 IK 가 끝난 뒤 손목 본을 도구의 잡기 포즈 위치에 바로 맞춘다 ──
+    // 도구는 카메라 앞(HoldPoint)에 고정되어 화면에서 흔들리지 않고, 손이 도구를 따라간다.
+    // (팔 IK 는 팔 길이·팔꿈치 제약 때문에 목표에 정확히 닿지 않을 수 있어, 그 오차만큼 손이 도구에서 떠 보였다)
+    private bool _snapHooked;
+    private bool _snapOn;
+    private Transform _snapPoseTf;
+    private Vector3 _snapHandOffset;
+    private Quaternion _snapRotOffset = Quaternion.identity;
+
+    /// <summary>매 프레임(IK 전) 호출. on 이면 이번 프레임 IK 직후 잡은 손 손목을 poseTf 기준 포즈 위치·회전으로 옮긴다.</summary>
+    public void SetWristSnap(bool on, Transform poseTf = null, Vector3 handOffset = default, Quaternion rotOffset = default)
+    {
+        _snapOn = on && poseTf != null;
+        _snapPoseTf = poseTf;
+        _snapHandOffset = handOffset;
+        _snapRotOffset = rotOffset;
+    }
+
+    private void OnRightPostIK() { if (_holdUsesRight) SnapWrist(rightArm); }
+    private void OnLeftPostIK() { if (!_holdUsesRight) SnapWrist(leftArm); }
+
+    private void SnapWrist(LimbIK arm)
+    {
+        if (!_snapOn || _snapPoseTf == null || arm == null || arm == _active) return;
+        if (arm.solver.bone3 == null || arm.solver.bone3.transform == null) return;
+        float w = Mathf.SmoothStep(0f, 1f, _holdW);
+        if (w <= 0.001f) return;
+
+        Transform wrist = arm.solver.bone3.transform;
+        Vector3 pos = _snapPoseTf.TransformPoint(_snapHandOffset);
+        Quaternion rot = _snapPoseTf.rotation * _snapRotOffset;
+        if ((pos - wrist.position).sqrMagnitude > 1f) return;   // 1m 넘게 떨어졌으면 아직 도구 위치가 정해지기 전
+
+        // 손목을 팔꿈치에서 아래팔 길이만큼만 떨어진 곳에 둔다. 앉거나 고개를 숙이면 도구 위치가 팔이 닿는 범위를 벗어나는데,
+        // 그때 손목만 끌어다 놓으면 팔꿈치는 그대로라 아래팔 메쉬가 고무처럼 늘어나 보였다.
+        // 그래서 손목을 직접 옮기지 않고 아래팔(팔꿈치 뼈)을 도구 쪽으로 돌려 손목이 따라오게 한다.
+        Vector3 target = Vector3.Lerp(wrist.position, pos, w);
+        Quaternion wristRot = Quaternion.Slerp(wrist.rotation, rot, w);
+        var elbowBone = arm.solver.bone2;
+        if (elbowBone != null && elbowBone.transform != null)
+        {
+            Transform elbowT = elbowBone.transform;
+            Vector3 elbow = elbowT.position;
+            Vector3 cur = wrist.position - elbow;
+            Vector3 want = target - elbow;
+            if (cur.sqrMagnitude > 1e-4f && want.sqrMagnitude > 1e-4f)
+                elbowT.rotation = Quaternion.FromToRotation(cur, want) * elbowT.rotation;
+            // 팔 길이 안쪽이면 남은 차이만 손목 위치로 맞춘다(늘어나는 방향으로는 옮기지 않음)
+            if (want.sqrMagnitude <= cur.sqrMagnitude) wrist.position = target;
+            wrist.rotation = wristRot;
+        }
+        else
+        {
+            wrist.SetPositionAndRotation(target, wristRot);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (!_snapHooked) return;
+        if (rightArm != null) rightArm.solver.OnPostUpdate -= OnRightPostIK;
+        if (leftArm != null) leftArm.solver.OnPostUpdate -= OnLeftPostIK;
     }
 
     private static void Zero(LimbIK arm)

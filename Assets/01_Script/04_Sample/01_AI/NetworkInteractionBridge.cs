@@ -1225,8 +1225,9 @@ namespace DoDrill.Training
                 Debug.LogWarning($"<color=orange>[Bridge]</color> 데이터 없음(Index:{_currentTaskIndex}): {zoneId} 신호를 검증 없이 서버로 보냅니다.");
             }
 
-            // 아이템 릴리즈 (공통)
-            if (!string.IsNullOrEmpty(itemId) && zoneId != "Player_Hand_Zone")
+            // 아이템 릴리즈: 부품을 제자리에 '놓는' 단계(Swap)의 목표 존일 때만.
+            // 예전에는 아이템을 든 채 보낸 존 신호마다 내려놓아서, 드릴로 볼트를 푸는 중(ZoneAndUse) F 를 누르면 드릴이 손에서 떨어졌다.
+            if (!string.IsNullOrEmpty(itemId) && zoneId != "Player_Hand_Zone" && ShouldReleaseOnZone(zoneId))
             {
                 ReleaseHeldItem(itemId);
             }
@@ -1239,6 +1240,16 @@ namespace DoDrill.Training
                 itemId = itemId,
                 clientId = InstanceFinder.ClientManager.Connection.ClientId,
             });
+        }
+
+        /// <summary>이 존 신호에서 든 아이템을 내려놓아야 하는지. 시나리오 정보가 없으면 예전처럼 내려놓는다.</summary>
+        private bool ShouldReleaseOnZone(string zoneId)
+        {
+            if (_scenarioData == null || _currentTaskIndex < 0 || _currentTaskIndex >= _scenarioData.scenario.tasks.Count) return true;
+            var config = _scenarioData.GetModuleConfig(_scenarioData.scenario.tasks[_currentTaskIndex].moduleId);
+            if (config == null || string.IsNullOrEmpty(config.actionType)) return true;
+            if (!config.actionType.Equals("Swap", StringComparison.OrdinalIgnoreCase)) return false;
+            return string.IsNullOrEmpty(config.targetZoneId) || string.Equals(config.targetZoneId, zoneId, StringComparison.OrdinalIgnoreCase);
         }
 
         private void ReleaseHeldItem(string itemId)
@@ -1366,10 +1377,26 @@ namespace DoDrill.Training
             }
 
             if (target == null) return;
-            var guideZone = TaskInteractionZone.Find(broadcast.guideId);
-            if (guideZone == null) return;
+            // 끼워 넣을 위치: 가이드 구역 → 같은 이름의 오브젝트(Guide_LockBox 등) → 지금 단계의 목표 구역 순으로 찾는다.
+            // 예전에는 가이드 ID 로 구역을 못 찾으면 그냥 끝나, 놓은 물건이 공중에 멈춘 채 다음 단계까지(약 2초) 기다렸다.
+            Transform snapTo = TaskInteractionZone.Find(broadcast.guideId)?.transform;
+            if (snapTo == null && !string.IsNullOrEmpty(broadcast.guideId))
+            {
+                var go = GameObject.Find(broadcast.guideId);
+                if (go != null) snapTo = go.transform;
+            }
+            if (snapTo == null && _scenarioData != null && _currentTaskIndex >= 0 && _currentTaskIndex < _scenarioData.scenario.tasks.Count)
+            {
+                var cfg = _scenarioData.GetModuleConfig(_scenarioData.scenario.tasks[_currentTaskIndex].moduleId);
+                if (!string.IsNullOrEmpty(cfg?.targetZoneId)) snapTo = TaskInteractionZone.Find(cfg.targetZoneId)?.transform;
+            }
+            if (snapTo == null)
+            {
+                Debug.LogWarning($"<color=orange>[Bridge]</color> 스냅 위치를 찾지 못함: {broadcast.guideId}");
+                return;
+            }
 
-            Vector3 targetPos = guideZone.transform.position;
+            Vector3 targetPos = snapTo.position;
             var lnt = target.GetComponent<LocalNetworkTransform>();
             if (lnt != null) lnt.enabled = false;
 

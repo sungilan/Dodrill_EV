@@ -345,15 +345,22 @@ public class ImpactWrench : MonoBehaviour
     private void RestoreBoltOutline()
     {
         if (_currentOutlinable == null) return;
-        _currentOutlinable.OutlineParameters.Color = restoreOutlineColor;
+        _currentOutlinable.OutlineParameters.Color = RestoreColorFor(_currentOutlinable);
         _currentOutlinable = null;
+    }
+
+    // 체결을 끝낸 볼트는 흰색이 아니라 초록(완료 표시)으로 되돌린다
+    private Color RestoreColorFor(Outlinable o)
+    {
+        var bolt = o != null ? o.GetComponent<Bolt>() : null;
+        return bolt != null && bolt.IsMarkedDone ? Bolt.DoneOutlineColor : restoreOutlineColor;
     }
 
     private void RestoreBoltOutlineForced()
     {
         if (_currentOutlinable != null)
         {
-            _currentOutlinable.OutlineParameters.Color = restoreOutlineColor;
+            _currentOutlinable.OutlineParameters.Color = RestoreColorFor(_currentOutlinable);
             _currentOutlinable = null;
         }
         _targetBolt = null;

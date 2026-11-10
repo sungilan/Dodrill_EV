@@ -78,6 +78,9 @@ public class BoltGroupCounter : MonoBehaviour
         {
             bolt.OnBoltLoosened += HandleBoltLoosened;
             bolt.isAssembleMode = this.assembleMode;
+            // 체결 단계: 볼트를 처음부터 '덜 조인' 위치에 둔다. 예전에는 다 조인 위치에 있다가
+            // 드릴을 대는 순간 빠진 위치로 툭 튀어나온 뒤 다시 들어가 보였다.
+            if (this.assembleMode && bolt.gameObject.activeInHierarchy && bolt.Progress <= 0f) bolt.ShowAssembleStart();
         }
         RegisterBroadcast();
     }
@@ -190,6 +193,8 @@ public class BoltGroupCounter : MonoBehaviour
     private IEnumerator LocalTogglePart(bool active)
     {
         yield return new WaitForSeconds(partToggleDelay);
+        // 체결 단계가 끝나면 볼트별 초록 표시를 걷는다
+        foreach (var b in _bolts) if (b != null) b.MarkDone(false);
         if (targetPart != null) targetPart.SetActive(active);
     }
 

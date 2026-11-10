@@ -74,6 +74,7 @@ public class PcAvatarIKDriver : MonoBehaviour
     /// <summary>이 플레이어가 물체를 잡고 있으면 그 물체 쪽으로 손을 유지하고 손가락을 쥔다.</summary>
     private void UpdateHold()
     {
+        armReach.SetWristSnap(false);
         if (_controller == null) { _hasPose = false; armReach.SetHold(false, true, Vector3.zero, Quaternion.identity); return; }
 
         if (Time.time >= _nextHeldSearch)
@@ -124,6 +125,8 @@ public class PcAvatarIKDriver : MonoBehaviour
             target = body.position + body.up * (1.05f * s) + body.forward * (0.35f * s) + body.right * ((_holdRightHand ? 0.18f : -0.18f) * s);
         _dbgTarget = target;
         armReach.SetHold(true, _holdRightHand, target, rot, baked, _hasPose);
+        // 본인 화면: 도구는 카메라 앞에 그대로 두고, IK 가 끝난 뒤 손목을 포즈 위치에 맞춘다 (다른 사람 화면은 HeldObjectHandAttach 가 도구를 손에 붙인다)
+        if (_hasPose && _controller.IsOwnerView) armReach.SetWristSnap(true, poseTf, _pose.handOffset, _pose.localQuaternionOffset);
         DebugHold(true);
     }
 

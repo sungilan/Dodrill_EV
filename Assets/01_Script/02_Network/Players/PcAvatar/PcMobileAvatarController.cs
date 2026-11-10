@@ -176,12 +176,12 @@ public class PcMobileAvatarController : NetworkBehaviour
             }
         }
 
-        // 소유자: 어떤 상호작용이든(3D 클릭 + UI 버튼 + 확인 버튼 등) 손 뻗기 재생.
+        // 소유자: 물체를 누르거나(구역 신호) 집을 때만 손 뻗기 재생.
+        // 단계 완료(OnTaskConfirmed)·도구 사용(OnItemUsed)에는 뻗지 않는다 — 드릴로 볼트를 풀거나 단계가 끝날 때
+        // 드릴을 든 손 반대쪽 손이 앞으로 뻗었다 돌아오는 쓸데없는 동작이 나왔다.
         if (base.IsOwner)
         {
-            InteractionEvents.OnTaskConfirmed += OnAnyInteraction;
             InteractionEvents.OnZoneActivated += OnAnyZone;
-            InteractionEvents.OnItemUsed += OnAnyInteraction;
             InteractionEvents.OnItemGrabbed += OnAnyInteraction;
         }
     }
@@ -189,9 +189,7 @@ public class PcMobileAvatarController : NetworkBehaviour
     public override void OnStopClient()
     {
         base.OnStopClient();
-        InteractionEvents.OnTaskConfirmed -= OnAnyInteraction;
         InteractionEvents.OnZoneActivated -= OnAnyZone;
-        InteractionEvents.OnItemUsed -= OnAnyInteraction;
         InteractionEvents.OnItemGrabbed -= OnAnyInteraction;
     }
 
@@ -217,7 +215,14 @@ public class PcMobileAvatarController : NetworkBehaviour
     private bool OwnInputRecently => Time.unscaledTime - _lastOwnInputTime < OwnInputWindow;
 
     private void OnAnyInteraction(string _) { if (OwnInputRecently) ReachForward(); }
-    private void OnAnyZone(string _, string __) { if (OwnInputRecently) ReachForward(); }
+    // 도구를 든 채 보내는 구역 신호(드릴로 볼트 풀기 등)이거나 무언가를 들고 있는 중이면 뻗지 않는다
+    private void OnAnyZone(string _, string itemId)
+    {
+        if (!OwnInputRecently || !string.IsNullOrEmpty(itemId) || IsHoldingSomething) return;
+        ReachForward();
+    }
+
+    private bool IsHoldingSomething => armReach != null && armReach.HoldWeight > 0.01f;
 
     /// <summary>타깃 좌표가 없는 상호작용(UI 버튼 등)에서 — 시선 앞쪽으로 손을 뻗는 제스처.</summary>
     public void ReachForward()

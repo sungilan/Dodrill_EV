@@ -26,7 +26,8 @@ MonoBehaviour:
     probeVolumeBlendStatesCS: {fileID: 0}
   m_RendererFeatures:
   - {fileID: 5630448032246806454}
-  m_RendererFeatureMap: b6375e68a75e234e
+  - {fileID: 358347716463611905}
+  m_RendererFeatureMap: b6375e68a75e234e01d0e279591bf904
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -55,6 +56,20 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &358347716463611905
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66d05b9bd637aca4f873d04cd11eaf68, type: 3}
+  m_Name: HeldItemOnTop
+  m_EditorClassIdentifier: Assembly-CSharp::HeldItemOnTopFeature
+  m_Active: 1
+  passEvent: 500
 --- !u!114 &5630448032246806454
 MonoBehaviour:
   m_ObjectHideFlags: 0

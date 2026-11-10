@@ -82,8 +82,8 @@ public class HeldObjectHandAttach : MonoBehaviour
         // (네트워크 위치 갱신이 없을 때) 물체가 매 프레임 조금씩 밀려 수백 m 까지 날아갔다.
         // → 손 IK 가 그 물체를 쫓다 팔이 펴져서 '움직일 때만 잡은 자세가 보이던' 원인.
         Restore();
-        // 원격 아바타 + PC·모바일 본인(1인칭 손이 보임). VR 본인은 Auto Hand 가 직접 쥐므로 제외.
-        if (!IsRemote && _pc == null) return;
+        // 원격 아바타만. 본인 화면은 도구를 카메라 앞에 두고 손목을 도구에 맞춘다(PcArmReach.SetWristSnap). VR 본인은 Auto Hand 가 직접 쥔다.
+        if (!IsRemote) return;
 
         if (Time.unscaledTime >= _nextSearch)
         {
@@ -95,7 +95,6 @@ public class HeldObjectHandAttach : MonoBehaviour
         // PC·모바일 + 도구에 잡기 포즈가 있으면: 손목(IK 결과) 기준으로 도구의 위치·회전을 포즈대로 맞춘다.
         // 물체는 카메라 앞(HoldPoint), 손은 어깨에서 IK 로 따로 움직여서 둘이 어긋나고 움직일 때 손이 따로 노는 것처럼 보였다.
         if (_pc != null && _arm != null && _arm.HoldWeight >= 0.6f && TryAttachByPose()) return;
-        if (!IsRemote) return;   // 본인 화면은 포즈가 있을 때만
 
         if (!TryGetHandPoint(out Vector3 hand)) return;
 

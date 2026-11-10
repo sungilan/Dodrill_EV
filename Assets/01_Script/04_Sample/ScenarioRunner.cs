@@ -443,6 +443,12 @@ public class ScenarioRunner : MonoBehaviour
         var taskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
         var config = _data.GetModuleConfig(taskDef.moduleId);
 
+        // 진행자를 아직 모르면(후드 래치·12V 커버처럼 서버가 클릭 상태를 적용하면서 바로 완료되는 단계)
+        // 방금 그 오브젝트를 누른 사람을 진행자로 쓴다. 예전에는 비어 있어서 완료 알림이 'Player' 로 떴다.
+        if(_activePlayerId < 0 && !string.IsNullOrEmpty(config?.targetObjName) &&
+           ClickableAnimatorManager.TryGetRecentActor(config.targetObjName, 5f, out int clicker))
+            _activePlayerId = clicker;
+
         string taskTitle = string.Empty;
         if(config != null && config.extra != null)
         {

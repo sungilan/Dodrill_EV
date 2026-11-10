@@ -74,7 +74,17 @@ public class VehiclePartsManager : MonoBehaviour
     /// <summary>서버에서 부품 활성/비활성 + 전체 클라에 동기화</summary>
     public void SetPartActive(string partId, bool active)
     {
-        if (!InstanceFinder.IsServerStarted) return;
+        if (!InstanceFinder.IsServerStarted)
+        {
+            // 클라이언트에서 불린 경우(리프트 애니메이션 이벤트는 클라이언트 화면에서 돈다): 내 화면에 바로 적용하고 서버에 알려 모두에게 퍼뜨린다.
+            // 예전에는 여기서 그냥 끝나 배터리 리프트로 배터리를 내린 뒤에도 차에 배터리가 그대로 보였다.
+            if (InstanceFinder.IsClientStarted)
+            {
+                ApplyPartActive(partId, active);
+                InstanceFinder.ClientManager.Broadcast(new PartActiveBroadcast { partId = partId, active = active });
+            }
+            return;
+        }
 
         ApplyPartActive(partId, active);
         InstanceFinder.ServerManager.Broadcast(
@@ -144,6 +154,24 @@ public class VehiclePartsManager : MonoBehaviour
             part.partObject.SetActive(active);
             Debug.Log($"[VehicleParts] {partId} SetActive({active})");
         }
+    }
+
+    /// <summary>
+    /// 배터리 팩을 실제로 들고 있는 매니저를 찾는다.
+    /// VehiclePartsManager가 차량(Ioniq5N)뿐 아니라 배터리팩 프리팹들에도 붙어 있어서
+    /// 아무거나 찾으면 batteryPack이 비어 있는 쪽이 잡혀 배터리가 안 사라지거나 안 돌아온다.
+    /// </summary>
+    public static VehiclePartsManager FindBatteryOwner()
+    {
+        var all = FindObjectsByType<VehiclePartsManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        VehiclePartsManager fallback = null;
+        foreach (var m in all)
+        {
+            if (m == null) continue;
+            if (m.batteryPack != null) return m;
+            if (fallback == null) fallback = m;
+        }
+        return fallback;
     }
 
     // ── 조회 ───────────────────────────────────────────────

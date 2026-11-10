@@ -11,9 +11,9 @@ public class LiftAnimationEventHandler : MonoBehaviour
         get
         {
             // 찾은 적이 없거나, 찾았는데 파괴되었다면 다시 시도
-            if(_partsManager == null)
+            if(_partsManager == null || _partsManager.batteryPack == null)
             {
-                _partsManager = GameObject.FindAnyObjectByType<VehiclePartsManager>(FindObjectsInactive.Include);
+                _partsManager = VehiclePartsManager.FindBatteryOwner();
 
                 if(_partsManager == null)
                     Debug.LogWarning("[LiftEvent] VehiclePartsManager를 씬에서 찾을 수 없습니다.");

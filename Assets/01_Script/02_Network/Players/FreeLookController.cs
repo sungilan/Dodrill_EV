@@ -138,6 +138,12 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     public float laserStartWidth = 0.006f;
     [Tooltip("레이저 너비 (끝)")]
     public float laserEndWidth = 0.002f;
+    [Tooltip("레이저 시작점: 카메라 앞(m)")]
+    public float laserStartForward = 0.35f;
+    [Tooltip("레이저 시작점: 카메라 오른쪽(m)")]
+    public float laserStartRight = 0.14f;
+    [Tooltip("레이저 시작점: 카메라 아래(m)")]
+    public float laserStartDown = 0.12f;
 
     // 레이저 호버/홀드 상태
     private SyncGrab _laserHoverTarget = null;
@@ -715,6 +721,15 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         // 리프트 버튼은 월드 캔버스 위에 있고 콜라이더가 없어 물리 레이캐스트로는 맞지 않는다.
         // 화면 좌표 ↔ 캔버스 사각형 교차로 직접 판정한다 (EventSystem 경로가 실패해도 동작).
         var uiLift = LiftButtonUI.FindAtScreen(_mainCamera, screenPos, raycastMaxDistance, transform, out float uiLiftDist);
+        // 버튼보다 가까이에 다른 물체(차체·MSD·커넥터 등)가 있으면 그 물체를 누른 것이다.
+        // 예전에는 화면상 위치만 겹치면 버튼이 눌려, MSD 를 닫으려 클릭할 때 리프트가 계속 내려갔다.
+        if(uiLift != null && Physics.Raycast(ray, out RaycastHit blockHit, uiLiftDist - 0.05f, ~0, QueryTriggerInteraction.Ignore)
+           && !blockHit.collider.transform.IsChildOf(transform)
+           && blockHit.collider.GetComponentInParent<LiftButtonUI>() == null)
+        {
+            Log($"리프트 버튼 무시 — 앞에 {blockHit.collider.name}({blockHit.distance:F2}m) 이(가) 있음");
+            uiLift = null;
+        }
         if(uiLift != null)
         {
             _pressedLiftButton = uiLift;
@@ -774,6 +789,14 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
 
         // ★ UI 블로킹 체크
         if (IsPointerOverUI(clickPos)) { FallbackUIClick(clickPos); return; }
+
+        // ── 0. 지금 단계의 클릭 대상이 레이 경로 바로 뒤에 있으면 그것을 우선 ──
+        // (접지 케이블 재연결 때 차 문·후드 래치 콜라이더가 앞을 막아 커넥터가 안 눌리던 문제)
+        if (_heldObject == null && TryClickCurrentTaskTarget(clickPos))
+        {
+            Managers.Sound.Play(clickSound);
+            return;
+        }
 
         // ── 1. 월드 UI 버튼(리프트 등) 처리 ──
         if (HandleWorldSpaceUIClick(clickPos))
@@ -953,6 +976,19 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         Log($"E키 Use: {itemId}");
         InteractionEvents.FireItemUsed(itemId);
 
+        // 메거·멀티미터: 화면 가운데로 본 단자에 빨간 프로브를 댄 것으로 처리 (본체를 들고 작은 단자에 프로브 끝을 맞추기 어려움)
+        var meter = _heldObject.GetComponent<MultimeterMaster>();
+        if(meter != null && _mainCamera != null && CurrentTaskIsMeasure())
+        {
+            var mpHit = FindMeasurementPointAtCenter(_heldObject.transform);
+            if(mpHit != null)
+            {
+                Log($"E키 프로브 측정: {mpHit.terminalId}");
+                meter.ProbeRedAt(mpHit.terminalId);
+                return;
+            }
+        }
+
         // 바라보는 Zone에도 함께 발행 (ZoneAndUseModule 완료용)
         if(_mainCamera != null)
         {
@@ -968,16 +1004,112 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
                     InteractionEvents.FireZoneActivated(zone.zoneId, itemId);
                 }
 
-                // MeasurementPoint 있으면 멀티테스터 측정 트리거
+                // MeasurementPoint 있으면 멀티테스터 측정 트리거 — 지금 단계가 측정 단계일 때만.
+                // (예전: 드릴로 볼트를 풀다 F 를 누르면 옆의 고전압 단자까지 '드릴로 측정'으로 보내져 단계가 실패하고 드릴이 내려놓였다)
                 var mp = hit.collider.GetComponent<MeasurementPoint>()
                       ?? hit.collider.GetComponentInParent<MeasurementPoint>();
-                if(mp != null)
+                if(mp != null && CurrentTaskIsMeasure())
                 {
                     Log($"E키 측정: {mp.terminalId}");
                     InteractionEvents.FireZoneActivated(mp.terminalId, itemId);
                 }
             }
         }
+    }
+
+    private static ScenarioReceiver s_scenarioReceiver;
+
+    /// <summary>화면 가운데 방향의 측정점(단자). 들고 있는 물체 자신의 콜라이더는 건너뛴다. 단자는 트리거라 트리거도 맞힌다.</summary>
+    private MeasurementPoint FindMeasurementPointAtCenter(Transform ignoreRoot)
+    {
+        Ray ray = _mainCamera.ScreenPointToRay(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+        var hits = Physics.RaycastAll(ray, raycastMaxDistance, ~0, QueryTriggerInteraction.Collide);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        foreach(var h in hits)
+        {
+            if(ignoreRoot != null && h.collider.transform.IsChildOf(ignoreRoot)) continue;
+            var mp = h.collider.GetComponent<MeasurementPoint>() ?? h.collider.GetComponentInParent<MeasurementPoint>();
+            if(mp != null) return mp;
+            if(!h.collider.isTrigger) return null; // 단자보다 앞에 벽·차체가 있으면 측정하지 않는다
+        }
+        return null;
+    }
+
+    /// <summary>지금 단계의 동작이 측정(MeasureVoltage/MeasureResistance 등)인지. 시나리오 정보가 없으면 예전처럼 true.</summary>
+    [Tooltip("지금 단계의 클릭 대상이 앞을 가린 물체(문·차체 등) 뒤 이 거리(m) 안에 있으면 대상을 누른 것으로 본다.")]
+    public float taskTargetPassThrough = 1.0f;
+    private static readonly RaycastHit[] s_taskClickHits = new RaycastHit[32];
+
+    private bool TryClickCurrentTaskTarget(Vector2 screenPos)
+    {
+        var cfg = CurrentTaskConfig();
+        string target = cfg?.targetObjName;
+        if(string.IsNullOrEmpty(target) || _mainCamera == null) return false;
+
+        Ray ray = _mainCamera.ScreenPointToRay(screenPos);
+        int n = Physics.RaycastNonAlloc(ray, s_taskClickHits, raycastMaxDistance, ~0, QueryTriggerInteraction.Collide);
+        if(n == 0) return false;
+        System.Array.Sort(s_taskClickHits, 0, n, s_hitDistanceComparer);
+
+        float first = -1f;
+        for(int i = 0; i < n; i++)
+        {
+            var col = s_taskClickHits[i].collider;
+            if(col == null || col.transform.IsChildOf(transform)) continue;
+            if(first < 0f && !col.isTrigger) first = s_taskClickHits[i].distance;
+            if(first >= 0f && s_taskClickHits[i].distance > first + taskTargetPassThrough) break;
+
+            var anim = col.GetComponentInParent<ClickableAnimator>();
+            if(anim == null || (anim.uniqueId != target && anim.gameObject.name != target)) continue;
+            if(first < 0f || s_taskClickHits[i].distance <= first + 0.001f) return false; // 가리는 것이 없으면 기존 흐름대로
+            Log($"단계 대상 우선 클릭: {anim.uniqueId} (앞을 가린 물체 {first:F2}m 무시)");
+            anim.OnPCClick();
+            return true;
+        }
+        return false;
+    }
+
+    private sealed class HitDistanceComparer : System.Collections.Generic.IComparer<RaycastHit>
+    {
+        public int Compare(RaycastHit a, RaycastHit b) => a.distance.CompareTo(b.distance);
+    }
+    private static readonly HitDistanceComparer s_hitDistanceComparer = new HitDistanceComparer();
+
+    /// <summary>지금 진행 중인 단계의 설정. 시나리오 정보가 없으면 null.</summary>
+    private static ModuleConfig CurrentTaskConfig()
+    {
+        var r = ScenarioStateReceiver.Instance;
+        if(r == null) return null;
+        var sc = r.CurrentScenario;
+        if(sc == null)
+        {
+            if(s_scenarioReceiver == null) s_scenarioReceiver = FindFirstObjectByType<ScenarioReceiver>();
+            if(s_scenarioReceiver != null) sc = s_scenarioReceiver.ReceivedData;
+        }
+        if(sc == null || sc.scenario == null || sc.scenario.tasks == null) return null;
+        int i = r.CurrentTaskState.taskIndex;
+        if(i < 0 || i >= sc.scenario.tasks.Count) return null;
+        return sc.GetModuleConfig(sc.scenario.tasks[i].moduleId);
+    }
+
+    private static bool CurrentTaskIsMeasure()
+    {
+        var r = ScenarioStateReceiver.Instance;
+        if(r == null) return true;
+        // 단계 진행 상태는 ScenarioStateReceiver, 시나리오 데이터는 스냅샷이 없으면 ScenarioReceiver 에서 받는다
+        // (스냅샷 없이 시작한 세션은 CurrentScenario 가 비어 있어, 예전에는 검사를 건너뛰고 드릴로도 측정 신호가 나갔다)
+        var sc = r.CurrentScenario;
+        if(sc == null)
+        {
+            if(s_scenarioReceiver == null) s_scenarioReceiver = FindFirstObjectByType<ScenarioReceiver>();
+            if(s_scenarioReceiver != null) sc = s_scenarioReceiver.ReceivedData;
+        }
+        if(sc == null || sc.scenario == null || sc.scenario.tasks == null) return true;
+        int i = r.CurrentTaskState.taskIndex;
+        if(i < 0 || i >= sc.scenario.tasks.Count) return false;
+        var cfg = sc.GetModuleConfig(sc.scenario.tasks[i].moduleId);
+        return cfg != null && !string.IsNullOrEmpty(cfg.actionType)
+            && cfg.actionType.StartsWith("Measure", System.StringComparison.OrdinalIgnoreCase);
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1242,11 +1374,13 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         int count = Mathf.Max(laserVertexCount, 2);
         laserLine.positionCount = count;
 
-        Vector3 start = origin.position + origin.forward * 0.05f;
+        // 예전: 눈(카메라) 5cm 앞에서 시작해 굵기 6mm 선이 화면을 가로지르는 큰 삼각형(원뿔)처럼 보였다.
+        // 지금: 화면 오른쪽 아래(오른손 위치쯤)에서 시작하고, 시작 부분은 투명하게 서서히 나타나게 한다.
+        Vector3 start = origin.position + origin.forward * laserStartForward + origin.right * laserStartRight - origin.up * laserStartDown;
         Vector3 end = targetPoint; // ★ 오브젝트 중심이 아닌, 넘겨받은 정확한 좌표 사용
 
-        // 중간 제어점 — 손 앞쪽으로 0.4m 뻗은 뒤 target 방향 평면에 투영
-        Vector3 forwardPoint = start + origin.forward * 0.4f;
+        // 중간 제어점 — 손 앞쪽으로 뻗은 뒤 target 방향 평면에 투영 (살짝 휘는 정도)
+        Vector3 forwardPoint = start + origin.forward * Mathf.Min(0.4f, Vector3.Distance(start, end) * 0.5f);
         Vector3 itemNormal = (start - end).normalized;
         Vector3 v = forwardPoint - end;
         Vector3 projected = forwardPoint - Vector3.Project(v, itemNormal);
@@ -1503,7 +1637,14 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         laserLine.material = mat;
         laserLine.startColor = laserColorStart;
         laserLine.endColor = laserColorEnd;
-        laserLine.colorGradient = MakeGradient(laserColorStart, laserColorEnd);
+        // 시작은 투명 → 금방 진해지고 → 끝(가리킨 지점)까지 보이게. 예전에는 끝이 투명이라 어디를 가리키는지 잘 안 보였다.
+        var g = new Gradient();
+        Color c = laserColorStart;
+        g.SetKeys(new[] { new GradientColorKey(c, 0f), new GradientColorKey(c, 1f) },
+                  new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.85f, 0.2f), new GradientAlphaKey(0.85f, 1f) });
+        laserLine.colorGradient = g;
+        laserLine.startWidth = 0.0025f;
+        laserLine.endWidth = 0.0025f;
         laserLine.enabled = false;
 
         Log("[LaserGrab] LineRenderer 자동 생성");

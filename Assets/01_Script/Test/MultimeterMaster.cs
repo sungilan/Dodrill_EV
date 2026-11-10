@@ -51,6 +51,13 @@ public class MultimeterMaster : MonoBehaviour
     [Tooltip("true 면 아무 단자에나 대도 측정 가능 (모드 체크 건너뜀)")]
     public bool bypassModeCheck = false;
 
+    [Header("접지(검정 프로브)")]
+    [Tooltip("검정 프로브가 아무 단자에도 닿아 있지 않으면 차체 접지(terminalId 에 'Ground' 가 들어간 측정점)에 물려 있는 것으로 본다.\n" +
+             "실제 정비에서 검정 프로브는 접지에 집게로 물려 두고 빨간 프로브만 단자에 댄다. PC·모바일에서는 본체를 들면 두 프로브가 같이 움직여서\n" +
+             "검정을 접지에, 빨강을 단자에 동시에 댈 수 없었다(측정이 한 번도 안 되던 원인).")]
+    public bool autoGroundBlackProbe = true;
+    private MeasurementPoint _groundPoint;
+
     [Header("결함 상태 연출")]
     [Tooltip("결함 발생 시 활성화될 빨간색 배경 오브젝트")]
     [SerializeField] private CanvasGroup _faultyCanvasGroup; // 결함용 빨간 화면 캔버스 그룹
@@ -107,6 +114,16 @@ public class MultimeterMaster : MonoBehaviour
         string red = redProbe != null ? redProbe.currentTerminalId : "";
         string black = blackProbe != null ? blackProbe.currentTerminalId : "";
 
+        // 검정 프로브는 접지에 물려 있는 것으로 본다 (빨간 프로브가 단자에 닿았을 때만)
+        bool redOnGround = false;
+        if(autoGroundBlackProbe && !string.IsNullOrEmpty(red))
+        {
+            var ground = FindGroundPoint();
+            redOnGround = ground != null && red == ground.terminalId;
+            if(string.IsNullOrEmpty(black))
+                black = ground != null ? ground.terminalId : red; // 접지 측정점이 없으면 빨간 단자 값만으로 잰다(값은 빨간 쪽 단자로만 정해진다)
+        }
+
         if(string.IsNullOrEmpty(red) || string.IsNullOrEmpty(black))
         {
             StopFluctuation();
@@ -156,9 +173,36 @@ public class MultimeterMaster : MonoBehaviour
         // ★ 핵심: 결함 여부와 상관없이 서버로 측정 신호를 보냅니다.
         // 이를 통해 서버(ScenarioRunner)는 "잘못된 값"이 들어온 것을 인지하고 단계를 넘기지 않거나 실패 처리를 할 수 있습니다.
         //InteractionEvents.FireZoneActivated(red, gameObject.name);
+        // 빨간 프로브를 접지점에 댄 것은 측정이 아니다(서버에 '단자 불일치'만 쌓인다)
+        if(redOnGround) return;
         InteractionEvents.FireValueMeasured(red, baseValue);
 
         Debug.Log($"[Multimeter] 신호 발신: 단자={red}, 값={baseValue}, 결함여부={isAnyFaulty}");
+    }
+
+    /// <summary>
+    /// PC: 들고 있는 상태에서 화면 가운데로 단자를 보고 E 를 누르면 빨간 프로브를 그 단자에 댄 것으로 처리한다.
+    /// (본체를 들고 빨간 프로브 끝을 작은 단자에 정확히 맞추기 어려워 넣은 보조 조작)
+    /// </summary>
+    public void ProbeRedAt(string terminalId)
+    {
+        if(redProbe == null || string.IsNullOrEmpty(terminalId)) return;
+        string touching = redProbe.currentTerminalId;
+        redProbe.currentTerminalId = terminalId;
+        Debug.Log($"[Multimeter] 빨간 프로브 지정: {terminalId}");
+        EvaluateConnection();
+        // 한 번 재는 조작이다. 실제 접촉 상태로 되돌려 다음 단계에서 같은 값이 다시 보내지지 않게 한다(화면 값은 그대로 둔다)
+        redProbe.currentTerminalId = touching;
+    }
+
+    private MeasurementPoint FindGroundPoint()
+    {
+        if(_groundPoint != null && _groundPoint.isActiveAndEnabled) return _groundPoint;
+        _groundPoint = null;
+        // 배터리 팩 프리팹이 단계마다 생성되므로 없으면 매번 다시 찾는다(측정 순간에만 불리므로 비용은 작다)
+        foreach(var mp in FindObjectsByType<MeasurementPoint>(FindObjectsSortMode.None))
+            if(!string.IsNullOrEmpty(mp.terminalId) && mp.terminalId.Contains("Ground")) { _groundPoint = mp; break; }
+        return _groundPoint;
     }
 
     // 결함 UI 연출 (수정된 버전)

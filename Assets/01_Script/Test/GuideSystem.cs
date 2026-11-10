@@ -145,6 +145,7 @@ public class GuideSystem : MonoBehaviour
     {
         if(currentLevel == GuideLevel.Hard) return;
         if(IsGuideHidden(_currentTask.taskIndex)) return;
+        RetryClickTargets();
         if(_ghostObject == null && _requiredItemObjects.Count == 0 && _clickTargets.Count == 0) return;
         _idleTimer += Time.deltaTime;
         if(_idleTimer >= nudgeIdleTime) { _idleTimer = 0f; TriggerNudge(); }
@@ -357,6 +358,9 @@ public class GuideSystem : MonoBehaviour
             {
                 if(r is CanvasRenderer || (r.GetComponent<MeshFilter>() == null && r is not SkinnedMeshRenderer))
                     continue;
+                // 이미 체결을 끝낸 볼트(초록 표시)는 가이드 깜빡임에 다시 넣지 않는다 — 가이드가 갱신될 때마다 초록이 원래대로 돌아가던 문제
+                var doneBolt = r.GetComponentInParent<Bolt>();
+                if(doneBolt != null && doneBolt.IsMarkedDone) continue;
 
                 outlinable.AddRenderer(r);
             }
@@ -394,6 +398,8 @@ public class GuideSystem : MonoBehaviour
 
     private void ClearVisualGuides()
     {
+        _clickRetryConfig = null;
+
         // 1. 미니맵
         foreach(var mmc in _activeMiniMapBlinks)
             if(mmc != null) mmc.StopBlinking();
@@ -557,7 +563,9 @@ public class GuideSystem : MonoBehaviour
                     if(!string.IsNullOrEmpty(bundle.spawnPointId) && spCache.TryGetValue(bundle.spawnPointId, out var spPt))
                     {
                         Vector3 pos = (existingItem != null) ? GetBoundsCenter(existingItem) : spPt.transform.position;
-                        if(existingItem?.GetComponent<NoneHighlight>() == null)
+                        // 멀티미터·메거는 늘어진 케이블 때문에 물체 중심이 엉뚱한 곳(케이블 끝 쪽)으로 잡혀 동그라미가 이상한 위치에 떴다 → 아웃라인만 표시
+                        bool outlineOnly = existingItem != null && existingItem.GetComponentInChildren<MultimeterMaster>(true) != null;
+                        if(existingItem?.GetComponent<NoneHighlight>() == null && !outlineOnly)
                         {
                             var markerGO = SpawnMarker(pos, GetDisplayName(bundle.prefabId), spawnGuideColor, false);
                             if(markerGO != null)
@@ -869,13 +877,45 @@ public class GuideSystem : MonoBehaviour
         if(!string.IsNullOrEmpty(text)) TTSManager.Instance?.Speak(text);
     }
 
-    private List<GameObject> FindClickTargets(ModuleConfig config)
+    private List<GameObject> FindClickTargets(ModuleConfig config, string moduleId)
     {
         var result = new List<GameObject>();
         if(config == null || string.IsNullOrEmpty(config.targetObjName)) return result;
         var go = FindSpawnedItem(config.targetObjName);
+        // 이름으로 못 찾으면 이 단계용 볼트 묶음(BoltGroupCounter.taskId == 단계 ID)으로 찾는다.
+        // (예: 배터리 팩 상부 커버 분리 — 시나리오의 대상 이름은 Battery_TopCover_Bolts 인데
+        //  실제로 스폰되는 BatteryPack_Disassemble 의 볼트 묶음 이름은 BatteryPack_Cover_Open_Bolts 라 아웃라인이 안 켜졌다)
+        if(go == null) go = FindBoltGroupForTask(moduleId);
         if(go != null) result.Add(go);
         return result;
+    }
+
+    private static GameObject FindBoltGroupForTask(string moduleId)
+    {
+        if(string.IsNullOrEmpty(moduleId)) return null;
+        GameObject inactive = null;
+        foreach(var bg in FindObjectsByType<BoltGroupCounter>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if(bg == null || !string.Equals(bg.taskId, moduleId, StringComparison.OrdinalIgnoreCase)) continue;
+            if(bg.gameObject.activeInHierarchy) return bg.gameObject;
+            if(inactive == null) inactive = bg.gameObject;
+        }
+        return inactive;
+    }
+
+    // 단계가 시작될 때 대상(스폰되는 부품의 볼트 등)이 아직 생기지 않았으면 잠시 동안 다시 찾아 아웃라인을 켠다
+    private ModuleConfig _clickRetryConfig;
+    private TaskDef _clickRetryTask;
+    private float _clickRetryUntil;
+    private float _nextClickRetry;
+
+    private void RetryClickTargets()
+    {
+        if(_clickRetryConfig == null || _clickTargets.Count > 0) return;
+        if(Time.unscaledTime > _clickRetryUntil) { _clickRetryConfig = null; return; }
+        if(Time.unscaledTime < _nextClickRetry) return;
+        _nextClickRetry = Time.unscaledTime + 0.5f;
+        ProcessClickTargets(_clickRetryConfig, _clickRetryTask);
     }
 
     private List<GameObject> FindRequiredItems(ModuleConfig config)
@@ -897,7 +937,14 @@ public class GuideSystem : MonoBehaviour
 
     private void ProcessClickTargets(ModuleConfig config, TaskDef taskDef)
     {
-        _clickTargets = FindClickTargets(config);
+        _clickTargets = FindClickTargets(config, taskDef?.moduleId);
+        if(_clickTargets.Count == 0 && !string.IsNullOrEmpty(config?.targetObjName))
+        {
+            if(_clickRetryConfig != config) { _clickRetryUntil = Time.unscaledTime + 8f; _nextClickRetry = Time.unscaledTime + 0.5f; }
+            _clickRetryConfig = config;
+            _clickRetryTask = taskDef;
+        }
+        else _clickRetryConfig = null;
         foreach(var t in _clickTargets)
         {
             // 아웃라인은 여기서 켜줍니다.

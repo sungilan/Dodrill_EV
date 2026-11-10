@@ -1326,7 +1326,49 @@ public class SyncGrab : NetworkBehaviour
 
     // LateUpdate: 카메라 회전·이동(FreeLookController.Update)이 모두 끝난 뒤의 HoldPoint 위치를 사용해
     // '한 프레임 늦게 따라오는' 현상을 없앤다.
-    private void LateUpdate() => FollowHoldPointNow();
+    private void LateUpdate()
+    {
+        UpdateDrawOnTop();
+        FollowHoldPointNow();
+    }
+
+    // ── PC·모바일 1인칭: 내가 든 도구와 내 장갑을 화면 맨 앞에 그린다(HeldItemOnTopFeature) ──
+    // 차체 밑·벽에 도구를 대면 도구가 차체를 뚫고 잘려 보이던 문제. 위치·충돌은 그대로 두고 그리기 순서만 바꾼다.
+    [Tooltip("PC·모바일에서 들고 있는 동안 내 화면에서는 이 물체와 내 장갑을 다른 물체보다 앞에 그린다(차체·벽 관통 방지).")]
+    public bool drawOnTopWhileHeld = true;
+    private bool _drawOnTop;
+    private readonly System.Collections.Generic.List<Renderer> _onTopGloves = new System.Collections.Generic.List<Renderer>();
+
+    private void OnDisable()
+    {
+        if(_drawOnTop) SetDrawOnTop(false);
+    }
+
+    private void UpdateDrawOnTop()
+    {
+        bool want = drawOnTopWhileHeld && _isPCHolding && IsOwner && holdPoint != null;
+        if(want == _drawOnTop) return;
+        SetDrawOnTop(want);
+    }
+
+    private void SetDrawOnTop(bool on)
+    {
+        _drawOnTop = on;
+        Debug.Log($"[HeldOnTop] {name} 맨 앞에 그리기 {(on ? "ON" : "OFF")}");
+        HeldItemOnTop.Set(gameObject, on);
+
+        if(on)
+        {
+            // 잡은 사람(내 플레이어)의 장갑 — 도구를 쥔 손이 도구 뒤로 잘려 보이지 않게 같이 앞에 그린다
+            _onTopGloves.Clear();
+            Transform root = holdPoint != null ? holdPoint.root : null;
+            if(root != null)
+                foreach(var smr in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                    if(smr.name.Contains("Glove")) _onTopGloves.Add(smr);
+        }
+        foreach(var r in _onTopGloves) HeldItemOnTop.Set(r, on);
+        if(!on) _onTopGloves.Clear();
+    }
 
     private int _followFrame = -1;
 
@@ -1372,6 +1414,9 @@ public class SyncGrab : NetworkBehaviour
     private Vector3 AvoidGeometry(Vector3 desired)
     {
         if(!avoidGeometryClipping) return desired;
+        // 맨 앞에 그리는 중이면 차체·배터리에 겹쳐도 보이므로 당기지 않는다.
+        // 당기면 물체가 카메라 바로 앞(화면 밖)으로 와서 오히려 안 보였고(메거를 배터리에 댈 때), 프로브·드릴 끝이 단자·볼트에 닿지 못했다.
+        if(_drawOnTop) { _avoidReduction = 0f; return desired; }
 
         var cam = Camera.main;
         if(cam == null) return desired;

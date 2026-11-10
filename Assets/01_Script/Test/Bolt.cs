@@ -54,7 +54,10 @@ public class Bolt : MonoBehaviour
         AnimateBoltPosition();
 
         if (prevProgress < 1.0f && _progress >= 1.0f)
+        {
+            if (isAssembleMode) MarkDone(true);   // 체결 완료한 볼트는 초록 아웃라인으로 표시
             OnBoltLoosened?.Invoke(this);
+        }
     }
 
     //private void AnimateBoltPosition()
@@ -100,6 +103,8 @@ public class Bolt : MonoBehaviour
             float yOffset = (1f - _progress) * ejectLocalY * directionMultiplier;
             // transform.up 방향(로컬 Y축)으로 이동 처리
             transform.localPosition = _originLocalPos + (Vector3.up * yOffset);
+            // 조일 때도 돌아가게 (풀 때와 반대로)
+            transform.localRotation = _originLocalRot * Quaternion.Euler(0f, (1f - _progress) * 720f, 0f);
         }
         else
         {
@@ -111,6 +116,15 @@ public class Bolt : MonoBehaviour
             float angle = _progress * 360f * 2f;
             transform.localRotation = _originLocalRot * Quaternion.Euler(0f, angle, 0f);
         }
+    }
+
+    /// <summary>체결 단계 시작 모습(덜 조인 위치)으로 둔다.</summary>
+    public void ShowAssembleStart()
+    {
+        SaveOrigin();
+        isAssembleMode = true;
+        _progress = 0f;
+        AnimateBoltPosition();
     }
 
     public void PlayFallEffect()
@@ -127,9 +141,57 @@ public class Bolt : MonoBehaviour
         gameObject.SetActive(false);
     }
 
+    // ── 체결 완료 표시 (초록 아웃라인) ─────────────────────────────
+    public static Color DoneOutlineColor = new Color(0.2f, 1f, 0.3f, 1f);
+    private EPOOutline.Outlinable _doneOutline;
+    public bool IsMarkedDone => _doneOutline != null;
+    private bool _doneOutlineCreated;
+
+    /// <summary>
+    /// 체결이 끝난 볼트를 초록 아웃라인으로 표시한다. 가이드가 볼트 그룹 전체에 건 깜빡이는 아웃라인에서는 이 볼트를 뺀다.
+    /// </summary>
+    public void MarkDone(bool on)
+    {
+        var myRenderers = GetComponentsInChildren<Renderer>(true);
+        if (on)
+        {
+            // 부모(볼트 그룹)에 걸린 가이드 아웃라인에서 이 볼트 렌더러 제외
+            foreach (var parentOutline in GetComponentsInParent<EPOOutline.Outlinable>(true))
+            {
+                if (parentOutline.gameObject == gameObject) continue;
+                var targets = parentOutline.OutlineTargets;
+                for (int i = targets.Count - 1; i >= 0; i--)
+                    if (System.Array.IndexOf(myRenderers, targets[i].Renderer) >= 0) parentOutline.RemoveTarget(targets[i]);
+            }
+            if (_doneOutline == null)
+            {
+                // 볼트에 이미 붙은 Outlinable(임팩트 렌치가 노란 표시용으로 붙인 것 등)이 있으면 그걸 쓴다.
+                // 따로 하나 더 붙이면 렌치가 손을 뗄 때 기존 것을 흰색으로 되돌려 초록 위에 덮어 버린다.
+                _doneOutline = GetComponent<EPOOutline.Outlinable>();
+                _doneOutlineCreated = _doneOutline == null;
+                if (_doneOutlineCreated) _doneOutline = gameObject.AddComponent<EPOOutline.Outlinable>();
+                if (_doneOutline.OutlineTargets.Count == 0)
+                    foreach (var r in myRenderers)
+                        if (r.GetComponent<MeshFilter>() != null || r is SkinnedMeshRenderer) _doneOutline.AddRenderer(r);
+            }
+            _doneOutline.RenderStyle = EPOOutline.RenderStyle.Single;
+            _doneOutline.OutlineParameters.Color = DoneOutlineColor;
+            _doneOutline.enabled = true;
+        }
+        else if (_doneOutline != null)
+        {
+            if (_doneOutlineCreated) Destroy(_doneOutline);
+            else _doneOutline.enabled = false;
+            _doneOutline = null;
+        }
+    }
+
     public void ReactivateForAssemble()
     {
-        transform.localPosition = _originLocalPos + (Vector3.up * ejectLocalY);
+        MarkDone(false);
+        // 체결 애니메이션(AnimateBoltPosition)의 시작 위치와 같은 쪽으로 빼 둔다.
+        // 예전에는 반대쪽(+Y)에 두어, 체결을 시작하는 순간 볼트가 위로 툭 올라갔다가 내려가 보였다.
+        transform.localPosition = _originLocalPos + (Vector3.up * -ejectLocalY);
         transform.localRotation = _originLocalRot;
 
         var rb = GetComponent<Rigidbody>();

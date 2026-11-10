@@ -381,7 +381,7 @@ public class EvaluationClientUI : MonoBehaviour
     {
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        try { MasterServerToolkit.MasterServer.Mst.Events.Invoke(DoDrill.ScenarioEventKeys.ShowEndPopup); }
+        try { DoDrill.Popup_EndGame.RequestShow(); }
         catch (Exception e) { Debug.LogWarning($"[Eval] 종료 팝업 호출 실패: {e.Message}"); }
     }
 

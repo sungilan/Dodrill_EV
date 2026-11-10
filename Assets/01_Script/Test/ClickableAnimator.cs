@@ -635,7 +635,10 @@ public class ClickableAnimator : MonoBehaviour
         // 3. ★ 시나리오 시스템 연동 (핵심) ★
         // "나(uniqueId) 클릭됐어!"라고 신호를 보냅니다.
         // ConfirmTaskModule이 이 uniqueId를 보고 자신의 targetObjName과 일치하면 단계를 완료합니다.
-        if(sendScenarioSignal)
+        // 서버(호스트 포함)에서만 보낸다. 단계 완료 판정은 서버의 모듈이 이 신호로 한다.
+        // (예전: 서버가 적용 → 단계 완료 → 다음 단계로 넘어간 '뒤에' 클라이언트가 같은 상태를 받아 또 신호를 보내서,
+        //  서버는 그걸 '다음 단계에서 엉뚱한 곳을 누름'으로 보고 정비 순서 위반(PROC_ORDER) 감점을 매겼다)
+        if(sendScenarioSignal && InstanceFinder.IsServerStarted)
         {
             InteractionEvents.FireZoneActivated(uniqueId, string.Empty);
             Debug.Log($"[Clickable] {uniqueId} 시나리오 신호 발신");
