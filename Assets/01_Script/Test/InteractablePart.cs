@@ -378,9 +378,15 @@ public class InteractablePart : MonoBehaviour
 
     public bool CheckSafetyAndTriggerAccident()
     {
-        // 1. 패스 조건 (프리모드나 디버그 모드)
-        if (isFreeMode || bypassSafety) return true;
+        // 1. 패스 조건 (디버그 모드 / 자유 모드)
+        // 부품 프리팹(Ioniq5Nfree)은 전부 isFreeMode=true 로 저장돼 있어서, 예전에는 시나리오 중에도 사고 체크가 아예 돌지 않았다.
+        // 볼트 동작(프리모드)은 그대로 두고, 시나리오가 진행 중일 때만 안전 체크를 살린다.
+        if (bypassSafety) return true;
         if (ElectricSafetyManager.Instance == null) return true;
+        if (isFreeMode && !ElectricSafetyManager.Instance.IsScenarioActive) return true;
+        // MSD(서비스 플러그) 자체는 차단하려고 만지는 부품이므로 사고 대상이 아니다
+        if (name.IndexOf("ServicePlug", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("MSD", System.StringComparison.OrdinalIgnoreCase) >= 0) return true;
 
         // 2. 완벽하게 안전한 상태인지 확인
         if (ElectricSafetyManager.Instance.IsSafeToWork()) return true;
@@ -410,6 +416,14 @@ public class InteractablePart : MonoBehaviour
 
         // 사고 발생!
         EmergencyEventManager.Instance.TriggerAccident(accidentType, reason);
+
+        // 평가: 서버에 알린다 (서버가 자기 진행 상태로 다시 판정해 치명/중결점으로 기록)
+        if (FishNet.InstanceFinder.IsClientStarted)
+            FishNet.InstanceFinder.ClientManager.Broadcast(new SafetyAccidentSignal
+            {
+                accidentType = (int)accidentType,
+                partName = gameObject.name,
+            });
         return false;
     }
 

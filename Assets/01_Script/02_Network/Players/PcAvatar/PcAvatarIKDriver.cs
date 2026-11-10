@@ -100,7 +100,8 @@ public class PcAvatarIKDriver : MonoBehaviour
         Quaternion rot = baked ? handGrip.HandRotation(_holdRightHand, yaw) : Quaternion.identity;
         // 물체 위치가 몸에서 한참 떨어져 있으면(동기화 지연·잘못된 위치) 그쪽으로 팔을 쭉 펴지 말고
         // 몸 앞 가슴 높이에 든 자세를 유지한다. 가만히 서 있을 때 팔이 펴져 기본 자세처럼 보이던 문제 방지.
-        Vector3 target = _held.GripWorldPoint;
+        // 손목이 갈 위치: 잡기 포즈가 있는 도구(드릴 등)는 손잡이 위, 아니면 물체 중심
+        Vector3 target = _held.HandTargetPoint(_holdRightHand);
         Transform body = _controller.transform;
         float s = Mathf.Max(0.01f, _controller.AvatarScale);
         if ((target - body.position).sqrMagnitude > (1.6f * s) * (1.6f * s))

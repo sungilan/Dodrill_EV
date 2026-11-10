@@ -86,6 +86,12 @@ public class GuideSystem : MonoBehaviour
     private Sequence _currentGuideSequence;
     private int _lastActiveTaskIndex = -1;
 
+    // 평가 모드: 가이드를 숨기고, 힌트를 쓴 단계만 보여 준다 (EvaluationMode / EvaluationClientUI)
+    private readonly HashSet<int> _hintTasks = new HashSet<int>();
+
+    /// <summary>지금 단계의 가이드를 숨겨야 하는지 (평가 모드이고 이 단계에서 힌트를 쓰지 않았다)</summary>
+    private bool IsGuideHidden(int taskIdx) => EvaluationMode.IsEvaluation(_scenarioData) && !_hintTasks.Contains(taskIdx);
+
     private void Awake()
     {
         if(Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -138,6 +144,7 @@ public class GuideSystem : MonoBehaviour
     private void Update()
     {
         if(currentLevel == GuideLevel.Hard) return;
+        if(IsGuideHidden(_currentTask.taskIndex)) return;
         if(_ghostObject == null && _requiredItemObjects.Count == 0 && _clickTargets.Count == 0) return;
         _idleTimer += Time.deltaTime;
         if(_idleTimer >= nudgeIdleTime) { _idleTimer = 0f; TriggerNudge(); }
@@ -146,12 +153,14 @@ public class GuideSystem : MonoBehaviour
     private void OnTaskUpdated(TaskStateBroadcast broadcast)
     {
         _currentTask = broadcast.currentTask;
+        if(_currentTask.taskIndex <= 0 && _currentTask.status == TaskStatus.Running) _hintTasks.Clear();   // 처음부터 다시
         if(_currentTask.status == TaskStatus.Running) { _completed = false; ShowGuideForCurrentTask(); }
         else if(_currentTask.status == TaskStatus.Completed) OnTaskCompleted();
     }
 
     private void OnSnapshotReceived(ScenarioSnapshotBroadcast broadcast)
     {
+        if(!ReferenceEquals(_scenarioData, broadcast.scenarioData)) _hintTasks.Clear();
         _scenarioData = broadcast.scenarioData;
         _currentTask = broadcast.currentTask;
         if(_currentTask.status == TaskStatus.Running) { _completed = false; ShowGuideForCurrentTask(); }
@@ -177,7 +186,9 @@ public class GuideSystem : MonoBehaviour
         var taskDef = tasks[idx];
         var config = _scenarioData.GetModuleConfig(taskDef.moduleId);
 
+        bool hidden = IsGuideHidden(idx);
         RefreshUI(idx, taskDef.moduleId, config);
+        if(hidden) HideGuideDetails();
         HandleCenterUI();
 
         ClearVisualGuides();
@@ -186,7 +197,7 @@ public class GuideSystem : MonoBehaviour
         var rawRequiredItems = FindRequiredItems(config);
         _idleTimer = 0f;
 
-        if(currentLevel != GuideLevel.Hard)
+        if(currentLevel != GuideLevel.Hard && !hidden)
         {
             ProcessClickTargets(config, taskDef);
 
@@ -221,7 +232,28 @@ public class GuideSystem : MonoBehaviour
             SpeakGuide(config);
         }
 
-        hintButton?.SetActive(currentLevel == GuideLevel.Normal);
+        hintButton?.SetActive(currentLevel == GuideLevel.Normal && !EvaluationMode.IsEvaluation(_scenarioData));
+    }
+
+    /// <summary>평가 모드: 단계 제목만 남기고 안내 문구·그림·대상 이름을 숨긴다</summary>
+    private void HideGuideDetails()
+    {
+        if(mainGuideText) mainGuideText.text = string.Empty;
+        if(subGuideText) subGuideText.gameObject.SetActive(false);
+        if(activeGuideImage) activeGuideImage.gameObject.SetActive(false);
+        if(activeGuideObjectNameText) activeGuideObjectNameText.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// [평가 모드] 힌트: 지금 단계의 가이드(마커·아웃라인·안내 문구·음성)를 훈련 모드처럼 보여 준다.
+    /// 서버가 힌트 감점을 기록한 뒤 EvaluationClientUI 가 부른다. 그 단계가 끝날 때까지 유지된다.
+    /// </summary>
+    public void ShowHintForCurrentTask()
+    {
+        if(_scenarioData == null || _currentTask.status != TaskStatus.Running || _completed) return;
+        _hintTasks.Add(_currentTask.taskIndex);
+        _lastActiveTaskIndex = -1;   // 같은 단계라도 다시 그리게
+        ShowGuideForCurrentTask();
     }
 
     private void OnTaskCompleted()

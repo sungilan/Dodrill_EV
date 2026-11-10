@@ -41,7 +41,8 @@ namespace DoDrill
         private void OnReceiveEnd(ScenarioEndBroadcast broadcast, Channel channel)
         {
             Debug.Log("[ScenarioExitHandler] 시나리오 종료 수신 → 종료 팝업 표시");
-            Mst.Events.Invoke(ScenarioEventKeys.ShowEndPopup);
+            // 평가 결과 화면이 떠 있으면 그것을 닫은 뒤에 종료 팝업을 띄운다 (겹치지 않게)
+            EvaluationClientUI.RunWhenResultClosed(() => Mst.Events.Invoke(ScenarioEventKeys.ShowEndPopup));
         }
 
         public void ReturnToTitle()

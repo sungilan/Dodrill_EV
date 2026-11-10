@@ -33,8 +33,24 @@ public class SessionPlayerServer : MonoBehaviour
     private bool _registered;
     private int _activePlayerId = -1;
 
+    private static SessionPlayerServer s_instance;
+
+    /// <summary>접속자 표시 이름 조회 (평가 결과 저장용). 모르면 false.</summary>
+    public static bool TryGetDisplayName(int clientId, out string displayName)
+    {
+        displayName = null;
+        if (s_instance == null) return false;
+        if (s_instance._players.TryGetValue(clientId, out var entry) && !string.IsNullOrWhiteSpace(entry.displayName))
+        {
+            displayName = entry.displayName;
+            return true;
+        }
+        return false;
+    }
+
     private void OnEnable()
     {
+        s_instance = this;
         if (InstanceFinder.ServerManager != null && InstanceFinder.IsServerStarted)
             Register();
         else if (InstanceFinder.ServerManager != null)
@@ -43,6 +59,7 @@ public class SessionPlayerServer : MonoBehaviour
 
     private void OnDisable()
     {
+        if (s_instance == this) s_instance = null;
         if (InstanceFinder.ServerManager != null)
         {
             InstanceFinder.ServerManager.OnServerConnectionState -= OnServerConnectionState;

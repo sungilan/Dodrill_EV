@@ -31,6 +31,12 @@ public class EmergencyEventManager : MonoBehaviour
 
     private bool isEventTriggered = false;
 
+    /// <summary>이 기기에서 사고가 났다 (사고 팝업이 이 사람의 종료 팝업 역할을 한다)</summary>
+    public bool HasAccident => isEventTriggered;
+
+    /// <summary>사고 연출(번쩍임·폭발)이 끝났다 — 평가 결과 화면은 이때부터 띄운다</summary>
+    public bool EffectsFinished { get; private set; }
+
     void Awake() => Instance = this;
 
     public void TriggerAccident(AccidentType type, string reason)
@@ -67,7 +73,7 @@ public class EmergencyEventManager : MonoBehaviour
     // 🔥 열폭주(화재) 루틴
     private IEnumerator ThermalRunawayRoutine(string reason)
     {
-        smokeEffect.SetActive(true);
+        if (smokeEffect != null) smokeEffect.SetActive(true);   // Game 씬에서 연결이 비어 있어 예전에는 여기서 멈췄다
 
         // Managers.Sound 활용: 경고 사이렌 재생 (BGM 타입으로 재생하면 자동 루프 가능)
         Managers.Sound.Play(alarmSoundName, Define.Sound.Effect);
@@ -81,7 +87,7 @@ public class EmergencyEventManager : MonoBehaviour
         // Managers.Sound 활용: 폭발음 재생
         Managers.Sound.Play(explosionSoundName, Define.Sound.Effect);
 
-        fireEffect.SetActive(true);
+        if (fireEffect != null) fireEffect.SetActive(true);
         if (cameraShake != null) cameraShake.Play();
 
         yield return StartCoroutine(FlashScreenRoutine(Color.red, 5));
@@ -98,7 +104,22 @@ public class EmergencyEventManager : MonoBehaviour
         // 실패 전용 BGM 재생 (슬픈 음악 등)
         Managers.Sound.Play(failureBgmName, Define.Sound.Bgm);
 
-        StartCoroutine(FadeInDeathCanvas());
+        EffectsFinished = true;
+        StartCoroutine(ShowDeathCanvasWhenReady());
+    }
+
+    /// <summary>
+    /// 평가 모드: 서버가 치명 판정을 하면 결과 화면(EvaluationClientUI)이 먼저 뜨고, 그걸 닫은 뒤 사고 팝업(확인 → 타이틀)을 띄운다.
+    /// 결과가 안 오면(서버가 안전 상태로 판정해 기록하지 않은 경우 등) 잠깐 기다렸다가 사고 팝업을 그냥 띄운다.
+    /// </summary>
+    private IEnumerator ShowDeathCanvasWhenReady()
+    {
+        if (EvaluationMode.ClientIsEvaluation)
+        {
+            for (float t = 0f; t < 3f && !EvaluationClientUI.IsResultShowing; t += Time.unscaledDeltaTime) yield return null;
+            while (EvaluationClientUI.IsResultShowing) yield return null;
+        }
+        yield return StartCoroutine(FadeInDeathCanvas());
     }
 
     // ✨ 화면 번쩍임 로직 (기존과 동일)

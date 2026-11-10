@@ -148,6 +148,14 @@ public class GDS_TabletController : MonoBehaviour
             return;
         }
 
+        // 평가용 시나리오(같은 ID + "_eval")가 이미 진행 중이면 훈련용으로 바꿔 시작하지 않는다
+        if (distributor.LastScenarioId == scenarioId + EvaluationMode.Suffix)
+        {
+            Debug.Log($"[GDS] 평가 모드 시나리오 진행 중 — {distributor.LastScenarioId} 유지");
+            scenarioStarted = true;
+            return;
+        }
+
         scenarioStarted = true;
 
         Debug.Log($"[GDS] DTC {dtcCode} → 시나리오 시작: {scenarioId}");

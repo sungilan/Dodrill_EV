@@ -346,11 +346,35 @@ public static class ClickableAnimatorManager
         _registered = false;
     }
 
+    // ── 누가 눌렀는지(서버) ─────────────────────────────────────
+    // 상태가 바뀌면 모든 클라이언트가 ApplyAnimState 를 실행하고 각자 시나리오 신호(ZoneActivated)를 서버로 보낸다.
+    // 그래서 서버가 받는 신호는 '누른 사람'이 아니라 '접속한 사람 수만큼' 와서, 신호의 연결(conn)로는 누가 눌렀는지 알 수 없다.
+    // 평가(감점)는 실제로 누른 사람에게 해야 하므로, 서버가 요청을 받은 연결을 여기에 기록해 둔다.
+    private static readonly Dictionary<string, (int clientId, float time)> s_lastActor = new Dictionary<string, (int, float)>();
+
+    internal static void RecordActor(string id, int clientId)
+    {
+        if(string.IsNullOrEmpty(id) || clientId < 0) return;
+        s_lastActor[id] = (clientId, Time.time);
+    }
+
+    /// <summary>[서버] 이 오브젝트를 최근(within 초 안에) 누른 사람. 없으면 false.</summary>
+    public static bool TryGetRecentActor(string id, float within, out int clientId)
+    {
+        clientId = -1;
+        if(string.IsNullOrEmpty(id)) return false;
+        if(!s_lastActor.TryGetValue(id, out var a)) return false;
+        if(Time.time - a.time > within) return false;
+        clientId = a.clientId;
+        return true;
+    }
+
     private static void OnServerReceive(NetworkConnection conn, AnimatorStateBroadcast broadcast, Channel channel)
     {
         var target = Get(broadcast.id);
         if(target == null) return;
         if(!target.CanInteract()) return;
+        if(conn != null && conn.IsValid) RecordActor(broadcast.id, conn.ClientId);
         target.ApplyAnimState(broadcast.isOpen);
         InstanceFinder.ServerManager.Broadcast(broadcast);
     }
@@ -553,6 +577,9 @@ public class ClickableAnimator : MonoBehaviour
 
         if(InstanceFinder.IsServerStarted)
         {
+            // 호스트(서버 겸 클라이언트)가 직접 누른 경우: 누른 사람은 호스트 자신
+            if(InstanceFinder.IsClientStarted && InstanceFinder.ClientManager.Connection != null)
+                ClickableAnimatorManager.RecordActor(uniqueId, InstanceFinder.ClientManager.Connection.ClientId);
             ApplyAnimState(open);
             InstanceFinder.ServerManager.Broadcast(broadcast);
         }

@@ -832,7 +832,11 @@ public class SyncGrab : NetworkBehaviour
     [Header("손 모션")]
     [Tooltip("(선택) 아바타 손이 잡을 위치. 비우면 렌더러 경계의 중심을 쓴다.")]
     public Transform gripPoint;
+    [Tooltip("PC·모바일 아바타 손목 위치 보정(이 물체 로컬 좌표, 단위 m). Auto Hand 잡기 포즈(GrabbablePose)의 손 위치에서 더 옮기고 싶을 때 쓴다. 기본 0.")]
+    public Vector3 handTargetAdjust = Vector3.zero;
     private Renderer[] _gripRenderers;
+    private Autohand.GrabbablePose _gripPose;
+    private bool _gripPoseSearched;
 
     /// <summary>
     /// 이 클라이언트가 소유한(=내) 플레이어의 HoldPoint. 모든 클라이언트에는 접속자 수만큼 플레이어 복사본이 있고 각각 HoldPoint 가 있어서
@@ -891,6 +895,36 @@ public class SyncGrab : NetworkBehaviour
             }
             return any ? b.center : transform.position;
         }
+    }
+
+    /// <summary>
+    /// PC·모바일 아바타의 '손목'이 가야 할 월드 위치.
+    /// 도구에 Auto Hand 잡기 포즈(GrabbablePose)가 저장돼 있으면(예: 드릴 손잡이) 그 포즈의 손 위치를 쓴다 — 물체 전체의 중심(GripWorldPoint)으로 가면
+    /// 손이 손잡이가 아니라 몸통 쪽에 놓여 손잡이를 못 쥐었다. 포즈가 없는 물체(태블릿 등)는 예전처럼 GripWorldPoint.
+    /// 포즈가 한쪽 손만 저장돼 있으면 물체 로컬 z 를 뒤집어 반대 손으로 쓴다(손잡이가 좌우 대칭이라는 가정).
+    /// </summary>
+    public Vector3 HandTargetPoint(bool rightHand)
+    {
+        if(!_gripPoseSearched)
+        {
+            _gripPoseSearched = true;
+            _gripPose = GetComponentInChildren<Autohand.GrabbablePose>(true);
+        }
+
+        if(_gripPose != null)
+        {
+            bool hasSame = rightHand ? _gripPose.rightPoseSet : _gripPose.leftPoseSet;
+            bool hasOther = rightHand ? _gripPose.leftPoseSet : _gripPose.rightPoseSet;
+            if(hasSame || hasOther)
+            {
+                Vector3 local = hasSame
+                    ? (rightHand ? _gripPose.rightPose.handOffset : _gripPose.leftPose.handOffset)
+                    : (rightHand ? _gripPose.leftPose.handOffset : _gripPose.rightPose.handOffset);
+                if(!hasSame) local.z = -local.z;   // 반대 손 포즈를 좌우 대칭으로
+                return transform.TransformPoint(local + handTargetAdjust);
+            }
+        }
+        return GripWorldPoint;
     }
 
     private void TrackHeld(bool held)

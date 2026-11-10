@@ -99,10 +99,41 @@ using Debug = UnityEngine.Debug;
         }
     }
 
+    public class EvalTestPenaltyCommand : IDebugCommand
+    {
+        public string Category    => "Scenario";
+        public string Name        => "EvalPenalty";
+        public string Description => "호출한 사람에게 감점 기록(점수판 확인) | args: [규칙ID, 기본 PROC_ORDER]";
+
+        public void Execute(string[] args, int callerId)
+        {
+            var runner = UnityEngine.Object.FindFirstObjectByType<ScenarioRunner>();
+            if (runner == null) { UnityEngine.Debug.LogWarning("[Debug] ScenarioRunner 를 씬에서 찾을 수 없음"); return; }
+            string rule = args != null && args.Length > 0 && !string.IsNullOrEmpty(args[0]) ? args[0] : "PROC_ORDER";
+            runner.DebugRecordViolation(callerId, rule);
+        }
+    }
+
+    public class EvalTestResultCommand : IDebugCommand
+    {
+        public string Category    => "Scenario";
+        public string Name        => "EvalResult";
+        public string Description => "평가 결과를 지금 모든 접속자에게 전송(결과 화면·CSV 저장 확인)";
+
+        public void Execute(string[] args, int callerId)
+        {
+            var runner = UnityEngine.Object.FindFirstObjectByType<ScenarioRunner>();
+            if (runner == null) { UnityEngine.Debug.LogWarning("[Debug] ScenarioRunner 를 씬에서 찾을 수 없음"); return; }
+            runner.DebugSendEvaluationResults();
+        }
+    }
+
     public class ScenarioDebugCommands
     {
         public static void RegisterAll(DebugCommandRegistry registry)
         {
+            registry.Register(new EvalTestPenaltyCommand());
+            registry.Register(new EvalTestResultCommand());
             registry.Register(new ScenarioForceCompleteCommand());
             registry.Register(new ScenarioForceFailCommand());
             registry.Register(new ScenarioJumpToTaskCommand());

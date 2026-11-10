@@ -84,6 +84,13 @@ public abstract class ConfirmTaskModule : ITaskModule
     // 서버가 조건(대기 시간 등)을 직접 검증해야 하는 단계에서 재정의
     protected virtual bool CanConfirm() => true;
 
+    // ── 평가(감점) 연동 ─────────────────────────────────────
+    /// <summary>지금 완료 신호를 받아들일 수 있는지 (ScenarioRunner 가 '조건을 못 채운 시도'를 감점 판정할 때 읽는다)</summary>
+    public bool CanConfirmNow => CanConfirm();
+
+    /// <summary>조건을 채우기 전에 완료를 시도하면 감점할 규칙 ID (없으면 null). 평가 규칙표(evaluation_rules.json)의 id.</summary>
+    public virtual string EarlyConfirmRuleId => null;
+
     // 오브젝트 클릭 전용 (TargetObjName 기반)
     private void HandleInteraction(string id, string itemId)
     {

@@ -1,0 +1,115 @@
+{
+  "startScore": 100,
+  "rules": [
+    {
+      "id": "SAFE_HV_BEFORE_CUTOFF",
+      "category": "safety",
+      "grade": "fatal",
+      "points": 100,
+      "oncePerTask": true,
+      "enabled": true,
+      "ko": "고전압 차단 전에 커넥터를 분리하거나 접촉했습니다.",
+      "en": "Touched or disconnected a high-voltage connector before the system was shut off.",
+      "vi": ""
+    },
+    {
+      "id": "SAFE_NO_PPE",
+      "category": "safety",
+      "grade": "major",
+      "points": 20,
+      "oncePerTask": true,
+      "enabled": true,
+      "ko": "보호구(절연 장갑 등)를 착용하지 않고 작업했습니다.",
+      "en": "Worked without protective equipment (insulated gloves, etc.).",
+      "vi": ""
+    },
+    {
+      "id": "SAFE_NONINSULATED_TOOL",
+      "category": "safety",
+      "grade": "major",
+      "points": 15,
+      "oncePerTask": true,
+      "enabled": false,
+      "ko": "고전압 부위 근처에서 비절연 공구를 사용했습니다.",
+      "en": "Used a non-insulated tool near a high-voltage part.",
+      "vi": ""
+    },
+    {
+      "id": "SAFE_DISCHARGE_WAIT",
+      "category": "safety",
+      "grade": "major",
+      "points": 15,
+      "oncePerTask": true,
+      "enabled": true,
+      "ko": "고전압 차단 후 방전 대기 시간을 지키지 않았습니다.",
+      "en": "Did not wait the required discharge time after shutting off high voltage.",
+      "vi": ""
+    },
+    {
+      "id": "PROC_ORDER",
+      "category": "procedure",
+      "grade": "minor",
+      "points": 10,
+      "oncePerTask": true,
+      "enabled": true,
+      "ko": "정비 순서를 지키지 않았습니다.",
+      "en": "Did not follow the service procedure order.",
+      "vi": ""
+    },
+    {
+      "id": "PROC_MISSING_0V",
+      "category": "procedure",
+      "grade": "major",
+      "points": 20,
+      "oncePerTask": true,
+      "enabled": false,
+      "ko": "0V 전압 측정 단계를 빠뜨렸습니다.",
+      "en": "Skipped the 0V voltage verification step.",
+      "vi": ""
+    },
+    {
+      "id": "TECH_DAMAGE",
+      "category": "technique",
+      "grade": "minor",
+      "points": 10,
+      "oncePerTask": false,
+      "enabled": false,
+      "ko": "부품을 탈거하다 충돌시키거나 떨어뜨렸습니다.",
+      "en": "Dropped or knocked a part while removing it.",
+      "vi": ""
+    },
+    {
+      "id": "ENV_TOOL_LEFT",
+      "category": "environment",
+      "grade": "minor",
+      "points": 5,
+      "oncePerTask": true,
+      "enabled": false,
+      "ko": "작업 도구를 바닥에 방치했습니다.",
+      "en": "Left a tool on the floor.",
+      "vi": ""
+    },
+    {
+      "id": "ENV_FENCE_EXIT",
+      "category": "environment",
+      "grade": "minor",
+      "points": 5,
+      "oncePerTask": true,
+      "enabled": false,
+      "ko": "작업장 안전 펜스를 무단으로 벗어났습니다.",
+      "en": "Left the safety fence area without permission.",
+      "vi": ""
+    },
+    {
+      "id": "HINT_USED",
+      "category": "procedure",
+      "grade": "minor",
+      "points": 5,
+      "oncePerTask": true,
+      "enabled": true,
+      "ko": "힌트를 사용했습니다.",
+      "en": "Used a hint.",
+      "vi": "Đã sử dụng gợi ý."
+    }
+  ]
+}

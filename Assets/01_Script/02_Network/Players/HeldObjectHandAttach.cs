@@ -92,7 +92,9 @@ public class HeldObjectHandAttach : MonoBehaviour
 
         if (!TryGetHandPoint(out Vector3 hand)) return;
 
-        Vector3 delta = hand - _held.GripWorldPoint;
+        // 손에 붙일 기준점: PC·모바일은 IK 가 향하는 점과 같아야 한다(잡기 포즈가 있는 도구는 손잡이 위 손목 위치)
+        Vector3 anchorPoint = (_pc != null && _arm != null) ? _held.HandTargetPoint(_arm.HoldUsesRightHand) : _held.GripWorldPoint;
+        Vector3 delta = hand - anchorPoint;
         if (delta.sqrMagnitude > 2f * 2f) return;   // 손과 2m 넘게 떨어진 물체는 아직 동기화 전 — 붙이지 않는다
 
         _appliedTo = _held.transform;

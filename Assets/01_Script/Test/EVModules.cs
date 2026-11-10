@@ -153,6 +153,9 @@ public class DischargeWaitModule : ConfirmTaskModule
     }
 
     protected override bool CanConfirm() => UnityEngine.Time.time >= _earliestConfirmTime;
+
+    // 방전 대기 시간이 끝나기 전에 완료를 시도하면 안전 항목 감점 (평가 규칙 SAFE_DISCHARGE_WAIT)
+    public override string EarlyConfirmRuleId => "SAFE_DISCHARGE_WAIT";
 }
 
 // ──────────────────────────────────────────────────────────────

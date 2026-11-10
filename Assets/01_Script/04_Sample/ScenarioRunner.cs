@@ -67,6 +67,203 @@ public class ScenarioRunner : MonoBehaviour
     // 존 인터랙션 레이스 컨디션 방지 (서버 전용 락)
     private bool _taskLocked;
 
+    // 평가: 사람별 점수·감점 기록 (서버가 판정, 규칙은 Resources/Evaluation/evaluation_rules.json)
+    private readonly EvaluationService _eval = new EvaluationService();
+    public EvaluationService Evaluation => _eval;
+
+    /// <summary>감점이 기록되면 그 사람에게만 알린다(점수판·알림). 문구는 보내지 않고 규칙 ID 만 보낸다.</summary>
+    private void HandleEvalRecorded(int clientId, EvalEntry entry, PlayerEval player)
+    {
+        if (!InstanceFinder.IsServerStarted) return;
+        if (!InstanceFinder.ServerManager.Clients.TryGetValue(clientId, out var conn) || conn == null || !conn.IsValid) return;
+
+        InstanceFinder.ServerManager.Broadcast(conn, new EvalPenaltyBroadcast
+        {
+            ruleId = entry.ruleId,
+            points = entry.points,
+            score = player.score,
+            fatal = player.fatal,
+        });
+
+        // 치명 위반: 이 사람만 훈련 종료. 결과를 바로 보내고, 남은 사람들의 진행을 막지 않도록 '모두 해야 하는' 판정에서 뺀다.
+        if (player.fatal)
+        {
+            SendResult(clientId, player, _eval.ElapsedSeconds);
+            if (_isRunning && _currentModule is GrabAllItemsModule perPlayer && perPlayer.PerPlayer)
+                perPlayer.Recheck(GetRequiredClientIds());
+            BroadcastState();
+        }
+    }
+
+    /// <summary>
+    /// 치명 위반으로 탈락한 사람인지. 탈락한 사람은 사고 팝업에서 '취소'를 눌러 화면에 남아 있을 수 있는데,
+    /// 그 사람의 조작(존·확인·측정 신호)으로 단계가 진행되면 안 된다.
+    /// </summary>
+    private bool IsEliminated(NetworkConnection conn)
+        => conn != null && _eval.Players.TryGetValue(conn.ClientId, out var p) && p.fatal;
+
+    /// <summary>이미 결과를 보낸 사람(치명 탈락) — 시나리오 끝에 다시 보내지 않는다</summary>
+    private readonly HashSet<int> _resultSent = new HashSet<int>();
+
+    private void SendResult(int clientId, PlayerEval player, float elapsed)
+    {
+        if (!_resultSent.Add(clientId)) return;
+        if (!InstanceFinder.ServerManager.Clients.TryGetValue(clientId, out var conn) || conn == null || !conn.IsValid) return;
+
+        InstanceFinder.ServerManager.Broadcast(conn, new EvalResultBroadcast
+        {
+            score = player.score,
+            grade = EvaluationService.GradeOf(player.score, player.fatal),
+            fatal = player.fatal,
+            lines = EvaluationService.BuildLines(player),
+            totalSeconds = Mathf.RoundToInt(elapsed),
+        });
+    }
+
+    /// <summary>접속 중이고 치명 탈락하지 않은 사람 — '모두 해야 하는' 단계에서 기다려야 할 사람들</summary>
+    private List<int> GetRequiredClientIds(int excludeId = -1)
+    {
+        var list = GetConnectedClientIds(excludeId);
+        list.RemoveAll(id => _eval.Players.TryGetValue(id, out var p) && p.fatal);
+        return list;
+    }
+
+    // ── 안전 사고 (평가) ─────────────────────────────────────
+
+    private const string GlovesModuleId = "LOTO_Gloves";
+    private const string MsdModuleId = "MSD_Removal";
+
+    /// <summary>
+    /// 시나리오에서 moduleId 단계를 이 사람(clientId)이 마쳤는지. 시나리오에 그 단계가 없으면 '마친 것'으로 본다(잘못된 치명 판정 방지).
+    /// 보호구 단계는 사람별로 확인하므로, 지금 그 단계라면 이 사람이 이미 착용했는지(_completedClients)도 본다.
+    /// </summary>
+    private bool HasPassedModule(string moduleId, int clientId)
+    {
+        var tasks = _data?.scenario?.tasks;
+        if (tasks == null) return true;
+        int index = -1;
+        for (int i = 0; i < tasks.Count; i++)
+            if (tasks[i] != null && string.Equals(tasks[i].moduleId, moduleId, StringComparison.OrdinalIgnoreCase)) { index = i; break; }
+        if (index < 0) return true;
+
+        int current = _currentTaskState.taskIndex;
+        if (current > index) return true;
+        if (current < index) return false;
+        return _currentTaskState.status == TaskStatus.Completed || _completedClients.Contains(clientId);
+    }
+
+    /// <summary>
+    /// 클라이언트에서 안전 사고가 났다는 신호. 클라이언트 판단을 믿지 않고 서버 진행 상태로 다시 판정한다:
+    ///   MSD 차단 전 → 치명(SAFE_HV_BEFORE_CUTOFF), 차단 후 보호구 미착용 → 중결점(SAFE_NO_PPE), 둘 다 마쳤으면 기록하지 않음.
+    /// </summary>
+    private void OnReceiveSafetyAccident(NetworkConnection conn, SafetyAccidentSignal signal, Channel channel)
+    {
+        if (conn == null || !conn.IsValid || _data == null || _currentTaskState.status != TaskStatus.Running) return;
+        int id = conn.ClientId;
+        string detail = $"{signal.partName} 접촉";
+
+        if (!HasPassedModule(MsdModuleId, id))
+            RecordViolation(conn, "SAFE_HV_BEFORE_CUTOFF", detail + " (MSD 차단 전)");
+        else if (!HasPassedModule(GlovesModuleId, id))
+            RecordViolation(conn, "SAFE_NO_PPE", detail + " (절연 장갑 미착용)");
+        else
+            Debug.LogWarning($"[Eval] Client#{id} 사고 신호({signal.partName})를 받았지만 서버 기준으로는 안전 상태 → 기록 안 함(클라이언트 상태가 늦게 갱신됐을 가능성)");
+    }
+
+    /// <summary>
+    /// 평가 모드에서 힌트 요청: 남은 횟수(EvaluationMode.MaxHints)가 있으면 HINT_USED 로 감점한다.
+    /// 감점 알림을 받은 클라이언트가 그 단계 가이드를 보여 준다. 같은 단계에서 다시 누르면 규칙(oncePerTask)상 감점되지 않는다.
+    /// </summary>
+    private void OnReceiveHintRequest(NetworkConnection conn, EvalHintRequest request, Channel channel)
+    {
+        if (conn == null || !conn.IsValid || !EvaluationMode.IsEvaluation(_data)) return;
+        if (_currentTaskState.status != TaskStatus.Running) return;
+
+        var player = _eval.Get(conn.ClientId);
+        int used = 0;
+        foreach (var e in player.entries)
+            if (e.ruleId == EvaluationMode.HintRuleId) used++;
+        if (used >= EvaluationMode.MaxHints)
+        {
+            Debug.Log($"[Eval] Client#{conn.ClientId} 힌트 요청 거절 — 이미 {used}회 사용");
+            return;
+        }
+        RecordViolation(conn, EvaluationMode.HintRuleId, $"힌트 요청 (클라이언트 단계 {request.taskIndex})");
+    }
+
+    /// <summary>
+    /// 시나리오가 끝났을 때: 요약 로그, 사람별 CSV 저장(서버), 접속 중인 사람에게 자기 결과 전송.
+    /// 중간에 나간 사람도 기록이 있으면 CSV 에는 남긴다.
+    /// 훈련 모드는 점수를 매기지 않으므로 로그만 남긴다(치명 탈락 처리는 모드와 관계없이 HandleEvalRecorded 에서).
+    /// </summary>
+    private void FinishEvaluation()
+    {
+        Debug.Log(_eval.BuildSummary());
+        if (!InstanceFinder.IsServerStarted) return;
+        if (!EvaluationMode.IsEvaluation(_data))
+        {
+            Debug.Log("[Eval] 훈련 모드 — 결과 화면·CSV 없이 종료");
+            return;
+        }
+
+        float elapsed = _eval.ElapsedSeconds;
+        string scenarioId = _data != null ? _data.scenarioId : string.Empty;
+
+        var ids = new HashSet<int>(GetConnectedClientIds());
+        foreach (int id in _eval.Players.Keys) ids.Add(id);
+
+        foreach (int id in ids)
+        {
+            var player = _eval.Get(id);   // 감점이 없던 사람은 시작 점수로 만들어진다
+
+            string name = null;
+            SessionPlayerServer.TryGetDisplayName(id, out name);
+            if (string.IsNullOrEmpty(name)) name = $"Player {id + 1}";
+            EvaluationResultExporter.AppendRow(scenarioId, name, player, elapsed);
+            SendResult(id, player, elapsed);   // 치명 탈락으로 이미 받은 사람은 건너뛴다
+        }
+    }
+
+    /// <summary>
+    /// 존 신호의 '실제로 행동한 사람'을 찾는다. 못 찾으면 -1 (그러면 감점하지 않는다).
+    /// 존 신호는 연결(conn)로 사람을 알 수 없다 — 누가 하나를 눌러도 모든 클라이언트가 같은 신호를 각자 보내고,
+    /// 스폰된 아이템이 존에 겹치기만 해도 모두가 보낸다. 그래서:
+    ///   1) 아이템이 들어간 신호: 그 아이템을 지금 들고 있는 사람
+    ///   2) 눌러서 작동하는 오브젝트(후드 등): 서버가 요청을 받은 사람(ClickableAnimatorManager)
+    ///   3) 둘 다 아니면(스폰된 아이템이 존에 겹친 경우 등) 누구의 잘못도 아니다
+    /// </summary>
+    private int ResolveActor(ZoneInteractionSignal signal)
+    {
+        if (!string.IsNullOrEmpty(signal.itemId))
+        {
+            foreach (var grab in FindObjectsByType<SyncGrab>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (grab == null || !grab.IsGrabbed || grab.Owner == null || !grab.Owner.IsValid) continue;
+                var item = grab.GetComponent<TaskItem>();
+                if (item != null && item.prefabId == signal.itemId) return grab.Owner.ClientId;
+            }
+            return -1;
+        }
+
+        return ClickableAnimatorManager.TryGetRecentActor(signal.zoneId, 3f, out int actor) ? actor : -1;
+    }
+
+    /// <summary>존 신호 위반(순서 위반)을 실제로 행동한 사람에게 기록한다.</summary>
+    private void RecordZoneViolation(ZoneInteractionSignal signal, string ruleId, string detail)
+    {
+        if (_currentTaskState.status != TaskStatus.Running) return;
+        int actor = ResolveActor(signal);
+        if (actor < 0) return;
+        _eval.Record(actor, ruleId, _currentTaskState.taskIndex, detail);
+    }
+
+    /// <summary>접속(연결)이 유효한 사람의 위반을 기록한다. 클라이언트가 보낸 ID 는 믿지 않고 연결의 ClientId 만 쓴다.</summary>
+    private void RecordViolation(NetworkConnection conn, string ruleId, string detail)
+    {
+        if (conn == null || !conn.IsValid || _currentTaskState.status != TaskStatus.Running) return;
+        _eval.Record(conn.ClientId, ruleId, _currentTaskState.taskIndex, detail);
+    }
+
     // ── 생명주기 ──────────────────────────
 
     private void OnEnable()
@@ -81,6 +278,8 @@ public class ScenarioRunner : MonoBehaviour
             InstanceFinder.ServerManager.RegisterBroadcast<ItemGrabbedSignal>(OnReceiveItemGrabbed);
             InstanceFinder.ServerManager.RegisterBroadcast<TaskConfirmSignal>(OnReceiveTaskConfirm);
             InstanceFinder.ServerManager.RegisterBroadcast<ValueMeasuredSignal>(OnReceiveValueMeasured);
+            InstanceFinder.ServerManager.RegisterBroadcast<SafetyAccidentSignal>(OnReceiveSafetyAccident);
+            InstanceFinder.ServerManager.RegisterBroadcast<EvalHintRequest>(OnReceiveHintRequest);
             InteractionEvents.OnStepAdvanced += OnStepAdvanced;
         }
         else if (InstanceFinder.ServerManager != null)
@@ -102,6 +301,8 @@ public class ScenarioRunner : MonoBehaviour
         InstanceFinder.ServerManager.RegisterBroadcast<TaskConfirmSignal>(OnReceiveTaskConfirm);
         // 예전에는 이 경로에서 ValueMeasuredSignal 이 빠져, 서버보다 먼저 활성화되는 구성에서는 측정 단계(8단계)가 진행 불가였다
         InstanceFinder.ServerManager.RegisterBroadcast<ValueMeasuredSignal>(OnReceiveValueMeasured);
+            InstanceFinder.ServerManager.RegisterBroadcast<SafetyAccidentSignal>(OnReceiveSafetyAccident);
+            InstanceFinder.ServerManager.RegisterBroadcast<EvalHintRequest>(OnReceiveHintRequest);
         InteractionEvents.OnStepAdvanced += OnStepAdvanced;
     }
 
@@ -118,6 +319,8 @@ public class ScenarioRunner : MonoBehaviour
             InstanceFinder.ServerManager.UnregisterBroadcast<ItemGrabbedSignal>(OnReceiveItemGrabbed);
             InstanceFinder.ServerManager.UnregisterBroadcast<TaskConfirmSignal>(OnReceiveTaskConfirm);
             InstanceFinder.ServerManager.UnregisterBroadcast<ValueMeasuredSignal>(OnReceiveValueMeasured);
+            InstanceFinder.ServerManager.UnregisterBroadcast<SafetyAccidentSignal>(OnReceiveSafetyAccident);
+            InstanceFinder.ServerManager.UnregisterBroadcast<EvalHintRequest>(OnReceiveHintRequest);
         }
         InteractionEvents.OnStepAdvanced -= OnStepAdvanced;
     }
@@ -147,8 +350,12 @@ public class ScenarioRunner : MonoBehaviour
         _isRunning = false;
         _retryCount = 0;
         _connectedClientCount = InstanceFinder.ServerManager?.Clients?.Count ?? 0;
+        _eval.Reset();   // 평가 점수·감점 기록 초기화
+        _resultSent.Clear();
+        _eval.OnRecorded -= HandleEvalRecorded;
+        _eval.OnRecorded += HandleEvalRecorded;
 
-        Debug.Log($"[ScenarioRunner] 시나리오 시작 — {data.scenarioName}, Tasks: {data.scenario.tasks.Count}");
+        Debug.Log($"[ScenarioRunner] 시나리오 시작 — {data.scenarioName}, Tasks: {data.scenario.tasks.Count}, 모드: {(EvaluationMode.IsEvaluation(data) ? "평가" : "훈련")}");
         _spawner?.SpawnMapObjects(data.map);
         StartTask(0);
     }
@@ -167,6 +374,7 @@ public class ScenarioRunner : MonoBehaviour
             }
 
             Debug.Log("[ScenarioRunner] 모든 Task 완료 — 1.5초 후 종료");
+            FinishEvaluation();   // 평가 요약 로그 + CSV 저장 + 사람별 결과 전송
             _isRunning = false;
             StartCoroutine(QuitAfterDelay(1.5f));
             return;
@@ -344,6 +552,7 @@ public class ScenarioRunner : MonoBehaviour
 
     private void OnReceiveCompleteSignal(NetworkConnection conn, TaskCompleteSignal signal, Channel channel)
     {
+        if (IsEliminated(conn)) return;   // 치명 위반으로 탈락한 사람의 조작은 진행에 반영하지 않는다
         // Zone 스냅 애니메이션 진행 중이면 무시 (중복 완료 방지)
         if (_taskLocked || !_isRunning) return;
         if (signal.taskIndex != _currentTaskState.taskIndex) return;
@@ -370,6 +579,7 @@ public class ScenarioRunner : MonoBehaviour
 
     private void OnReceiveItemUsed(NetworkConnection conn, ItemUsedSignal signal, Channel channel)
     {
+        if (IsEliminated(conn)) return;   // 치명 위반으로 탈락한 사람의 조작은 진행에 반영하지 않는다
         if (!_isRunning) return;
         if (signal.taskIndex != _currentTaskState.taskIndex) return;
 
@@ -388,6 +598,7 @@ public class ScenarioRunner : MonoBehaviour
 
     private void OnReceiveItemGrabbed(NetworkConnection conn, ItemGrabbedSignal signal, Channel channel)
     {
+        if (IsEliminated(conn)) return;   // 치명 위반으로 탈락한 사람의 조작은 진행에 반영하지 않는다
         if (!_isRunning) return;
         if (signal.taskIndex != _currentTaskState.taskIndex) return;
 
@@ -408,7 +619,7 @@ public class ScenarioRunner : MonoBehaviour
         // 클라이언트가 보낸 clientId 는 믿지 않는다 — 서버가 아는 연결의 ClientId 만 쓴다
         if (conn == null || !conn.IsValid) return;
         int id = conn.ClientId;
-        var required = GetConnectedClientIds();
+        var required = GetRequiredClientIds();   // 치명 탈락한 사람은 기다리지 않는다
 
         var result = module.NotifyGrabbedBy(id, signal.itemId, required);
         if (result == GrabAllItemsModule.GrabResult.Ignored) return;
@@ -463,6 +674,7 @@ public class ScenarioRunner : MonoBehaviour
 
     private void OnReceiveTaskConfirm(NetworkConnection conn, TaskConfirmSignal signal, Channel channel)
     {
+        if (IsEliminated(conn)) return;   // 치명 위반으로 탈락한 사람의 조작은 진행에 반영하지 않는다
         if (!_isRunning) return;
         if (signal.taskIndex != _currentTaskState.taskIndex) return;
 
@@ -472,6 +684,11 @@ public class ScenarioRunner : MonoBehaviour
         {
             return;
         }
+
+        // 평가: 조건(방전 대기 시간 등)을 채우기 전에 완료를 시도했으면 감점 (완료 자체는 모듈이 거부한다)
+        if (_currentModule is ConfirmTaskModule confirmModule && !confirmModule.CanConfirmNow &&
+            !string.IsNullOrEmpty(confirmModule.EarlyConfirmRuleId))
+            RecordViolation(conn, confirmModule.EarlyConfirmRuleId, $"{taskDef.moduleId} 조건을 채우기 전에 완료 시도");
 
         // 올바른 확인(Confirm) 신호일 때만 진행자 등록 및 UI 불 켜기
         RegisterActivePlayer(conn, signal.clientId);
@@ -492,6 +709,7 @@ public class ScenarioRunner : MonoBehaviour
 
     private void OnReceiveZoneSignal(NetworkConnection conn, ZoneInteractionSignal signal, Channel channel)
     {
+        if (IsEliminated(conn)) return;   // 치명 위반으로 탈락한 사람의 조작은 진행에 반영하지 않는다
         // 1. 기본 상태 검증
         if(_taskLocked || !_isRunning) return;
         if(signal.taskIndex != _currentTaskState.taskIndex) return;
@@ -508,12 +726,20 @@ public class ScenarioRunner : MonoBehaviour
         {
             // [검증] 단계별 존 ID 확인
             string stepZoneId = stepModule.CurrentStepZoneId;
-            if(!string.IsNullOrEmpty(stepZoneId) && stepZoneId != signal.zoneId) return;
+            if(!string.IsNullOrEmpty(stepZoneId) && stepZoneId != signal.zoneId)
+            {
+                RecordZoneViolation(signal, "PROC_ORDER", $"{taskDef.moduleId} 단계 존 불일치: 기대 {stepZoneId} / 접촉 {signal.zoneId}");
+                return;
+            }
 
             // [검증] 단계별 요구 아이템 확인
             var stepItems = stepModule.CurrentStepRequiredItems;
             bool validStep = stepItems.Count == 0 || stepItems.Contains(signal.itemId);
-            if(!validStep) return;
+            if(!validStep)
+            {
+                RecordZoneViolation(signal, "PROC_ORDER", $"{taskDef.moduleId} 단계 아이템 불일치: {signal.itemId}");
+                return;
+            }
 
             // [핵심 추가] 검증 통과 후 진행자 등록 및 UI 갱신
             RegisterActivePlayer(conn, signal.clientId);
@@ -551,6 +777,7 @@ public class ScenarioRunner : MonoBehaviour
         {
             // 오답일 경우 로그만 남기고 조용히 리턴 (UI 불 안 켜짐)
             Debug.LogWarning($"[ScenarioRunner] 오답 존 터치 무시: 서버기다림({officialTargetId}) vs 클라보냄({signal.zoneId})");
+            RecordZoneViolation(signal, "PROC_ORDER", $"{taskDef.moduleId} 오답 존: 기대 {officialTargetId} / 접촉 {signal.zoneId}");
             return;
         }
 
@@ -560,6 +787,7 @@ public class ScenarioRunner : MonoBehaviour
         if(!validItem)
         {
             Debug.LogWarning($"[ScenarioRunner] 잘못된 아이템 사용 무시: {signal.itemId}");
+            RecordZoneViolation(signal, "PROC_ORDER", $"{taskDef.moduleId} 잘못된 아이템: {signal.itemId}");
             return;
         }
 
@@ -627,6 +855,7 @@ public class ScenarioRunner : MonoBehaviour
 
     private void OnReceiveValueMeasured(NetworkConnection conn, ValueMeasuredSignal signal, Channel channel)
     {
+        if (IsEliminated(conn)) return;   // 치명 위반으로 탈락한 사람의 조작은 진행에 반영하지 않는다
         Debug.Log($"<color=white>[Runner-Check]</color> 서버에 신호 도착함! Task:{signal.taskIndex}");
 
         // ── [1단계] 서버 상태 확인 ──
@@ -712,7 +941,11 @@ public class ScenarioRunner : MonoBehaviour
     private bool EvaluateCompletion(string mode)
     {
         int completed = _completedClients.Count;
-        int total = Mathf.Max(1, _connectedClientCount);
+        // 치명 탈락한 사람은 '모두 완료' 판정에서 뺀다 (남은 사람들이 그 사람을 기다리느라 멈추지 않게)
+        int fatalConnected = 0;
+        foreach (var p in _eval.Players.Values)
+            if (p.fatal && InstanceFinder.ServerManager != null && InstanceFinder.ServerManager.Clients.ContainsKey(p.clientId)) fatalConnected++;
+        int total = Mathf.Max(1, _connectedClientCount - fatalConnected);
 
         return mode switch
         {
@@ -754,7 +987,7 @@ public class ScenarioRunner : MonoBehaviour
             if (_isRunning && _currentModule is GrabAllItemsModule perPlayer && perPlayer.PerPlayer)
             {
                 _completedClients.Remove(conn.ClientId);
-                perPlayer.Recheck(GetConnectedClientIds(conn.ClientId));
+                perPlayer.Recheck(GetRequiredClientIds(conn.ClientId));
             }
         }
     }
@@ -819,6 +1052,15 @@ public class ScenarioRunner : MonoBehaviour
     // ── 디버그 커맨드용 public API ─────────
 
     public void ForceCompleteCurrentTask() => CompleteCurrentTask();
+
+    /// <summary>디버그: 지정한 사람에게 감점을 기록한다(점수판·결과 화면 확인용). 규칙이 꺼져 있으면 기록되지 않는다.</summary>
+    public void DebugRecordViolation(int clientId, string ruleId)
+    {
+        _eval.Record(clientId, ruleId, _currentTaskState.taskIndex, "디버그 명령");
+    }
+
+    /// <summary>디버그: 지금 시나리오가 끝난 것처럼 평가 결과를 보낸다(결과 화면 확인용). 시나리오는 계속 진행된다.</summary>
+    public void DebugSendEvaluationResults() => FinishEvaluation();
     public void ForceFailCurrentTask() => FailCurrentTask();
 
     public void JumpToTask(int index)
