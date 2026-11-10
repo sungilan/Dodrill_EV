@@ -835,7 +835,7 @@ public class SyncGrab : NetworkBehaviour
     [Tooltip("PC·모바일 아바타 손목 위치 보정(이 물체 로컬 좌표, 단위 m). Auto Hand 잡기 포즈(GrabbablePose)의 손 위치에서 더 옮기고 싶을 때 쓴다. 기본 0.")]
     public Vector3 handTargetAdjust = Vector3.zero;
     private Renderer[] _gripRenderers;
-    private Autohand.GrabbablePose _gripPose;
+    private Autohand.GrabbablePose[] _gripPoses;
     private bool _gripPoseSearched;
 
     /// <summary>
@@ -905,26 +905,48 @@ public class SyncGrab : NetworkBehaviour
     /// </summary>
     public Vector3 HandTargetPoint(bool rightHand)
     {
+        // 같은 손 포즈가 있으면 그 손목 위치 그대로
+        if(TryGetGripPose(rightHand, out var same, out var poseTf))
+            return poseTf.TransformPoint(same.handOffset) + transform.TransformVector(handTargetAdjust);
+
+        // 반대 손 포즈만 있으면 좌우 대칭(포즈 기준 로컬 z 반전)으로 손목 위치만 쓴다
+        if(TryGetGripPose(!rightHand, out var other, out var otherTf))
+        {
+            Vector3 local = other.handOffset;
+            local.z = -local.z;
+            return otherTf.TransformPoint(local) + transform.TransformVector(handTargetAdjust);
+        }
+        return GripWorldPoint;
+    }
+
+    /// <summary>
+    /// 이 도구에 저장된 Auto Hand 잡기 포즈(GrabbablePose) 중 해당 손 것을 찾는다.
+    /// pose 의 handOffset / localQuaternionOffset / 손가락 회전은 모두 poseTransform(=GrabbablePose 가 붙은 오브젝트) 기준이다.
+    /// PC·모바일 아바타 손(PcHandGrip)이 VR 과 같은 손 모양으로 쥐는 데 쓴다.
+    /// </summary>
+    public bool TryGetGripPose(bool rightHand, out Autohand.HandPoseData pose, out Transform poseTransform)
+    {
+        pose = default;
+        poseTransform = null;
         if(!_gripPoseSearched)
         {
             _gripPoseSearched = true;
-            _gripPose = GetComponentInChildren<Autohand.GrabbablePose>(true);
+            _gripPoses = GetComponentsInChildren<Autohand.GrabbablePose>(true);
         }
+        if(_gripPoses == null) return false;
 
-        if(_gripPose != null)
+        foreach(var gp in _gripPoses)
         {
-            bool hasSame = rightHand ? _gripPose.rightPoseSet : _gripPose.leftPoseSet;
-            bool hasOther = rightHand ? _gripPose.leftPoseSet : _gripPose.rightPoseSet;
-            if(hasSame || hasOther)
-            {
-                Vector3 local = hasSame
-                    ? (rightHand ? _gripPose.rightPose.handOffset : _gripPose.leftPose.handOffset)
-                    : (rightHand ? _gripPose.leftPose.handOffset : _gripPose.rightPose.handOffset);
-                if(!hasSame) local.z = -local.z;   // 반대 손 포즈를 좌우 대칭으로
-                return transform.TransformPoint(local + handTargetAdjust);
-            }
+            if(gp == null || !gp.poseEnabled) continue;
+            bool set = rightHand ? gp.rightPoseSet : gp.leftPoseSet;
+            if(!set) continue;
+            var data = rightHand ? gp.rightPose : gp.leftPose;
+            if(data.fingerPoses == null || data.fingerPoses.Length < 5) continue;
+            pose = data;
+            poseTransform = gp.transform;
+            return true;
         }
-        return GripWorldPoint;
+        return false;
     }
 
     private void TrackHeld(bool held)
@@ -1304,9 +1326,20 @@ public class SyncGrab : NetworkBehaviour
 
     // LateUpdate: 카메라 회전·이동(FreeLookController.Update)이 모두 끝난 뒤의 HoldPoint 위치를 사용해
     // '한 프레임 늦게 따라오는' 현상을 없앤다.
-    private void LateUpdate()
+    private void LateUpdate() => FollowHoldPointNow();
+
+    private int _followFrame = -1;
+
+    /// <summary>
+    /// PC 홀드 중이면 이번 프레임의 HoldPoint 로 물체를 옮긴다(프레임당 1회).
+    /// 아바타 손 IK(PcAvatarIKDriver, 실행 순서 -100)가 이 위치를 목표로 쓰므로, IK 가 먼저 불러서 '이번 프레임' 위치를 받게 한다.
+    /// 예전에는 IK 가 지난 프레임 위치를 쫓아 손(과 손에 붙여 그리는 도구)이 카메라보다 한 프레임 늦어 1인칭에서 떨려 보였다.
+    /// </summary>
+    public void FollowHoldPointNow()
     {
         if(!_isPCHolding || holdPoint == null || !IsOwner) return;
+        if(_followFrame == Time.frameCount) return;
+        _followFrame = Time.frameCount;
 
         if(_rb != null) _rb.isKinematic = true;
 

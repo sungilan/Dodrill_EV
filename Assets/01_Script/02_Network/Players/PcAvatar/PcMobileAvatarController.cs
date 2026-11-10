@@ -107,6 +107,33 @@ public class PcMobileAvatarController : NetworkBehaviour
         }
     }
 
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+        // 서버(호스트 포함)에 있는 '남의' 플레이어 복사본도 물리로 움직이면 안 된다 — 아래 설명 참고
+        // (FishNet 은 OnStartServer 안에서 IsOwner 사용을 막는다 → 소유 연결이 이 컴퓨터의 클라이언트(호스트 본인)인지로 판단)
+        if (base.Owner == null || !base.Owner.IsLocalClient) FreezeRemoteBodies();
+    }
+
+    /// <summary>
+    /// 원격 복사본의 Rigidbody 를 전부 kinematic 으로 바꾼다.
+    /// 루트 Rigidbody 가 물리로 살아 있으면, 잡은 물체(가슴 앞)나 손 콜라이더와 부딪혀 몸이 밀려난다.
+    /// 서버는 위치가 바뀌면 그 값을 모두에게 다시 보내므로, 잡은 사람이 가만히 있는 동안(새 위치를 안 보낼 때)
+    /// 다른 사람 화면에서 아바타가 수 m 밀려나 물체와 떨어지고 → 손이 기본 자세로 돌아가 드릴이 안 보였다.
+    /// 잡은 사람이 다시 움직이면 새 위치가 와서 제자리로 돌아왔다.
+    /// </summary>
+    private void FreezeRemoteBodies()
+    {
+        foreach (var rb in GetComponentsInChildren<Rigidbody>(true))
+        {
+            if (rb == null || rb.isKinematic) continue;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+    }
+
     public override void OnStartClient()
     {
         base.OnStartClient();
@@ -121,6 +148,8 @@ public class PcMobileAvatarController : NetworkBehaviour
 
         // 원격(비소유) 복사본은 카메라·오디오 리스너를 끈 채로 둔다 (OnStartClient 시점에 다시 켜졌더라도 보장)
         if (!base.IsOwner) DisableCameras();
+
+        if (!base.IsOwner) FreezeRemoteBodies();
 
         // 소유자: 자기 카메라에 자기 머리 안쪽이 보이지 않도록 지정 렌더러를 그림자 전용으로.
         if (base.IsOwner && hideRenderersForOwner != null)

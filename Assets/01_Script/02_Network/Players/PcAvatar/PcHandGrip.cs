@@ -49,8 +49,49 @@ public class PcHandGrip : MonoBehaviour
         }
     }
 
+    // bones 배열 순서(엄지·검지·중지·약지·소지) → Auto Hand 손가락 번호
+    private static readonly Autohand.FingerEnum[] s_autoHandFinger =
+    {
+        Autohand.FingerEnum.thumb, Autohand.FingerEnum.index, Autohand.FingerEnum.middle, Autohand.FingerEnum.ring, Autohand.FingerEnum.pinky
+    };
+
     /// <summary>
-    /// 손 본이 가져야 할 월드 회전: 손가락은 몸 앞쪽(약간 아래), 손바닥은 몸 안쪽(오른손은 왼쪽, 왼손은 오른쪽)을 향한다.
+    /// 도구에 저장된 Auto Hand 잡기 포즈(VR 과 같은 손 모양)로 손가락을 만든다. LateUpdate 에서 IK 앞에 호출.
+    ///
+    /// VR 손(Auto Hand)은 이 아바타와 같은 정비사 리그의 손 본에 붙어 있어 본 축이 같으므로 값을 그대로 쓴다.
+    /// 포즈 값은 "손목 기준" 회전이라, 손목 기준으로 로컬 회전을 정해 두면 뒤에서 팔 IK 가 손목을 돌려도 손 모양이 유지된다.
+    /// </summary>
+    public bool ApplyPose(bool isRight, ref Autohand.HandPoseData pose, float weight)
+    {
+        if (weight <= 0.001f || !IsBaked(isRight) || pose.fingerPoses == null) return false;
+        var h = isRight ? right : left;
+        if (h.bones.Length < 15) return false;
+
+        Quaternion wristInv = Quaternion.Inverse(h.wrist.rotation);
+        for (int f = 0; f < 5; f++)
+        {
+            int fi = (int)s_autoHandFinger[f];
+            if (fi < 0 || fi >= pose.fingerPoses.Length) continue;
+            var lr = pose.fingerPoses[fi].localRotations;
+            if (lr == null || lr.Length < 3) continue;
+
+            Transform knuckle = h.bones[f * 3], middle = h.bones[f * 3 + 1], distal = h.bones[f * 3 + 2];
+            if (knuckle == null || middle == null || distal == null || knuckle.parent == null) continue;
+
+            // 첫 마디: 손목 기준 회전 lr[0] → 부모(손바닥 뼈 등) 기준 로컬 회전으로 바꾼다
+            Quaternion parentInWrist = wristInv * knuckle.parent.rotation;
+            Quaternion kLocal = Quaternion.Inverse(parentInWrist) * lr[0];
+            knuckle.localRotation = Quaternion.Slerp(knuckle.localRotation, kLocal, weight);
+
+            // 둘째·셋째 마디: 바로 앞 마디 기준 회전이라 그대로 로컬 회전
+            middle.localRotation = Quaternion.Slerp(middle.localRotation, middle.parent == knuckle ? lr[1] : middle.localRotation, weight);
+            distal.localRotation = Quaternion.Slerp(distal.localRotation, distal.parent == middle ? lr[2] : distal.localRotation, weight);
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 손 본이 가져야 할 월드 회전:손가락은 몸 앞쪽(약간 아래), 손바닥은 몸 안쪽(오른손은 왼쪽, 왼손은 오른쪽)을 향한다.
     /// 손잡이를 감싸 쥐는 가장 흔한 한 손 잡기 자세.
     /// </summary>
     public Quaternion HandRotation(bool isRight, Quaternion bodyYaw)

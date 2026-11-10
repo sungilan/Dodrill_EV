@@ -26,6 +26,28 @@ public static class PcAvatarBuilder
         if (p != null) EditorUtility.DisplayDialog("Mechanic 아바타", "생성 완료:\n" + OutPath, "확인");
     }
 
+    /// <summary>
+    /// 이미 만든 아바타 프리팹의 손 쥠 값만 다시 굽는다 (FBX 휴머노이드 매핑을 고친 뒤 사용).
+    /// 프리팹의 다른 수정 사항은 그대로 둔다.
+    /// </summary>
+    [MenuItem("Dodrill/아바타/Mechanic 손 쥠 다시 굽기")]
+    public static void RebakeGrip()
+    {
+        var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(FbxPath);
+        var contents = PrefabUtility.LoadPrefabContents(OutPath);
+        try
+        {
+            var anim = contents.GetComponent<Animator>();
+            var grip = contents.GetComponent<PcHandGrip>();
+            if (fbx == null || anim == null || grip == null) { Debug.LogError("[PcAvatarBuilder] 손 쥠 다시 굽기 실패: FBX/Animator/PcHandGrip 없음"); return; }
+            anim.Rebind(); anim.Update(0f);
+            BakeGrip(grip, anim, fbx);
+            PrefabUtility.SaveAsPrefabAsset(contents, OutPath);
+            Debug.Log("[PcAvatarBuilder] 손 쥠 다시 굽기 완료: " + OutPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(contents); }
+    }
+
     public static GameObject Build()
     {
         var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(FbxPath);

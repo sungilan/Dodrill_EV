@@ -122,6 +122,13 @@ public class LocalNetworkTransform : NetworkBehaviour
 
         if(IsServerInitialized)
         {
+            // 클라이언트가 소유한 물체(플레이어 본인, 잡힌 도구 등): 위치의 주인은 그 클라이언트다.
+            // 서버 쪽 복사본이 물리·충돌로 밀려도 그 값을 다시 퍼뜨리지 않는다(다른 사람에게는 소유자가 보낸 위치만 전달).
+            // (예전: 소유자가 가만히 있어 새 위치를 안 보내는 동안 서버가 밀린 위치를 퍼뜨려,
+            //  다른 사람 화면에서 아바타·도구가 엉뚱한 곳으로 가 있다가 소유자가 움직이면 돌아왔다)
+            if(!IsOwner && Owner.IsValid && _serverHasOwnerPos)
+                return;
+
             // 서버 authority
             if(Time.time - lastSyncTime > syncInterval)
             {
@@ -266,8 +273,18 @@ public class LocalNetworkTransform : NetworkBehaviour
 
         lastSentPos = networkLocalPos;
         lastSentRot = networkLocalRot;
+        _serverHasOwnerPos = true;
 
         UpdateLocalTransformObserversRpc(networkLocalPos, networkLocalRot);
+    }
+
+    // 서버: 지금 소유자에게서 위치를 한 번이라도 받았는지 (소유자가 바뀌면 새로 받을 때까지 고정하지 않는다)
+    private bool _serverHasOwnerPos;
+
+    public override void OnOwnershipServer(NetworkConnection prevOwner)
+    {
+        base.OnOwnershipServer(prevOwner);
+        _serverHasOwnerPos = false;
     }
 
     [ObserversRpc(BufferLast = true)]

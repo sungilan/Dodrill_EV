@@ -31,6 +31,9 @@ public class PcAvatarIKDriver : MonoBehaviour
     private bool _holdRightHand = true;
     private float _nextHeldSearch;
     private float _lastHeldSeen = -10f;
+    // 잡은 도구의 Auto Hand 잡기 포즈 (있을 때만)
+    private bool _hasPose;
+    private Autohand.HandPoseData _pose;
     [Tooltip("잡고 있다는 판정이 잠깐(소유권 전환·동기화 지연) 끊겨도 이 시간(초) 동안은 잡은 자세를 유지한다. 짧게 끊길 때마다 손이 기본 자세로 왔다갔다 하던 것을 막는다.")]
     [SerializeField] private float holdGraceSeconds = 0.5f;
 
@@ -59,14 +62,19 @@ public class PcAvatarIKDriver : MonoBehaviour
             UpdateHold();
             armReach.Tick(Time.deltaTime);
             if (handGrip != null)
-                handGrip.ApplyCurl(armReach.HoldUsesRightHand, Mathf.SmoothStep(0f, 1f, armReach.HoldWeight));
+            {
+                float w = Mathf.SmoothStep(0f, 1f, armReach.HoldWeight);
+                // 도구에 잡기 포즈가 있으면 VR 과 같은 손 모양, 없으면 기본 쥔 손
+                if (!(_hasPose && handGrip.ApplyPose(armReach.HoldUsesRightHand, ref _pose, w)))
+                    handGrip.ApplyCurl(armReach.HoldUsesRightHand, w);
+            }
         }
     }
 
     /// <summary>이 플레이어가 물체를 잡고 있으면 그 물체 쪽으로 손을 유지하고 손가락을 쥔다.</summary>
     private void UpdateHold()
     {
-        if (_controller == null) { armReach.SetHold(false, true, Vector3.zero, Quaternion.identity); return; }
+        if (_controller == null) { _hasPose = false; armReach.SetHold(false, true, Vector3.zero, Quaternion.identity); return; }
 
         if (Time.time >= _nextHeldSearch)
         {
@@ -90,14 +98,22 @@ public class PcAvatarIKDriver : MonoBehaviour
         bool graceOk = _held != null && Time.time - _lastHeldSeen < holdGraceSeconds;
         if (_held == null || (!_held.IsGrabbed && !graceOk))
         {
+            _hasPose = false;
             armReach.SetHold(false, _holdRightHand, Vector3.zero, Quaternion.identity);
             DebugHold(false);
             return;
         }
 
+        // 내가 든 물체는 먼저 이번 프레임 HoldPoint 로 옮긴 뒤 목표를 읽는다(한 프레임 늦어 떨려 보이던 문제)
+        if (_controller.IsOwnerView) _held.FollowHoldPointNow();
         Quaternion yaw = Quaternion.Euler(0f, _controller.transform.eulerAngles.y, 0f);
         bool baked = handGrip != null && handGrip.IsBaked(_holdRightHand);
         Quaternion rot = baked ? handGrip.HandRotation(_holdRightHand, yaw) : Quaternion.identity;
+
+        // 도구에 이 손의 Auto Hand 잡기 포즈가 있으면 손목 방향도 포즈대로(도구 기준) 맞춘다
+        Transform poseTf = null;
+        _hasPose = baked && _held.TryGetGripPose(_holdRightHand, out _pose, out poseTf);
+        if (_hasPose) rot = poseTf.rotation * _pose.localQuaternionOffset;
         // 물체 위치가 몸에서 한참 떨어져 있으면(동기화 지연·잘못된 위치) 그쪽으로 팔을 쭉 펴지 말고
         // 몸 앞 가슴 높이에 든 자세를 유지한다. 가만히 서 있을 때 팔이 펴져 기본 자세처럼 보이던 문제 방지.
         // 손목이 갈 위치: 잡기 포즈가 있는 도구(드릴 등)는 손잡이 위, 아니면 물체 중심
@@ -107,7 +123,7 @@ public class PcAvatarIKDriver : MonoBehaviour
         if ((target - body.position).sqrMagnitude > (1.6f * s) * (1.6f * s))
             target = body.position + body.up * (1.05f * s) + body.forward * (0.35f * s) + body.right * ((_holdRightHand ? 0.18f : -0.18f) * s);
         _dbgTarget = target;
-        armReach.SetHold(true, _holdRightHand, target, rot, baked);
+        armReach.SetHold(true, _holdRightHand, target, rot, baked, _hasPose);
         DebugHold(true);
     }
 

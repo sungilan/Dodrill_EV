@@ -38,6 +38,7 @@ public class PcArmReach : MonoBehaviour
     private Vector3 _holdPos;
     private Quaternion _holdRot = Quaternion.identity;
     private bool _holdUseRot = true;
+    private bool _holdFullRot;   // 도구 잡기 포즈가 있을 때: 손목 방향을 포즈대로 완전히 따른다
     private float _holdW;
     private float _armLenRight, _armLenLeft;
 
@@ -66,9 +67,10 @@ public class PcArmReach : MonoBehaviour
     }
 
     /// <summary>매 프레임: 잡고 있으면 true + 손이 가야 할 월드 위치/회전. 잡지 않으면 false.</summary>
-    public void SetHold(bool holding, bool useRightHand, Vector3 worldPos, Quaternion handRot, bool useRotation = true)
+    public void SetHold(bool holding, bool useRightHand, Vector3 worldPos, Quaternion handRot, bool useRotation = true, bool fullRotation = false)
     {
         _holding = holding;
+        _holdFullRot = fullRotation;
         if (!holding) return;
 
         // 잡기 시작할 때 같은 손으로 뻗기가 진행 중이면 뻗기를 끝낸다 — 안 그러면 뻗기가 끝나며 가중치가 0으로 돌아가
@@ -182,7 +184,7 @@ public class PcArmReach : MonoBehaviour
         arm.solver.IKPosition = _holdPos;
         arm.solver.IKPositionWeight = w;
         arm.solver.IKRotation = _holdRot;
-        arm.solver.IKRotationWeight = _holdUseRot ? w * holdRotationWeight : 0f;
+        arm.solver.IKRotationWeight = _holdUseRot ? w * (_holdFullRot ? 1f : holdRotationWeight) : 0f;
     }
 
     private float CurrentWeight()

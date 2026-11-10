@@ -25,6 +25,7 @@ public class HeldObjectHandAttach : MonoBehaviour
     private SyncGrab _held;
     private float _nextSearch;
     private Vector3 _saved;
+    private Quaternion _savedRot;
     private Transform _appliedTo;
     private bool _applied;
 
@@ -81,7 +82,8 @@ public class HeldObjectHandAttach : MonoBehaviour
         // (네트워크 위치 갱신이 없을 때) 물체가 매 프레임 조금씩 밀려 수백 m 까지 날아갔다.
         // → 손 IK 가 그 물체를 쫓다 팔이 펴져서 '움직일 때만 잡은 자세가 보이던' 원인.
         Restore();
-        if (!IsRemote) return;
+        // 원격 아바타 + PC·모바일 본인(1인칭 손이 보임). VR 본인은 Auto Hand 가 직접 쥐므로 제외.
+        if (!IsRemote && _pc == null) return;
 
         if (Time.unscaledTime >= _nextSearch)
         {
@@ -89,6 +91,11 @@ public class HeldObjectHandAttach : MonoBehaviour
             _held = SyncGrab.FindHeldBy(HolderId);
         }
         if (_held == null || !_held.IsGrabbed) return;
+
+        // PC·모바일 + 도구에 잡기 포즈가 있으면: 손목(IK 결과) 기준으로 도구의 위치·회전을 포즈대로 맞춘다.
+        // 물체는 카메라 앞(HoldPoint), 손은 어깨에서 IK 로 따로 움직여서 둘이 어긋나고 움직일 때 손이 따로 노는 것처럼 보였다.
+        if (_pc != null && _arm != null && _arm.HoldWeight >= 0.6f && TryAttachByPose()) return;
+        if (!IsRemote) return;   // 본인 화면은 포즈가 있을 때만
 
         if (!TryGetHandPoint(out Vector3 hand)) return;
 
@@ -99,15 +106,41 @@ public class HeldObjectHandAttach : MonoBehaviour
 
         _appliedTo = _held.transform;
         _saved = _appliedTo.position;
+        _savedRot = _appliedTo.rotation;
         _appliedTo.position = _saved + delta;
         _applied = true;
+    }
+
+    private bool TryAttachByPose()
+    {
+        bool right = _arm.HoldUsesRightHand;
+        if (!_held.TryGetGripPose(right, out var pose, out var poseTf)) return false;
+        Transform wrist = _arm.HandTransform(right);
+        if (wrist == null) return false;
+
+        Transform obj = _held.transform;
+        // 포즈 기준 오브젝트(GrabPose_R 등)가 도구 루트에서 어떻게 놓였는지(도구 로컬)
+        Quaternion poseInObj = Quaternion.Inverse(obj.rotation) * poseTf.rotation;
+        Vector3 wristInObj = Quaternion.Inverse(obj.rotation) * (poseTf.TransformPoint(pose.handOffset) - obj.position);
+
+        // 손목 회전 = 도구 회전 * poseInObj * localQuaternionOffset → 도구 회전을 거꾸로 구한다
+        Quaternion objRot = wrist.rotation * Quaternion.Inverse(pose.localQuaternionOffset) * Quaternion.Inverse(poseInObj);
+        Vector3 objPos = wrist.position - objRot * wristInObj;
+        if ((objPos - obj.position).sqrMagnitude > 2f * 2f) return false;   // 아직 동기화 전이면 붙이지 않는다
+
+        _appliedTo = obj;
+        _saved = obj.position;
+        _savedRot = obj.rotation;
+        obj.SetPositionAndRotation(objPos, objRot);
+        _applied = true;
+        return true;
     }
 
     private void Restore()
     {
         if (!_applied) return;
         _applied = false;
-        if (_appliedTo != null) _appliedTo.position = _saved;
+        if (_appliedTo != null) _appliedTo.SetPositionAndRotation(_saved, _savedRot);
         _appliedTo = null;
     }
 

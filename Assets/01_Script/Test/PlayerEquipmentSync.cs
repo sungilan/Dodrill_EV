@@ -68,11 +68,91 @@ public class PlayerEquipmentSync : NetworkBehaviour
         EquipServerRpc(prefabId);
     }
 
+    // 서버가 들고 있는 이 플레이어의 착용 목록.
+    // BufferLast 는 마지막 RPC 하나만 남기므로, 매번 "지금까지 착용한 전체 목록"을 보내야
+    // 늦게 들어온 사람도 헬멧·절연화 등을 모두 본다.
+    private readonly HashSet<string> _serverEquipped = new();
+
     [ServerRpc]
-    private void EquipServerRpc(string prefabId) => EquipObserversRpc(prefabId);
+    private void EquipServerRpc(string prefabId)
+    {
+        if(FindEntry(prefabId) == null) return;
+        if(!_serverEquipped.Add(prefabId)) return;
+        var ids = new string[_serverEquipped.Count];
+        _serverEquipped.CopyTo(ids);
+        EquipObserversRpc(ids);
+    }
 
     [ObserversRpc(BufferLast = true)]
-    private void EquipObserversRpc(string prefabId) => ApplyEquip(prefabId);
+    private void EquipObserversRpc(string[] prefabIds)
+    {
+        if(prefabIds == null) return;
+        foreach(var id in prefabIds) ApplyEquip(id);
+        ApplyHairRule();
+    }
+
+    // ── 헬멧 착용 시 헤어 교체 ─────────────────────────────
+    private const string HairName = "SM_Mechanic_Hair";
+    private const string HelmetHairName = "SM_Mechanic_Hair_Helmet";
+
+    private void Awake()
+    {
+        // 프리팹에 헬멧 헤어가 켜진 채로 저장돼 있어도 시작할 때는 기본 헤어만 보이게 한다
+        ApplyHairRule();
+    }
+
+    /// <summary>헬멧(안면보호구)을 썼으면 기본 헤어를 끄고 헬멧 전용 헤어를 켠다. 안 썼으면 반대.</summary>
+    private void ApplyHairRule()
+    {
+        if(equipments == null || equipments.Count == 0) return;   // 비어 있는 예전 컴포넌트는 건드리지 않음
+
+        bool helmetOn = false;
+        foreach(var id in _equipped)
+        {
+            if(IsHelmetEntry(FindEntry(id))) { helmetOn = true; break; }
+        }
+
+        int hairLayer = -1;
+        var helmetHairs = new List<GameObject>();
+        var nob = GetComponentInParent<NetworkObject>(true);
+        var root = nob != null ? nob.transform : transform;
+        foreach(var t in root.GetComponentsInChildren<Transform>(true))
+        {
+            if(t.name == HairName)
+            {
+                hairLayer = t.gameObject.layer;
+                t.gameObject.SetActive(!helmetOn);
+            }
+            else if(t.name == HelmetHairName)
+            {
+                helmetHairs.Add(t.gameObject);
+            }
+        }
+
+        foreach(var go in helmetHairs)
+        {
+            go.SetActive(helmetOn);
+            // 본인 화면에서는 기본 헤어와 같은 방식으로 보이게(가려지게) 레이어를 맞춘다
+            if(hairLayer >= 0) SetLayerRecursively(go, hairLayer);
+        }
+    }
+
+    private static bool IsHelmetEntry(EquipmentEntry entry)
+    {
+        if(entry == null) return false;
+        if(ContainsHelmetWord(entry.prefabId)) return true;
+        if(entry.objectsToActivate != null)
+            foreach(var obj in entry.objectsToActivate)
+                if(obj != null && (obj.name == HelmetHairName || ContainsHelmetWord(obj.name))) return true;
+        return false;
+    }
+
+    private static bool ContainsHelmetWord(string s)
+    {
+        if(string.IsNullOrEmpty(s)) return false;
+        return s.IndexOf("Helmet", System.StringComparison.OrdinalIgnoreCase) >= 0
+            || s.IndexOf("FaceShield", System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
 
     private void ApplyEquip(string prefabId)
     {
