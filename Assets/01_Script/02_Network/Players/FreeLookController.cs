@@ -198,6 +198,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         }
 
         _isVR = IsVRDevice();
+        Debug.Log($"[PC입력진단] OnStartClient isVR={_isVR} xrActive={UnityEngine.XR.XRSettings.isDeviceActive} xrName='{UnityEngine.XR.XRSettings.loadedDeviceName}'");
         EnableMyCamera();
 
         // ★ LocalNetworkTransform이 있으면 비활성화
@@ -233,6 +234,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         StopAllCoroutines();
         _heldObject = null;
         _cameraReady = false;
+        Log("OnDisable — 카메라 준비 상태를 초기화함 (다시 켜지면 Update 에서 복구)");
     }
 
     // 창 포커스를 잃어도(알트탭·녹화 프로그램·알림 팝업) 손에 든 물체를 놓지 않는다.
@@ -347,8 +349,19 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     // Update
     // ═══════════════════════════════════════════════════════
 
+    // [진단] 클릭했는데 상호작용이 안 될 때 어느 조건에서 막히는지 한 번에 보려고 클릭 순간의 내부 상태를 찍는다 (showDebugLog 와 무관).
+    private void DiagnoseClick()
+    {
+        if(!Input.GetMouseButtonDown(0)) return;
+        bool inv = EVInventoryUI.Instance != null && EVInventoryUI.Instance.panel != null && EVInventoryUI.Instance.panel.activeInHierarchy;
+        Debug.Log($"[PC입력진단] 클릭 pos={Input.mousePosition} enabled={enabled} IsOwner={IsOwner} IsClientInitialized={IsClientInitialized} " +
+                  $"isVR={_isVR} cameraReady={_cameraReady} mainCam={(_mainCamera != null)} inventoryOpen={inv} held={(_heldObject != null)} " +
+                  $"xrActive={UnityEngine.XR.XRSettings.isDeviceActive} xrName='{UnityEngine.XR.XRSettings.loadedDeviceName}'");
+    }
+
     private void Update()
     {
+        DiagnoseClick();
         if(!IsOwner || !IsClientInitialized) return;
 
         // 카메라 이동/회전은 인벤토리가 켜져 있어도 작동하도록 위쪽 유지
@@ -356,7 +369,17 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         HandleCameraLook();
         HandleVerticalInput();
 
-        if(_isVR || !_cameraReady) return;
+        if(_isVR) return;
+
+        // _cameraReady 는 OnStartClient 에서 한 번만 켜지고 OnDisable 에서 꺼진다. 컴포넌트/오브젝트가 한 번이라도
+        // 껐다 켜지면 영영 false 로 남아 이동·시점만 되고 클릭 상호작용(해치·물체 잡기)이 전부 죽던 문제 → 여기서 복구한다.
+        if(!_cameraReady)
+        {
+            if(_mainCamera == null) _mainCamera = GetComponentInChildren<Camera>(includeInactive: true);
+            if(_mainCamera == null) return;
+            _cameraReady = true;
+            Log($"카메라 준비 상태 복구 — {_mainCamera.name} (껐다 켜진 뒤 상호작용이 막히던 문제 방지)");
+        }
 
         if(_mainCamera == null)
         {
@@ -416,8 +439,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         if(UseAvatarRig)
         {
             // 수직 자유 비행 대신 크라우치/높이 조절(PcMobileAvatarController)이 담당, 루트 Y는 접지 처리
-            transform.position += horizontalVelocity * Time.deltaTime;
-            _planarVelocity = horizontalVelocity;
+            _planarVelocity = MoveWithCollision(horizontalVelocity * Time.deltaTime);
             return;
         }
 
@@ -428,8 +450,36 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             Time.deltaTime / Mathf.Max(0.0001f, verticalSmoothTime)
         );
 
-        transform.position += (horizontalVelocity + Vector3.up * _currentVerticalVelocity) * Time.deltaTime;
-        _planarVelocity = horizontalVelocity;
+        // 수직(자유 비행)은 그대로, 수평만 벽·가구에 막는다
+        _planarVelocity = MoveWithCollision(horizontalVelocity * Time.deltaTime);
+        transform.position += Vector3.up * (_currentVerticalVelocity * Time.deltaTime);
+    }
+
+    [Header("이동 충돌 (벽·가구)")]
+    [Tooltip("작업장 벽·가구에 막히게 한다. 환경 콜라이더는 'Ignore Raycast' 레이어(Tools ▸ DoDrill ▸ 플레이어 충돌 만들기)에 있다.")]
+    [SerializeField] private bool collideWithEnvironment = true;
+    [SerializeField] private float collisionRadius = 0.28f;
+    [SerializeField] private float collisionHeight = 1.7f;
+
+    /// <summary>수평 이동량(이번 프레임)을 충돌을 적용해 옮기고, 실제로 움직인 속도(m/s)를 돌려준다(걷기 애니메이션용).</summary>
+    private Vector3 MoveWithCollision(Vector3 wantDelta)
+    {
+        float dt = Mathf.Max(Time.deltaTime, 1e-4f);
+        if(!collideWithEnvironment)
+        {
+            transform.position += wantDelta;
+            return wantDelta / dt;
+        }
+
+        float s = _avatarCtrl != null ? _avatarCtrl.AvatarScale : 1f;
+        Vector3 before = transform.position;
+        Vector3 after = PlayerCollision.Move(before, wantDelta, collisionRadius * s, collisionHeight * s);
+        transform.position = after;
+
+        Vector3 actual = (after - before); actual.y = 0f;
+        Vector3 vel = actual / dt;
+        float max = Mathf.Max(moveSpeed, 0.01f) * 1.5f;           // 겹침 해소로 튄 값이 걷기 속도를 부풀리지 않게
+        return vel.magnitude > max ? vel.normalized * max : vel;
     }
 
     private void HandleCameraLook()
@@ -771,24 +821,27 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         bool clicked = false;
         Vector2 clickPos = Vector2.zero;
 
-#if UNITY_IOS || UNITY_ANDROID
-    if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
-    {
-        clicked = true;
-        clickPos = Input.GetTouch(0).position;
-    }
-#else
-        if (Input.GetMouseButtonDown(0) && !Input.GetMouseButton(1))
+        // 예전에는 '#if UNITY_IOS || UNITY_ANDROID' 로 컴파일 때 갈랐다. 그러면 Active Build Target 이 Android 일 때
+        // (모바일 APK 를 빌드하느라 에디터를 Android 로 바꿔 둔 상태) 에디터의 PC 플레이어가 마우스 클릭을 전혀 읽지 못했다.
+        // → 실행 중에 판정: 터치가 있으면 터치, 아니면 마우스.
+        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+        {
+            clicked = true;
+            clickPos = Input.GetTouch(0).position;
+        }
+        else if (!Application.isMobilePlatform && Input.GetMouseButtonDown(0) && !Input.GetMouseButton(1))
         {
             clicked = true;
             clickPos = Input.mousePosition;
         }
-#endif
 
         if (!clicked) return;
 
         // ★ UI 블로킹 체크
-        if (IsPointerOverUI(clickPos)) { FallbackUIClick(clickPos); return; }
+        bool overUI = IsPointerOverUI(clickPos);
+        Log($"[클릭] pos={clickPos} overUI={overUI} held={(_heldObject != null)} ES={(EventSystem.current != null ? EventSystem.current.name : "없음")}" +
+            $"/{(EventSystem.current != null && EventSystem.current.currentInputModule != null ? EventSystem.current.currentInputModule.GetType().Name : "모듈없음")}");
+        if (overUI) { FallbackUIClick(clickPos); return; }
 
         // ── 0. 지금 단계의 클릭 대상이 레이 경로 바로 뒤에 있으면 그것을 우선 ──
         // (접지 케이블 재연결 때 차 문·후드 래치 콜라이더가 앞을 막아 커넥터가 안 눌리던 문제)

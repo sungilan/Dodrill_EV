@@ -98,6 +98,12 @@ public class ResponsiveCanvasScaler : MonoBehaviour
         }
 
         bool changed = false;
+
+        // 같은 EventSystem 에 AutoHand 의 AutoInputModule(VR 손 레이저용)이 마우스 모듈보다 앞/같이 있으면
+        // EventSystem 이 그쪽을 현재 모듈로 잡아 마우스·터치가 UI 에 전달되지 않는다. 이 스케일러는 헤드셋이 아닐 때만 동작하므로 꺼 둔다.
+        foreach (var m in keep.GetComponents<BaseInputModule>())
+            if (m != null && m.enabled && m.GetType().Name == "AutoInputModule") { m.enabled = false; changed = true; }
+
         foreach (var es in all)
             if (es != keep && es.enabled) { es.enabled = false; changed = true; }
         if (EventSystem.current != keep) { EventSystem.current = keep; changed = true; }

@@ -67,14 +67,24 @@ public class SlidingPanel : MonoBehaviour
             _canvasGroup.alpha = 0f;
     }
 
+    // Awake 전에(비활성 오브젝트였다가) 버튼 이벤트로 먼저 호출되면 _canvasGroup 이 null 이라 NRE 가 났다 → 필요할 때 보충한다.
+    private bool EnsureRefs()
+    {
+        if(_rect == null) _rect = GetComponent<RectTransform>();
+        if(_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
+        return _rect != null && _canvasGroup != null;
+    }
+
     public void TogglePanel()
     {
+        if(!EnsureRefs()) return;
         if(_isShown) Hide();
         else Show();
     }
 
     public void Show()
     {
+        if(!EnsureRefs()) return;
         _isShown = true;
         KillTweens();
 
@@ -99,6 +109,7 @@ public class SlidingPanel : MonoBehaviour
 
     public void Hide()
     {
+        if(!EnsureRefs()) return;
         _isShown = false;
         KillTweens();
 

@@ -278,16 +278,42 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
 
         if(UseAvatarRig)
         {
-            transform.position += currentVelocity * Time.deltaTime;
-            _planarVelocity = currentVelocity;
+            _planarVelocity = MoveWithCollision(currentVelocity * Time.deltaTime);
             return;
         }
 
         float targetVerticalVel = desiredVertical * moveSpeed;
         currentVerticalVelocity = Mathf.Lerp(currentVerticalVelocity, targetVerticalVel, Time.deltaTime / verticalSmoothTime);
 
-        transform.position += (currentVelocity + Vector3.up * currentVerticalVelocity) * Time.deltaTime;
-        _planarVelocity = currentVelocity;
+        _planarVelocity = MoveWithCollision(currentVelocity * Time.deltaTime);
+        transform.position += Vector3.up * (currentVerticalVelocity * Time.deltaTime);
+    }
+
+    [Header("이동 충돌 (벽·가구)")]
+    [Tooltip("작업장 벽·가구에 막히게 한다. 환경 콜라이더는 'Ignore Raycast' 레이어(Tools ▸ DoDrill ▸ 플레이어 충돌 만들기)에 있다.")]
+    [SerializeField] private bool collideWithEnvironment = true;
+    [SerializeField] private float collisionRadius = 0.28f;
+    [SerializeField] private float collisionHeight = 1.7f;
+
+    /// <summary>수평 이동량(이번 프레임)을 충돌을 적용해 옮기고, 실제로 움직인 속도(m/s)를 돌려준다(걷기 애니메이션용).</summary>
+    private Vector3 MoveWithCollision(Vector3 wantDelta)
+    {
+        float dt = Mathf.Max(Time.deltaTime, 1e-4f);
+        if(!collideWithEnvironment)
+        {
+            transform.position += wantDelta;
+            return wantDelta / dt;
+        }
+
+        float s = _avatarCtrl != null ? _avatarCtrl.AvatarScale : 1f;
+        Vector3 before = transform.position;
+        Vector3 after = PlayerCollision.Move(before, wantDelta, collisionRadius * s, collisionHeight * s);
+        transform.position = after;
+
+        Vector3 actual = (after - before); actual.y = 0f;
+        Vector3 vel = actual / dt;
+        float max = Mathf.Max(moveSpeed, 0.01f) * 1.5f;
+        return vel.magnitude > max ? vel.normalized * max : vel;
     }
 
     // 오른쪽 절반은 시선 회전 영역이지만, 짧게 톡 치면(이동 거의 없음) 상호작용으로 처리한다.

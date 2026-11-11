@@ -26,6 +26,16 @@ public struct BoltProgressBroadcast : IBroadcast
     public int total;
 }
 
+// ── 볼트 진행도 중계 (돌리는 클라 → 서버 → 다른 클라) ─────────────────────
+// 볼트를 도구로 돌리는 사람의 클라이언트만 진행도·위치·체결 완료 초록 아웃라인을 계산해서, 다른 플레이어에게는 볼트가 전혀 안 움직였다.
+public struct BoltProgressSyncBroadcast : IBroadcast
+{
+    public string groupId;
+    public int boltIndex;
+    public float progress;   // 0..1
+    public int senderId;     // 서버가 채운다(보낸 사람 클라이언트 ID) — 본인에게 되돌아온 것은 무시
+}
+
 // ── 조립 복원 명령 (서버 → 전체 클라) ──────────────────────────────
 public struct BoltGroupResetBroadcast : IBroadcast
 {
@@ -77,6 +87,7 @@ public class BoltGroupCounter : MonoBehaviour
         foreach (var bolt in _bolts)
         {
             bolt.OnBoltLoosened += HandleBoltLoosened;
+            bolt.OnProgressChanged += HandleBoltProgressChanged;
             bolt.isAssembleMode = this.assembleMode;
             // 체결 단계: 볼트를 처음부터 '덜 조인' 위치에 둔다. 예전에는 다 조인 위치에 있다가
             // 드릴을 대는 순간 빠진 위치로 툭 튀어나온 뒤 다시 들어가 보였다.
@@ -91,6 +102,8 @@ public class BoltGroupCounter : MonoBehaviour
         if(InstanceFinder.IsServerStarted)
         {
             InstanceFinder.ServerManager.RegisterBroadcast<BoltHideBroadcast>(OnServerHide);
+            InstanceFinder.ServerManager.RegisterBroadcast<BoltProgressSyncBroadcast>(OnServerProgressSync);
+            _syncServerRegistered = true;
             Debug.Log($"<color=cyan>[Server]</color> BoltHideBroadcast 핸들러 등록 완료");
         }
 
@@ -99,8 +112,71 @@ public class BoltGroupCounter : MonoBehaviour
         {
             InstanceFinder.ClientManager.RegisterBroadcast<BoltProgressBroadcast>(OnClientProgress);
             InstanceFinder.ClientManager.RegisterBroadcast<BoltFallBroadcast>(OnClientBoltFall);
+            InstanceFinder.ClientManager.RegisterBroadcast<BoltProgressSyncBroadcast>(OnClientProgressSync);
+            _syncClientRegistered = true;
             Debug.Log($"<color=cyan>[Client]</color> 브로드캐스트 핸들러 등록 완료");
         }
+    }
+
+    private bool _syncServerRegistered, _syncClientRegistered;
+
+    private void OnDestroy()
+    {
+        foreach (var b in _bolts)
+        {
+            if (b == null) continue;
+            b.OnBoltLoosened -= HandleBoltLoosened;
+            b.OnProgressChanged -= HandleBoltProgressChanged;
+        }
+        if (_syncServerRegistered && InstanceFinder.ServerManager != null)
+            InstanceFinder.ServerManager.UnregisterBroadcast<BoltProgressSyncBroadcast>(OnServerProgressSync);
+        if (_syncClientRegistered && InstanceFinder.ClientManager != null)
+            InstanceFinder.ClientManager.UnregisterBroadcast<BoltProgressSyncBroadcast>(OnClientProgressSync);
+    }
+
+    // ── 볼트 진행도 중계 ─────────────────────────────────────
+    private readonly Dictionary<int, float> _lastSentProgress = new();
+    private readonly Dictionary<int, float> _lastSentTime = new();
+    private const float SyncMinDelta = 0.03f;      // 진행도가 이만큼 바뀌어야 보낸다
+    private const float SyncMinInterval = 0.08f;   // 최소 전송 간격(초)
+
+    private void HandleBoltProgressChanged(Bolt bolt)
+    {
+        if (!InstanceFinder.IsClientStarted) return;
+        int idx = _bolts.IndexOf(bolt);
+        if (idx < 0) return;
+
+        float p = bolt.Progress;
+        _lastSentProgress.TryGetValue(idx, out float last);
+        _lastSentTime.TryGetValue(idx, out float lastT);
+
+        bool done = p >= 1f && last < 1f;
+        if (!done && (p - last < SyncMinDelta || Time.unscaledTime - lastT < SyncMinInterval)) return;
+
+        _lastSentProgress[idx] = p;
+        _lastSentTime[idx] = Time.unscaledTime;
+        InstanceFinder.ClientManager.Broadcast(new BoltProgressSyncBroadcast { groupId = groupId, boltIndex = idx, progress = p });
+    }
+
+    private void OnServerProgressSync(NetworkConnection conn, BoltProgressSyncBroadcast msg, Channel ch)
+    {
+        if (msg.groupId != groupId) return;
+        if (msg.boltIndex < 0 || msg.boltIndex >= _bolts.Count) return;
+        msg.senderId = conn != null ? conn.ClientId : -1;
+        InstanceFinder.ServerManager.Broadcast(msg);
+    }
+
+    private void OnClientProgressSync(BoltProgressSyncBroadcast msg, Channel ch)
+    {
+        if (msg.groupId != groupId) return;
+        if (msg.boltIndex < 0 || msg.boltIndex >= _bolts.Count) return;
+
+        // 내가 돌린 것이 되돌아온 것은 이미 로컬에서 처리했다
+        var conn = InstanceFinder.ClientManager != null ? InstanceFinder.ClientManager.Connection : null;
+        if (conn != null && conn.IsValid && conn.ClientId == msg.senderId) return;
+
+        var bolt = _bolts[msg.boltIndex];
+        if (bolt != null) bolt.ApplyRemoteProgress(msg.progress);
     }
 
     private void HandleBoltLoosened(Bolt bolt)

@@ -533,9 +533,32 @@ public class ClickableAnimator : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 이 클라이언트의 사용자가 직접(PC 클릭·모바일 터치) 눌러 상태를 바꿀 때 발행 — 아바타 손 뻗기용. 인자 = 눌린 지점(월드).
+    /// 예전에는 클라이언트마다 시나리오 신호(FireZoneActivated)가 메아리쳐서 그 신호로 손을 뻗었는데,
+    /// 신호를 서버에서만 보내도록 바꾼 뒤(정비 순서 오탐 수정) 해치·문을 열고 닫아도 손이 안 움직였다.
+    /// </summary>
+    public static event Action<Vector3> OnLocalClicked;
+
+    // 누른 지점 — 이 오브젝트 콜라이더 묶음에서 카메라에 가장 가까운 점(정확한 히트 점은 호출부마다 달라 넘기지 않는다)
+    private Vector3 ReachPoint()
+    {
+        var cam = Camera.main;
+        var cols = GetComponentsInChildren<Collider>(false);
+        bool any = false; Bounds b = default;
+        foreach(var c in cols)
+        {
+            if(c == null || !c.enabled || c.isTrigger) continue;
+            if(!any) { b = c.bounds; any = true; } else b.Encapsulate(c.bounds);
+        }
+        if(!any) return transform.position;
+        return cam != null ? b.ClosestPoint(cam.transform.position) : b.center;
+    }
+
     public void OnPCClick()
     {
         if(!CanInteract()) return;
+        try { OnLocalClicked?.Invoke(ReachPoint()); } catch(Exception e) { Debug.LogException(e); }
         RequestSetState(!_isOpen);
     }
 

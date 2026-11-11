@@ -109,8 +109,43 @@ public class VRPlayer : BasePlayer
             {
                 _avatarRenderers = applyAvatar.GetComponentsInChildren<Renderer>(true);
                 SetAvatarVisible(false);
+                DisableRemoteHandPhysics();
             }
         }
+    }
+
+    /// <summary>
+    /// 원격(다른 사람 화면)에 보이는 아바타의 손에는 Auto Hand 물리 손이 통째로 붙어 있다
+    /// (Rigidbody[중력 켜짐·비키네마틱] + 손바닥/손끝 충돌체 + Hand·HandFollow·HandAnimator·컨트롤러 링크).
+    /// 이것들이 원격 사본에서도 돌아서 ① 손가락을 AutoHand 가 매 프레임 자기 식으로(펴진 손) 덮어써 잡기 포즈가 안 보이고
+    /// ② 손 충돌체가 차·리프트·선반에 부딪혀 팔을 밀어내 자세가 꺾이고 몸이 어긋났다.
+    /// 원격 아바타는 네트워크로 받은 손목·손가락 값만 따르면 되므로 물리 손을 모두 끈다.
+    /// </summary>
+    private void DisableRemoteHandPhysics()
+    {
+        if (applyAvatar == null) return;
+
+        int behaviours = 0, bodies = 0, colliders = 0;
+        foreach (var mb in applyAvatar.GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            if (mb == null || !mb.enabled) continue;
+            // Autohand.Hand·HandFollow·HandAnimator 등과 Autohand.Demo.OpenXRHandControllerLink·OpenXRAutoHandFingerBender(손가락을 입력으로 구부림) 등
+            var ns = mb.GetType().Namespace;
+            if (ns != null && ns.StartsWith("Autohand")) { mb.enabled = false; behaviours++; }
+        }
+        foreach (var rb in applyAvatar.GetComponentsInChildren<Rigidbody>(true))
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+            rb.detectCollisions = false;
+            bodies++;
+        }
+        foreach (var col in applyAvatar.GetComponentsInChildren<Collider>(true))
+        {
+            col.enabled = false;
+            colliders++;
+        }
+        Debug.Log($"[VRPlayer] 원격 아바타 물리 손 비활성화 (owner={OwnerId}): AutoHand 컴포넌트 {behaviours}, Rigidbody {bodies}, Collider {colliders}");
     }
 
     private Renderer[] _avatarRenderers;
@@ -266,7 +301,8 @@ public class VRPlayer : BasePlayer
     [SerializeField] private LayerMask floorMask = ~0;
     [SerializeField] private float floorProbeUp = 0.4f;
     [SerializeField] private float floorProbeDown = 1.2f;
-    [SerializeField] private float floorMaxDeviation = 0.6f;
+    [SerializeField] private float floorMaxDeviation = 0.6f;   // (프리팹에 값이 저장돼 있어 코드 기본값 변경이 안 먹을 수 있다 → 아래 상한으로 한 번 더 제한)
+    private const float FloorMaxDeviationCap = 0.25f;
     [SerializeField] private float minHeadHeightOverride = 0.3f;
     [SerializeField] private float stepThresholdOverride = 0.5f;
 
@@ -290,10 +326,20 @@ public class VRPlayer : BasePlayer
             if (c == null || c.transform.IsChildOf(transform)) continue;
             // 다른 플레이어·잡을 수 있는 물건(NetworkObject)은 바닥이 아니다
             if (c.GetComponentInParent<NetworkObject>() != null) continue;
+            // 차 리프트 팔·선반·공구함 옆면/모서리처럼 위를 향하지 않은 면은 바닥이 아니다
+            if (s_floorHits[i].normal.y < 0.7f) continue;
             if (s_floorHits[i].distance < best) { best = s_floorHits[i].distance; y = s_floorHits[i].point.y; found = true; _floorHitName = c.name; }
         }
-        if (!found) { _floorHitName = "none"; return; }
-        y = Mathf.Clamp(y, _floorBaseY - floorMaxDeviation, _floorBaseY + floorMaxDeviation);
+        if (!found)
+        {
+            _floorHitName = "none";
+            // 예전에는 못 찾으면 직전 값을 그대로 뒀다 → 차 리프트·바닥 장비 위를 지나며 한 번 틀어진 바닥 높이가 영영 남아
+            // 돌아온 뒤에도 발이 바닥을 뚫거나 떠 있었다. 처음 높이(바닥)로 서서히 되돌린다.
+            _avatarFloorY = Mathf.Lerp(_avatarFloorY, _floorBaseY, 0.15f);
+            return;
+        }
+        float dev = Mathf.Min(floorMaxDeviation, FloorMaxDeviationCap);
+        y = Mathf.Clamp(y, _floorBaseY - dev, _floorBaseY + dev);
         _avatarFloorY = Mathf.Lerp(_avatarFloorY, y, 0.5f);
     }
 

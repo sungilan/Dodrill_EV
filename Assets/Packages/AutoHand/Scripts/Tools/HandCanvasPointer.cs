@@ -175,7 +175,9 @@ namespace Autohand
                         system.name = "UI Input Event System";
                     }
                     inputModule = system.gameObject.AddComponent<AutoInputModule>();
-                    inputModule.transform.parent = AutoHandExtensions.transformParent;
+                    // [DoDrill] 빌드에서만 EventSystem 오브젝트가 'Auto Hand Generated' 아래로 옮겨져 씬/활성 상태가 어긋났다 → 헤드셋일 때만 옮긴다.
+                    if (UnityEngine.XR.XRSettings.isDeviceActive)
+                        inputModule.transform.parent = AutoHandExtensions.transformParent;
                 }
             }
         }

@@ -24,6 +24,8 @@ public class Bolt : MonoBehaviour
     private bool _originSaved;
 
     public event Action<Bolt> OnBoltLoosened;
+    /// <summary>이 클라이언트에서 도구로 직접 돌려 진행도가 바뀔 때마다(매 프레임) 발생 — BoltGroupCounter 가 다른 플레이어에게 중계한다. 원격 적용(ApplyRemoteProgress)에서는 발생하지 않는다.</summary>
+    public event Action<Bolt> OnProgressChanged;
     public float Progress => _progress;
     public bool isloosened => _progress >= 1.0f;
     public bool isAssembleMode = false;
@@ -52,12 +54,32 @@ public class Bolt : MonoBehaviour
         _progress = Mathf.Clamp01(_progress);
 
         AnimateBoltPosition();
+        if (_progress != prevProgress) OnProgressChanged?.Invoke(this);
 
         if (prevProgress < 1.0f && _progress >= 1.0f)
         {
             if (isAssembleMode) MarkDone(true);   // 체결 완료한 볼트는 초록 아웃라인으로 표시
             OnBoltLoosened?.Invoke(this);
         }
+    }
+
+    /// <summary>
+    /// 다른 플레이어가 돌리고 있는 볼트의 진행도를 받아 같은 모습으로 맞춘다(움직임·체결 완료 시 초록 아웃라인).
+    /// 예전에는 진행도·위치·아웃라인이 드릴을 쥔 사람의 클라이언트에서만 계산돼, 다른 플레이어에게는 볼트가 전혀 안 움직이고 초록 표시도 안 보였다.
+    /// 되감기는 무시한다(늦게 온 옛 값이 덮어쓰지 않게).
+    /// </summary>
+    public void ApplyRemoteProgress(float progress)
+    {
+        if (isBroken) return;
+        progress = Mathf.Clamp01(progress);
+        if (progress <= _progress) return;
+
+        SaveOrigin();
+        float prev = _progress;
+        _progress = progress;
+        AnimateBoltPosition();
+
+        if (prev < 1.0f && _progress >= 1.0f && isAssembleMode) MarkDone(true);
     }
 
     //private void AnimateBoltPosition()

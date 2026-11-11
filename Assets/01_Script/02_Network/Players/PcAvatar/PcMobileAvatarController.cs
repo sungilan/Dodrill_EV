@@ -183,7 +183,15 @@ public class PcMobileAvatarController : NetworkBehaviour
         {
             InteractionEvents.OnZoneActivated += OnAnyZone;
             InteractionEvents.OnItemGrabbed += OnAnyInteraction;
+            // 해치·문 같은 씬 고정 오브젝트를 내가 직접 눌렀을 때 — 눌린 지점으로 손 뻗기
+            ClickableAnimator.OnLocalClicked += OnClickableClicked;
         }
+    }
+
+    private void OnClickableClicked(Vector3 worldPoint)
+    {
+        if (armReach == null) return;
+        RequestReach(worldPoint);
     }
 
     public override void OnStopClient()
@@ -191,6 +199,7 @@ public class PcMobileAvatarController : NetworkBehaviour
         base.OnStopClient();
         InteractionEvents.OnZoneActivated -= OnAnyZone;
         InteractionEvents.OnItemGrabbed -= OnAnyInteraction;
+        ClickableAnimator.OnLocalClicked -= OnClickableClicked;
     }
 
     // InteractionEvents 는 정적 이벤트라, 다른 사람(VR 등)의 행동이 이 클라이언트에서도 발행되면(구역 트리거·완료 알림 등)
