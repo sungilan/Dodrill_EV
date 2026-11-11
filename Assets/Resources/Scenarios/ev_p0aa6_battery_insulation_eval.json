@@ -2186,15 +2186,15 @@
           },
           {
             "key": "guideText",
-            "ko": "모든 정비 완료 후 P0AA6가 재현되지 않는지 확인합니다. 고장코드 소거 후 절연 저항 라이브 데이터도 100MΩ 이상인지 확인하세요.",
-            "en": "After all repairs, verify P0AA6 does not reoccur. After clearing DTCs, also verify insulation resistance live data shows 100MΩ+.",
-            "vi": "Sau tất cả sửa chữa, xác nhận P0AA6 không tái hiện. Sau khi xóa mã, xác nhận dữ liệu trực tiếp điện trở cách điện 100MΩ+."
+            "ko": "모든 정비 완료 후 P0AA6가 재현되지 않는지 확인합니다. 고장코드 소거 후 진단기 서비스 데이터의 '절연 저항'이 규정값(500kΩ 이상)인지 확인하세요. (BMU 표시 최대값은 3000kΩ)",
+            "en": "After all repairs, verify P0AA6 does not reoccur. After clearing DTCs, check that the service data 'Insulation Resistance' meets the specified value (500 kΩ or higher). The BMU displays up to 3000 kΩ.",
+            "vi": "Sau tất cả sửa chữa, xác nhận P0AA6 không tái hiện. Sau khi xóa mã, kiểm tra 'điện trở cách điện' trong dữ liệu dịch vụ đạt giá trị quy định (từ 500 kΩ trở lên). BMU hiển thị tối đa 3000 kΩ."
           },
           {
             "key": "subguideText",
-            "ko": "GDS 연결 → DTC 조회 → P0AA6 소거 → 절연 저항 라이브 데이터 확인 (100MΩ 이상)",
-            "en": "Connect GDS → Read DTC → Clear P0AA6 → Check live insulation data (100MΩ+)",
-            "vi": "Kết nối GDS → Đọc DTC → Xóa P0AA6 → Kiểm tra dữ liệu cách điện trực tiếp (100MΩ+)"
+            "ko": "GDS 연결 → DTC 조회 → P0AA6 소거 → 절연 저항 서비스 데이터 확인 (500kΩ 이상)",
+            "en": "Connect GDS → Read DTC → Clear P0AA6 → Check insulation resistance service data (500 kΩ+)",
+            "vi": "Kết nối GDS → Đọc DTC → Xóa P0AA6 → Kiểm tra dữ liệu dịch vụ điện trở cách điện (500 kΩ+)"
           },
           {
             "key": "clearDTC",
@@ -2213,8 +2213,8 @@
           },
           {
             "key": "resultNote",
-            "ko": "P0AA6 소거 확인 및 절연 저항 정상값(100MΩ 이상) 확인 → 정비 완료",
-            "en": "P0AA6 소거 확인 및 절연 저항 정상값(100MΩ 이상) 확인 → 정비 완료"
+            "ko": "P0AA6 소거 확인 및 절연 저항 서비스 데이터(500kΩ 이상) 확인 → 정비 완료",
+            "en": "P0AA6 cleared and insulation resistance service data confirmed (500 kΩ or higher) → Repair complete"
           }
         ]
       }

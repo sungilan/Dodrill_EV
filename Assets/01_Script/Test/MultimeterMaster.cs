@@ -245,17 +245,24 @@ public class MultimeterMaster : MonoBehaviour
     {
         if(lcdDisplay == null) return;
 
+        // 절연저항계(Megger)는 값을 MΩ 단위로 보여 준다.
+        // 시나리오의 절연 저항 측정값(정상 500, 불량 0.1)과 안내문(정상 2MΩ 이상)은 MΩ 기준인데,
+        // 예전에는 멀티미터와 같은 코드라 '500.0 Ω' / 0.9MΩ 초과는 'O.L'로 떠서 정상값(2MΩ 이상)을 아예 볼 수 없었다.
+        bool megger = name.IndexOf("Megger", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        bool meggerOhm = megger && currentMode == MultimeterMode.Resistance;
+
         string unit = currentMode switch
         {
             MultimeterMode.DC_Voltage => " V",
             MultimeterMode.AC_Voltage => " V~",
-            MultimeterMode.Resistance => value > 900000f ? " O.L" : " Ω",
+            MultimeterMode.Resistance => meggerOhm ? " MΩ" : (value > 900000f ? " O.L" : " Ω"),
             MultimeterMode.Continuity => value < 10f ? " ))))" : " O.L",
             _ => ""
         };
 
         // 1. 텍스트 갱신
-        string resultText = (currentMode == MultimeterMode.Resistance && value > 900000f) ? "O.L" :
+        bool overLimit = currentMode == MultimeterMode.Resistance && (meggerOhm ? value > 9999f : value > 900000f);
+        string resultText = overLimit ? "O.L" :
                             (currentMode == MultimeterMode.Continuity && value < 10f) ? "))))" :
                             $"{value:F1}{unit}";
 

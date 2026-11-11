@@ -35,8 +35,12 @@ namespace Autohand
 
                     // [DoDrill] PC/모바일 클라이언트에서도 다른 플레이어(VR)의 아바타 손 UIPointer 가 켜지며 이 getter 가 불린다.
                     // 아래 정리 코드가 게임 씬의 EventSystem/입력 모듈(마우스·터치용)까지 Destroy 해서 PC 빌드에서 화면 UI 버튼이 먹통이 됐다.
-                    // 헤드셋이 아닌 기기에서는 정리하지 않는다.
-                    if (!UnityEngine.XR.XRSettings.isDeviceActive)
+                    // 확실히 헤드셋이 아닌 기기에서만 정리를 건너뛴다.
+                    // (XRSettings.isDeviceActive 만으로 가르면 Quest 에서 XR 초기화가 늦을 때 false 라 VR 손 레이저 UI 가 안 눌렸다 → XrDetect)
+                    bool skipCleanup = XrDetect.DefinitelyNotHeadset;
+                    Debug.Log($"[AutoInputModule] EventSystem 정리 {(skipCleanup ? "건너뜀(헤드셋 아님)" : "실행(헤드셋/미확정)")} " +
+                              $"| XRSettings.isDeviceActive={UnityEngine.XR.XRSettings.isDeviceActive} device='{UnityEngine.XR.XRSettings.loadedDeviceName}'");
+                    if (skipCleanup)
                         return _instance;
 
                     EventSystem[] system = null;

@@ -266,6 +266,9 @@ public class DodrillBuildProfiles : EditorWindow
         // 인수인계서: Android(Quest VR) = ARM64 · IL2CPP. 다른 설정으로 흘러가지 않게 고정한다.
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
         PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+        // 빌드 시간: 'Faster runtime'(OptimizeSpeed)이면 제네릭을 전부 따로 펼쳐 생성 C++ 5.8GB 중 5.2GB 가 제네릭 코드였고
+        // libil2cpp.so 링크만 9분, 디버그 심볼(6.3GB) 복사에 7분이 걸렸다. 'Faster (smaller) builds' 는 제네릭을 공유해 이 양을 크게 줄인다.
+        PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.Android, Il2CppCodeGeneration.OptimizeSize);
 
         PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft; // 가로 고정(VR 은 무관)
         EditorUserBuildSettings.buildAppBundle = false;

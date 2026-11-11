@@ -23,7 +23,8 @@ public class ResponsiveCanvasScaler : MonoBehaviour
     private static void Boot()
     {
         if (Application.isBatchMode) return;
-        if (XRSettings.isDeviceActive) return;                 // 헤드셋은 월드 스페이스 UI — 해당 없음
+        // 헤드셋 여부는 여기서 정하지 않는다 — XR 초기화가 늦으면 시작 직후엔 isDeviceActive 가 false 라 헤드셋에서도 이 정리가 돌아
+        // VR 용 EventSystem 을 꺼 버렸다. 오브젝트는 만들어 두고, Apply() 가 매번 XrDetect 로 확인한다.
         if (FindFirstObjectByType<ResponsiveCanvasScaler>() != null) return;
 
         var go = new GameObject("[ResponsiveCanvasScaler]") { hideFlags = HideFlags.HideInHierarchy };
@@ -117,6 +118,7 @@ public class ResponsiveCanvasScaler : MonoBehaviour
 
     private static void Apply()
     {
+        if (XrDetect.MaybeHeadset) return;   // 헤드셋은 월드 스페이스 UI·VR 손 레이저 — 화면 UI 정리 대상 아님
         EnsureWorkingEventSystem();
         EnsureRaycasters();
         foreach (var scaler in FindObjectsByType<CanvasScaler>(FindObjectsInactive.Include, FindObjectsSortMode.None))
