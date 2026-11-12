@@ -39,6 +39,9 @@ public class GuideMarker : MonoBehaviour
     private Transform _followTarget;
     private Vector3 _followOffset;
 
+    /// <summary>따라다니는 대상(목표 지점). 없으면 null.</summary>
+    public Transform FollowTarget => _followTarget;
+
     /// <summary>대상 물체를 따라다니게 한다. 생성 시점의 위치 차이를 그대로 유지.</summary>
     public void Follow(Transform target)
     {

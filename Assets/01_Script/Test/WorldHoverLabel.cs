@@ -125,12 +125,14 @@ public class WorldHoverLabel : MonoBehaviour
             if (g is TMP_Text t)
             {
                 var m = t.fontMaterial;                       // 인스턴스 복사본
-                if (m != null && m.HasProperty("unity_GUIZTestMode")) m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+                // HasProperty 로 확인하면 안 된다 — 셰이더 Properties 에 선언되지 않은 값이라 항상 false 여서, 예전에는 실제로 한 번도 적용되지 않았다.
+                if (m != null) { m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always); m.renderQueue = 4001; }
             }
             else
             {
                 var m = new Material(g.materialForRendering);
-                if (m.HasProperty("unity_GUIZTestMode")) m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+                m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+                m.renderQueue = 4000;
                 g.material = m;
             }
         }

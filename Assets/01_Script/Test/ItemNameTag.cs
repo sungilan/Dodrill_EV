@@ -61,7 +61,7 @@ public static class ItemNameTag
         if (!TryTop(target, out var top)) top = target.position + Vector3.up * 0.2f;
 
         s_label = Object.Instantiate(s_prefab, top - Vector3.up * RiseFrom, Quaternion.identity);
-        SetLayer(s_label, 2);   // Ignore Raycast — 라벨이 손 레이저를 막지 않게
+        SetLayer(s_label, 1);   // TransparentFX — VR 카메라가 그리는 레이어(2번 Ignore Raycast 는 VR 카메라 컬링에서 빠져 있어 안 보였다). 콜라이더가 없어 레이저는 막지 않는다
         var label = s_label.GetComponent<WorldHoverLabel>();
         if (label != null) label.SetText(prefabIdOrName, null);
         s_label.AddComponent<UIHoverFader>();

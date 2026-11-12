@@ -542,12 +542,14 @@ public class ScenarioSpawner : NetworkBehaviour
     /// 1. despawnObjectIds에 명시된 persist 오브젝트 삭제
     /// 2. 일반 오브젝트 삭제 및 새로 생긴 persist 오브젝트 이관
     /// </summary>
-    public void DespawnCurrentTask(TaskDef taskDef)
+    public void DespawnCurrentTask(TaskDef taskDef, bool failed = false)
     {
-        Debug.Log($"<color=orange>[Despawn-Start]</color> TaskID: {taskDef.moduleId}");
+        Debug.Log($"<color=orange>[Despawn-Start]</color> TaskID: {taskDef.moduleId}{(failed ? " (실패 — despawnObjectIds 유지)" : "")}");
 
-        // 1. despawnObjectIds 처리
-        if (taskDef.despawnObjectIds != null)
+        // 1. despawnObjectIds 처리 — '이 단계를 마치면 치울 물건'이므로 성공했을 때만.
+        //    (예전: 실패해도 지워, 절연저항 마지막 단계(Inverter -)에서 시간 초과로 실패하면 측정 대상인 배터리팩(BatteryPack_Disassemble)이
+        //     사라지고, 재도전 때 다시 스폰되지 않아 진행이 막혔다. 12·16단계의 렌치·멀티미터도 같은 문제)
+        if (!failed && taskDef.despawnObjectIds != null)
         {
             foreach (string id in taskDef.despawnObjectIds)
             {

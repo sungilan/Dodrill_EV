@@ -71,6 +71,9 @@ public class GuideSystem : MonoBehaviour
     private ScenarioData _scenarioData;
     private TaskState _currentTask;
     private List<GameObject> _requiredItemObjects = new();
+
+    /// <summary>지금 단계의 목표 지점(볼트 묶음·커넥터·장착 위치 등). 엑스레이 모드(XRayMode)가 차체 너머로 비춰 보여 준다.</summary>
+    public GameObject XRayTarget { get; private set; }
     private List<GameObject> _tempGuides = new();
     private GameObject _ghostObject;
     private GuideMarker _targetMarker;
@@ -97,6 +100,37 @@ public class GuideSystem : MonoBehaviour
         if(Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         SetupPlatformUI();
+        _nextAction = GetComponent<NextActionGuide>();
+        if(_nextAction == null) _nextAction = gameObject.AddComponent<NextActionGuide>();
+    }
+
+    // ── '지금 할 일 하나' 안내(NextActionGuide)가 쓰는 정보 ──
+    private NextActionGuide _nextAction;
+
+    /// <summary>지금 단계의 안내를 보여 주는 중인지(진행 중 · Hard 아님 · 평가 모드에서 숨김 아님)</summary>
+    public bool IsGuiding => _scenarioData != null && !_completed && _currentTask.status == TaskStatus.Running
+                             && currentLevel != GuideLevel.Hard && !IsGuideHidden(_currentTask.taskIndex);
+
+    public ModuleConfig CurrentConfig
+    {
+        get
+        {
+            var tasks = _scenarioData?.scenario?.tasks;
+            int i = _currentTask.taskIndex;
+            if(tasks == null || i < 0 || i >= tasks.Count) return null;
+            return _scenarioData.GetModuleConfig(tasks[i].moduleId);
+        }
+    }
+
+    public IReadOnlyList<GameObject> ClickTargets => _clickTargets;
+    public GuideMarker TargetMarker => _targetMarker;
+    public bool HasSpawnMarker(string prefabId) => !string.IsNullOrEmpty(prefabId) && _spawnMarkers.TryGetValue(prefabId, out var m) && m != null;
+    public string GetItemDisplayName(string id) => GetDisplayName(id);
+
+    /// <summary>도구를 아직 안 든 동안 목표 지점 마커를 숨긴다(무엇부터 할지 한 가지만 보이게).</summary>
+    public void SetTargetMarkerVisible(bool visible)
+    {
+        if(_targetMarker != null && _targetMarker.gameObject.activeSelf != visible) _targetMarker.gameObject.SetActive(visible);
     }
 
     private void Start()
@@ -299,6 +333,10 @@ public class GuideSystem : MonoBehaviour
     }
     public Transform GetCurrentGuideTransform()
     {
+        // 0순위: 지금 할 일 하나 — 도구를 아직 안 들었으면 도구, 들었으면 목표(남은 볼트 등)
+        var next = _nextAction != null ? _nextAction.FocusTransform : null;
+        if(next != null) return next;
+
         // 1순위: 목적지 마커 (Zone, Target)
         if(_targetMarker != null)
             return _targetMarker.transform;
@@ -315,7 +353,8 @@ public class GuideSystem : MonoBehaviour
 
     public bool HasGuideTarget()
     {
-        return _targetMarker != null || (_requiredItemObjects != null && _requiredItemObjects.Count > 0);
+        return (_nextAction != null && _nextAction.FocusTransform != null)
+            || _targetMarker != null || (_requiredItemObjects != null && _requiredItemObjects.Count > 0);
     }
 
     public bool IsCurrentTargetZone()
@@ -399,6 +438,7 @@ public class GuideSystem : MonoBehaviour
     private void ClearVisualGuides()
     {
         _clickRetryConfig = null;
+        XRayTarget = null;
 
         // 1. 미니맵
         foreach(var mmc in _activeMiniMapBlinks)
@@ -608,6 +648,7 @@ public class GuideSystem : MonoBehaviour
         GameObject itemGO = !string.IsNullOrEmpty(prefabId) ? FindSpawnedItem(prefabId) : null;
 
         // ── 3. 가이드 처리 시작 ──
+        XRayTarget = markerTargetGO;
         if(markerTargetGO != null)
         {
             var zoneData = markerTargetGO.GetComponent<GuideZoneData>();
@@ -640,6 +681,8 @@ public class GuideSystem : MonoBehaviour
                         label = zoneData.guideDescription.GetLocalizedString();
                     }
                 }
+                // 번역 항목이 비어 내부 ID(OLD_PRA_Unit 등)가 그대로 나오면 표시 이름으로 바꾼다
+                if(LooksLikeRawId(label)) label = string.IsNullOrWhiteSpace(label) || label.Contains("No translation") ? "이곳으로 이동하세요" : HoverNameFormatter.Format(label);
 
                 var boltGroup = markerTargetGO.GetComponent<BoltGroupCounter>();
                 bool isBoltTask = boltGroup != null || (markerTargetGO.name != null && markerTargetGO.name.Contains("Bolt"));
@@ -805,6 +848,27 @@ public class GuideSystem : MonoBehaviour
             if(markerGO != null) { _tempGuides.Remove(markerGO); markerGO.transform.DOKill(); Destroy(markerGO); }
             _spawnMarkers.Remove(prefabId);
         }
+    }
+
+    /// <summary>
+    /// 지금 집어야 할 도구에 스폰 때와 같은 안내(빨간 아웃라인 + 이름 라벨)를 붙인다.
+    /// 앞 단계에서 쓰고 내려놓은 도구처럼 스폰 마커가 없는 경우에 NextActionGuide 가 부른다. 이미 있으면 아무것도 안 한다.
+    /// </summary>
+    public void EnsureItemGuide(GameObject item, string prefabId)
+    {
+        if(item == null || string.IsNullOrEmpty(prefabId) || _completed) return;
+        if(!_requiredItemObjects.Contains(item))
+        {
+            _requiredItemObjects.Add(item);
+            SetOutline(item, true);
+        }
+        if(HasSpawnMarker(prefabId)) return;
+        if(item.GetComponent<NoneHighlight>() != null) return;
+        if(item.GetComponentInChildren<MultimeterMaster>(true) != null) return;   // 케이블 때문에 중심이 엉뚱해 아웃라인만
+        var marker = SpawnMarker(GetBoundsCenter(item), GetDisplayName(prefabId), spawnGuideColor, false);
+        if(marker == null) return;
+        marker.Follow(item.transform);
+        _spawnMarkers[prefabId] = marker.gameObject;
     }
 
     private void TriggerNudge()
@@ -1073,12 +1137,23 @@ public class GuideSystem : MonoBehaviour
             // 2. TaskItem에 itemName이 설정되어 있다면 로컬라이징된 문자열 반환
             if(taskItem != null)
             {
-                return taskItem.itemName.GetLocalizedString();
+                string n = null;
+                try { n = taskItem.itemName.GetLocalizedString(); } catch { n = null; }
+                if(!LooksLikeRawId(n)) return n;
             }
         }
 
-        // 3. 만약 아이템을 못 찾거나 이름 설정이 없다면 폴백(id) 반환
-        return id;
+        // 3. 이름을 못 찾았거나 번역이 비어 내부 ID(Old_PRA_Unit 등)가 그대로 나오면 표시 이름 사전으로 바꾼다
+        return HoverNameFormatter.Format(id);
+    }
+
+    /// <summary>번역이 없어 내부 ID·키가 그대로 나온 문자열인가(공백 없이 '_' 가 들어간 영문, 'No translation' 등).</summary>
+    private static bool LooksLikeRawId(string n)
+    {
+        if(string.IsNullOrWhiteSpace(n) || n.Contains("No translation")) return true;
+        if(n.IndexOf(' ') >= 0 || n.IndexOf('_') < 0) return false;
+        foreach(char c in n) if(c > 127) return false;   // 한글 등이 섞이면 사람이 쓴 이름
+        return true;
     }
 
     private void OnDestroy()

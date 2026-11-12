@@ -546,12 +546,31 @@ public class SyncGrab : NetworkBehaviour
         DOTween.Kill(transform);
         // 상태는 이미 서버가 Grabbing으로 설정했으므로 추가 호출 없음
     }
+    /// <summary>VR 도구 벨트(VrToolBelt): 허리 슬롯 근처에서 놓으면 true 를 돌려주고 직접 보관한다 — 이때는 서버에 놓기를 보내지 않는다(소유·잡힘 유지).</summary>
+    /// <summary>VR 에서 손을 놓을 때 먼저 물어보는 처리기들(도구 벨트·장착 스냅). 하나라도 true 면 기본 놓기(서버 낙하)를 하지 않는다.</summary>
+    public static readonly System.Collections.Generic.List<System.Func<SyncGrab, Hand, bool>> VrReleaseInterceptors = new System.Collections.Generic.List<System.Func<SyncGrab, Hand, bool>>();
+    /// <summary>VR 도구 벨트에 꽂혀 있음(잡힘 상태는 유지되지만 손에는 없음).</summary>
+    [System.NonSerialized] public bool IsHolstered;
+
     private void OnVRRelease(Hand hand, Grabbable g)
     {
-        if(!IsOwner) return;
+        if(!IsOwner)
+        {
+            // 들고 있는 사이 소유권이 넘어갔으면(단계 전환 때 서버가 되돌림 등) 손을 떼는 순간 서버 상태로 바로 맞춘다
+            // — 그대로 두면 잡는 동안의 '중력 꺼짐' 상태로 손의 속도를 받아 날아간다
+            if(_rb != null && (_grab == null || _grab.GetHeldBy().Count == 0))
+            {
+                if(!_rb.isKinematic) { _rb.linearVelocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
+                ApplyKinematic(true);
+            }
+            return;
+        }
 
         // 다른 손이 아직 잡고 있으면 무시
         if(_grab != null && _grab.GetHeldBy().Count > 0) return;
+
+        for(int i = 0; i < VrReleaseInterceptors.Count; i++)
+            if(VrReleaseInterceptors[i] != null && VrReleaseInterceptors[i](this, hand)) return;
 
         OnReleased?.Invoke();   // ★ 내려놓기 → InteractablePart에 알림
         ReleaseServerRpc(transform.position, transform.rotation);
@@ -616,8 +635,16 @@ public class SyncGrab : NetworkBehaviour
         });
     }
 
+    private static float s_nextLaserCheck;
+
     private void LateUpdate()
     {
+        // VR 플레이어가 물건보다 늦게 생성돼도 레이저 레이어가 맞춰지게 가끔 다시 확인한다
+        if(Time.unscaledTime >= s_nextLaserCheck)
+        {
+            s_nextLaserCheck = Time.unscaledTime + 3f;
+            EnsureLaserHitsLayer(-1);
+        }
         UpdateDrawOnTop();
         FollowHoldPointNow();
         ReconcilePhysics();
@@ -634,12 +661,34 @@ public class SyncGrab : NetworkBehaviour
         _nextPhysReconcile = Time.time + 0.5f;
         if(_serverSettling) return;   // 서버가 낙하 시뮬레이션 중
 
+        CheckOrphanGrab();
+
         if(_isGrabbed.Value || _isTweening || _isPCHolding || _pendingHand != null) return;
         if(_grab != null && _grab.GetHeldBy().Count > 0) return;   // 지금 VR 손에 있음
 
         bool want = _isKinematic.Value;
         if(_rb.isKinematic != want) { ApplyKinematic(want); return; }
         if(!want && !_rb.useGravity) _rb.useGravity = true;         // 중력이 꺼진 채 떠 있는 경우
+    }
+
+    // ── 손에 없는데 '잡힘'으로 남은 물체 정리(VR) ──
+    // 잡기 요청이 승인돼 소유권을 받았는데 AutoHand 잡기가 실패하면(손이 이미 다른 걸 잡음·손이 멀어짐 등)
+    // 물체가 '잡힘 + 키네마틱 아님 + 중력 꺼짐' 상태로 남는다. 이때 손이 스치면 그 속도 그대로 무중력으로 날아가
+    // 다시 돌아오지 않았다(드릴 분실). 소유·잡힘인데 1초 넘게 어느 손에도 없으면 보통의 놓기와 똑같이 처리한다.
+    private float _orphanSince = -1f;
+    private void CheckOrphanGrab()
+    {
+        bool orphan = IsOwner && _isGrabbed.Value && !IsHolstered && !_isPCHolding && !_isTweening
+                      && _pendingHand == null && _onGranted == null && _grab != null && _grabCoroutine == null
+                      && VrProbeHandling.IsVRDevice && _grab.GetHeldBy().Count == 0;
+        if(!orphan) { _orphanSince = -1f; return; }
+        if(_orphanSince < 0f) { _orphanSince = Time.time; return; }
+        if(Time.time - _orphanSince < 1f) return;
+
+        _orphanSince = -1f;
+        Debug.LogWarning($"[SyncGrab] {name}: 손에 없는데 잡힘 상태로 남아 놓기 처리(무중력 표류 방지)");
+        if(_rb != null && !_rb.isKinematic) { _rb.linearVelocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
+        RequestRelease();
     }
 
     // ── PC·모바일 1인칭: 내가 든 도구와 내 장갑을 화면 맨 앞에 그린다(HeldItemOnTopFeature) ──
@@ -951,6 +1000,30 @@ public class SyncGrab : NetworkBehaviour
     /// RequireOwnership=true — Owner만 호출 가능.
     /// 위치 확정 + Kinematic 복구 + 소유권 반납.
     /// </summary>
+    /// <summary>
+    /// [VR 장착 스냅] 놓은 자리에 떨어뜨리지 않고 정해진 자세로 고정한 채 놓는다(소유권은 서버로).
+    /// VrPlacementGhost 가 부품을 장착 위치로 끌어당긴 뒤 호출한다.
+    /// </summary>
+    public void ReleaseAndPlace(Vector3 position, Quaternion rotation)
+    {
+        if(!IsOwner) return;
+        IsHolstered = false;
+        DOTween.Kill(transform);
+        OnReleased?.Invoke();
+        PlaceServerRpc(position, rotation);
+    }
+
+    [ServerRpc(RequireOwnership = true)]
+    private void PlaceServerRpc(Vector3 position, Quaternion rotation)
+    {
+        _isGrabbed.Value = false;
+        StopServerSettle();
+        transform.SetPositionAndRotation(position, rotation);
+        _isKinematic.Value = true;
+        ApplyKinematic(true);
+        NetworkObject.GiveOwnership(null);
+    }
+
     [ServerRpc(RequireOwnership = true)]
     private void ReleaseServerRpc(Vector3 position, Quaternion rotation)
     {
@@ -1037,12 +1110,14 @@ public class SyncGrab : NetworkBehaviour
 
             hand.TryGrab(_grab);
             _pendingHand = null;
+            _grabCoroutine = null;
 
             Debug.Log($"<color=lime>[SyncGrab]</color> {name} 소유권 획득 후 그랩 성공");
         }
         else
         {
             Debug.LogWarning($"<color=red>[SyncGrab]</color> {name} 그랩 실패 (Owner: {IsOwner}, Hand: {hand != null})");
+            _grabCoroutine = null;
             RequestRelease();
         }
     }
@@ -1137,6 +1212,7 @@ public class SyncGrab : NetworkBehaviour
     private void EnsureDistanceGrab()
     {
         if(_grab == null || !IsHandheldItem()) return;
+        EnsureLaserHitsLayer(_grab.gameObject.layer);
         var dg = _grab.GetComponent<DistanceGrabbable>();
         if(dg == null)
         {
@@ -1149,7 +1225,8 @@ public class SyncGrab : NetworkBehaviour
         if(dg.StartSelecting == null) dg.StartSelecting = new UnityHandGrabEvent();
         if(dg.OnPull == null) dg.OnPull = new UnityHandGrabEvent();
         string label = GetPrefabId();
-        dg.StartTargeting.AddListener((h, g) => { if(!_isGrabbed.Value) ItemNameTag.Show(transform, label); });
+        // 안내 마커(빨간 아웃라인 + 이름 라벨)가 이미 붙은 도구는 이름표를 또 띄우지 않는다 — 라벨이 겹쳐 보였다
+        dg.StartTargeting.AddListener((h, g) => { if(!_isGrabbed.Value && !(GuideSystem.Instance != null && GuideSystem.Instance.HasSpawnMarker(label))) ItemNameTag.Show(transform, label); });
         dg.StopTargeting.AddListener((h, g) => ItemNameTag.Hide(transform));
         dg.StartSelecting.AddListener((h, g) => ItemNameTag.Hide(transform));
         // 당기는 순간: AutoHand 의 Hand.Grab 은 Kinematic(내려놓아 고정된) 물체를 잡지 않으므로,
@@ -1162,6 +1239,23 @@ public class SyncGrab : NetworkBehaviour
             OnBeforeGrab(h, g);
         });
         _grab.onGrab.AddListener((h, g) => ItemNameTag.Hide(transform));
+    }
+
+    /// <summary>
+    /// 손 레이저(HandDistanceGrabber)가 이 물건의 레이어를 맞힐 수 있게 한다.
+    /// 레이저는 레이어를 비워 두면 'Grabbable' 레이어만 검사하는데, 도구 프리팹(멀티미터·렌치·보호구 등)은 모두 'Interactable' 레이어라
+    /// 레이저가 아무것도 맞히지 못해 거리 잡기가 전혀 되지 않았다.
+    /// </summary>
+    private static void EnsureLaserHitsLayer(int layer)
+    {
+        int add = LayerMask.GetMask(Hand.grabbableLayerNameDefault, "Interactable");
+        if(layer >= 0 && layer < 32) add |= 1 << layer;
+        foreach(var g in FindObjectsByType<HandDistanceGrabber>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if(g == null) continue;
+            int cur = g.layers.value;
+            if((cur & add) != add) g.layers = cur | add;
+        }
     }
 
     [Tooltip("VR 손 레이저로 당겨 잡을 수 있는 최대 크기(m). 카트·리프트·배터리 커버처럼 큰 물체는 당겨 오지 않는다.")]

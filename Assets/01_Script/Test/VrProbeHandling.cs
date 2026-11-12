@@ -17,8 +17,10 @@ using UnityEngine;
 //       빨강: 0.5초 유지하면 측정값이 고정(HOLD)되어 단자 옆에 표시되고, 서버로 측정 신호가 간다.
 //    5. 손을 놓으면 빨간 프로브는 본체로 돌아간다.
 //
-//  케이블은 본체 뼈대(Bone)에 붙은 스킨 메시라, 케이블 오브젝트를 옮겨도 모양이 바뀌지 않는다.
-//  그래서 케이블 뼈대를 '본체 단자 → 프로브 끝' 곡선을 따라 직접 배치한다.
+//  프로브는 케이블 스킨 메시 끝에 붙어 있어 따로 쥘 메시가 없다. 예전에는 케이블 뼈대를 손 쪽으로 휘었는데
+//  기기에서 손에 아무것도 보이지 않았다(2026-11-12 테스트). 이제는 꺼내는 순간 그 색 케이블 메시를 숨기고,
+//  손(또는 접지 단자)에 프로브 펜 모양을 붙인 뒤 본체 단자에서 펜 꼬리까지 선 케이블로 잇는다. 놓으면 원래 메시로 돌아간다.
+//  측정값은 단자 옆에 띄운다(본체는 다른 손에 들려 있어 LCD 를 보면서 단자를 볼 수 없다).
 //
 //  · VR 기기에서만 동작한다(PC·모바일은 기존 조준 측정 그대로).
 //  · 프로브 위치는 내 화면에서만 움직인다(다른 사람 화면의 케이블은 늘어진 그대로). 측정 결과는 기존처럼 서버로 간다.
@@ -28,7 +30,7 @@ using UnityEngine;
 public class VrProbeHandling : MonoBehaviour
 {
     // ── 조절값 ──
-    private const float TakeFromBodyRadius = 0.18f;   // 빈 손으로 본체 이만큼 안을 쥐면 프로브를 꺼낸다
+    private const float TakeFromBodyRadius = 0.3f;    // 빈 손으로 본체 이만큼 안을 쥐면 프로브를 꺼낸다 (0.18 은 실제 기기에서 0.19~0.29m 로 자꾸 빗나가 단계 시간이 초과됐다)
     private const float TakeFromTipRadius = 0.09f;    // 늘어진 프로브 끝을 직접 쥘 때
     private const float SnapRadius = 0.035f;          // 단자 자석 보정 거리
     private const float RedDwell = 0.5f;              // 빨강: 이만큼 대고 있으면 측정
@@ -54,7 +56,11 @@ public class VrProbeHandling : MonoBehaviour
 
         public State state;
         public Hand hand;
+        public bool bySqueeze;            // 트리거로 꺼냈으면 트리거를 놓을 때 돌려놓는다(그립으로 꺼냈으면 그립을 놓을 때)
         public bool posed;
+        public SkinnedMeshRenderer cable;  // 본체에 늘어진 케이블+프로브 메시(꺼내면 숨김)
+        public GameObject pen;             // 손에 쥔 프로브 펜
+        public LineRenderer cord;          // 본체 → 펜 꼬리 케이블
 
         public MeasurementPoint snap;
         public float snapStart;
@@ -82,6 +88,7 @@ public class VrProbeHandling : MonoBehaviour
     private GameObject _valueLabel;
     private float _valueLabelUntil;
     private MeasurementPoint _valueAt;
+    private string _valueText;
 
     private static GameObject s_labelPrefab;
 
@@ -108,6 +115,16 @@ public class VrProbeHandling : MonoBehaviour
         _black = BuildProbe(_master.blackProbe, false);
         if (_red == null) { Debug.LogWarning($"[VrProbe] {name}: 빨간 프로브 케이블 뼈대를 찾지 못해 VR 프로브 조작을 끕니다."); enabled = false; return; }
 
+        // 메거 프리팹은 본체 Grabbable·SyncGrab 이 꺼져 있고 빨간 케이블만 잡게 되어 있다(0.6.6 부터, PC 흐름용).
+        // VR 에서는 아래에서 케이블 잡기를 끄므로 그대로 두면 잡을 곳이 하나도 없어 '메거가 안 잡힘'(2026-11-12 테스트) → 본체를 잡게 켠다.
+        if (_bodyGrab != null && !_bodyGrab.enabled)
+        {
+            _bodyGrab.enabled = true;
+            var sg = GetComponent<SyncGrab>();
+            if (sg != null && !sg.enabled) sg.enabled = true;
+            Debug.Log($"[VrProbe] {name}: 본체 잡기 켬 (VR)");
+        }
+
         // 예전 방식(케이블 오브젝트의 큰 트리거로 본체만 갖다 대도 측정)을 내 화면에서 끈다. 케이블 오브젝트를 손이 잡지도 않게 한다.
         foreach (var mp in GetComponentsInChildren<MultimeterProbe>(true))
         {
@@ -127,6 +144,7 @@ public class VrProbeHandling : MonoBehaviour
         if (_bodyLockedByUs && _bodyGrab != null) _bodyGrab.isGrabbable = true;
         _bodyLockedByUs = false;
         RestoreRest(_red); RestoreRest(_black);
+        DestroyPen(_red); DestroyPen(_black);
         if (_red != null) _red.state = State.Docked;
         if (_black != null) { _black.state = State.Docked; _black.clip = null; }
         if (_ring != null) Destroy(_ring.gameObject);
@@ -148,7 +166,7 @@ public class VrProbeHandling : MonoBehaviour
         }
         if (root == null) return null;
 
-        var p = new Probe { red = red, probe = probe, root = root };
+        var p = new Probe { red = red, probe = probe, root = root, cable = probe.GetComponent<SkinnedMeshRenderer>() };
         var cur = root;
         while (true)
         {
@@ -244,6 +262,9 @@ public class VrProbeHandling : MonoBehaviour
             h.OnTriggerGrab += OnHandGrabPressed;
             h.OnTriggerRelease += OnHandReleasePressed;
             h.OnGrabbed += OnHandGrabbed;
+            h.OnSqueezed += OnHandSqueezed;
+            h.OnUnsqueezed += OnHandUnsqueezed;
+            Debug.Log($"[VrProbe] {name}: 손 연결 {h.name} (왼손={h.left})");
         }
         _hands.RemoveAll(h => h == null);
     }
@@ -254,6 +275,8 @@ public class VrProbeHandling : MonoBehaviour
         h.OnTriggerGrab -= OnHandGrabPressed;
         h.OnTriggerRelease -= OnHandReleasePressed;
         h.OnGrabbed -= OnHandGrabbed;
+        h.OnSqueezed -= OnHandSqueezed;
+        h.OnUnsqueezed -= OnHandUnsqueezed;
     }
 
     private bool IsHolding(Hand h) => (_red != null && _red.state == State.Held && _red.hand == h) || (_black != null && _black.state == State.Held && _black.hand == h);
@@ -265,9 +288,47 @@ public class VrProbeHandling : MonoBehaviour
         return false;
     }
 
-    private void OnHandGrabPressed(Hand hand, Grabbable _)
+    // ── 누르면 쥐고, 다시 누르면 놓는다(토글) ──
+    // 예전에는 버튼을 누르고 있는 동안만 쥐어서, 눌렀다 떼면 프로브가 곧바로 돌아가 '안 잡힌다' 로 보였다(VR 테스트 로그: 1초 간격으로 꺼냄만 반복).
+    // 컨트롤러 연결 스크립트가 같은 버튼 이벤트를 두 번 보내므로 짧은 시간 안의 중복 입력은 무시한다.
+    private readonly Dictionary<Hand, float> _lastToggle = new Dictionary<Hand, float>();
+
+    private bool Debounced(Hand hand)
     {
-        if (!isActiveAndEnabled || hand == null || IsHolding(hand) || hand.GetHeld() != null) return;
+        if (_lastToggle.TryGetValue(hand, out float t) && Time.unscaledTime - t < 0.25f) return true;
+        _lastToggle[hand] = Time.unscaledTime;
+        return false;
+    }
+
+    private void OnHandGrabPressed(Hand hand, Grabbable _) => Toggle(hand, false);
+
+    // 빈손 트리거로도 꺼내고 놓을 수 있다
+    private void OnHandSqueezed(Hand hand, Grabbable held)
+    {
+        if (held == null) Toggle(hand, true);
+    }
+
+    private void OnHandUnsqueezed(Hand hand, Grabbable _) { }
+
+    private void Toggle(Hand hand, bool bySqueeze)
+    {
+        if (!isActiveAndEnabled || hand == null) return;
+        if (IsHolding(hand))
+        {
+            if (Debounced(hand)) return;
+            foreach (var p in new[] { _red, _black })
+                if (p != null && p.state == State.Held && p.hand == hand) { ReleaseProbe(p); Debug.Log($"[VrProbe] {(p.red ? "빨간 프로브" : "검정 집게")} 내려놓음"); }
+            return;
+        }
+        if (_lastToggle.TryGetValue(hand, out float t0) && Time.unscaledTime - t0 < 0.25f) return;
+        if (TryTake(hand, bySqueeze)) _lastToggle[hand] = Time.unscaledTime;
+    }
+
+    private float _nextMissLog;
+
+    private bool TryTake(Hand hand, bool bySqueeze)
+    {
+        if (!isActiveAndEnabled || hand == null || IsHolding(hand) || hand.GetHeld() != null) return false;
         Vector3 palm = hand.palmTransform != null ? hand.palmTransform.position : hand.transform.position;
 
         Probe pick = null;
@@ -280,14 +341,28 @@ public class VrProbeHandling : MonoBehaviour
         }
         if (pick == null && BodyHeldByOtherHand(hand) && Vector3.Distance(palm, BodyCenter()) < TakeFromBodyRadius)
             pick = NextProbeToTake();
-        if (pick == null) return;
+        if (pick == null)
+        {
+            // 본체 근처에서 눌렀는데 못 꺼낸 경우만 원인을 남긴다(테스트 확인용)
+            float dBody = Vector3.Distance(palm, BodyCenter());
+            if (dBody < 0.5f && Time.unscaledTime > _nextMissLog)
+            {
+                _nextMissLog = Time.unscaledTime + 1f;
+                Debug.Log($"[VrProbe] 꺼내기 실패: 손={hand.name} 본체거리={dBody:0.00}m(기준 {TakeFromBodyRadius}) 다른손이본체쥠={BodyHeldByOtherHand(hand)} " +
+                          $"빨강끝거리={(_red != null ? Vector3.Distance(palm, CurrentTip(_red)) : -1f):0.00}m 트리거={bySqueeze}");
+            }
+            return false;
+        }
 
         if (pick.state == State.Clipped && !pick.red) Unclip(pick);
         pick.state = State.Held;
         pick.hand = hand;
+        pick.bySqueeze = bySqueeze;
+        Debug.Log($"[VrProbe] {(pick.red ? "빨간 프로브" : "검정 집게")} 꺼냄 (손={hand.name}, {(bySqueeze ? "트리거" : "그립")})");
         pick.snap = null; pick.done = false;
         if (!pick.posed) { pick.lastTip = RestTip(pick); pick.lastDir = transform.TransformDirection(pick.restDirLocal); }
         Haptic(hand, 0.06f, 0.35f);
+        return true;
     }
 
     private void OnHandGrabbed(Hand hand, Grabbable grab)
@@ -296,15 +371,14 @@ public class VrProbeHandling : MonoBehaviour
         if (IsHolding(hand)) hand.ForceReleaseGrab();
     }
 
-    private void OnHandReleasePressed(Hand hand, Grabbable _)
+    // 버튼을 떼도 프로브는 손에 남는다(다시 누르면 놓는다)
+    private void OnHandReleasePressed(Hand hand, Grabbable _) { }
+
+    private void ReleaseProbe(Probe p)
     {
-        foreach (var p in new[] { _red, _black })
-        {
-            if (p == null || p.state != State.Held || p.hand != hand) continue;
-            p.hand = null;
-            if (!p.red && p.clip != null) { p.state = State.Clipped; continue; }   // 접지에 물린 검정 집게는 그대로 둔다
-            StartReturn(p);
-        }
+        p.hand = null;
+        if (!p.red && p.clip != null) { p.state = State.Clipped; return; }   // 접지에 물린 검정 집게는 그대로 둔다
+        StartReturn(p);
     }
 
     private Probe NextProbeToTake()
@@ -317,10 +391,10 @@ public class VrProbeHandling : MonoBehaviour
 
     private void StartReturn(Probe p)
     {
-        p.state = State.Returning;
-        p.returnT = 0f;
-        p.returnFrom = p.lastTip;
-        p.returnFromDir = p.lastDir;
+        // 펜을 거두고 본체에 늘어진 원래 케이블 메시를 다시 보인다
+        HidePen(p);
+        RestoreRest(p);
+        p.state = State.Docked;
         p.snap = null;
     }
 
@@ -353,7 +427,7 @@ public class VrProbeHandling : MonoBehaviour
                     {
                         Unclip(p); StartReturn(p); break;   // 본체를 들고 너무 멀어지면 집게가 빠진다
                     }
-                    Pose(p, ClipCenter(p.clip), Vector3.down);
+                    ShowPen(p, ClipCenter(p.clip), Vector3.down);
                     break;
                 case State.Returning:
                     p.returnT += Time.deltaTime / ReturnTime;
@@ -389,7 +463,7 @@ public class VrProbeHandling : MonoBehaviour
             p.snap = mp;
             p.snapStart = Time.time;
             p.done = false;
-            if (mp != null) Haptic(hand, 0.04f, 0.25f);
+            if (mp != null) { Haptic(hand, 0.04f, 0.25f); Debug.Log($"[VrProbe] {(p.red ? "빨간 프로브" : "검정 집게")} 단자 접촉: {mp.terminalId}"); }
         }
 
         if (mp != null)
@@ -407,7 +481,8 @@ public class VrProbeHandling : MonoBehaviour
         }
         else HideRing();
 
-        Pose(p, tip, dir);
+        ShowPen(p, tip, dir);
+        GripFingers(hand);
     }
 
     private void OnContactComplete(Probe p, MeasurementPoint mp)
@@ -419,17 +494,22 @@ public class VrProbeHandling : MonoBehaviour
             p.probe.currentTerminalId = mp.terminalId;
             Haptic(p.hand, 0.1f, 0.6f);
             Debug.Log($"[VrProbe] 검정 집게 → {mp.terminalId}");
+            // 물리면 손에서 저절로 놓아져 집게가 접지에 남는다 — 빈 손으로 바로 빨간 프로브를 꺼낼 수 있게
+            p.hand = null;
+            p.state = State.Clipped;
             return;
         }
 
         if (MeterOff())
         {
             FlashGuide("다이얼을 돌려 측정 모드를 먼저 고르세요");
+            Debug.Log("[VrProbe] 측정 보류: 계측기 OFF");
             return;
         }
         if (NeedsBlack(ClipCenter(mp)))
         {
             FlashGuide("검정 집게를 먼저 접지에 물리세요");
+            Debug.Log($"[VrProbe] 측정 보류: 접지 집게 필요 ({mp.terminalId})");
             return;
         }
 
@@ -443,7 +523,8 @@ public class VrProbeHandling : MonoBehaviour
 
         Haptic(p.hand, 0.12f, 0.8f);
         _valueAt = mp;
-        _valueLabelUntil = Time.time + 4f;
+        _valueText = _master.lcdDisplay != null ? _master.lcdDisplay.text : null;
+        _valueLabelUntil = Time.time + 6f;
         Debug.Log($"[VrProbe] 빨간 프로브 측정 → {mp.terminalId} = {(_master.lcdDisplay != null ? _master.lcdDisplay.text : "?")}");
     }
 
@@ -543,7 +624,7 @@ public class VrProbeHandling : MonoBehaviour
         if (_ring == null)
         {
             var go = new GameObject("[VrProbeRing]");
-            go.layer = 2;
+            go.layer = 1;
             _ring = go.AddComponent<LineRenderer>();
             _ring.useWorldSpace = true;
             _ring.loop = false;
@@ -553,7 +634,7 @@ public class VrProbeHandling : MonoBehaviour
             _ring.receiveShadows = false;
             var sh = Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default");
             _ringMat = new Material(sh);
-            if (_ringMat.HasProperty("unity_GUIZTestMode")) _ringMat.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+            _ringMat.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
             _ringMat.renderQueue = 4000;
             _ring.material = _ringMat;
         }
@@ -588,13 +669,20 @@ public class VrProbeHandling : MonoBehaviour
         if (s_labelPrefab == null) return null;
         var go = Instantiate(s_labelPrefab);
         go.name = goName;
-        foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 2;
+        foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 1;
         return go;
     }
 
+    private string _valueShown;
+    private static float s_valueShowingUntil;
+    /// <summary>측정값 라벨이 떠 있는 동안 true — 같은 단자 위 목표 마커(노란 안내)가 값을 가리지 않게 NextActionGuide 가 마커를 숨긴다.</summary>
+    public static bool ValueLabelShowing => Time.time < s_valueShowingUntil;
+
     private void UpdateValueLabel()
     {
-        if (_valueAt == null || Time.time > _valueLabelUntil || _master.lcdDisplay == null)
+        bool stillOn = _valueAt != null && _red != null && _red.state == State.Held && _red.snap == _valueAt;
+        if (stillOn) _valueLabelUntil = Mathf.Max(_valueLabelUntil, Time.time + 2f);
+        if (_valueAt == null || Time.time > _valueLabelUntil)
         {
             if (_valueLabel != null) _valueLabel.SetActive(false);
             return;
@@ -602,10 +690,20 @@ public class VrProbeHandling : MonoBehaviour
         if (_valueLabel == null) _valueLabel = MakeLabel("[VrProbeValue]");
         if (_valueLabel == null) return;
         _valueLabel.SetActive(true);
-        _valueLabel.transform.position = ClipCenter(_valueAt) + Vector3.up * 0.07f;
+        // 값이 떠 있는 동안 단자 위 노란 목표 마커('빨간 프로브를 대주세요')를 숨긴다 — 그 안내가 값을 덮었다
+        s_valueShowingUntil = Time.time + 0.4f;
+        var gsys = GuideSystem.Instance;
+        if (gsys != null) gsys.SetTargetMarkerVisible(false);
+        // 단자 바로 위, 보는 사람 쪽으로 당겨 띄운다(마커·안내보다 앞)
+        Vector3 at = ClipCenter(_valueAt) + Vector3.up * 0.06f;
+        var cam = Camera.main;
+        if (cam != null) at += (cam.transform.position - at).normalized * 0.1f;
+        _valueLabel.transform.position = at;
         var l = _valueLabel.GetComponent<WorldHoverLabel>();
-        string v = _master.lcdDisplay.text;
-        if (l != null) l.SetText(string.IsNullOrWhiteSpace(v) ? "----" : v, "HOLD");
+        string v = _valueText;
+        if (string.IsNullOrWhiteSpace(v) && _master.lcdDisplay != null) v = _master.lcdDisplay.text;
+        string shown = string.IsNullOrWhiteSpace(v) ? "----" : v;
+        if (l != null && shown != _valueShown) { _valueShown = shown; l.SetText(shown, "측정값 HOLD"); }
     }
 
     private float _flashUntil;
@@ -632,10 +730,13 @@ public class VrProbeHandling : MonoBehaviour
             if (MeterOff()) text = "다이얼을 돌려 측정 모드를 고르세요";
             else if (blackHeld) text = "검정 집게를 접지 단자에 대고 잠시 기다리세요";
             else if (redHeld)
-                text = _red.snap != null && NeedsBlack(ClipCenter(_red.snap)) ? "검정 집게를 먼저 접지에 물리세요" : "빨간 프로브를 단자에 대고 잠시 기다리세요";
-            else if (_black != null && _black.clip == null && FindGround(BodyCenter(), 2f) != null) text = "빈 손으로 계측기를 쥐면 검정 집게를 꺼냅니다";
-            else text = "빈 손으로 계측기를 쥐면 빨간 프로브를 꺼냅니다";
+                text = _red.snap != null && NeedsBlack(ClipCenter(_red.snap)) ? "검정 집게를 먼저 접지에 물리세요" : "빨간 프로브를 단자에 대고 잠시 기다리세요 (다시 누르면 내려놓기)";
+            else if (_black != null && _black.clip == null && FindGround(BodyCenter(), 2f) != null) text = "다른 손을 계측기에 대고 그립·트리거 → 검정 집게";
+            else text = "다른 손을 계측기에 대고 그립·트리거 → 빨간 프로브";
         }
+
+        // 측정값이 떠 있는 동안은 안내를 숨긴다 — 같은 단자 위에 겹쳐 값이 잘 안 보였다(값을 읽는 순간에는 안내가 필요 없다)
+        if (_valueLabel != null && _valueLabel.activeSelf && Time.time >= _flashUntil) text = null;
 
         if (text == null)
         {
@@ -654,9 +755,122 @@ public class VrProbeHandling : MonoBehaviour
             _guideText = text;
             _guideLabel.SetText(_master.name.Contains("Megger") ? "절연저항계" : "멀티미터", text);
         }
-        var col = GetComponent<Collider>();
-        Vector3 top = col != null ? new Vector3(col.bounds.center.x, col.bounds.max.y, col.bounds.center.z) : transform.position;
-        _guide.transform.position = Vector3.Lerp(_guide.transform.position, top + Vector3.up * 0.12f, _guide.transform.position == Vector3.zero ? 1f : Time.deltaTime * 12f);
+        // 프로브를 들고 있으면 사용자는 단자 쪽을 보고 있으므로 안내도 프로브 끝 근처에 띄운다
+        Vector3 want;
+        var heldP = redHeld ? _red : (blackHeld ? _black : null);
+        if (heldP != null)
+        {
+            want = heldP.lastTip + Vector3.up * 0.1f;
+        }
+        else
+        {
+            var col = GetComponent<Collider>();
+            Vector3 top = col != null ? new Vector3(col.bounds.center.x, col.bounds.max.y, col.bounds.center.z) : transform.position;
+            want = top + Vector3.up * 0.12f;
+            // 계측기 바로 위에 띄우면 LCD(측정값 화면)를 가리므로 보는 사람 기준 옆으로 비켜 띄운다
+            var cam = Camera.main;
+            if (cam != null) want += Vector3.ProjectOnPlane(cam.transform.right, Vector3.up).normalized * 0.14f;
+        }
+        _guide.transform.position = Vector3.Lerp(_guide.transform.position, want, _guide.transform.position == Vector3.zero ? 1f : Time.deltaTime * 12f);
+    }
+
+    // ── 손에 쥔 프로브 펜 ─────────────────────
+
+    private const float PenTipLen = 0.025f;
+    private const float PenBodyLen = 0.10f;
+    private const int CordSegments = 24;
+    private static Material s_cordMat;
+
+    private void ShowPen(Probe p, Vector3 tip, Vector3 dir)
+    {
+        if (p.pen == null) BuildPen(p);
+        if (p.cable != null && p.cable.enabled) p.cable.enabled = false;
+        if (!p.pen.activeSelf) p.pen.SetActive(true);
+        if (dir.sqrMagnitude < 1e-6f) dir = Vector3.down;
+        p.pen.transform.SetPositionAndRotation(tip, Quaternion.FromToRotation(Vector3.up, dir));
+        p.lastTip = tip; p.lastDir = dir;
+
+        // 본체 단자 → 펜 꼬리: 남는 길이만큼 아래로 처지게
+        Vector3 a = p.root.position;
+        Vector3 b = tip - dir * (PenTipLen + PenBodyLen);
+        float d = Vector3.Distance(a, b);
+        float sag = Mathf.Max(0.03f, (p.length - d) * 0.45f);
+        Vector3 c1 = a + Vector3.down * sag;
+        Vector3 c2 = b - dir * Mathf.Min(0.1f, d * 0.3f) + Vector3.down * sag * 0.6f;
+        if (!p.cord.enabled) p.cord.enabled = true;
+        for (int i = 0; i < CordSegments; i++) p.cord.SetPosition(i, Bezier(a, c1, c2, b, (float)i / (CordSegments - 1)));
+    }
+
+    private void HidePen(Probe p)
+    {
+        if (p == null) return;
+        if (p.pen != null && p.pen.activeSelf) p.pen.SetActive(false);
+        if (p.cord != null) p.cord.enabled = false;
+        if (p.cable != null) p.cable.enabled = true;
+    }
+
+    private void DestroyPen(Probe p)
+    {
+        if (p == null) return;
+        HidePen(p);
+        if (p.pen != null) Destroy(p.pen);
+        if (p.cord != null) Destroy(p.cord.gameObject);
+        p.pen = null; p.cord = null;
+    }
+
+    /// <summary>빨강/검정 손잡이 + 금속 탐침. 충돌체는 없다(손·레이저를 막지 않게).</summary>
+    private void BuildPen(Probe p)
+    {
+        Color body = p.red ? new Color(0.85f, 0.08f, 0.08f) : new Color(0.08f, 0.08f, 0.08f);
+        var root = new GameObject(p.red ? "[VrProbePen_Red]" : "[VrProbePen_Black]");
+        root.layer = 1;
+        MakePart(root.transform, new Vector3(0f, -PenTipLen * 0.5f, 0f), new Vector3(0.0025f, PenTipLen * 0.5f, 0.0025f), new Color(0.75f, 0.75f, 0.78f), p);   // 금속 탐침
+        MakePart(root.transform, new Vector3(0f, -PenTipLen - PenBodyLen * 0.5f, 0f), new Vector3(0.012f, PenBodyLen * 0.5f, 0.012f), body, p);              // 손잡이
+        MakePart(root.transform, new Vector3(0f, -PenTipLen - 0.004f, 0f), new Vector3(0.018f, 0.003f, 0.018f), body, p);                                    // 손가락 걸이
+        p.pen = root;
+
+        var cordGo = new GameObject(p.red ? "[VrProbeCord_Red]" : "[VrProbeCord_Black]");
+        cordGo.layer = 1;
+        var lr = cordGo.AddComponent<LineRenderer>();
+        lr.useWorldSpace = true;
+        lr.positionCount = CordSegments;
+        lr.widthMultiplier = 0.005f;
+        lr.numCapVertices = 2;
+        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        lr.receiveShadows = false;
+        if (s_cordMat == null) s_cordMat = new Material(Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default"));
+        lr.sharedMaterial = s_cordMat;
+        lr.startColor = lr.endColor = p.red ? new Color(0.7f, 0.06f, 0.06f) : new Color(0.06f, 0.06f, 0.06f);
+        lr.enabled = false;
+        p.cord = lr;
+    }
+
+    private static void MakePart(Transform parent, Vector3 localPos, Vector3 localScale, Color color, Probe p)
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        var col = go.GetComponent<Collider>();
+        if (col != null) { col.enabled = false; Destroy(col); }
+        go.layer = 1;
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localPos;
+        go.transform.localScale = localScale;
+        var r = go.GetComponent<MeshRenderer>();
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        // 케이블 메시의 재질(빌드에 포함된 URP 셰이더)을 복사해 색만 바꾼다
+        Material baseMat = p.cable != null ? p.cable.sharedMaterial : null;
+        var m = baseMat != null ? new Material(baseMat) : new Material(r.sharedMaterial);
+        if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", null);
+        if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", null);
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
+        if (m.HasProperty("_Color")) m.SetColor("_Color", color);
+        r.sharedMaterial = m;
+    }
+
+    /// <summary>프로브를 쥔 손가락을 오므린다(손이 펜을 쥔 모양).</summary>
+    private static void GripFingers(Hand hand)
+    {
+        if (hand == null || hand.fingers == null) return;
+        foreach (var f in hand.fingers) if (f != null) f.SetFingerBend(0.7f);
     }
 
 #if UNITY_EDITOR

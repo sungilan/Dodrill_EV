@@ -558,7 +558,7 @@ public class ScenarioRunner : MonoBehaviour
 
         // 실패한 Task 오브젝트 디스폰 (재도전 시 StartTask에서 다시 스폰됨)
         var currentTaskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
-        _spawner?.DespawnCurrentTask(currentTaskDef);
+        _spawner?.DespawnCurrentTask(currentTaskDef, failed: true);
         _spawner?.ReturnLooseItemsHome();   // 떨어뜨린 도구(이전 단계에서 가져온 드릴 등)도 제자리로
         BroadcastState(); // 클라이언트에 Fail 상태 먼저 전달
 

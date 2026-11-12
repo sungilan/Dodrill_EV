@@ -133,6 +133,8 @@ namespace Autohand
         }
 
         public virtual void Press() {
+            // [DoDrill] 트리거 이벤트(UnityEvent)는 꺼진 포인터에도 Press 를 부른다. 꺼진 포인터의 인덱스는 다른 손 포인터를 가리킬 수 있어 오작동 → 막는다.
+            if (!isActiveAndEnabled) return;
             // Handle the UI events
             if(inputModule) inputModule.ProcessPress(pointerIndex);
 
@@ -147,6 +149,7 @@ namespace Autohand
 
         public virtual void Release()
         {
+            if (!isActiveAndEnabled) return;   // [DoDrill] Press 와 같은 이유
             // Handle the UI events
             if(inputModule) inputModule.ProcessRelease(pointerIndex);
 

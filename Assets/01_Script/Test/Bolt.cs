@@ -58,7 +58,7 @@ public class Bolt : MonoBehaviour
 
         if (prevProgress < 1.0f && _progress >= 1.0f)
         {
-            if (isAssembleMode) MarkDone(true);   // 체결 완료한 볼트는 초록 아웃라인으로 표시
+            if (isAssembleMode) { MarkDone(true); WorldSfx.TorqueClick(transform.position); }   // 체결 완료: 초록 아웃라인 + 토크렌치 '딸깍'
             OnBoltLoosened?.Invoke(this);
         }
     }
@@ -79,7 +79,7 @@ public class Bolt : MonoBehaviour
         _progress = progress;
         AnimateBoltPosition();
 
-        if (prev < 1.0f && _progress >= 1.0f && isAssembleMode) MarkDone(true);
+        if (prev < 1.0f && _progress >= 1.0f && isAssembleMode) { MarkDone(true); WorldSfx.TorqueClick(transform.position); }
     }
 
     //private void AnimateBoltPosition()

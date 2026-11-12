@@ -20,19 +20,28 @@ public class HeldItemOnTopFeature : ScriptableRendererFeature
     public RenderPassEvent passEvent = RenderPassEvent.AfterRenderingTransparents;
 
     private DrawOnTopPass _pass;
+    private XRayPass _xrayPass;
+
+    /// <summary>런타임 안내(링·라벨)가 쓰는 레이어 — VR 카메라가 그리는 TransparentFX.</summary>
+    private const int GuideLayer = 1;
 
     public override void Create()
     {
         _pass = new DrawOnTopPass { renderPassEvent = passEvent };
+        // 엑스레이는 든 도구보다 먼저(뒤에) 그려, 손에 든 도구·손이 엑스레이 빛 위에 보이게 한다
+        _xrayPass = new XRayPass { renderPassEvent = passEvent - 1 };
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        if (!HeldItemOnTop.Any) return;
+        bool held = HeldItemOnTop.Any;
+        bool xray = XRayMode.HasTargets && XRayMode.OverrideMaterial != null;
+        if (!held && !xray) return;
         var cam = renderingData.cameraData.camera;
         // 내 1인칭 화면(메인 카메라)만. 미니맵·UI·씬 뷰 카메라에서는 그리지 않는다.
         if (renderingData.cameraData.cameraType != CameraType.Game || cam == null || !cam.CompareTag("MainCamera")) return;
-        renderer.EnqueuePass(_pass);
+        if (xray) renderer.EnqueuePass(_xrayPass);
+        if (held) renderer.EnqueuePass(_pass);
     }
 
     private class DrawOnTopPass : ScriptableRenderPass
@@ -48,6 +57,7 @@ public class HeldItemOnTopFeature : ScriptableRendererFeature
         {
             public RendererListHandle list;
             public RendererListHandle uiList;
+            public RendererListHandle guideList;
         }
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -67,12 +77,19 @@ public class HeldItemOnTopFeature : ScriptableRendererFeature
             var uiFiltering = new FilteringSettings(RenderQueueRange.transparent, 1 << HeldItemOnTop.UILayer);
             var uiParams = new RendererListParams(renderingData.cullResults, uiDrawing, uiFiltering);
 
+            // 안내 링·라벨(TransparentFX 레이어, 큐 3500 이상, 깊이 무시)을 다시 그린 도구·손 위에 한 번 더 그린다.
+            // 이것이 없으면 VR 에서 메거를 들고 있을 때 맨 앞에 다시 그린 메거·손이 단자 안내 라벨을 덮었다.
+            var guideFiltering = new FilteringSettings(new RenderQueueRange(3500, 5000), 1 << GuideLayer);
+            var guideParams = new RendererListParams(renderingData.cullResults, uiDrawing, guideFiltering);
+
             using (var builder = renderGraph.AddRasterRenderPass<PassData>("Held Item On Top", out var data))
             {
                 data.list = renderGraph.CreateRendererList(listParams);
                 data.uiList = renderGraph.CreateRendererList(uiParams);
+                data.guideList = renderGraph.CreateRendererList(guideParams);
                 builder.UseRendererList(data.list);
                 builder.UseRendererList(data.uiList);
+                builder.UseRendererList(data.guideList);
                 builder.SetRenderAttachment(resources.activeColorTexture, 0, AccessFlags.Write);
                 builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.ReadWrite);
                 builder.AllowPassCulling(false);
@@ -82,8 +99,67 @@ public class HeldItemOnTopFeature : ScriptableRendererFeature
                     ctx.cmd.ClearRenderTarget(RTClearFlags.Depth, Color.clear, 1f, 0);
                     ctx.cmd.DrawRendererList(d.list);
                     ctx.cmd.DrawRendererList(d.uiList);
+                    ctx.cmd.DrawRendererList(d.guideList);
                 });
             }
+        }
+    }
+}
+
+/// <summary>
+/// 엑스레이: 표시(XRayMode.Bit)가 붙은 렌더러를 깊이를 무시하고 하늘색 반투명 재질로 덮어 그린다(차체 너머로 비침).
+/// 그 위에 안내 링·라벨을 한 번 더 그려 엑스레이 빛에 묻히지 않게 한다.
+/// </summary>
+class XRayPass : ScriptableRenderPass
+{
+    private static readonly List<ShaderTagId> s_tags = new List<ShaderTagId>
+    {
+        new ShaderTagId("UniversalForward"),
+        new ShaderTagId("UniversalForwardOnly"),
+        new ShaderTagId("SRPDefaultUnlit"),
+    };
+
+    private class PassData
+    {
+        public RendererListHandle list;
+        public RendererListHandle guideList;
+    }
+
+    public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+    {
+        var mat = XRayMode.OverrideMaterial;
+        if (mat == null) return;
+        var resources = frameData.Get<UniversalResourceData>();
+        var renderingData = frameData.Get<UniversalRenderingData>();
+        var cameraData = frameData.Get<UniversalCameraData>();
+        var lightData = frameData.Get<UniversalLightData>();
+
+        var drawing = RenderingUtils.CreateDrawingSettings(s_tags, renderingData, cameraData, lightData, SortingCriteria.CommonTransparent);
+        drawing.overrideMaterial = mat;
+        drawing.overrideMaterialPassIndex = 0;
+        var filtering = new FilteringSettings(RenderQueueRange.all, ~0, XRayMode.Bit);
+        var listParams = new RendererListParams(renderingData.cullResults, drawing, filtering);
+
+        var guideDrawing = RenderingUtils.CreateDrawingSettings(s_tags, renderingData, cameraData, lightData, SortingCriteria.CommonTransparent);
+        var guideFiltering = new FilteringSettings(new RenderQueueRange(3500, 5000), 1 << 1);
+        var guideParams = new RendererListParams(renderingData.cullResults, guideDrawing, guideFiltering);
+
+        using (var builder = renderGraph.AddRasterRenderPass<PassData>("XRay Targets", out var data))
+        {
+            data.list = renderGraph.CreateRendererList(listParams);
+            data.guideList = renderGraph.CreateRendererList(guideParams);
+            builder.UseRendererList(data.list);
+            builder.UseRendererList(data.guideList);
+            builder.SetRenderAttachment(resources.activeColorTexture, 0, AccessFlags.Write);
+            builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.ReadWrite);
+            builder.AllowPassCulling(false);
+            builder.SetRenderFunc((PassData d, RasterGraphContext ctx) =>
+            {
+                // 차체 깊이를 지우고 대상만 덮어 그린다(반투명이라 보이는 부분은 살짝 물들고, 가린 부분은 비쳐 보인다)
+                ctx.cmd.ClearRenderTarget(RTClearFlags.Depth, Color.clear, 1f, 0);
+                ctx.cmd.DrawRendererList(d.list);
+                ctx.cmd.DrawRendererList(d.guideList);
+            });
         }
     }
 }

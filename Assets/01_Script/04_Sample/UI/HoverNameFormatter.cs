@@ -8,7 +8,7 @@ using System.Text;
 /// </summary>
 public static class HoverNameFormatter
 {
-    private static readonly Dictionary<string, string> Ko = new Dictionary<string, string>
+    private static readonly Dictionary<string, string> Ko = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase)
     {
         // 아이템
         ["Ioniq5N"] = "아이오닉 5 N",
@@ -28,6 +28,19 @@ public static class HoverNameFormatter
         ["BatteryPack_Assemble"] = "배터리 팩",
         ["New_PRA_Unit"] = "새 PRA 유닛",
         ["Old_PRA_Unit"] = "기존 PRA 유닛",
+        // 정비 장비
+        ["Equip_OilDrainer"] = "오일 받이",
+        ["Equip_BatteryLift"] = "이동식 배터리 리프트",
+        ["Equip_OilBottle"] = "엔진 오일",
+        ["Equip_Canister"] = "냉각수 통",
+        ["Equip_Spray_Lube"] = "윤활 방청제 스프레이",
+        ["Equip_Spray_Cleaner"] = "접점 세정제",
+        ["Equip_Extinguisher"] = "소화기",
+        ["Equip_WorkLight"] = "작업등",
+        ["Equip_AirImpact"] = "에어 임팩렌치",
+        ["Equip_Compressor"] = "에어 컴프레서",
+        ["Equip_Spanner"] = "스패너",
+        ["Equip_Screwdriver"] = "드라이버",
 
         // 차량·부품
         ["Hood_Latch_Point"] = "후드 래치",

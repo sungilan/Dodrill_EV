@@ -64,10 +64,21 @@ public class ImpactWrench : MonoBehaviour
         get
         {
             if(_sync == null) _sync = GetComponentInParent<SyncGrab>();
-            return _sync == null || (_sync.IsOwner && _sync.IsGrabbed);
+            return _sync == null || (_sync.IsOwner && _sync.IsGrabbed && !_sync.IsHolstered);   // 벨트에 꽂힌 렌치는 작업하지 않는다
         }
     }
     private bool _progressShown;   // 이 렌치가 볼트 진행도 UI를 띄운 상태인지
+
+    /// <summary>내가 든 렌치가 지금 겨누고 있는 볼트(다음 단계 안내가 같은 볼트에 링을 겹쳐 그리지 않게 쓴다).</summary>
+    public static Bolt LocalTargetBolt { get; private set; }
+    /// <summary>지금 작업 버튼을 누르고 있는가(진동 피드백용).</summary>
+    public bool IsWorking => _wasWorking;
+    /// <summary>지금 겨누고 있는 볼트(진동 피드백용).</summary>
+    public Bolt TargetBolt => _targetBolt;
+
+    // 지금 작업 중인 볼트 표시: 초록 아웃라인 + 볼트를 감싸는 초록 진행 링 (CMS VR 참고)
+    private static readonly Color WorkingOutlineColor = new Color(0.25f, 1f, 0.35f, 1f);
+    private LineRenderer _progRing, _progTrack;
 
     // ── 생명주기 ───────────────────────────────────────────
 
@@ -78,6 +89,8 @@ public class ImpactWrench : MonoBehaviour
 
     private void OnDisable()
     {
+        RestoreHandVisuals();
+        ResetBoltSnap();
         _buttonHeld = false;
         ApplyEffects(false);
         SetMobileButton(false);
@@ -145,7 +158,9 @@ public class ImpactWrench : MonoBehaviour
             {
                 // 렌치 회전 방향은 물리적 일관성을 위해 currentMode 유지 가능 (필요시 수정)
                 float dir = (currentMode == WrenchMode.Unscrew) ? 1f : -1f;
-                _targetBolt.InteractWithTool(dir * rotationSpeed * Time.deltaTime, transform.forward);
+                if (BoltWork.IsSeized(_targetBolt) && !BoltWork.IsLubed(_targetBolt))
+                    EquipFx.Notice("seized", "녹슬어 뻑뻑한 볼트", "윤활 방청제를 뿌리면 잘 풀립니다", EquipFx.Warn, 3f, 10f);
+                _targetBolt.InteractWithTool(dir * rotationSpeed * BoltWork.SpeedFactor(_targetBolt) * Time.deltaTime, transform.forward);
 
                 // [작업 중]
                 ShowProgress($"{actionName} 중...", GetPlatformInstruction(actionName, true));
@@ -183,8 +198,10 @@ public class ImpactWrench : MonoBehaviour
     {
         RestoreBoltOutline();
         HideProgress();
+        if (LocalTargetBolt == _targetBolt) LocalTargetBolt = null;
         _targetBolt = null;
         _currentBoltGameObject = null;
+        HideRing();
     }
 
     // ── 단계 검증 로직 ──────────────────────────────────────
@@ -313,6 +330,7 @@ public class ImpactWrench : MonoBehaviour
         // 일치할 경우에만 아래 로직 실행
         _targetBolt = detectedBolt;
         _currentBoltGameObject = other.gameObject;
+        LocalTargetBolt = detectedBolt;
 
         if (_currentOutlinable != null) RestoreBoltOutline();
         ChangeBoltOutlineColor();
@@ -342,7 +360,7 @@ public class ImpactWrench : MonoBehaviour
 
         _currentOutlinable.enabled = true;
         var parameters = _currentOutlinable.OutlineParameters;
-        parameters.Color = targetOutlineColor;
+        parameters.Color = WorkingOutlineColor;   // 예전 노란색(targetOutlineColor) 대신 초록 — '지금 이 볼트를 작업 중' 표시
         parameters.BlurShift = outlineWidth;
         parameters.Enabled = true;
     }
@@ -368,8 +386,266 @@ public class ImpactWrench : MonoBehaviour
             _currentOutlinable.OutlineParameters.Color = RestoreColorFor(_currentOutlinable);
             _currentOutlinable = null;
         }
+        if (LocalTargetBolt == _targetBolt) LocalTargetBolt = null;
         _targetBolt = null;
         _currentBoltGameObject = null;
+        HideRing();
+    }
+
+    // ── 진행 링 ─────────────────────────────────────
+
+    // ── 볼트에 착 붙기 (VR) ─────────────────────────
+    // CMS VR 처럼 렌치가 볼트를 겨누면 비트 끝이 볼트 머리에 맞춰 붙고, 볼트가 빠져나오는 동안 렌치도 같이 따라 나온다.
+    // 손(루트)은 그대로 두고 모델(본체·비트 메시)과 쥔 손의 모델만 옮긴다(손 모델은 그리는 동안만). 비트는 Animator 가 매 프레임 쓰므로 현재 값 기준,
+    // 본체는 애니메이션이 없어 시작 때 값 기준으로 매번 다시 계산한다(누적 방지).
+    private const float SnapMaxDist = 0.08f;    // 이보다 멀면 붙이지 않는다(m)
+    private const float SnapMaxAngle = 45f;     // 비트 방향과 볼트 축이 이보다 어긋나면 붙이지 않는다
+    private Transform _snapBody, _snapBit;
+    private Vector3 _bodyPos0, _tipLocal;
+    private Quaternion _bodyRot0;
+    private bool _snapReady, _snapApplied;
+    private float _snapW;
+
+    private void InitBoltSnap()
+    {
+        if (_snapReady) return;
+        _snapReady = true;
+        MeshFilter big = null, small = null;
+        float bigV = -1f, smallV = float.MaxValue;
+        foreach (Transform c in transform)
+        {
+            var mf = c.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) continue;
+            var sz = mf.sharedMesh.bounds.size;
+            float v = sz.x * sz.y * sz.z;
+            if (v > bigV) { bigV = v; big = mf; }
+            if (v < smallV) { smallV = v; small = mf; }
+        }
+        if (big == null || small == null || big == small) return;
+        _snapBody = big.transform;
+        _snapBit = small.transform;
+        _bodyPos0 = _snapBody.localPosition;
+        _bodyRot0 = _snapBody.localRotation;
+        var mb = small.sharedMesh.bounds;
+        _tipLocal = transform.InverseTransformPoint(_snapBit.TransformPoint(mb.center + Vector3.right * mb.extents.x));
+    }
+
+    private void UpdateBoltSnap()
+    {
+        if (!VrProbeHandling.IsVRDevice) return;
+        InitBoltSnap();
+        if (_snapBody == null) return;
+
+        // 목표: 비트 축(루트 +X)을 볼트가 빠지는 반대 방향으로, 비트 끝을 볼트 머리로
+        Quaternion rFull = Quaternion.identity;
+        Vector3 dFull = Vector3.zero;
+        bool want = false;
+        if (_targetBolt != null && _targetBolt.gameObject.activeInHierarchy && IsLocalHeld)
+        {
+            var bt = _targetBolt.transform;
+            Vector3 outDir = bt.parent != null ? bt.parent.TransformDirection(Vector3.down) : Vector3.down;   // Bolt 가 빠져나오는 방향
+            outDir.Normalize();
+            Vector3 head = BoltHead(_targetBolt, outDir);
+            Vector3 tipWorld = transform.TransformPoint(_tipLocal);
+            Vector3 axisWorld = transform.TransformDirection(Vector3.right).normalized;
+            float ang = Vector3.Angle(axisWorld, -outDir);
+            if (ang < SnapMaxAngle && Vector3.Distance(tipWorld, head) < SnapMaxDist)
+            {
+                Vector3 targetL = transform.InverseTransformDirection(-outDir).normalized;
+                rFull = Quaternion.FromToRotation(Vector3.right, targetL);
+                dFull = transform.InverseTransformPoint(head) - _tipLocal;
+                want = true;
+            }
+        }
+
+        _snapW = Mathf.MoveTowards(_snapW, want ? 1f : 0f, Time.deltaTime * (want ? 8f : 6f));
+        if (_snapW <= 0f)
+        {
+            if (_snapApplied) ResetBoltSnap();
+            return;
+        }
+        if (want) { _lastR = rFull; _lastD = dFull; }   // 놓을 때는 마지막 자세에서 부드럽게 풀린다
+
+        Quaternion r = Quaternion.Slerp(Quaternion.identity, _lastR, _snapW);
+        Vector3 d = _lastD * _snapW;
+        ApplySnap(_snapBody, _bodyPos0, _bodyRot0, r, d);
+        ApplySnap(_snapBit, _snapBit.localPosition, _snapBit.localRotation, r, d);   // Animator 가 막 쓴 값 기준
+        _snapApplied = true;
+        OffsetHandVisuals(r, d);
+    }
+
+    // ── 렌치를 쥔 손 모델도 같이 옮기기 ─────────────
+    // 렌치 모델만 볼트 쪽으로 옮기면 손에서 떨어져 보였다. 보이는 손은 아바타 장갑(손 뼈에 스킨)이고, 잡은 Hand 가 곧 그 손 뼈다.
+    // 그래서 같은 이동·회전을 손 뼈(Hand) 자체에 '그리기 직전'(IK 가 끝난 뒤)에만 적용하고, 그린 직후 원래대로 돌려놓는다.
+    // 손의 물리·추적·포인터 판정 위치는 건드리지 않는다.
+    // (예전: 손 아래 '렌더러가 있는 자식'을 옮겼는데 그게 장갑이 아니라 UI·그랩 포인터여서 손은 안 따라오고 포인터만 어긋났다)
+    private readonly System.Collections.Generic.List<Transform> _handVis = new System.Collections.Generic.List<Transform>();
+    private readonly System.Collections.Generic.List<Vector3> _handVisPos = new System.Collections.Generic.List<Vector3>();
+    private readonly System.Collections.Generic.List<Quaternion> _handVisRot = new System.Collections.Generic.List<Quaternion>();
+    private bool _handRestoreHooked;
+    private Autohand.Grabbable _grabbable;
+    private bool _handOffsetWanted;
+    private Quaternion _handOffR = Quaternion.identity;
+    private Vector3 _handOffD;
+    private int _handOffFrame = -1;
+
+    private void OffsetHandVisuals(Quaternion r, Vector3 d)
+    {
+        _handOffsetWanted = true;
+        _handOffR = r; _handOffD = d;
+        _handOffFrame = Time.frameCount;
+        if (!_handRestoreHooked)
+        {
+            _handRestoreHooked = true;
+            UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += OnBeginRendering;
+            UnityEngine.Rendering.RenderPipelineManager.endContextRendering += OnEndRendering;
+        }
+    }
+
+    private void OnBeginRendering(UnityEngine.Rendering.ScriptableRenderContext ctx, System.Collections.Generic.List<Camera> cams)
+    {
+        RestoreHandVisuals();
+        // 이번 프레임에 스냅이 적용됐을 때만(놓았거나 볼트에서 떨어지면 바로 원래 손)
+        if (!_handOffsetWanted || _handOffFrame < Time.frameCount - 1 || !_snapApplied) return;
+        if (_grabbable == null) _grabbable = GetComponentInParent<Autohand.Grabbable>();
+        if (_grabbable == null) return;
+        var heldBy = _grabbable.GetHeldBy();
+        if (heldBy == null || heldBy.Count == 0) return;
+
+        Vector3 pivotW = transform.TransformPoint(_tipLocal);
+        Quaternion rotW = transform.rotation * _handOffR * Quaternion.Inverse(transform.rotation);
+        Vector3 dW = transform.TransformVector(_handOffD);
+
+        foreach (var h in heldBy)
+        {
+            if (h == null) continue;
+            var c = h.transform;
+            if (transform.IsChildOf(c)) continue;   // 렌치가 손 아래로 붙은 경우(이미 같이 움직임)
+            _handVis.Add(c); _handVisPos.Add(c.position); _handVisRot.Add(c.rotation);
+            c.SetPositionAndRotation(rotW * (c.position - pivotW) + pivotW + dW, rotW * c.rotation);
+        }
+    }
+
+    private void OnEndRendering(UnityEngine.Rendering.ScriptableRenderContext ctx, System.Collections.Generic.List<Camera> cams) => RestoreHandVisuals();
+
+    private void RestoreHandVisuals()
+    {
+        for (int i = 0; i < _handVis.Count; i++)
+            if (_handVis[i] != null) _handVis[i].SetPositionAndRotation(_handVisPos[i], _handVisRot[i]);
+        _handVis.Clear(); _handVisPos.Clear(); _handVisRot.Clear();
+    }
+
+    private Quaternion _lastR = Quaternion.identity;
+    private Vector3 _lastD;
+
+    private void ApplySnap(Transform t, Vector3 basePos, Quaternion baseRot, Quaternion r, Vector3 d)
+    {
+        t.localPosition = r * (basePos - _tipLocal) + _tipLocal + d;
+        t.localRotation = r * baseRot;
+    }
+
+    private void ResetBoltSnap()
+    {
+        _snapW = 0f;
+        if (!_snapApplied) return;
+        _snapApplied = false;
+        if (_snapBody != null) { _snapBody.localPosition = _bodyPos0; _snapBody.localRotation = _bodyRot0; }
+        // 비트는 다음 프레임 Animator 가 원래 값으로 되돌린다
+    }
+
+    private static Vector3 BoltHead(Bolt bolt, Vector3 outDir)
+    {
+        var r = bolt.GetComponentInChildren<Renderer>();
+        if (r == null) return bolt.transform.position;
+        var b = r.bounds;
+        Vector3 e = b.extents;
+        float along = Mathf.Abs(e.x * outDir.x) + Mathf.Abs(e.y * outDir.y) + Mathf.Abs(e.z * outDir.z);
+        return b.center + outDir * along;
+    }
+
+    private void LateUpdate()
+    {
+        UpdateBoltSnap();
+        if (_targetBolt == null || !_targetBolt.gameObject.activeInHierarchy || !IsLocalHeld) { HideRing(); return; }
+        DrawRing(_targetBolt);
+    }
+
+    private void DrawRing(Bolt bolt)
+    {
+        if (_progRing == null) { _progTrack = MakeRing("[BoltProgressTrack]"); _progRing = MakeRing("[BoltProgressRing]"); }
+        if (_progRing == null) return;
+
+        // 볼트 크기에 맞춘 반지름
+        Bounds b = default; bool any = false;
+        foreach (var r in bolt.GetComponentsInChildren<Renderer>(false))
+        {
+            if (r is LineRenderer) continue;
+            if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
+        }
+        Vector3 c = any ? b.center : bolt.transform.position;
+        float radius = Mathf.Clamp(any ? b.extents.magnitude * 1.1f : 0.025f, 0.018f, 0.06f);
+
+        var cam = Camera.main;
+        Vector3 n = cam != null ? (cam.transform.position - c).normalized : bolt.transform.up;
+        Vector3 u = Vector3.Cross(n, Vector3.up);
+        if (u.sqrMagnitude < 1e-4f) u = Vector3.Cross(n, Vector3.right);
+        u.Normalize();
+        Vector3 v = Vector3.Cross(n, u);
+
+        float p = Mathf.Clamp01(bolt.Progress);
+        SetArc(_progTrack, c, u, v, radius, 1f, new Color(1f, 1f, 1f, 0.28f));
+        SetArc(_progRing, c, u, v, radius, Mathf.Max(p, 0.001f), WorkingOutlineColor);
+        _progRing.widthMultiplier = _progTrack.widthMultiplier = Mathf.Clamp(radius * 0.18f, 0.0025f, 0.007f);
+    }
+
+    private static void SetArc(LineRenderer lr, Vector3 c, Vector3 u, Vector3 v, float r, float frac, Color col)
+    {
+        if (!lr.gameObject.activeSelf) lr.gameObject.SetActive(true);
+        lr.startColor = lr.endColor = col;
+        int count = Mathf.Max(2, Mathf.CeilToInt(48 * frac) + 1);
+        lr.positionCount = count;
+        for (int i = 0; i < count; i++)
+        {
+            float a = Mathf.PI * 0.5f - Mathf.PI * 2f * frac * i / (count - 1);   // 12시 방향에서 시계 방향으로 찬다
+            lr.SetPosition(i, c + (u * Mathf.Cos(a) + v * Mathf.Sin(a)) * r);
+        }
+    }
+
+    private static LineRenderer MakeRing(string goName)
+    {
+        var go = new GameObject(goName);
+        go.layer = 1;   // TransparentFX — VR·PC 카메라 모두 그림
+        var lr = go.AddComponent<LineRenderer>();
+        lr.useWorldSpace = true;
+        lr.numCapVertices = 2;
+        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        lr.receiveShadows = false;
+        var sh = Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default");
+        var m = new Material(sh);
+        m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+        m.renderQueue = 4000;
+        lr.material = m;
+        go.SetActive(false);
+        return lr;
+    }
+
+    private void HideRing()
+    {
+        if (_progRing != null && _progRing.gameObject.activeSelf) _progRing.gameObject.SetActive(false);
+        if (_progTrack != null && _progTrack.gameObject.activeSelf) _progTrack.gameObject.SetActive(false);
+    }
+
+    private void OnDestroy()
+    {
+        if (_handRestoreHooked)
+        {
+            UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= OnBeginRendering;
+            UnityEngine.Rendering.RenderPipelineManager.endContextRendering -= OnEndRendering;
+            _handRestoreHooked = false;
+        }
+        RestoreHandVisuals();
+        if (_progRing != null) Destroy(_progRing.gameObject);
+        if (_progTrack != null) Destroy(_progTrack.gameObject);
     }
 
     // ── 외부 연동 ─────────────────────────────────────

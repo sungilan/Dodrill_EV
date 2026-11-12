@@ -187,6 +187,28 @@ public class BoltGroupCounter : MonoBehaviour
 
         if (InstanceFinder.IsClientStarted)
             InstanceFinder.ClientManager.Broadcast(new BoltHideBroadcast { groupId = groupId, boltIndex = idx });
+
+        // 다 푼 볼트는 내 화면에서 바로 치운다(서버 왕복·낙하 연출을 기다리지 않음). 체결 단계는 볼트가 남아야 한다.
+        // ClickableAnimator 가 붙은 볼트도 같다 — 예전엔 예외로 두어 중력으로 떨어졌다(2026-11-12 VR 테스트). 상태 동기화(Open)는 렌치가 그대로 보낸다.
+        if (!assembleMode) StartCoroutine(PopOut(bolt));
+    }
+
+    /// <summary>풀린 볼트를 아주 짧게 줄이며 사라지게 한다(예전: 중력으로 떨어진 뒤 0.5초 후 비활성화).</summary>
+    private IEnumerator PopOut(Bolt bolt)
+    {
+        if (bolt == null || !bolt.gameObject.activeInHierarchy) yield break;
+        var t = bolt.transform;
+        WorldSfx.BoltOut(t.position);   // 빠지는 금속음(3D)
+        Vector3 s0 = t.localScale;
+        const float dur = 0.1f;
+        for (float e = 0f; e < dur && bolt != null && bolt.gameObject.activeInHierarchy; e += Time.deltaTime)
+        {
+            t.localScale = s0 * (1f - e / dur);
+            yield return null;
+        }
+        if (bolt == null) yield break;
+        t.localScale = s0;   // 조립 단계에서 다시 켤 때 원래 크기로 보이게 되돌려 둔다
+        bolt.Deactivate();
     }
 
     private void OnServerHide(NetworkConnection conn, BoltHideBroadcast msg, Channel ch)
@@ -243,8 +265,9 @@ public class BoltGroupCounter : MonoBehaviour
             return;
         }
 
-        bolt.PlayFallEffect();
-        StartCoroutine(LocalDeactivateBolt(bolt));
+        // 이미 내 화면에서 치운 볼트(내가 푼 것)는 건너뛴다. 다른 사람이 푼 볼트도 떨어뜨리지 않고 바로 사라지게.
+        if(!bolt.gameObject.activeInHierarchy) return;
+        StartCoroutine(PopOut(bolt));
     }
 
     private IEnumerator LocalDeactivateBolt(Bolt bolt)
