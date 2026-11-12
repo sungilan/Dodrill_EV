@@ -168,8 +168,9 @@ public class SessionPlayerServer : MonoBehaviour
             name = $"Player {id + 1}";
         else
         {
-            name = name.Trim();
+            name = name.Replace("<", "").Replace(">", "").Trim();   // TMP 리치텍스트 태그 제거(완료·입퇴장 알림, 접속자 목록에 그대로 표시됨)
             if (name.Length > 48) name = name.Substring(0, 48);
+            if (string.IsNullOrWhiteSpace(name)) name = $"Player {id + 1}";
         }
 
         _players[id] = new SessionPlayerEntry

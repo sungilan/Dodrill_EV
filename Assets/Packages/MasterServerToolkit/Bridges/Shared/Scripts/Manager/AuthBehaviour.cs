@@ -237,7 +237,7 @@ namespace MasterServerToolkit.Bridges
                     {
                         if (accountInfo.IsEmailConfirmed)
                         {
-                            Logger.Debug($"{Mst.Localization["signInSuccessResult"]} {Mst.Client.Auth.AccountInfo}");
+                            Logger.Debug($"{Mst.Localization["signInSuccessResult"]} {Mst.Client.Auth.AccountInfo?.Username}");   // 토큰이 든 AccountInfo 전체는 로그에 남기지 않는다
                         }
                         else
                         {
@@ -279,7 +279,7 @@ namespace MasterServerToolkit.Bridges
                     {
                         Mst.Events.Invoke(MstEventKeys.hideSignInView);
 
-                        Logger.Debug($"{Mst.Localization["signInSuccessResult"]}\n{Mst.Client.Auth.AccountInfo}");
+                        Logger.Debug($"{Mst.Localization["signInSuccessResult"]}\n{Mst.Client.Auth.AccountInfo?.Username}");   // 토큰이 든 AccountInfo 전체는 로그에 남기지 않는다
                     }
                     else
                     {
@@ -314,7 +314,7 @@ namespace MasterServerToolkit.Bridges
                     {
                         if (accountInfo.IsGuest || accountInfo.IsEmailConfirmed)
                         {
-                            Logger.Debug($"{Mst.Localization["signInSuccessResult"]} {Mst.Client.Auth.AccountInfo}");
+                            Logger.Debug($"{Mst.Localization["signInSuccessResult"]} {Mst.Client.Auth.AccountInfo?.Username}");   // 토큰이 든 AccountInfo 전체는 로그에 남기지 않는다
                         }
                         else
                         {

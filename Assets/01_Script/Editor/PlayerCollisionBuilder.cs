@@ -85,11 +85,23 @@ public static class PlayerCollisionBuilder
         }
         sb.AppendLine($"[PlayerCollision] 가구 {made}개");
 
-        // ── 물리 충돌 행렬: Ignore Raycast(2) 는 Player(16) 하고만 충돌 ──
+        // ── 물리 충돌 행렬 ──
+        // ① Ignore Raycast(2) 는 VR 몸체하고만 충돌. VR 몸체(AutoHandPlayer 캡슐)는 시작할 때 레이어를 'HandPlayer'(9)로 바꾼다
+        //    (AutoHandPlayer.cs:237) — 프리팹에는 Player(16) 로 저장돼 있어 예전에는 16 만 허용해서 VR 몸이 벽·가구를 뚫었다.
         int player = LayerMask.NameToLayer("Player");
+        int handPlayer = LayerMask.NameToLayer("HandPlayer");
         for (int j = 0; j < 32; j++)
-            Physics.IgnoreLayerCollision(PlayerCollision.BlockLayer, j, j != player);
-        sb.AppendLine("[PlayerCollision] 충돌 행렬: 레이어 2(Ignore Raycast) ↔ " + (player >= 0 ? $"{player}(Player)" : "Player 레이어 없음") + " 만 충돌");
+            Physics.IgnoreLayerCollision(PlayerCollision.BlockLayer, j, j != player && j != handPlayer);
+
+        // ② VR 몸체는 상호작용 오브젝트와는 충돌하지 않는다 — 차 해치·문(Interactable), 볼트(Bolt), Door 의 솔리드 콜라이더가
+        //    열리고 닫히는 동안 VR 몸을 밀어내던 문제. (손·도구와의 충돌은 그대로)
+        if (handPlayer >= 0)
+            foreach (var n in new[] { "Interactable", "Bolt", "Door" })
+            {
+                int l = LayerMask.NameToLayer(n);
+                if (l >= 0) Physics.IgnoreLayerCollision(handPlayer, l, true);
+            }
+        sb.AppendLine("[PlayerCollision] 충돌 행렬: 레이어 2(Ignore Raycast) ↔ Player(" + player + ")·HandPlayer(" + handPlayer + "), HandPlayer ↮ Interactable·Bolt·Door");
 
         EditorSceneManager.MarkSceneDirty(scene);
         if (saveScene) EditorSceneManager.SaveScene(scene);

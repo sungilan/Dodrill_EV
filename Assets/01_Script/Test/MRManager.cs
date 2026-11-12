@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 using System.Collections;
@@ -17,10 +18,15 @@ public class MRManager : MonoBehaviour
     private UniversalAdditionalCameraData cameraData;
 
     public float fadeDuration = 0.5f;
+    private bool _switching;
 
     private void Start()
     {
         rigid = GetComponent<Rigidbody>();
+
+        // VR: 손가락이 버튼 안에 잠깐 머물러야 전환되게 한다.
+        // 메뉴 바가 몸을 따라 아래쪽에 있어서, 바닥에 떨어진 드릴을 집으려고 손을 내리면 손가락이 MR 버튼을 스치고 지나가 MR 이 계속 바뀌었다.
+        foreach(var d in GetComponentsInChildren<VrFingerUiButtonDriver>(true)) d.MinHoldSeconds = 0.35f;
 
         // Start에서는 카메라 찾기를 하지 않음
         Debug.Log("MRManager 초기화 완료. 버튼 클릭 시 카메라를 찾습니다.");
@@ -28,6 +34,8 @@ public class MRManager : MonoBehaviour
 
     public void SwitchView()
     {
+        if(_switching) return;   // 전환 연출 중 연타 무시
+
         // 버튼 클릭 시마다 카메라를 새로 찾기
         if(playerCamera == null)
         {
@@ -117,6 +125,7 @@ public class MRManager : MonoBehaviour
 
     private IEnumerator SwitchViewWithFade()
     {
+        _switching = true;
         yield return StartCoroutine(FadeScreen(1f, fadeDuration));
 
         VRMode = !VRMode;
@@ -124,8 +133,7 @@ public class MRManager : MonoBehaviour
         if(VRMode)
         {
             Debug.Log("VR Mode On");
-            if(vrMapObject != null)
-                vrMapObject.SetActive(true);
+            SetMapVisibleInMR(false);
             if(icon != null && MRIcon != null)
                 icon.sprite = MRIcon;
             SetPostProcessing(true);
@@ -133,14 +141,14 @@ public class MRManager : MonoBehaviour
         else
         {
             Debug.Log("VR Mode Off (MR Mode)");
-            if(vrMapObject != null)
-                vrMapObject.SetActive(false);
+            SetMapVisibleInMR(true);
             if(icon != null && VRIcon != null)
                 icon.sprite = VRIcon;
             SetPostProcessing(false);
         }
 
         yield return StartCoroutine(FadeScreen(0f, fadeDuration));
+        _switching = false;
     }
 
     private IEnumerator FadeScreen(float targetAlpha, float duration)
@@ -170,6 +178,67 @@ public class MRManager : MonoBehaviour
         }
 
         playerCamera.backgroundColor = new Color(originalColor.r, originalColor.g, originalColor.b, targetAlpha);
+    }
+
+    // ── MR 모드에서 작업장 모델 처리 ─────────────────────────────
+    // 예전에는 MR 로 바꾸면 작업장 모델(MR_Object)을 통째로 꺼서, 같은 모델을 위에서 찍던 미니맵이 하얗게(빈 화면) 됐다.
+    // 이제 모델은 켜 둔 채 렌더러만 끄고, 미니맵 카메라가 그릴 때만 바닥·벽·리프트를 잠깐 켜서 미니맵 배경은 그대로 보이게 한다.
+    [Tooltip("MR 모드에서도 미니맵에는 보이게 할 자식 이름(MR_Object 바로 아래)")]
+    public string[] keepOnMiniMap = { "Floor", "Wall", "Preb_Rig_CarLift_X" };
+
+    private Renderer[] _mapRenderers;
+    private Collider[] _mapColliders;
+    private readonly System.Collections.Generic.List<Renderer> _miniMapRenderers = new System.Collections.Generic.List<Renderer>();
+    private bool _mrHidden;
+
+    private void SetMapVisibleInMR(bool mr)
+    {
+        if(vrMapObject == null) return;
+        if(!vrMapObject.activeSelf) vrMapObject.SetActive(true);
+        if(_mapRenderers == null)
+        {
+            _mapRenderers = vrMapObject.GetComponentsInChildren<Renderer>(true);
+            _mapColliders = vrMapObject.GetComponentsInChildren<Collider>(true);
+            _miniMapRenderers.Clear();
+            foreach(Transform child in vrMapObject.transform)
+                if(System.Array.IndexOf(keepOnMiniMap, child.name) >= 0)
+                    _miniMapRenderers.AddRange(child.GetComponentsInChildren<Renderer>(true));
+        }
+        foreach(var r in _mapRenderers) if(r != null) r.enabled = !mr;
+        foreach(var c in _mapColliders) if(c != null) c.enabled = !mr;
+
+        if(mr == _mrHidden) return;
+        _mrHidden = mr;
+        if(mr)
+        {
+            RenderPipelineManager.beginCameraRendering += OnBeginCamera;
+            RenderPipelineManager.endCameraRendering += OnEndCamera;
+        }
+        else
+        {
+            RenderPipelineManager.beginCameraRendering -= OnBeginCamera;
+            RenderPipelineManager.endCameraRendering -= OnEndCamera;
+        }
+    }
+
+    private static bool IsMiniMapCamera(Camera cam) => cam != null && cam.name == "MiniCam";
+
+    private void OnBeginCamera(ScriptableRenderContext ctx, Camera cam)
+    {
+        if(!IsMiniMapCamera(cam)) return;
+        foreach(var r in _miniMapRenderers) if(r != null) r.enabled = true;
+    }
+
+    private void OnEndCamera(ScriptableRenderContext ctx, Camera cam)
+    {
+        if(!IsMiniMapCamera(cam)) return;
+        foreach(var r in _miniMapRenderers) if(r != null) r.enabled = false;
+    }
+
+    private void OnDestroy()
+    {
+        RenderPipelineManager.beginCameraRendering -= OnBeginCamera;
+        RenderPipelineManager.endCameraRendering -= OnEndCamera;
     }
 
     private void SetPostProcessing(bool enable)

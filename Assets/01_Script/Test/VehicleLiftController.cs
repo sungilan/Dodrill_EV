@@ -121,11 +121,7 @@ public class VehicleLiftController : LiftControllerBase
     {
         if(h == 0f) return;
 
-        Debug.Log($"<color=white>[VehicleLift]</color> ApplyHeightTransform(h={h:F3}) | " +
-                  $"LeftArm: {(leftArm != null ? "O" : "X")} | " +
-                  $"RightArm: {(rightArm != null ? "O" : "X")} | " +
-                  $"Vehicle: {(vehicleTransform != null ? "O" : "X")}");
-
+        // (높이가 바뀔 때마다 찍던 이동 로그 — 프레임마다 6줄씩 나와 제거. 문제는 아래 Vehicle 미할당 경고로 확인)
         Vector3 localOffset = Vector3.up * h;
 
         if(leftArm != null)
@@ -135,11 +131,9 @@ public class VehicleLiftController : LiftControllerBase
                 ? leftArm.parent.TransformPoint(targetLocalPos)
                 : targetLocalPos;
 
-            Debug.Log($"<color=green>✓ LeftArm 이동 시도: {leftArm.name} | 로컬: {targetLocalPos} -> 월드: {targetWorldPos}</color>");
             UpdateTargetPositionViaLNT(leftArm, targetWorldPos);
 
             // 이동 후 실제 위치 확인
-            Debug.Log($"<color=green>✓ LeftArm 실제 위치 (이동 후): {leftArm.position}</color>");
         }
 
         if(rightArm != null)
@@ -149,19 +143,15 @@ public class VehicleLiftController : LiftControllerBase
                 ? rightArm.parent.TransformPoint(targetLocalPos)
                 : targetLocalPos;
 
-            Debug.Log($"<color=green>✓ RightArm 이동 시도: {rightArm.name} | 로컬: {targetLocalPos} -> 월드: {targetWorldPos}</color>");
             UpdateTargetPositionViaLNT(rightArm, targetWorldPos);
 
-            Debug.Log($"<color=green>✓ RightArm 실제 위치 (이동 후): {rightArm.position}</color>");
         }
 
         if(vehicleTransform != null)
         {
             Vector3 targetWorldPos = _vehicleOrigin + Vector3.up * h;
-            Debug.Log($"<color=green>✓ Vehicle 이동 시도: {vehicleTransform.name} | {_vehicleOrigin} -> {targetWorldPos}</color>");
             UpdateTargetPositionViaLNT(vehicleTransform, targetWorldPos);
 
-            Debug.Log($"<color=green>✓ Vehicle 실제 위치 (이동 후): {vehicleTransform.position}</color>");
         }
         else
         {

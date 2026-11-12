@@ -160,9 +160,10 @@ public class MobileMeterReadout : MonoBehaviour
         string mode = meter.modeDisplay != null ? meter.modeDisplay.text : "";
         _title.text = string.IsNullOrEmpty(mode) ? device : $"{device}  ·  {mode}";
 
-        string v = meter.lcdDisplay.text;
-        if (!connected || string.IsNullOrWhiteSpace(v) || meter.lcdDisplay.alpha < 0.1f) v = "----";
-        _value.text = v;
+        // 기기 LCD 에 값이 떠 있으면 그대로 옮긴다.
+        // 예전에는 '두 프로브가 모두 단자에 닿아 있을 때'만 값을 보여 줘서, 검정 프로브를 접지로 자동 처리하는 실제 측정
+        // (빨간 프로브만 단자에 대기, PC 의 E 키 측정)에서는 기기 LCD 값이 바뀌어도 패널은 계속 '----' 였다.
+        _value.text = HasLiveValue(meter) ? meter.lcdDisplay.text : "----";
 
         _bg.color = meter.IsShowingFault ? FaultBg : NormalBg;
     }
@@ -184,12 +185,21 @@ public class MobileMeterReadout : MonoBehaviour
             if (!m.isActiveAndEnabled) continue;
 
             bool red = m.redProbe != null && !string.IsNullOrEmpty(m.redProbe.currentTerminalId);
-            bool black = m.blackProbe != null && !string.IsNullOrEmpty(m.blackProbe.currentTerminalId);
-            if (red && black) { connected = true; return m; }
+            bool mine = held != null && IsPartOf(held, m);
+            // 내가 든 계측기에 값이 떠 있거나, 빨간 프로브가 단자에 닿아 있는 계측기를 우선 보여 준다
+            if ((mine || red) && HasLiveValue(m)) { connected = true; return m; }
 
-            if (held != null && heldMeter == null && IsPartOf(held, m)) heldMeter = m;
+            if (mine && heldMeter == null) heldMeter = m;
         }
         return heldMeter;
+    }
+
+    /// <summary>기기 LCD 에 측정값이 떠 있는지(꺼져 가는 중이거나 '----' 가 아님).</summary>
+    private static bool HasLiveValue(MultimeterMaster m)
+    {
+        if (m == null || m.lcdDisplay == null) return false;
+        string v = m.lcdDisplay.text;
+        return m.lcdDisplay.alpha > 0.1f && !string.IsNullOrWhiteSpace(v) && v != "----";
     }
 
     private static bool IsPartOf(SyncGrab held, MultimeterMaster m)

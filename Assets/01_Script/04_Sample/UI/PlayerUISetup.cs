@@ -54,7 +54,11 @@ namespace DoDrill
         [ServerRpc]
         private void CmdSetNickname(string nickname)
         {
-            // ★ [v4 수정]: .Value 속성을 통해 값을 설정합니다.
+            // 클라이언트가 보낸 이름을 그대로 쓰지 않는다: 길이 제한(48자) + TMP 리치텍스트 태그('<') 제거
+            // (이름표에 <size=1000> 같은 태그를 넣어 화면을 가리는 것 방지)
+            if(string.IsNullOrWhiteSpace(nickname)) nickname = $"Guest_{OwnerId}";
+            nickname = nickname.Replace("<", "").Replace(">", "").Trim();
+            if(nickname.Length > 48) nickname = nickname.Substring(0, 48);
             _syncNickname.Value = nickname;
         }
 

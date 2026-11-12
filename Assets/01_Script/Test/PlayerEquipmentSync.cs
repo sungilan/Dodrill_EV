@@ -265,6 +265,10 @@ public class PlayerEquipmentSync : NetworkBehaviour
 
         _equipped.Add(prefabId);
 
+        // 본인이 착용했을 때 안내 문구(작업 완료 알림 팝업 재사용)
+        if(IsOwner)
+            DoDrill.Training.TaskProgressUI.RequestToast($"<color=#00f800><b>{HoverNameFormatter.Format(prefabId)}</b></color>을(를)\n착용했습니다.");
+
         // 1. 오브젝트 활성화 처리 (여러 개 가능)
         if(entry.objectsToActivate != null)
         {

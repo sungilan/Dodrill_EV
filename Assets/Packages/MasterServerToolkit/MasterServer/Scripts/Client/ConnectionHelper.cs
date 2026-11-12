@@ -244,7 +244,11 @@ namespace MasterServerToolkit.MasterServer
         {
             float totalConnectionTime = Time.realtimeSinceStartup - startConnectionTime;
             logger.Info($"{GetType().Name.FromCamelcase()} connected to server at: {serverIp}:{serverPort}. Connection time is: {totalConnectionTime}s.".ToGreen());
+            // [DoDrill 진단] 접속 이벤트 처리에 걸린 시간·프레임(메뉴 지연 원인 확인용)
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             OnConnectedEvent?.Invoke();
+            sw.Stop();
+            Debug.Log($"[ConnDiag] {GetType().Name} OnConnectedEvent 처리 {sw.ElapsedMilliseconds}ms frame={Time.frameCount} realtime={Time.realtimeSinceStartup:F2}s");
         }
     }
 }

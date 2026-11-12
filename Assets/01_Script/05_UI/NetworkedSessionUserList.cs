@@ -108,9 +108,72 @@ public class NetworkedSessionUserList : MonoBehaviour
         }
         _highlightExpired = msg.activePlayerId >= 0 && Time.unscaledTime - _activeSince >= ActiveHighlightSeconds;
 
+        TrackPresence(list);
         RebuildUi(list.OrderBy(e => e.clientId).ToList(), msg.activePlayerId);
         if (_highlightExpired) ClearHighlight();
         OnPlayersBroadcastReceived?.Invoke(msg);
+    }
+
+    // ── 입장/퇴장 안내 ─────────────────────────────────────────
+    // 접속자 목록이 바뀔 때 누가 들어오고 나갔는지 비교해 '작업 완료' 알림과 같은 팝업(TaskProgressUI.RequestToast)으로 알린다.
+    // · 이 접속에서 처음 받은 목록(이미 있던 사람들, 나 자신)은 알리지 않는다.
+    // · 서버가 먼저 'Player N' 임시 이름으로 알린 뒤 닉네임이 도착하므로, 입장 안내는 잠깐(JoinAnnounceDelay) 늦춰 진짜 이름으로 띄운다.
+    // · 플랫폼별 UI 에 이 컴포넌트가 여러 개 있어도 한 번만 알리도록 상태는 static 으로 공유한다.
+    private const float JoinAnnounceDelay = 1.5f;
+    private static Dictionary<int, string> s_prevNames;
+    private static int s_ownClientId = -1;
+    private static readonly Dictionary<int, float> s_pendingJoins = new Dictionary<int, float>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetPresenceStatics()
+    {
+        s_prevNames = null; s_ownClientId = -1; s_pendingJoins.Clear();
+    }
+
+    private static void TrackPresence(List<SessionPlayerEntry> list)
+    {
+        int own = InstanceFinder.ClientManager?.Connection != null ? InstanceFinder.ClientManager.Connection.ClientId : -1;
+        if (s_prevNames != null && own != s_ownClientId) { s_prevNames = null; s_pendingJoins.Clear(); }   // 새로 접속함
+        s_ownClientId = own;
+
+        var now = new Dictionary<int, string>();
+        foreach (var e in list)
+            now[e.clientId] = string.IsNullOrWhiteSpace(e.displayName) ? $"Player {e.clientId + 1}" : e.displayName;
+
+        if (s_prevNames == null) { s_prevNames = now; return; }
+
+        foreach (var kv in now)
+            if (!s_prevNames.ContainsKey(kv.Key) && kv.Key != own)
+                s_pendingJoins[kv.Key] = Time.unscaledTime + JoinAnnounceDelay;
+
+        foreach (var kv in s_prevNames)
+        {
+            if (now.ContainsKey(kv.Key) || kv.Key == own) continue;
+            if (s_pendingJoins.Remove(kv.Key)) continue;      // 입장 안내 전에 나간 경우는 둘 다 생략
+            AnnouncePresence(kv.Value, joined: false);
+        }
+        s_prevNames = now;
+    }
+
+    private static void FlushPendingJoins()
+    {
+        if (s_pendingJoins.Count == 0) return;
+        List<int> due = null;
+        foreach (var kv in s_pendingJoins)
+            if (Time.unscaledTime >= kv.Value) (due ??= new List<int>()).Add(kv.Key);
+        if (due == null) return;
+        foreach (int id in due)
+        {
+            s_pendingJoins.Remove(id);
+            string name = (s_prevNames != null && s_prevNames.TryGetValue(id, out var n)) ? n : $"Player {id + 1}";
+            AnnouncePresence(name, joined: true);
+        }
+    }
+
+    private static void AnnouncePresence(string name, bool joined)
+    {
+        string color = joined ? "#00f800" : "#ffb300";
+        DoDrill.Training.TaskProgressUI.RequestToast($"<color={color}><b>{name}</b></color>님이\n{(joined ? "입장했습니다." : "퇴장했습니다.")}");
     }
 
     private const float ActiveHighlightSeconds = 4f;
@@ -120,6 +183,7 @@ public class NetworkedSessionUserList : MonoBehaviour
 
     private void Update()
     {
+        FlushPendingJoins();
         if (_lastBroadcastActiveId < 0 || _highlightExpired) return;
         if (Time.unscaledTime - _activeSince < ActiveHighlightSeconds) return;
         _highlightExpired = true;

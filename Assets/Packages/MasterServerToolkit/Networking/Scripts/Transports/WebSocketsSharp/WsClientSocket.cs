@@ -227,6 +227,7 @@ namespace MasterServerToolkit.Networking
             // Check if status changed
             if (wasConnected != IsConnected)
             {
+                UnityEngine.Debug.Log($"[ConnDiag] 소켓 IsConnected {wasConnected} → {IsConnected} frame={UnityEngine.Time.frameCount} realtime={UnityEngine.Time.realtimeSinceStartup:F2}s");
                 SetStatus(IsConnected ? ConnectionStatus.Connected : ConnectionStatus.Disconnected);
             }
         }
@@ -247,9 +248,14 @@ namespace MasterServerToolkit.Networking
                     {
                         _peer.SendDelayedMessages();
 
+                        // [DoDrill 진단] 소켓이 열린 시각과 인증 응답이 온 시각의 차이(메뉴 지연 원인 확인용)
+                        float diagStart = UnityEngine.Time.realtimeSinceStartup;
+                        UnityEngine.Debug.Log($"[ConnDiag] 소켓 열림 → 인증 요청 frame={UnityEngine.Time.frameCount} realtime={diagStart:F2}s");
+
                         // Client should be validated
                         Mst.Security.AuthenticateConnection(this, (isSuccess, error) =>
                         {
+                            UnityEngine.Debug.Log($"[ConnDiag] 인증 응답 success={isSuccess} 걸린 시간={UnityEngine.Time.realtimeSinceStartup - diagStart:F2}s frame={UnityEngine.Time.frameCount}");
                             Status = ConnectionStatus.Connected;
 
                             if (isSuccess && fireEvent)

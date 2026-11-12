@@ -68,6 +68,40 @@ public class ScenarioSpawner : NetworkBehaviour
     // --- [추가] persist=true 로 유지되고 있는 오브젝트 목록 ---
     private readonly List<NetworkObject> _persistedObjects = new();
 
+    private struct HomePose { public Transform parent; public Vector3 localPos; public Quaternion localRot; }
+    private readonly Dictionary<NetworkObject, HomePose> _homePoses = new();
+
+    /// <summary>
+    /// (서버) 아무도 잡고 있지 않은 도구를 처음 스폰된 자리로 돌려놓는다. 단계 실패 후 재도전 때 호출.
+    /// 예전에는 도구를 바닥에 떨어뜨리거나 손이 닿지 않는 곳에 놓친 채 실패하면, 이전 단계에서 가져온 도구(드릴 등)는
+    /// 이번 단계의 스폰 목록에 없어서 제자리로 돌아오지 않았고 다시 잡을 방법이 없었다.
+    /// </summary>
+    public void ReturnLooseItemsHome()
+    {
+        if(!InstanceFinder.IsServerStarted) return;
+        var all = new List<NetworkObject>(_activeObjects);
+        foreach(var p in _persistedObjects) if(!all.Contains(p)) all.Add(p);
+
+        foreach(var nob in all)
+        {
+            if(nob == null || !nob.IsSpawned) continue;
+            if(!_homePoses.TryGetValue(nob, out var home)) continue;
+            var sg = nob.GetComponent<SyncGrab>() ?? nob.GetComponentInChildren<SyncGrab>();
+            if(sg == null || sg.IsGrabbed) continue;   // 누가 들고 있는 것은 건드리지 않는다
+
+            var t = nob.transform;
+            bool moved = t.parent != home.parent
+                         || (t.localPosition - home.localPos).sqrMagnitude > 0.05f * 0.05f;
+            if(!moved) continue;
+
+            sg.ServerResetToRest();
+            if(home.parent != null && t.parent != home.parent) t.SetParent(home.parent);
+            if(home.parent != null) t.SetLocalPositionAndRotation(home.localPos, home.localRot);
+            else t.SetPositionAndRotation(home.localPos, home.localRot);
+            Debug.Log($"<color=green>[Spawner]</color> 단계 실패 → {nob.name} 제자리로 복귀");
+        }
+    }
+
     // map.objects로 스폰된 환경 오브젝트 목록 (차량·리프트·카트 등)
     private readonly List<GameObject> _mapObjects = new();
 
@@ -78,9 +112,9 @@ public class ScenarioSpawner : NetworkBehaviour
     private Dictionary<string, SpawnPoint> _spawnPointCache;
 
     // prefabId로 Persisted 오브젝트를 찾는 헬퍼
-    private NetworkObject GetPersistedObject(string prefabId)
+    private NetworkObject GetPersistedObject(string prefabId, string suffix = "")
     {
-        return _persistedObjects.Find(x => x.name == $"{prefabId}(Persist)");
+        return _persistedObjects.Find(x => x != null && x.name == $"{prefabId}(Persist){suffix}");
     }
 
     // ── 에디터 자동 등록 ──────────────────
@@ -406,7 +440,7 @@ public class ScenarioSpawner : NetworkBehaviour
     /// Task 시작 시 ScenarioRunner가 호출
     /// SpawnBundle 목록 기반으로 스폰 + 가이드 활성화
     /// </summary>
-    public void SpawnForTask(TaskDef taskDef)
+    public void SpawnForTask(TaskDef taskDef, int playerCount = 1)
     {
         if(taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0) return;
         if(!InstanceFinder.IsServerStarted) return;
@@ -416,8 +450,68 @@ public class ScenarioSpawner : NetworkBehaviour
         {
             // 아이템 좌우 분산 계산
             float xOffset = (i - (count - 1) * 0.5f) * SPAWN_SPREAD;
-            SpawnBundle(taskDef.spawnObjects[i], xOffset);
+            var bundle = taskDef.spawnObjects[i];
+
+            if(!IsPerPlayer(bundle))
+            {
+                SpawnBundle(bundle, xOffset);
+                continue;
+            }
+
+            // 여럿이 동시에 작업하는 공구(드릴 등)는 접속 인원수만큼 나란히 놓는다 (한 줄에 3개, 넘치면 뒷줄)
+            int n = Mathf.Max(1, playerCount);
+            for(int j = 0; j < n; j++)
+            {
+                int row = j / PER_PLAYER_ROW, col = j % PER_PLAYER_ROW;
+                int inRow = Mathf.Min(PER_PLAYER_ROW, n - row * PER_PLAYER_ROW);
+                float x = xOffset + (col - (inRow - 1) * 0.5f) * PER_PLAYER_SPREAD;
+                float z = -row * PER_PLAYER_SPREAD;
+                SpawnBundle(bundle, x, z, CopySuffix(j));
+            }
+            DespawnExtraPersistedCopies(bundle.prefabId, n);
+            Debug.Log($"<color=cyan>[Spawn-PerPlayer]</color> {bundle.prefabId} × {n} (접속 인원)");
         }
+    }
+
+    private const int PER_PLAYER_ROW = 3;
+    private const float PER_PLAYER_SPREAD = 0.22f;
+
+    /// <summary>두 번째 복사본부터 이름 뒤에 붙는 꼬리표(#2, #3 …). 첫 번째는 기존 이름 그대로 — 이름으로 찾는 기존 코드와 호환.</summary>
+    private static string CopySuffix(int index) => index == 0 ? "" : $"#{index + 1}";
+
+    private bool IsPerPlayer(SpawnBundle bundle)
+    {
+        if(bundle == null || string.IsNullOrEmpty(bundle.prefabId)) return false;
+        if(bundle.perPlayer) return true;
+        var prefab = FindPrefab(bundle.prefabId);
+        return prefab != null && prefab.GetComponentInChildren<ImpactWrench>(true) != null;
+    }
+
+    /// <summary>이전 단계에서 더 많은 인원으로 남겨 둔 복사본 중 이번에 쓰지 않는 것은 치운다(누가 들고 있으면 둔다).</summary>
+    private void DespawnExtraPersistedCopies(string prefabId, int keep)
+    {
+        for(int i = _persistedObjects.Count - 1; i >= 0; i--)
+        {
+            var obj = _persistedObjects[i];
+            if(obj == null) { _persistedObjects.RemoveAt(i); continue; }
+            if(!IsPersistCopyOf(obj, prefabId, out int index) || index < keep) continue;
+            var sg = obj.GetComponent<SyncGrab>() ?? obj.GetComponentInChildren<SyncGrab>();
+            if(sg != null && sg.IsGrabbed) continue;
+            _persistedObjects.RemoveAt(i);
+            SafeDespawn(obj);
+        }
+    }
+
+    /// <summary>obj 가 prefabId 의 persist 복사본인지, 몇 번째(0부터)인지.</summary>
+    private static bool IsPersistCopyOf(NetworkObject obj, string prefabId, out int index)
+    {
+        index = 0;
+        string baseName = $"{prefabId}(Persist)";
+        if(obj.name == baseName) return true;
+        if(!obj.name.StartsWith(baseName + "#")) return false;
+        if(!int.TryParse(obj.name.Substring(baseName.Length + 1), out int no)) return false;
+        index = no - 1;
+        return true;
     }
 
     /// <summary>
@@ -457,14 +551,15 @@ public class ScenarioSpawner : NetworkBehaviour
         {
             foreach (string id in taskDef.despawnObjectIds)
             {
-                NetworkObject target = GetPersistedObject(id);
-                if (target != null)
+                // 인원수만큼 놓았던 복사본(#2, #3 …)까지 함께 치운다
+                var targets = _persistedObjects.FindAll(x => x != null && IsPersistCopyOf(x, id, out _));
+                foreach (var target in targets)
                 {
                     _persistedObjects.Remove(target);
                     _activeObjects.Remove(target);
                     SafeDespawn(target);
                 }
-                else
+                if (targets.Count == 0)
                 {
                     Debug.LogWarning($"<color=yellow>[Despawn-Skip]</color> 지우려고 했으나 리스트에 없음: {id}");
                 }
@@ -495,9 +590,45 @@ public class ScenarioSpawner : NetworkBehaviour
         _activeObjects.Clear();
     }
 
+    /// <summary>
+    /// [서버] 단계 완료가 확정된 뒤 다음 단계로 넘어가기까지 기다리는 동안(1.5~2.5초) 물건이 손이나 구역에 멈춘 채 떠 있지 않도록,
+    /// 이번 단계에서 쓰고 끝난 물건을 delay 초 뒤 바로 치운다. 다음 단계에서 다시 쓰는 persist 물건은 건드리지 않는다.
+    ///  · itemId 가 있으면 그 물건(구역에 놓은 물건)
+    ///  · itemId 가 비어 있으면 지금 누군가 들고 있는 물건(착용·잡기 단계)
+    /// </summary>
+    public void DespawnUsedItemsSoon(string itemId, float delay)
+    {
+        if(!InstanceFinder.IsServerStarted) return;
+        StartCoroutine(DespawnUsedItemsRoutine(itemId, delay));
+    }
+
+    private System.Collections.IEnumerator DespawnUsedItemsRoutine(string itemId, float delay)
+    {
+        if(delay > 0f) yield return new WaitForSeconds(delay);
+        for(int i = _activeObjects.Count - 1; i >= 0; i--)
+        {
+            var obj = _activeObjects[i];
+            if(obj == null || !obj.IsSpawned || obj.name.Contains("(Persist)")) continue;
+            var sg = obj.GetComponent<SyncGrab>() ?? obj.GetComponentInChildren<SyncGrab>();
+            if(string.IsNullOrEmpty(itemId))
+            {
+                if(sg == null || !sg.IsGrabbed) continue;
+            }
+            else
+            {
+                var item = obj.GetComponent<TaskItem>() ?? obj.GetComponentInChildren<TaskItem>();
+                if(item == null || item.prefabId != itemId) continue;
+            }
+            _activeObjects.RemoveAt(i);
+            SafeDespawn(obj);
+            Debug.Log($"<color=orange>[Spawner]</color> 단계 완료 → {obj.name} 바로 정리");
+        }
+    }
+
     private void SafeDespawn(NetworkObject obj)
     {
         if (obj == null) return;
+        _homePoses.Remove(obj);
         if (!obj.IsSpawned) return;
 
         // Rigidbody가 있으면 물리 시스템에서 먼저 분리
@@ -657,9 +788,9 @@ public class ScenarioSpawner : NetworkBehaviour
     //    }
     //}
 
-    private void SpawnBundle(SpawnBundle bundle, float xOffset = 0f)
+    private void SpawnBundle(SpawnBundle bundle, float xOffset = 0f, float zOffset = 0f, string copySuffix = "")
     {
-        Debug.Log($"<color=cyan>[Spawn-Bundle-Start]</color> Prefab: {bundle.prefabId}, SP: {bundle.spawnPointId}");
+        Debug.Log($"<color=cyan>[Spawn-Bundle-Start]</color> Prefab: {bundle.prefabId}{copySuffix}, SP: {bundle.spawnPointId}");
 
         // 1. 위치 및 부모 결정
         Vector3 spawnPos = _fallbackSpawnRoot != null ? _fallbackSpawnRoot.position : Vector3.zero;
@@ -678,12 +809,18 @@ public class ScenarioSpawner : NetworkBehaviour
         // 2. 객체 생성 (Instantiate)
         if(string.IsNullOrEmpty(bundle.prefabId)) return;
 
-        NetworkObject instanceToSpawn = GetPersistedObject(bundle.prefabId);
+        NetworkObject instanceToSpawn = GetPersistedObject(bundle.prefabId, copySuffix);
 
         if(instanceToSpawn != null)
         {
             Debug.Log($"<color=green>[Spawn-Reuse]</color> 기존 Persist 오브젝트 재사용: {bundle.prefabId}");
             _persistedObjects.Remove(instanceToSpawn);
+            // 재사용하는 물체는 놓인 직후 낙하 중이었거나 잡힘 표시가 남아 있을 수 있다 → 위치를 옮기기 전에 정지·고정·잡힘 해제
+            if(InstanceFinder.IsServerStarted)
+            {
+                var sg = instanceToSpawn.GetComponent<SyncGrab>() ?? instanceToSpawn.GetComponentInChildren<SyncGrab>();
+                if(sg != null && instanceToSpawn.IsSpawned) sg.ServerResetToRest();
+            }
         }
         else
         {
@@ -693,7 +830,7 @@ public class ScenarioSpawner : NetworkBehaviour
                 // 스폰 전에는 월드 좌표에 생성
                 var instanceGo = Instantiate(prefab.gameObject, spawnPos, spawnRot);
                 instanceToSpawn = instanceGo.GetComponent<NetworkObject>();
-                instanceToSpawn.name = bundle.persist ? $"{bundle.prefabId}(Persist)" : bundle.prefabId;
+                instanceToSpawn.name = bundle.persist ? $"{bundle.prefabId}(Persist){copySuffix}" : bundle.prefabId;
             }
             else
             {
@@ -724,7 +861,7 @@ public class ScenarioSpawner : NetworkBehaviour
                         instanceToSpawn.SetParent(parentNob);
                         instanceToSpawn.transform.SetParent(targetParent);
                         // 자식으로 들어갔으므로 로컬 좌표 초기화 (살짝 위로 배치)
-                        instanceToSpawn.transform.localPosition = new Vector3(xOffset, SPAWN_HEIGHT, 0f);
+                        instanceToSpawn.transform.localPosition = new Vector3(xOffset, SPAWN_HEIGHT, zOffset);
                         instanceToSpawn.transform.localRotation = Quaternion.identity;
 
                         Debug.Log($"<color=lime>[Spawn-Parent]</color> {instanceToSpawn.name} -> {targetParent.name} (SetParent 완료)");
@@ -733,10 +870,19 @@ public class ScenarioSpawner : NetworkBehaviour
                     {
                         // 부모가 일반 오브젝트인 경우 (차선책)
                         instanceToSpawn.transform.SetParent(targetParent);
-                        instanceToSpawn.transform.localPosition = new Vector3(xOffset, SPAWN_HEIGHT, 0f);
+                        instanceToSpawn.transform.localPosition = new Vector3(xOffset, SPAWN_HEIGHT, zOffset);
                         Debug.LogWarning($"<color=yellow>[Spawn-Parent]</color> 부모({targetParent.name})에 NetworkObject가 없어 Transform으로만 연결됨");
                     }
                 }
+
+                // 처음 놓인 자리를 기억해 둔다 — 단계 실패 시 바닥에 떨어뜨린 도구를 이 자리로 돌려놓는다
+                if(!_homePoses.ContainsKey(instanceToSpawn))
+                    _homePoses[instanceToSpawn] = new HomePose
+                    {
+                        parent = instanceToSpawn.transform.parent,
+                        localPos = instanceToSpawn.transform.localPosition,
+                        localRot = instanceToSpawn.transform.localRotation,
+                    };
             }
         }
     }   

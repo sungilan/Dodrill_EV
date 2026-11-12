@@ -156,6 +156,10 @@ public class SpawnBundle
     public bool showGuide = true;
     public bool persist = false;
     public bool attachToSpawnPoint = false;
+    /// <summary>
+    /// 접속 인원수만큼 스폰(여럿이 같은 단계를 동시에 작업하는 공구용). 임팩트 렌치는 이 값이 없어도 자동으로 인원수만큼 놓는다.
+    /// </summary>
+    public bool perPlayer = false;
 }
 
 [Serializable]

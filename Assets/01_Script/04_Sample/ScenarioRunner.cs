@@ -50,6 +50,8 @@ public class ScenarioRunner : MonoBehaviour
 
     // [추가] 현재 태스크를 진행 중인 클라이언트 ID
     private int _activePlayerId = -1;
+    // 현재 단계가 시작된 서버 시간 — 리프트 버튼을 '이 단계 중에' 누른 사람을 가리는 용도
+    private float _taskStartTime;
 
     // ── 내부 상태 ─────────────────────────
     private ScenarioData _data;
@@ -401,6 +403,7 @@ public class ScenarioRunner : MonoBehaviour
         _completedClients.Clear();
         _taskLocked = false;
         _activePlayerId = -1;  // [추가] 새 태스크마다 초기화
+        _taskStartTime = Time.time;
         _currentModule = module;
 
         _currentTaskState = new TaskState
@@ -418,12 +421,18 @@ public class ScenarioRunner : MonoBehaviour
         _isRunning = true;
 
         // Task 오브젝트 스폰 (서버 전용, FishNet이 클라이언트에 자동 복제)
-        _spawner?.SpawnForTask(taskDef);
+        // 드릴처럼 여럿이 동시에 쓰는 공구는 지금 참여 중인 인원(탈락자 제외)만큼 놓는다
+        _spawner?.SpawnForTask(taskDef, GetRequiredClientIds().Count);
 
         // GrabUse / GrabAll 계열은 클릭/터치 후 1.5s 딜레이 (Zone은 OnReceiveZoneSignal이 직접 처리)
         bool needsDelay = module is GrabUseTaskModule || module is GrabAllItemsModule;
         System.Action onComplete = needsDelay
-            ? () => StartCoroutine(CompleteAfterSnapDelay(1.5f))
+            ? () =>
+            {
+                // 착용·잡기가 끝난 물건은 손에 멈춘 채 1.5초 떠 있지 않게 바로 치운다
+                _spawner?.DespawnUsedItemsSoon(null, 0f);
+                StartCoroutine(CompleteAfterSnapDelay(1.5f));
+            }
             : (System.Action)CompleteCurrentTask;
 
         module.OnStart(config,
@@ -467,6 +476,16 @@ public class ScenarioRunner : MonoBehaviour
         // 이름을 못 찾으면 비워 보낸다 → 클라이언트가 접속자 목록과 같은 규칙('Player N')으로 표시 (예전엔 항상 'Player 1')
         string activePlayerName = string.Empty;
 
+        // 리프트 상승 단계는 높이가 목표에 닿으면 서버가 끝내므로 진행자가 비어 있다 → 이 단계 중에 리프트 UP 버튼을 누른 사람을 진행자로 쓴다.
+        // 방전 대기처럼 누르는 사람이 없는 단계는 그대로 비워 둔다(알림에는 단계 이름만 표시).
+        if(_activePlayerId < 0 && IsLiftModule(taskDef.moduleId) && TryGetLiftActor(taskDef.moduleId, out int liftActor))
+            _activePlayerId = liftActor;
+        int notifyId = _activePlayerId;
+
+        // 보호구 착용처럼 '사람마다' 해야 하는 단계는 마지막에 끝낸 한 명의 이름 대신 '모든 작업자'로 알린다(접속자 2명 이상일 때). clientId -2 = 모두.
+        if(_currentModule is GrabAllItemsModule everyoneModule && everyoneModule.PerPlayer && GetConnectedClientIds().Count > 1)
+            notifyId = -2;
+
        var sessionServer = FindFirstObjectByType<SessionPlayerServer>();
         if(sessionServer != null)
         {
@@ -477,7 +496,7 @@ public class ScenarioRunner : MonoBehaviour
             if(field != null)
             {
                 var playersDict = field.GetValue(sessionServer) as Dictionary<int, SessionPlayerEntry>;
-                if(playersDict != null && playersDict.TryGetValue(_activePlayerId, out var entry))
+                if(playersDict != null && playersDict.TryGetValue(notifyId, out var entry))
                 {
                     activePlayerName = entry.displayName;
                 }
@@ -489,7 +508,7 @@ public class ScenarioRunner : MonoBehaviour
         {
             InstanceFinder.ServerManager.Broadcast(new TaskNotificationBroadcast
             {
-                clientId = _activePlayerId,
+                clientId = notifyId,
                 clientName = activePlayerName,
                 taskName = taskTitle
             });
@@ -511,6 +530,23 @@ public class ScenarioRunner : MonoBehaviour
         StartTask(next);
     }
 
+    private static bool IsLiftModule(string moduleId)
+        => !string.IsNullOrEmpty(moduleId) && moduleId.IndexOf("Lift_Up", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+    /// <summary>리프트 상승 단계(차량 Car_Lift_Up / 배터리 잭 BatteryJack_Lift_Up…)를 시작한 뒤 해당 리프트 UP 버튼을 누른 사람.</summary>
+    private bool TryGetLiftActor(string moduleId, out int clientId)
+    {
+        clientId = -1;
+        bool battery = moduleId.IndexOf("Battery", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        foreach(var lift in FindObjectsByType<LiftControllerBase>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if(battery != (lift is BatteryLiftController)) continue;
+            if(lift.TryGetMoveActor(_taskStartTime, out clientId)) return true;
+        }
+        clientId = -1;
+        return false;
+    }
+
     private void FailCurrentTask()
     {
         if (!_isRunning) return;
@@ -523,6 +559,7 @@ public class ScenarioRunner : MonoBehaviour
         // 실패한 Task 오브젝트 디스폰 (재도전 시 StartTask에서 다시 스폰됨)
         var currentTaskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
         _spawner?.DespawnCurrentTask(currentTaskDef);
+        _spawner?.ReturnLooseItemsHome();   // 떨어뜨린 도구(이전 단계에서 가져온 드릴 등)도 제자리로
         BroadcastState(); // 클라이언트에 Fail 상태 먼저 전달
 
         // maxRetries 초과 체크 (0 = 무제한)
@@ -558,6 +595,14 @@ public class ScenarioRunner : MonoBehaviour
 
     private void OnReceiveCompleteSignal(NetworkConnection conn, TaskCompleteSignal signal, Channel channel)
     {
+        // 클라이언트가 '이 단계 끝났다'고 직접 알리는 신호는 받지 않는다 — 이 신호를 보내는 정식 코드는 없고(SendCompleteSignal 은 호출처 없음),
+        // 받아 주면 수정된 클라이언트가 아무 단계나 강제로 넘길 수 있다. 완료는 서버가 신호(존·아이템·확인·측정)로 직접 판정한다.
+        // 디버그 모드(에디터·Development Build)에서만 허용.
+        if (!DebugBootstrapper.IsDebugMode)
+        {
+            Debug.LogWarning($"[ScenarioRunner] 클라이언트 완료 신호 무시 (Client#{(conn != null ? conn.ClientId : -1)}, Task[{signal.taskIndex}])");
+            return;
+        }
         if (IsEliminated(conn)) return;   // 치명 위반으로 탈락한 사람의 조작은 진행에 반영하지 않는다
         // Zone 스냅 애니메이션 진행 중이면 무시 (중복 완료 방지)
         if (_taskLocked || !_isRunning) return;
@@ -769,7 +814,11 @@ public class ScenarioRunner : MonoBehaviour
 
             bool isLastStep = stepModule.AdvanceZoneStep();
             if(isLastStep)
+            {
+                // 제자리에 끼워지는 연출(snapDuration)만 보여 주고 바로 치운다 — 다음 단계까지 떠 있지 않게
+                _spawner?.DespawnUsedItemsSoon(signal.itemId, snapDuration + 0.1f);
                 StartCoroutine(CompleteAfterSnapDelay(snapDuration + snapDelay));
+            }
             else
                 StartCoroutine(UnlockAfterStepDelay(snapDuration + snapDelay));
 
@@ -837,6 +886,8 @@ public class ScenarioRunner : MonoBehaviour
             });
         }
 
+        // 제자리에 끼워지는 연출(snapDuration)만 보여 주고 바로 치운다 — 다음 단계까지 떠 있지 않게
+        _spawner?.DespawnUsedItemsSoon(signal.itemId, snapDurationSingle + 0.1f);
         StartCoroutine(CompleteAfterSnapDelay(snapDurationSingle + snapDelaySingle));
 
         Debug.Log($"<color=lime>[ScenarioRunner] 단계 완료 승인</color>: zone={signal.zoneId}, task={_currentTaskState.taskIndex}");

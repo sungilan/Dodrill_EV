@@ -370,6 +370,7 @@ public class VRPlayer : BasePlayer
             vrik.solver.spine.minHeadHeight = minHeadHeightOverride;
             vrik.solver.locomotion.stepThreshold = stepThresholdOverride;
             CacheArmLengths();
+            SetupElbowGoals(vrik);
         }
 
         MatchAvatarHeight();
@@ -441,6 +442,36 @@ public class VRPlayer : BasePlayer
     private float _rxHz;
     private float _armLenL, _armLenR;
 
+    // ── 팔꿈치 (2026-11-12) ──
+    // VRIK 가 팔꿈치 방향을 자동으로 정하면 손이 몸 앞·위쪽에 있을 때 팔꿈치가 위/바깥으로 솟아 팔이 꺾여 보였다.
+    // 어깨 기준 '아래·바깥·뒤' 에 목표점(Bend Goal)을 두어 팔꿈치가 몸 쪽 아래를 향하게 한다. (아바타 루트의 자식이라 몸을 따라다닌다)
+    [Header("원격 아바타 팔꿈치")]
+    [SerializeField] private bool lowerElbows = true;
+    [SerializeField, Range(0f, 1f)] private float elbowGoalWeight = 0.75f;
+    [SerializeField] private Vector3 elbowGoalOffset = new Vector3(0.20f, -0.75f, -0.30f);   // 어깨 기준(바깥 +, 아래 -, 뒤 -) · 아바타 스케일 1 기준 m
+
+    private void SetupElbowGoals(VRIK vrik)
+    {
+        if (!lowerElbows || vrik == null || _avatarRoot == null) return;
+        MakeElbowGoal(vrik.solver.leftArm, vrik.references.leftUpperArm, "ElbowGoal_L");
+        MakeElbowGoal(vrik.solver.rightArm, vrik.references.rightUpperArm, "ElbowGoal_R");
+    }
+
+    private void MakeElbowGoal(IKSolverVR.Arm arm, Transform upperArm, string goalName)
+    {
+        if (arm == null || upperArm == null) return;
+        if (arm.bendGoal == null)
+        {
+            Vector3 local = _avatarRoot.InverseTransformPoint(upperArm.position);
+            float side = local.x >= 0f ? 1f : -1f;   // 아바타 오른쪽 팔은 +x, 왼쪽은 -x
+            var g = new GameObject(goalName).transform;
+            g.SetParent(_avatarRoot, false);
+            g.localPosition = new Vector3(local.x + side * elbowGoalOffset.x, local.y + elbowGoalOffset.y, local.z + elbowGoalOffset.z);
+            arm.bendGoal = g;
+        }
+        arm.bendGoalWeight = Mathf.Max(arm.bendGoalWeight, elbowGoalWeight);
+    }
+
     private void CacheArmLengths()
     {
         if (_vrik == null) return;
@@ -469,7 +500,7 @@ public class VRPlayer : BasePlayer
     private void DebugRemote()
     {
         if (!debugLog || Time.unscaledTime < _nextDebug) return;
-        _nextDebug = Time.unscaledTime + Mathf.Max(0.5f, debugInterval);
+        _nextDebug = Time.unscaledTime + Mathf.Max(10f, debugInterval);
         if (_avatarRoot == null || trackingSetup.applyHead == null) return;
 
         Vector3 hp = trackingSetup.applyHead.position;
@@ -507,7 +538,7 @@ public class VRPlayer : BasePlayer
     private void DebugOwner()
     {
         if (!debugLog || Time.unscaledTime < _nextDebug) return;
-        _nextDebug = Time.unscaledTime + Mathf.Max(0.5f, debugInterval);
+        _nextDebug = Time.unscaledTime + Mathf.Max(10f, debugInterval);
         Transform anchorT = anchor != null ? anchor : transform;
         if (trackingSetup.trackingHead == null) return;
         Vector3 h = trackingSetup.trackingHead.position - anchorT.position;

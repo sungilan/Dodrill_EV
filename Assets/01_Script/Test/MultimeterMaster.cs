@@ -69,12 +69,15 @@ public class MultimeterMaster : MonoBehaviour
     // 내부 상태
     private Coroutine _fluctuateCoroutine;
     private float _lastMeasuredValue;
+    private bool _fadingOut;
 
     private void Awake()
     {
         // 싱글톤 선택적 — 여러 대 있을 수 있으므로 약한 참조
         if (Instance == null) Instance = this;
         MobileMeterReadout.Register(this);   // 모바일: 화면에 측정값을 크게 띄우는 패널
+        // VR: 프로브를 손으로 꺼내 단자에 대는 측정 (VR 기기가 아니면 스스로 꺼진다)
+        if (GetComponent<VrProbeHandling>() == null) gameObject.AddComponent<VrProbeHandling>();
     }
 
     /// <summary>결함 화면(빨간 배경)이 떠 있는지 — 모바일 확대 패널이 같은 색을 따라 쓴다.</summary>
@@ -270,8 +273,11 @@ public class MultimeterMaster : MonoBehaviour
 
         // 2. [추가] 부드럽게 나타나는 연출 (Fade In)
         // 이미 텍스트가 보이고 있는 상태라면 굳이 다시 트윈을 돌릴 필요가 없으므로 체크
-        if(lcdDisplay.alpha < 0.1f)
+        // 꺼지는 중(ResetDisplay 페이드 아웃)에 새 값이 들어오면 그 페이드를 멈추고 다시 켠다.
+        // 예전에는 페이드 아웃이 그대로 끝나면서 방금 띄운 값을 '----' 로 덮어써, 단자에 다시 대도 값이 안 바뀌어 보였다.
+        if(_fadingOut || lcdDisplay.alpha < 0.1f)
         {
+            _fadingOut = false;
             lcdDisplay.DOKill(); // 기존 트윈 중단
             lcdDisplay.alpha = 0f; // 시작점 강제 설정
             lcdDisplay.DOFade(1f, _fadeDuration).SetEase(Ease.OutCubic);
@@ -286,8 +292,11 @@ public class MultimeterMaster : MonoBehaviour
         if(lcdDisplay != null)
         {
             // 사라질 때도 스르륵 사라지게 하고 싶다면:
+            if(_fadingOut || lcdDisplay.alpha < 0.1f) return;   // 이미 꺼졌거나 꺼지는 중
             lcdDisplay.DOKill();
+            _fadingOut = true;
             lcdDisplay.DOFade(0f, _fadeDuration).OnComplete(() => {
+                _fadingOut = false;
                 lcdDisplay.text = "----";
             });
         }

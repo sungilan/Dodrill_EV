@@ -155,7 +155,8 @@ public class PcAvatarIKDriver : MonoBehaviour
         bool changed = holding != _dbgLastHolding;
         if (changed) _dbgToggles++;
         _dbgLastHolding = holding;
-        if (!changed && Time.unscaledTime < _dbgNext) return;
+        // 들고 있지 않을 때는 상태가 바뀔 때만 남긴다(0.5초마다 같은 줄이 계속 찍히던 것 정리)
+        if (!changed && (!holding || Time.unscaledTime < _dbgNext)) return;
         _dbgNext = Time.unscaledTime + debugInterval;
 
         int reach = armReach.DbgReachCount;

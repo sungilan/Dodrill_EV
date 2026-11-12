@@ -87,8 +87,14 @@ public class BottomButtonsPanel : MonoBehaviour
                 toggleVisual.SetSelected(isOpen);
         }
 
+        // VR 미션 리스트(Left_TaskListPanel)는 슬라이드만으로는 마스크가 안 먹어(중첩 Canvas) 아래에 그대로 보였다 → 닫히면 완전히 숨긴다
+        if (listToggle == null) listToggle = FindFirstObjectByType<VrTaskListToggle>(FindObjectsInactive.Include);
+        if (listToggle != null) listToggle.SetShown(isOpen);
+
         onOpenStateChanged?.Invoke(isOpen);
     }
+
+    private VrTaskListToggle listToggle;
 
     // ───────── Animation ─────────
 

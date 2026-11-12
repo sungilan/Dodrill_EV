@@ -236,16 +236,21 @@ public class ImpactWrench : MonoBehaviour
         // 4. 비교 (대소문자/공백 무시)
         bool isMatch = group.taskId.Trim().Equals(currentModuleId.Trim(), System.StringComparison.OrdinalIgnoreCase);
 
+        // 렌치가 볼트에 닿아 있는 동안 매 프레임 불려서 로그가 폭주했다 → 결과가 바뀔 때만 남긴다
         if(!isMatch)
-        {
-            Debug.Log($"<color=orange>[ImpactWrench]</color> 단계 불일치: 현재[<b>{currentModuleId}</b>] vs 볼트설정[<b>{group.taskId}</b>]");
-        }
+            LogChanged("mismatch:" + currentModuleId + ">" + group.taskId, $"<color=orange>[ImpactWrench]</color> 단계 불일치: 현재[<b>{currentModuleId}</b>] vs 볼트설정[<b>{group.taskId}</b>]");
         else
-        {
-            Debug.Log($"<color=lime>[ImpactWrench]</color> 단계 일치 확인: {currentModuleId}");
-        }
+            LogChanged("match:" + currentModuleId, $"<color=lime>[ImpactWrench]</color> 단계 일치 확인: {currentModuleId}");
 
         return isMatch;
+    }
+
+    private static string s_lastLogKey;
+    private static void LogChanged(string key, string message)
+    {
+        if(s_lastLogKey == key) return;
+        s_lastLogKey = key;
+        Debug.Log(message);
     }
 
     // ── 효과 적용 ───────────────────────────────────────────
@@ -290,7 +295,7 @@ public class ImpactWrench : MonoBehaviour
         if (!other.CompareTag("Bolt")) return;
         if (!IsLocalHeld) return;
 
-        Debug.Log($"<color=white>[ImpactWrench]</color> 볼트 충돌 감지: {other.name}. 검증 시작...");
+        LogChanged("hit:" + other.name, $"<color=white>[ImpactWrench]</color> 볼트 충돌 감지: {other.name}. 검증 시작...");
 
         Bolt detectedBolt = other.GetComponent<Bolt>();
         if (detectedBolt == null)

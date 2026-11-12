@@ -12,38 +12,6 @@ using System;
 ///       public override string ModuleId => "MyModuleId";
 ///   }
 /// </summary>
-//public abstract class ConfirmTaskModule : ITaskModule
-//{
-//    public abstract string ModuleId { get; }
-
-//    private Action _onComplete;
-//    private Action _onFail;
-
-//    public virtual void OnStart(ModuleConfig config, Action onComplete, Action onFail)
-//    {
-//        _onComplete = onComplete;
-//        _onFail = onFail;
-//        InteractionEvents.OnTaskConfirmed += HandleConfirm;
-//    }
-
-//    private void HandleConfirm(string moduleId)
-//    {
-//        if(moduleId != ModuleId) return;
-//        _onComplete?.Invoke();
-//    }
-
-//    public void OnUpdate(float deltaTime) { }
-
-//    public void OnComplete()
-//    {
-//        InteractionEvents.OnTaskConfirmed -= HandleConfirm;
-//    }
-
-//    public void OnFail()
-//    {
-//        InteractionEvents.OnTaskConfirmed -= HandleConfirm;
-//    }
-//}
 using System;
 using UnityEngine;
 

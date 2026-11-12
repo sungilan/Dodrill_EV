@@ -150,6 +150,7 @@ namespace DoDrill.Training
             ScenarioReceiver.OnScenarioReceived      += OnScenarioReceived;
             InstanceFinder.ClientManager?.RegisterBroadcast<BoltProgressBroadcast>(OnBoltProgressReceived);
             InstanceFinder.ClientManager?.RegisterBroadcast<TaskNotificationBroadcast>(OnTaskNotificationReceived);
+            s_toastRequested += ShowToast;
 
             if (_confirmButton != null)
                 _confirmButton.onClick.AddListener(OnConfirmClicked);
@@ -162,6 +163,7 @@ namespace DoDrill.Training
             ScenarioReceiver.OnScenarioReceived      -= OnScenarioReceived;
             InstanceFinder.ClientManager?.UnregisterBroadcast<BoltProgressBroadcast>(OnBoltProgressReceived);
             InstanceFinder.ClientManager?.UnregisterBroadcast<TaskNotificationBroadcast>(OnTaskNotificationReceived);
+            s_toastRequested -= ShowToast;
 
             if (_confirmButton != null)
                 _confirmButton.onClick.RemoveListener(OnConfirmClicked);
@@ -255,17 +257,45 @@ namespace DoDrill.Training
             string activePlayerName = msg.clientName;
 
             // 서버가 이름을 찾지 못해 빈 값이 오면 접속자 목록(UserStateRow)과 같은 규칙의 번호로 대체
-            if(string.IsNullOrEmpty(activePlayerName))
-                activePlayerName = msg.clientId >= 0 ? $"Player {msg.clientId + 1}" : "Player";
+            if(string.IsNullOrEmpty(activePlayerName) && msg.clientId >= 0)
+                activePlayerName = $"Player {msg.clientId + 1}";
 
             // ── 2. 텍스트 구성 및 색상 적용 ──
             // 요청하신 형광 초록 계열 색상 (#00f800) 적용
             string pColor = "#00f800";
             // 서버는 자기 언어 설정(기본 en)으로 단계 이름을 골라 보내므로, 시나리오 데이터에서 같은 단계를 찾아 이 기기의 언어로 다시 표시한다
             string taskTitle = ResolveLocalizedTitle(msg.taskName);
-            _notifText.text = $"<color={pColor}><b>{activePlayerName}</b></color>(이)가\n<b>{taskTitle}</b>를 완료하였습니다.";
+            // clientId -2: 모든 작업자가 각자 마친 단계(보호구 착용 등)
+            if(msg.clientId == -2)
+            {
+                ShowToast($"<color={pColor}><b>모든 작업자</b></color>가\n<b>{taskTitle}</b>을(를) 완료하였습니다.");
+                return;
+            }
+            // 진행자를 알 수 없으면(이름도 번호도 없음) 'Player' 로 얼버무리지 않고 주어 없이 단계 이름만 알린다
+            if(string.IsNullOrEmpty(activePlayerName))
+                ShowToast($"<b>{taskTitle}</b>를 완료하였습니다.");
+            else
+                ShowToast($"<color={pColor}><b>{activePlayerName}</b></color>(이)가\n<b>{taskTitle}</b>를 완료하였습니다.");
+        }
 
-            // ── 3. DOTween 연출 (나타났다 사라지기) ──
+        // ── 공용 안내 토스트 (작업 완료 알림 패널 재사용) ──
+        // 보호구 착용, 입장/퇴장 등 다른 곳에서 TaskProgressUI.RequestToast(...) 로 같은 팝업을 띄운다.
+        // 화면에 켜져 있는 TaskProgressUI(플랫폼별 하나)가 받아서 표시한다.
+        private static event System.Action<string> s_toastRequested;
+
+        /// <summary>작업 완료 알림과 같은 팝업에 안내 문구를 띄운다(TMP 리치텍스트 가능).</summary>
+        public static void RequestToast(string richText)
+        {
+            if (string.IsNullOrEmpty(richText)) return;
+            s_toastRequested?.Invoke(richText);
+        }
+
+        private void ShowToast(string richText)
+        {
+            if(_notifCanvasGroup == null || _notifText == null) return;
+            _notifText.text = richText;
+
+            // ── DOTween 연출 (나타났다 사라지기) ──
             _notifCanvasGroup.DOKill(); // 진행 중인 연출 즉시 중단
 
             Sequence seq = DOTween.Sequence();

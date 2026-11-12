@@ -83,11 +83,19 @@ public class ScenarioStateReceiver : MonoBehaviour
 
     // ── 수신 처리 ─────────────────────────
 
+    private string _lastReceiverLogKey;
+
     private void OnReceiveTaskState(TaskStateBroadcast broadcast, Channel channel)
     {
         CurrentTaskState = broadcast.currentTask;
         TotalTaskCount = broadcast.totalTaskCount;
-        Debug.Log($"[Receiver] 모듈 전환: {broadcast.currentTask.moduleId} (Index: {broadcast.currentTask.taskIndex})");
+        // 같은 상태가 연달아 오는 경우(진행자·완료자 갱신 등)에는 로그를 반복하지 않는다
+        string logKey = $"{broadcast.currentTask.moduleId}|{broadcast.currentTask.taskIndex}|{broadcast.currentTask.status}";
+        if(logKey != _lastReceiverLogKey)
+        {
+            _lastReceiverLogKey = logKey;
+            Debug.Log($"[Receiver] 모듈 전환: {broadcast.currentTask.moduleId} (Index: {broadcast.currentTask.taskIndex}, {broadcast.currentTask.status})");
+        }
 
 #if UNITY_EDITOR
         Debug.Log($"[ScenarioStateReceiver] Task[{broadcast.currentTask.taskIndex}] 상태: {broadcast.currentTask.status}");
@@ -201,95 +209,3 @@ public class ScenarioStateReceiver : MonoBehaviour
 
 }
 
-//using FishNet;
-//using FishNet.Transporting;
-//using UnityEngine;
-//using Debug = UnityEngine.Debug;
-
-//public class ScenarioStateReceiver : MonoBehaviour
-//{
-//    public static ScenarioStateReceiver Instance { get; private set; }
-
-//    // ★ Channel 파라미터 제거
-//    public static event System.Action<TaskStateBroadcast> OnTaskStateUpdated;
-//    public static event System.Action<ScenarioSnapshotBroadcast> OnSnapshotReceived;
-
-//    public TaskState CurrentTaskState { get; private set; }
-//    public ScenarioData CurrentScenario { get; private set; }
-//    public int TotalTaskCount { get; private set; }
-
-//    private void Awake()
-//    {
-//        Debug.Log("[ScenarioStateReceiver] Awake");
-//        if(Instance != null && Instance != this)
-//        {
-//            Debug.LogWarning("[ScenarioStateReceiver] 이미 Instance가 있음 — 파괴");
-//            Destroy(gameObject);
-//            return;
-//        }
-//        Instance = this;
-//    }
-
-//    private void OnEnable()
-//    {
-//        Debug.Log("[ScenarioStateReceiver] OnEnable — 브로드캐스트 등록");
-//        if(InstanceFinder.ClientManager == null)
-//        {
-//            Debug.LogError("[ScenarioStateReceiver] ClientManager가 없음!");
-//            return;
-//        }
-//        InstanceFinder.ClientManager.RegisterBroadcast<TaskStateBroadcast>(OnReceiveTaskState);
-//        InstanceFinder.ClientManager.RegisterBroadcast<ScenarioSnapshotBroadcast>(OnReceiveSnapshot);
-//    }
-
-//    private void OnDisable()
-//    {
-//        Debug.Log("[ScenarioStateReceiver] OnDisable — 브로드캐스트 등록 해제");
-//        if(InstanceFinder.ClientManager == null) return;
-//        InstanceFinder.ClientManager.UnregisterBroadcast<TaskStateBroadcast>(OnReceiveTaskState);
-//        InstanceFinder.ClientManager.UnregisterBroadcast<ScenarioSnapshotBroadcast>(OnReceiveSnapshot);
-//    }
-
-//    // ★ Channel 파라미터는 유지 (FishNet이 요구)하지만, 이벤트 발화할 때는 포함 X
-//    private void OnReceiveTaskState(TaskStateBroadcast broadcast, Channel channel)
-//    {
-//        CurrentTaskState = broadcast.currentTask;
-//        TotalTaskCount = broadcast.totalTaskCount;
-
-//        Debug.Log($"[ScenarioStateReceiver] ★ TaskState 수신 ★");
-//        Debug.Log($"[ScenarioStateReceiver]   taskIndex: {broadcast.currentTask.taskIndex}");
-//        Debug.Log($"[ScenarioStateReceiver]   status: {broadcast.currentTask.status}");
-//        Debug.Log($"[ScenarioStateReceiver]   totalTaskCount: {broadcast.totalTaskCount}");
-
-//        // ★ Channel 파라미터 없이 발화
-//        OnTaskStateUpdated?.Invoke(broadcast);
-//    }
-
-//    private void OnReceiveSnapshot(ScenarioSnapshotBroadcast broadcast, Channel channel)
-//    {
-//        CurrentScenario = broadcast.scenarioData;
-//        CurrentTaskState = broadcast.currentTask;
-//        TotalTaskCount = broadcast.totalTaskCount;
-
-//        Debug.Log($"[ScenarioStateReceiver] ★ Snapshot 수신 ★");
-//        Debug.Log($"[ScenarioStateReceiver]   scenarioData: {(broadcast.scenarioData != null ? "있음" : "NULL")}");
-//        Debug.Log($"[ScenarioStateReceiver]   taskIndex: {broadcast.currentTask.taskIndex}");
-//        Debug.Log($"[ScenarioStateReceiver]   totalTaskCount: {broadcast.totalTaskCount}");
-
-//        // ★ Channel 파라미터 없이 발화
-//        OnSnapshotReceived?.Invoke(broadcast);
-//    }
-
-//    public void SendCompleteSignal(int taskIndex)
-//    {
-//        int clientId = InstanceFinder.ClientManager?.Connection?.ClientId ?? -1;
-
-//        InstanceFinder.ClientManager.Broadcast(new TaskCompleteSignal
-//        {
-//            taskIndex = taskIndex,
-//            clientId = clientId,
-//        });
-
-//        Debug.Log($"[ScenarioStateReceiver] 완료 신호 전송 — Task[{taskIndex}], Client#{clientId}");
-//    }
-//}

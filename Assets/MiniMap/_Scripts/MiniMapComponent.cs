@@ -205,11 +205,14 @@ public class MiniMapComponent : MonoBehaviour
                 return;
             }
 
+            bool before = mmo.spr.gameObject.activeSelf;
             mmo.spr.gameObject.SetActive(active);
             if(mmo.labelText != null)
                 mmo.labelText.gameObject.SetActive(active && showNameOnMap);
 
-            Debug.Log($"<color=cyan>[MiniMap-Visibility]</color> <b>{gameObject.name}</b> 가시성: {mmo.spr.gameObject.activeSelf} ({reason})");
+            // 같은 상태로 다시 설정될 때(수십 개 오브젝트가 한꺼번에) 로그가 쏟아지던 것 → 실제로 바뀔 때만 남긴다
+            if(before != mmo.spr.gameObject.activeSelf)
+                Debug.Log($"<color=cyan>[MiniMap-Visibility]</color> <b>{gameObject.name}</b> 가시성: {mmo.spr.gameObject.activeSelf} ({reason})");
         }
     }
 

@@ -220,10 +220,30 @@ public abstract class LiftControllerBase : NetworkBehaviour, ILiftController
         OnHeightChanged(newHeight, prevHeight);
     }
 
+    // [서버] 이 리프트의 UP/DOWN 버튼을 마지막으로 누른 사람 — '리프트 상승' 단계 완료 알림에 그 사람 이름을 붙이는 용도
+    private int _lastMoveActorId = -1;
+    private float _lastMoveActorTime = -100f;
+
+    private void RecordMoveActor(int dir, FishNet.Connection.NetworkConnection sender)
+    {
+        if(dir == 0 || sender == null || !sender.IsValid) return;
+        _lastMoveActorId = sender.ClientId;
+        _lastMoveActorTime = Time.time;
+    }
+
+    /// <summary>[서버] sinceTime(Time.time 기준) 이후에 이 리프트 버튼을 누른 사람. 없으면 false.</summary>
+    public bool TryGetMoveActor(float sinceTime, out int clientId)
+    {
+        clientId = _lastMoveActorId;
+        return _lastMoveActorId >= 0 && _lastMoveActorTime >= sinceTime;
+    }
+
     [ServerRpc(RequireOwnership = false)]
-    private void RequestMoveServerRpc(int dir)
+    private void RequestMoveServerRpc(int dir, FishNet.Connection.NetworkConnection sender = null)
     {
         if(!IsServerInitialized) return;
+        dir = Mathf.Clamp(dir, -1, 1);   // 방향은 -1/0/1 만 — 큰 값을 보내 리프트를 수십 배 빠르게 움직이는 것 방지
+        RecordMoveActor(dir, sender);
         _syncDirection.Value = dir;
     }
 
@@ -231,6 +251,8 @@ public abstract class LiftControllerBase : NetworkBehaviour, ILiftController
     private void RequestOwnershipAndMoveServerRpc(int dir, FishNet.Connection.NetworkConnection sender = null)
     {
         if(!IsServerInitialized) return;
+        dir = Mathf.Clamp(dir, -1, 1);
+        RecordMoveActor(dir, sender);
         _syncDirection.Value = dir;
         NetworkObject.GiveOwnership(sender);
     }
@@ -252,9 +274,15 @@ public abstract class LiftControllerBase : NetworkBehaviour, ILiftController
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void SyncHeightToServerRpc(float height)
+    private void SyncHeightToServerRpc(float height, FishNet.Connection.NetworkConnection sender = null)
     {
         if(!IsServerInitialized) return;
+        // 높이는 '리프트를 움직이는 중인 소유자'가 보낸, 범위 안의 연속적인 값만 받는다.
+        // (아무 클라이언트나 높이를 바로 써서 '리프트 상승' 단계를 건너뛰는 것 방지)
+        if(float.IsNaN(height) || float.IsInfinity(height)) return;
+        if(sender == null || !sender.IsValid || NetworkObject.Owner != sender) return;
+        if(height < 0f || height > MaxValue) return;
+        if(Mathf.Abs(height - _syncCurrentHeight.Value) > Mathf.Max(MaxValue * 0.25f, 0.5f)) return;
         _syncCurrentHeight.Value = height;
     }
 

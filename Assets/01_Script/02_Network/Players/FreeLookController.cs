@@ -566,7 +566,8 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         {
             if(_worldLabel != null && hit)
             {
-                Vector3 targetPos = hitInfo.point + Vector3.up * labelHeightOffset;
+                // 잡을 수 있는 물건이면 물건 머리 위에 고정, 그 밖에는 맞은 지점 위
+                Vector3 targetPos = ItemNameTag.LabelAnchor(hoveredCol, hitInfo.point, labelHeightOffset);
                 _worldLabel.transform.position = Vector3.Lerp(_worldLabel.transform.position, targetPos, Time.deltaTime * 15f);
             }
             return;
@@ -614,7 +615,8 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         SetGuideUI(msg);
 
         // 새 라벨 생성
-        SpawnWorldLabel(hitInfo.point, objName, msg);
+        // 물건 머리 위 조금 아래에서 시작해 위로 스르륵 올라오게(따라가기 Lerp 가 올려 준다)
+        SpawnWorldLabel(ItemNameTag.LabelAnchor(hoveredCol, hitInfo.point, labelHeightOffset) - Vector3.up * (labelHeightOffset + ItemNameTag.RiseFrom), objName, msg);
     }
 
     private void SpawnWorldLabel(Vector3 worldPos, string objName, string actionMsg)

@@ -120,22 +120,71 @@ public class MapObject : MonoBehaviour
         SetRotation();
     }
 
+    // VR 플레이어는 루트 오브젝트를 네트워크로 동기화하지 않고(머리·손 목표만 보냄) 루트가 스폰 지점에 그대로 있다.
+    // 그래서 미니맵 아이콘이 시작 위치에 고정됐다 → VR 이면 머리(내 것은 HMD, 남의 것은 아바타 머리 목표)를 기준으로 삼는다.
+    private VRPlayer _vrPlayer;
+    private bool _vrChecked;
+
+    private Transform TrackPoint
+    {
+        get
+        {
+            if(owner == null) return null;
+            if(!_vrChecked)
+            {
+                _vrChecked = true;
+                _vrPlayer = owner.GetComponent<VRPlayer>();
+                if(_vrPlayer == null) _vrPlayer = owner.GetComponentInParent<VRPlayer>();
+            }
+            if(_vrPlayer != null && _vrPlayer.trackingSetup != null)
+            {
+                var ts = _vrPlayer.trackingSetup;
+                Transform head = _vrPlayer.IsOwner ? ts.trackingHead : ts.applyHead;
+                if(head != null) return head;
+            }
+            return owner.transform;
+        }
+    }
+
+    private float OwnerYaw()
+    {
+        var tp = TrackPoint;
+        if(tp == null || tp == owner.transform) return owner.transform.localEulerAngles.y;
+        return tp.eulerAngles.y;
+    }
+
     void SetPosition()
     {
         if(mapCamera == null || owner == null || miniMapTarget == null) return;
 
         cornerss = new Vector3[4];
         rt.GetWorldCorners(cornerss);
-        screenPos = RectTransformUtility.WorldToScreenPoint(mapCamera, owner.transform.position);
+        Vector3 ownerPos = TrackPoint.position;
+        screenPos = RectTransformUtility.WorldToScreenPoint(mapCamera, ownerPos);
 
-        if(linkedMiniMapEntity.clampInBorder && mmc.target != null && Mathf.Abs(Vector3.Distance(owner.transform.position, mmc.target.transform.position)) < linkedMiniMapEntity.clampDist)
+        if(linkedMiniMapEntity.clampInBorder && mmc.target != null && Mathf.Abs(Vector3.Distance(ownerPos, mmc.target.transform.position)) < linkedMiniMapEntity.clampDist)
         {
             ClampIconColliderWise();
+            SetInMapRange(true);
         }
         else
         {
             sprRect.anchoredPosition = screenPos - rt.sizeDelta / 2f;
+            // 미니맵이 찍는 범위 밖이면 아이콘이 미니맵 밖에 떠 보이지 않게 숨긴다
+            Vector3 sp = mapCamera.WorldToScreenPoint(ownerPos);
+            Vector2 size = rt.rect.size;
+            SetInMapRange(sp.z > 0f && screenPos.x >= 0f && screenPos.x <= size.x && screenPos.y >= 0f && screenPos.y <= size.y);
         }
+    }
+
+    // 가시성은 MiniMapComponent 가 spr.gameObject.SetActive 로 따로 관리한다 → 여기서는 그림(Graphic)만 껐다 켠다(서로 안 부딪힘)
+    private bool _inMapRange = true;
+    private void SetInMapRange(bool inRange)
+    {
+        if(_inMapRange == inRange) return;
+        _inMapRange = inRange;
+        if(spr != null) spr.enabled = inRange;
+        if(labelText != null) labelText.enabled = inRange;
     }
 
     void ClampIconColliderWise()
@@ -172,8 +221,8 @@ public class MapObject : MonoBehaviour
             if(Mathf.Abs(linkedMiniMapEntity.upAxis.y) == 1)
             {
                 finalZ = mmc.rotateWithTarget
-                    ? linkedMiniMapEntity.upAxis.y * (miniMapTarget.localEulerAngles.y - mmc.rotationOfCam.z - owner.transform.localEulerAngles.y) + linkedMiniMapEntity.rotation
-                    : -linkedMiniMapEntity.upAxis.y * (owner.transform.localEulerAngles.y) + linkedMiniMapEntity.rotation;
+                    ? linkedMiniMapEntity.upAxis.y * (miniMapTarget.localEulerAngles.y - mmc.rotationOfCam.z - OwnerYaw()) + linkedMiniMapEntity.rotation
+                    : -linkedMiniMapEntity.upAxis.y * (OwnerYaw()) + linkedMiniMapEntity.rotation;
             }
             // ... (x, z축 회전 로직은 생략 혹은 위와 동일하게 finalZ 계산)
 

@@ -103,6 +103,11 @@ public class HeldObjectHandAttach : MonoBehaviour
         Vector3 delta = hand - anchorPoint;
         if (delta.sqrMagnitude > 2f * 2f) return;   // 손과 2m 넘게 떨어진 물체는 아직 동기화 전 — 붙이지 않는다
 
+        // VR 은 주인 화면에서 Auto Hand 가 물체를 '진짜로' 쥐고 있어서 물체와 손(손목)의 상대 위치가 이미 맞다.
+        // 여기서 쥐는 점(Grip)을 손목 위치로 끌어오면 손바닥 앞 ~10cm 에 있어야 할 물체가 손목에 박혀 '잡은 손 위치가 안 맞아' 보인다.
+        // → 네트워크 지연·보간으로 많이 벌어졌을 때(30cm 넘게)만 보정한다.
+        if (_vr != null && delta.sqrMagnitude < 0.3f * 0.3f) return;
+
         _appliedTo = _held.transform;
         _saved = _appliedTo.position;
         _savedRot = _appliedTo.rotation;

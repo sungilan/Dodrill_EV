@@ -73,6 +73,8 @@ namespace Autohand {
         private void CheckTrackedObjects() {
             if(!disableCollisionTracking) {
                 for(int i = 0; i < collisionObjects.Count; i++) {
+                    // [DoDrill] 파괴된 오브젝트(디스폰된 도구 등)에서 activeInHierarchy 를 읽으면 NullReferenceException → 이 코루틴이 죽어 충돌 추적이 멈췄다
+                    if(collisionObjects[i] == null) continue;
                     if(!collisionObjects[i].activeInHierarchy ||
                         !nextCollisionObjects.Contains(collisionObjects[i])) {
                         if(OnCollisionLastExit != null)
@@ -99,6 +101,7 @@ namespace Autohand {
 
             if(!disableTriggersTracking) {
                 for(int i = 0; i < triggerObjects.Count; i++) {
+                    if(triggerObjects[i] == null) continue;
                     if(!triggerObjects[i].activeInHierarchy ||
                         !nextTriggerObjects.Contains(triggerObjects[i])) {
                         if(OnTriggerLastExit != null)
