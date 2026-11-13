@@ -36,11 +36,57 @@ public struct StandingHeight
     private float _winPeak;
     private float _winT;
 
+    // (11/13 4차) 빌드 테스트: 헤드셋을 조금씩 들어 올리면 키가 1.86m 까지 따라 올라갔고, 다시 바로 서도
+    // 15초 구간 경계를 두 번 지나야(최대 ~30초) 내려와 그동안 무릎이 굽어 '키가 고정된' 것처럼 보였다(Quest Player.log).
+    //  ③ 정면을 보고(고개 ±25°) 3cm 안에서 3초 가만히 서 있으면, 그 높이가 지금 키보다 낮고 80% 이상일 때 바로 그 값으로 내린다.
+    //     엔진룸을 들여다보며 숙인 자세는 고개가 아래를 향하므로 해당되지 않는다.
+    private const float StillTime = 3f;
+    private const float StillTol = 0.03f;
+    private const float LevelPitch = 25f;
+    private const float StillRatio = 0.8f;
+    private float _stillRef;
+    private float _stillT;
+    private float _stillSum;
+
+    // (11/13 5차) 헤드셋은 머리 높이만 알 뿐 무릎이 펴졌는지 모른다 → 사용자가 똑바로 서서 직접 보정(키 고정).
+    // 보정된 뒤에는 자동 추정(올리기·내리기)을 하지 않는다.
+    private bool _locked;
+    public bool Locked => _locked;
+    public void Lock(float h)
+    {
+        if (h < StandMin || h > MaxPlausible) return;
+        _locked = true;
+        _max = h;
+    }
+
     public float Value => _max;
 
-    public float Feed(float h, float dt)
+    /// <param name="headForward">머리(카메라) 정면 방향(월드). 고개를 숙였는지 판단용.</param>
+    public float Feed(float h, float dt, Vector3 headForward)
     {
-        if (h > MaxPlausible || h < 0f) return _max;
+        if (_locked || h > MaxPlausible || h < 0f) return _max;
+
+        float pitch = Mathf.Asin(Mathf.Clamp(headForward.normalized.y, -1f, 1f)) * Mathf.Rad2Deg;
+        if (Mathf.Abs(pitch) <= LevelPitch && h >= StandMin && Mathf.Abs(h - _stillRef) <= StillTol)
+        {
+            _stillT += dt;
+            _stillSum += h * dt;
+            if (_stillT >= StillTime)
+            {
+                float avg = _stillSum / _stillT;
+                if (_max > 0f && avg < _max - StillTol && avg >= _max * StillRatio)
+                {
+                    Debug.Log($"[AvatarFit] 바로 선 자세 {avg:F2}m 감지 → 키 {_max:F2} → {avg:F2}m");
+                    _max = avg;
+                    _winPeak = 0f; _winT = 0f;
+                }
+                _stillT = 0f; _stillSum = 0f;
+            }
+        }
+        else
+        {
+            _stillRef = h; _stillT = 0f; _stillSum = 0f;
+        }
 
         _smooth = _smooth <= 0f ? h : Mathf.Lerp(_smooth, h, 1f - Mathf.Exp(-dt / 0.5f));
         if (_smooth > _winPeak) _winPeak = _smooth;
@@ -107,7 +153,10 @@ public class LocalAvatarHeightFit : MonoBehaviour
         if (_head == null) return;
 
         float h = _head.position.y - _vis.transform.position.y;   // 아바타 루트 = 발(AutoHandVRIK 가 플레이어 높이로 맞춤)
-        float stand = _stand.Feed(h, Time.deltaTime);
+        TickCalibration(h);
+        var cam = Camera.main;
+        Vector3 fwd = cam != null ? cam.transform.forward : _head.forward;
+        float stand = _stand.Feed(h, Time.deltaTime, fwd);
         if (stand < 1.0f) return;
 
         float want = Mathf.Clamp(stand / restHeadHeight * kneeSlack, scaleRange.x, scaleRange.y);
@@ -119,8 +168,90 @@ public class LocalAvatarHeightFit : MonoBehaviour
         if (Time.unscaledTime >= _nextLog)
         {
             _nextLog = Time.unscaledTime + 10f;
-            Debug.Log($"[AvatarFit][local] standHead={stand:F2}m scale={_cur:F3} (want {want:F3})");
+            Debug.Log($"[AvatarFit][local] standHead={stand:F2}m scale={_cur:F3} (want {want:F3}){(_stand.Locked ? " [보정됨]" : "")}");
         }
+    }
+
+    // ── 키 보정: 똑바로 서서 왼쪽 스틱을 2초간 누르면 그때 머리 높이를 키로 고정(기기에 저장, 다른 사람 화면에도 전달)
+    private const float CalibHold = 2f;
+    private const float AutoStill = 3f;
+    private bool _autoDone;
+    private float _autoRef, _autoT, _autoSumLocal, _autoSumRemote;
+    private float _calibT;
+    private float _calibSumLocal, _calibSumRemote;
+    private bool _calibWaitRelease;
+    private VRPlayer _vrPlayer;
+    private static readonly System.Collections.Generic.List<UnityEngine.XR.InputDevice> s_devs = new System.Collections.Generic.List<UnityEngine.XR.InputDevice>();
+
+    private void TickCalibration(float h)
+    {
+        if (_vrPlayer == null) _vrPlayer = GetComponent<VRPlayer>();
+
+        // (11/13 6차) 시작할 때는 버튼 없이 자동으로 맞춘다: 정면을 보고(±25°) 3cm 안에서 3초 가만히 서 있으면 그 높이로 고정.
+        // 헤드셋을 쓰는 사람이 바뀔 수 있으므로 저장값은 쓰지 않고 매번 새로 잰다. 다시 맞추려면 왼쪽 스틱 2초.
+        if (!_autoDone)
+        {
+            var cam = Camera.main;
+            Vector3 fwd = cam != null ? cam.transform.forward : _head.forward;
+            float pitch = Mathf.Asin(Mathf.Clamp(fwd.normalized.y, -1f, 1f)) * Mathf.Rad2Deg;
+            float remoteNow = _vrPlayer != null ? _vrPlayer.OwnerHeadWorldY - _vis.transform.position.y : h;
+            if (Mathf.Abs(pitch) <= 25f && h >= 1.3f && h <= 1.95f && Mathf.Abs(h - _autoRef) <= 0.03f)
+            {
+                _autoT += Time.deltaTime;
+                _autoSumLocal += h * Time.deltaTime;
+                _autoSumRemote += remoteNow * Time.deltaTime;
+                if (_autoT >= AutoStill)
+                {
+                    _autoDone = true;
+                    ApplyCalibration(_autoSumLocal / _autoT, _autoSumRemote / _autoT, true);
+                }
+            }
+            else
+            {
+                _autoRef = h; _autoT = 0f; _autoSumLocal = _autoSumRemote = 0f;
+            }
+        }
+
+        bool pressed = LeftStickPressed();
+        if (!pressed) { _calibT = 0f; _calibSumLocal = _calibSumRemote = 0f; _calibWaitRelease = false; return; }
+        if (_calibWaitRelease) return;
+
+        float remote = _vrPlayer != null ? _vrPlayer.OwnerHeadWorldY - _vis.transform.position.y : h;
+        _calibT += Time.deltaTime;
+        _calibSumLocal += h * Time.deltaTime;
+        _calibSumRemote += remote * Time.deltaTime;
+        if (_calibT < CalibHold) return;
+
+        _calibWaitRelease = true;
+        float local = _calibSumLocal / _calibT, rem = _calibSumRemote / _calibT;
+        if (local < 1.3f || local > 1.95f)
+        {
+            EquipFx.Notice("height_calib", "키 맞추기", $"높이 {local:F2}m 는 서 있는 키로 보기 어렵습니다.\n똑바로 서서 다시 눌러 주세요", EquipFx.Warn, 3f, 0.5f);
+            return;
+        }
+        _autoDone = true;   // 직접 맞췄으면 자동 보정은 더 하지 않는다
+        ApplyCalibration(local, rem, false);
+    }
+
+    private void ApplyCalibration(float local, float rem, bool auto)
+    {
+        _stand.Lock(local);
+        if (_vrPlayer != null) _vrPlayer.SendCalibratedHeight(rem);
+        Debug.Log($"[AvatarFit] 키 {(auto ? "자동 " : "")}보정 {local:F2}m (원격 {rem:F2}m)");
+        EquipFx.Notice("height_calib", "키 맞추기",
+            auto ? $"키를 자동으로 맞췄습니다 (머리 높이 {local:F2}m)\n다시 맞추려면 똑바로 서서 왼쪽 스틱을 2초간 누르세요"
+                 : $"키를 맞췄습니다 (머리 높이 {local:F2}m)",
+            EquipFx.Info, auto ? 5f : 2.5f, 0.5f);
+    }
+
+    private static bool LeftStickPressed()
+    {
+        s_devs.Clear();
+        UnityEngine.XR.InputDevices.GetDevicesWithCharacteristics(
+            UnityEngine.XR.InputDeviceCharacteristics.Controller | UnityEngine.XR.InputDeviceCharacteristics.Left, s_devs);
+        foreach (var d in s_devs)
+            if (d.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primary2DAxisClick, out bool v) && v) return true;
+        return false;
     }
 }
 

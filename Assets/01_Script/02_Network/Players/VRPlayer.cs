@@ -290,7 +290,7 @@ public class VRPlayer : BasePlayer
     {
         if (!matchAvatarHeight || _avatarRoot == null || _avatarHeadBone == null || anchor == null) return;
         float headWorldY = anchor.position.y + (anchor.rotation * targetHeadPos).y;
-        _maxHeadHeight = _standing.Feed(headWorldY - _avatarFloorY, Time.deltaTime);
+        _maxHeadHeight = _standing.Feed(headWorldY - _avatarFloorY, Time.deltaTime, anchor.rotation * targetHeadRot * Vector3.forward);
         if (_maxHeadHeight < 1.0f || _avatarEyeAtBase < 0.5f) return;
         float factor = Mathf.Clamp(_maxHeadHeight / _avatarEyeAtBase * KneeSlack, avatarScaleRange.x, avatarScaleRange.y);
         float cur = _avatarRoot.localScale.y / Mathf.Max(0.0001f, _avatarBaseScale.y);
@@ -678,6 +678,30 @@ public class VRPlayer : BasePlayer
     {
         targetLeftFingerRots = leftFingerRots;
         targetRightFingerRots = rightFingerRots;
+    }
+
+    // (11/13 5차) 키 보정: 본인이 똑바로 서서 잰 머리 높이(바닥 기준)를 다른 사람 화면에도 그대로 쓴다.
+    // BufferLast 라 나중에 들어온 사람도 받는다.
+    public float OwnerHeadWorldY => trackingSetup.trackingHead ? trackingSetup.trackingHead.position.y : 0f;
+
+    public void SendCalibratedHeight(float h)
+    {
+        if (!IsOwner || h < 1.3f || h > 1.95f) return;
+        CalibHeightToServer(h);
+    }
+
+    [ServerRpc(RequireOwnership = true)]
+    private void CalibHeightToServer(float h)
+    {
+        if (h < 1.3f || h > 1.95f) return;
+        CalibHeightToClients(h);
+    }
+
+    [ObserversRpc(ExcludeOwner = true, BufferLast = true)]
+    private void CalibHeightToClients(float h)
+    {
+        _standing.Lock(h);
+        Debug.Log($"[AvatarFit][remote owner={OwnerId}] 키 보정값 수신 {h:F2}m");
     }
 
     private void ApplyWristSmooth(HandData hand, Vector3 wristPos, Quaternion wristRot)
