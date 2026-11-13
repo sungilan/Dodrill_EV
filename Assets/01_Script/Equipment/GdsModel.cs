@@ -35,7 +35,19 @@ public static class GdsModel
     };
 
     // ── 시나리오 ──────────────────────────
-    public static ScenarioData Scenario => ScenarioStateReceiver.Instance != null ? ScenarioStateReceiver.Instance.CurrentScenario : null;
+    // 단계 진행 상태는 ScenarioStateReceiver, 시나리오 데이터는 스냅샷 없이 시작한 세션이면 ScenarioReceiver 에만 있다.
+    // 예전엔 CurrentScenario 만 봐서 시나리오가 없는 것으로 판단 → 현재 단계가 빈 값이라 진단을 끝내도 단계 신호를 안 보냈다.
+    private static ScenarioReceiver s_scenarioReceiver;
+    public static ScenarioData Scenario
+    {
+        get
+        {
+            var r = ScenarioStateReceiver.Instance;
+            if (r != null && r.CurrentScenario != null) return r.CurrentScenario;
+            if (s_scenarioReceiver == null) s_scenarioReceiver = Object.FindFirstObjectByType<ScenarioReceiver>();
+            return s_scenarioReceiver != null ? s_scenarioReceiver.ReceivedData : null;
+        }
+    }
     public static bool HasScenario => Scenario != null && Scenario.scenario != null && Scenario.scenario.tasks != null && Scenario.scenario.tasks.Count > 0;
     public static int TaskIndex => ScenarioStateReceiver.Instance != null ? ScenarioStateReceiver.Instance.CurrentTaskState.taskIndex : -1;
     public static string CurrentModule

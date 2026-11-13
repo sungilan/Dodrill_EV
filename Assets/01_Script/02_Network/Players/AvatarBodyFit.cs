@@ -19,14 +19,38 @@ using UnityEngine;
 /// <summary>서 있을 때의 머리 높이 추정(잠깐 튄 값 무시).</summary>
 public struct StandingHeight
 {
+    // (11/13 3차) 원격 VR 아바타가 다시 구부정해짐: PC 로그에서 키 추정이 1.59 → 2.09m 로 튄 뒤 그대로 남음
+    // (실제 서 있는 머리 높이 1.50m) → 아바타가 1.12배로 커져 머리를 낮추려고 무릎을 굽혔고, 30cm 이상 높이 들어야 펴졌다.
+    // 예전엔 올라가기만 하고 내려오는 조건(최대에서 12cm 이내에 머묾)이 사실상 안 맞아 한 번 틀리면 영영 안 고쳐졌다.
+    //  ① 사람 머리뼈가 닿기 어려운 높이(1.95m 초과: 사다리·헤드셋 들어올림·추적 튐)는 버린다
+    //  ② 15초 구간마다 '그 동안 서 있던 최고 높이'(0.5초 평활)를 재서, 서 있는 높이(1.3m 이상)인데 지금 값보다 낮으면 그 값으로 내린다
+    //     (차 밑에서 15초 내내 웅크려 있으면 1.3m 를 못 넘어 키를 줄이지 않는다)
+    private const float MaxPlausible = 1.95f;
+    private const float StandMin = 1.3f;
+    private const float Window = 15f;   // (안전장치) 잘못 잡힌 키는 서 있으면 15초 안에 풀린다
+
     private float _max;
     private float _candidate;
     private float _above;
+    private float _smooth;
+    private float _winPeak;
+    private float _winT;
 
     public float Value => _max;
 
     public float Feed(float h, float dt)
     {
+        if (h > MaxPlausible || h < 0f) return _max;
+
+        _smooth = _smooth <= 0f ? h : Mathf.Lerp(_smooth, h, 1f - Mathf.Exp(-dt / 0.5f));
+        if (_smooth > _winPeak) _winPeak = _smooth;
+        _winT += dt;
+        if (_winT >= Window)
+        {
+            if (_winPeak >= StandMin && _winPeak < _max - 0.04f) _max = _winPeak;
+            _winPeak = 0f; _winT = 0f;
+        }
+
         if (h > _max + 0.01f)
         {
             // 더 높은 값이 0.6초 이상 이어져야 키로 인정(그 동안의 최저값)

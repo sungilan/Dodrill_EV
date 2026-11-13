@@ -26,7 +26,20 @@ public class ScenarioStateReceiver : MonoBehaviour
 
     // ── 현재 상태 보관 ────────────────────
     public TaskState CurrentTaskState { get; private set; }
-    public ScenarioData CurrentScenario { get; private set; }
+    // 스냅샷(ScenarioSnapshotBroadcast) 없이 시작한 세션은 시나리오가 ScenarioReceiver 에만 들어온다.
+    // 예전엔 여기만 보는 코드(진단기, 평가 모드, 방전 타이머, 고전압 경고, 과제 물체 배치 등)가 시나리오가 없다고 판단했다.
+    private ScenarioData _snapshotScenario;
+    private ScenarioReceiver _scenarioReceiver;
+    public ScenarioData CurrentScenario
+    {
+        get
+        {
+            if(_snapshotScenario != null) return _snapshotScenario;
+            if(_scenarioReceiver == null) _scenarioReceiver = FindFirstObjectByType<ScenarioReceiver>();
+            return _scenarioReceiver != null ? _scenarioReceiver.ReceivedData : null;
+        }
+        private set { _snapshotScenario = value; }
+    }
     public int TotalTaskCount { get; private set; }
 
     // ── FishNet 등록 ──────────────────────

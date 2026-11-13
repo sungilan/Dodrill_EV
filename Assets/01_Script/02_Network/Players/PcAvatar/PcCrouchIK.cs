@@ -94,6 +94,17 @@ public class PcCrouchIK : MonoBehaviour
         SolveFoot(rightLeg, crouch01, scale, _ankleR, _hasRestR, _restR);
     }
 
+    /// <summary>크리퍼에 누운 동안: 발 IK 를 끈다(누운 몸에서 발이 바닥을 찾아 움직이지 않게).</summary>
+    public void SuspendFeet()
+    {
+        foreach (var leg in new[] { leftLeg, rightLeg })
+        {
+            if (leg == null || leg.solver == null) continue;
+            leg.solver.IKPositionWeight = 0f;
+            leg.solver.IKRotationWeight = 0f;
+        }
+    }
+
     private void SolveFoot(LimbIK leg, float crouch01, float scale, float ankle, bool hasRest, Quaternion rest)
     {
         if (leg == null) return;

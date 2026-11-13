@@ -495,10 +495,10 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     private void HandleCameraLook()
     {
         if(!Input.GetMouseButton(1)) return;
-        if(LookLocked) return;
 
         float y = Input.GetAxis("Mouse X") * lookSensitivity;
-        _rotX += Input.GetAxis("Mouse Y") * lookSensitivity * -1f;
+        // 크리퍼에 누운 동안(LookLocked): 위아래 시선은 고정, 좌우 방향 전환은 된다(예전엔 둘 다 막혀 누운 채 돌 수 없었다)
+        if(!LookLocked) _rotX += Input.GetAxis("Mouse Y") * lookSensitivity * -1f;
         _rotX = Mathf.Clamp(_rotX, minLookX, maxLookX);
 
         if(UseAvatarRig)
@@ -515,11 +515,10 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
 
     private void HandleVerticalInput()
     {
-        // 소켓 교체(에어 임팩트 렌치)·색 바꾸기(도색 건)처럼 Q 를 쓰는 도구를 든 동안엔 Q 로 높이를 올리지 않는다
-        // (예전엔 소켓을 끼울 때마다 시점이 올라가 '소켓에 밀려 몸이 뜨는' 것처럼 보였다)
-        bool qTool = _heldObject != null && (_heldObject.GetComponent<AirImpactWrench>() != null || _heldObject.GetComponent<PaintGun>() != null);
+        // 소켓 교체(에어 임팩트 렌치)·색 바꾸기(도색 건)는 마우스 휠로 옮겼다 → Q 는 무엇을 들고 있어도 높이 올리기
+        // (예전엔 두 기능이 Q 를 같이 써서, 그 도구를 든 동안 Q 높이 올리기를 막아 두었다)
         // 사다리 가까이에선 Q/E 가 한 칸 오르기/내려오기(LadderProp)
-        if(Input.GetKeyDown(KeyCode.Q) && !qTool && !LadderProp.TryClimbStep(transform, +1)) MoveUp();
+        if(Input.GetKeyDown(KeyCode.Q) && !LadderProp.TryClimbStep(transform, +1)) MoveUp();
         if(Input.GetKeyDown(KeyCode.E) && !LadderProp.TryClimbStep(transform, -1)) MoveDown();
         if(Input.GetKeyUp(KeyCode.Q)) StopVertical();
         if(Input.GetKeyUp(KeyCode.E)) StopVertical();

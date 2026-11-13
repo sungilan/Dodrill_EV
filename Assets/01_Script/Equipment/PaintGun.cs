@@ -14,7 +14,7 @@ using XRAirpotrSecurity;
 //  '분사하는 위치'의 차체 패널(문·후드·범퍼·차체 등)만 뿌린 만큼 서서히 그 색으로 덮인다(패널 전체가 아님).
 //  도색 결과는 모두에게 같게 보이고 늦게 들어온 사람에게도 보인다(PaintSync).
 //  · 방식: 패널마다 작은 3D 마스크(렌더러 로컬 좌표, 약 5cm 칸)에 분사 지점을 누적 → 전용 셰이더(Dodrill/PaintLit, URP Lit 복사본)가 마스크만큼 색을 입힌다
-//  · 색 고르기: 도색 색상판(PaintSwatch)을 클릭/터치하거나 VR 에서 건 노즐을 색 칸에 대기. PC 는 들고 Q 로 다음 색
+//  · 색 고르기: 도색 색상판(PaintSwatch)을 클릭/터치하거나 VR 에서 건 노즐을 색 칸에 대기. PC 는 들고 마우스 휠로 다음 색(Q 는 높이 올리기)
 //  · 너무 가까이(15cm 안) 뿌리면 흘러내림 경고, 너무 멀면(1.2m 밖) 거의 안 묻는다 — 적정 거리 15~30cm
 // ============================================================
 public class PaintGun : EquipmentBase
@@ -71,7 +71,8 @@ public class PaintGun : EquipmentBase
 
         if (held)
         {
-            if (Platform == PlatformType.PC && Input.GetKeyDown(KeyCode.Q)) Pick((_color.Value + 1) % Palette.Length);
+            if (Platform == PlatformType.PC && EquipFx.PcWheelStep())
+                Pick((_color.Value + (Input.mouseScrollDelta.y > 0f ? 1 : Palette.Length - 1)) % Palette.Length);
             if (IsVR) foreach (var sw in PaintSwatch.All) if (sw != null && Nozzle != null && (sw.transform.position - Nozzle.position).sqrMagnitude < 0.12f * 0.12f && sw.index != _color.Value) Pick(sw.index);
         }
 
@@ -103,7 +104,7 @@ public class PaintGun : EquipmentBase
         LocalPick = i;
         SetColorServerRpc(i);
         AudioSource.PlayClipAtPoint(EquipFx.Click, transform.position, 0.6f);
-        EquipFx.Notice("paint_color", $"도색 색상: {PaletteNames[i]}", Platform == PlatformType.PC ? "Q 로 다음 색" : "색상판에서 다른 색을 고를 수 있습니다", EquipFx.Info, 1.5f, 0f);
+        EquipFx.Notice("paint_color", $"도색 색상: {PaletteNames[i]}", Platform == PlatformType.PC ? "마우스 휠로 다른 색" : "색상판에서 다른 색을 고를 수 있습니다", EquipFx.Info, 1.5f, 0f);
     }
 
     [FishNet.Object.ServerRpc(RequireOwnership = false)]

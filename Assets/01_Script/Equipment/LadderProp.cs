@@ -36,6 +36,7 @@ public class LadderProp : MonoBehaviour
     // 이 화면(로컬 PC·모바일 플레이어)이 키로 올라선 사다리와 칸 수
     private static LadderProp s_pcLadder;
     private static int s_pcLevel;
+    private static float s_pcSign = 1f;   // 사다리 어느 쪽 면으로 올라갔는지(A형 사다리 양면)
 
     /// <summary>발판 맨 위 높이(로컬).</summary>
     public float StandHeight => _standY;
@@ -86,7 +87,10 @@ public class LadderProp : MonoBehaviour
             int lv = Mathf.Clamp(s_pcLevel + dir, 0, s_pcLadder._n);
             if (lv == s_pcLevel) return true;
             s_pcLevel = lv;
-            if (lv == 0) s_pcLadder = null;
+            // 그 칸 발판 위로 옮겨 선다. 예전엔 첫 칸 자리(사다리 바깥 끝)에 선 채 높이만 올라가,
+            // 끝까지 올리면 발이 아래 칸들 앞 허공에 떠 있었다(맨 위 발판은 사다리 가운데 쪽).
+            if (lv > 0) { Vector3 t = s_pcLadder.StandPoint(lv, s_pcSign); player.position = new Vector3(t.x, pos.y, t.z); }
+            else s_pcLadder = null;
             WorldSfx.TorqueClick(pos);
             return true;
         }
@@ -106,13 +110,23 @@ public class LadderProp : MonoBehaviour
         s_pcLevel = 1;
         // 내 쪽 발판 위로 옮겨 선다(사다리 옆 허공에 떠 보이지 않게)
         Vector3 lp = best.transform.InverseTransformPoint(pos) - best._fpCenter;
-        float sign = (best._alongX ? lp.x : lp.z) >= 0f ? 1f : -1f;
-        float w = best._n == 1 ? best._topHalf * 0.5f : Mathf.Max(best._topHalf * 0.5f, best._half - best._run * 0.5f - 0.1f);
-        Vector3 local = best._fpCenter + (best._alongX ? new Vector3(sign * w, 0f, 0f) : new Vector3(0f, 0f, sign * w));
-        Vector3 target = best.transform.TransformPoint(local);
+        s_pcSign = (best._alongX ? lp.x : lp.z) >= 0f ? 1f : -1f;
+        Vector3 target = best.StandPoint(1, s_pcSign);
         player.position = new Vector3(target.x, pos.y, target.z);
         WorldSfx.TorqueClick(pos);
         return true;
+    }
+
+    /// <summary>lv 번째 칸 발판의 가운데(월드). 칸이 오를수록 사다리 가운데(맨 위 발판) 쪽으로 들어간다.</summary>
+    private Vector3 StandPoint(int lv, float sign)
+    {
+        float top = _topHalf * 0.5f;
+        float w;
+        if (_n == 1 || lv >= _n) w = top;
+        else if (lv <= 1) w = Mathf.Max(top, _half - _run * 0.5f - 0.1f);      // 첫 칸: 예전 위치 그대로
+        else w = Mathf.Max(top, _half - _run * (lv - 1) - _run * 0.5f);         // lv 칸 띠의 가운데
+        Vector3 local = _fpCenter + (_alongX ? new Vector3(sign * w, 0f, 0f) : new Vector3(0f, 0f, sign * w));
+        return transform.TransformPoint(local);
     }
 
     private bool NearFootprint(Vector3 worldPos, float margin)

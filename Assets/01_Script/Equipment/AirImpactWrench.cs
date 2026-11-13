@@ -16,7 +16,7 @@ using XRAirpotrSecurity;
 //      27mm : 과대 소켓 + 과토크 → 볼트 머리 파손 연출(불꽃·파편·깨지는 소리), 진행 없음
 //  · 에어 호스 연결 + 컴프레서 밸브 열림이어야 돈다(AirCompressor)
 //  · VR: 에어 입구(손잡이 아래)를 컴프레서 호스 끝에 갖다 대면 연결. PC·모바일: 들고 호스 끝 2m 안으로 가면 자동 연결
-//  · PC: Q 로 소켓 바꾸기(거치대 1.5m 안), F 로 작동 — 화면 가운데로 볼트를 겨누면 그 볼트를 돌린다
+//  · PC: 마우스 휠로 소켓 바꾸기(거치대 1.5m 안, 예전 Q 는 높이 올리기와 겹쳐 휠로 옮김), F 로 작동 — 화면 가운데로 볼트를 겨누면 그 볼트를 돌린다
 //  · 휠 너트(FreeWorkBolt): 해머 타격 진동·소리 → '툭' 풀림 → 빠른 헛돌기 / 조일 때는 반대 순서(손맛)
 // ============================================================
 public class AirImpactWrench : EquipmentBase
@@ -92,7 +92,7 @@ public class AirImpactWrench : EquipmentBase
     {
         // 누른 순간 왜 안 도는지 알려 준다
         if (!TwoHands) EquipFx.Notice("aiw_hands", "두 손으로 잡으세요", "에어 임팩렌치는 무거워서 앞 손잡이까지 두 손으로 잡아야 작동합니다", EquipFx.Warn, 2.5f, 4f);
-        else if (_socket.Value == 0) EquipFx.Notice("aiw_socket", "소켓이 없습니다", IsVR ? "소켓 거치대의 소켓에 앤빌(앞쪽 사각 축)을 꽂으세요" : Platform == PlatformType.Mobile ? "소켓 거치대 근처에서 '소켓 끼우기' 버튼을 누르세요" : "소켓 거치대 근처에서 Q 로 소켓을 끼우세요", EquipFx.Warn, 2.5f, 4f);
+        else if (_socket.Value == 0) EquipFx.Notice("aiw_socket", "소켓이 없습니다", IsVR ? "소켓 거치대의 소켓에 앤빌(앞쪽 사각 축)을 꽂으세요" : Platform == PlatformType.Mobile ? "소켓 거치대 근처에서 '소켓 끼우기' 버튼을 누르세요" : "소켓 거치대 근처에서 마우스 휠로 소켓을 끼우세요", EquipFx.Warn, 2.5f, 4f);
         else if (Air == null) EquipFx.Notice("aiw_hose", "에어 호스 미연결", "손잡이 아래 에어 입구에 컴프레서 호스를 연결하세요", EquipFx.Warn, 2.5f, 4f);
         else if (!Air.ValveOpen) EquipFx.Notice("aiw_valve", "공기가 안 나옵니다", "컴프레서의 밸브를 여세요", EquipFx.Warn, 2.5f, 4f);
     }
@@ -164,9 +164,9 @@ public class AirImpactWrench : EquipmentBase
             MobileQuickButtons.Set("aiw_socket", nearRack, label, MobileQuickButtons.SlotLeft, CycleSocket);
             return;
         }
-        if (Platform == PlatformType.PC && Input.GetKeyDown(KeyCode.Q))
+        if (Platform == PlatformType.PC && EquipFx.PcWheelStep())
         {
-            if (!nearRack) { EquipFx.Notice("aiw_rack", "소켓 거치대가 멀리 있습니다", "거치대 가까이에서 Q 로 소켓을 바꾸세요", EquipFx.Info, 2f, 3f); return; }
+            if (!nearRack) { EquipFx.Notice("aiw_rack", "소켓 거치대가 멀리 있습니다", "거치대 가까이에서 마우스 휠로 소켓을 바꾸세요", EquipFx.Info, 2f, 3f); return; }
             CycleSocket();
         }
     }

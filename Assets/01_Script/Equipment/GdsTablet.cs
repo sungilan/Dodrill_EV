@@ -30,6 +30,8 @@ public class GdsTablet : MonoBehaviour
     [Tooltip("유리 크기(m) — 메시의 안쪽 유리면 실측")] public Vector2 screenSize = new Vector2(0.2247f, 0.1456f);
     [Tooltip("유리 모서리 반경(캔버스 px)")] public float cornerRadius = 22f;
     [Tooltip("VCI 연결 거리(m) — OBD 단자에 이만큼 가까이 대면 연결")] public float connectDistance = 0.45f;
+    [Tooltip("PC·모바일: 진단기를 든 채 내 눈(카메라)이 OBD 단자에서 이 거리 안이면 연결. 단자가 운전석 아래 차체 안쪽이라 들고 있는 진단기를 45cm 안까지 넣을 수 없었다")] public float pcConnectDistance = 1.6f;
+    [Tooltip("VR: 머리가 OBD 단자에서 이 거리 안이어도 연결(손이 차체에 막히는 경우)")] public float vrHeadConnectDistance = 1.0f;
     [Tooltip("VR: 연결되는 순간 손에서 떼어 OBD 단자 앞에 세워 고정한다(다시 잡으면 들 수 있음)")] public bool dockOnConnectVR = true;
     [Tooltip("거치 위치 = OBD 단자에서 플레이어 쪽으로 이만큼(m)")] public float dockOffset = 0.06f;
     [Tooltip("거치할 때 화면을 위로 젖히는 각도(도)")] public float dockTilt = 25f;
@@ -386,7 +388,15 @@ public class GdsTablet : MonoBehaviour
         }
         if (_obd == null) return;
         float d = Vector3.Distance(transform.position, _obd.position);
-        bool want = Vci ? d < 12f : d < connectDistance;
+        var cam = Camera.main;
+        float dc = cam != null ? Vector3.Distance(cam.transform.position, _obd.position) : 99f;
+        bool near = d < connectDistance || dc < (Plat == PlatformType.VR ? vrHeadConnectDistance : pcConnectDistance);
+        bool want = Vci ? d < 12f : near;
+        if (!Vci && !want && dc < 4f)
+            EquipFx.Notice("gds_go", "VCI 미연결", Plat == PlatformType.VR
+                ? "운전석 문을 열고 진단기를 운전석 아래 OBD 단자에 가까이 대세요"
+                : "진단기를 든 채 운전석 문 앞(OBD 단자 표시)까지 가까이 가면 연결됩니다", EquipFx.Info, 3f, 15f);
+        if (want != Vci) Debug.Log($"[GDS] VCI {(want ? "연결" : "해제")} — 진단기↔단자 {d:0.00}m, 눈↔단자 {dc:0.00}m, 단계 {GdsModel.CurrentModule}");
         if (want == Vci) return;
         GdsSync.Request(Screen, Arg, want, Cleared);
         if (want)
@@ -806,6 +816,7 @@ public class GdsTablet : MonoBehaviour
     public static bool ObdSignalOpen { get; private set; }
     private void FireObd()
     {
+        Debug.Log($"[GDS] 단계 신호 보냄 — 단계 {GdsModel.CurrentModule}, 고장 {GdsModel.FaultPresent}");
         ObdSignalOpen = true;
         try { InteractionEvents.FireZoneActivated("OBD_Zone", _item != null ? _item.prefabId : "GDS_Tablet"); }
         finally { ObdSignalOpen = false; }
@@ -832,6 +843,7 @@ public class GdsTablet : MonoBehaviour
         if (!NeedVci("고장 코드 상세")) return;
 
         // 시나리오 '초기 진단' 단계: 연결 → 원클릭 진단 → 고장 코드 상세(원인·점검 절차)까지 확인해야 완료
+        Debug.Log($"[GDS] 고장 코드 상세 열람 — 단계 {GdsModel.CurrentModule}(#{GdsModel.TaskIndex}), 고장 {GdsModel.FaultPresent}");
         if (GdsModel.CurrentModule == "InitialDiagnosis" && GdsModel.FaultPresent)
         {
             FireObd();

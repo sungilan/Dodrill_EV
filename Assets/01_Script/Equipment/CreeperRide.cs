@@ -57,6 +57,7 @@ public class CreeperRide : NetworkBehaviour
     private void Update()
     {
         UpdateRiderPose();
+        if (Plat == PlatformType.VR) VrHeightGuard();
         if (!IsClientStarted) return;
 
         bool riderIsMe = _rider.Value != null && _rider.Value.IsOwner;
@@ -223,6 +224,7 @@ public class CreeperRide : NetworkBehaviour
             if (_vrPlayer != null)
             {
                 _savedHeightOffset = _vrPlayer.heightOffset;
+                if (s_vrBaseKnown && _vrPlayer == s_guardPlayer) _savedHeightOffset = s_vrBaseOffset - (_vrPlayer.crouching ? _vrPlayer.crouchHeight : 0f);   // 이미 틀어진 값을 '원래 값'으로 저장하지 않게
                 float eye = _vrPlayer.headCamera != null ? _vrPlayer.headCamera.transform.position.y - transform.position.y : 1.6f;
                 _vrPlayer.heightOffset = _savedHeightOffset + (vrEyeHeight - eye);
                 _savedVrSpeed = _vrPlayer.maxMoveSpeed;
@@ -259,6 +261,35 @@ public class CreeperRide : NetworkBehaviour
             if (av != null) av.ResetCrouch();   // SetLying(false) 는 다음 UpdateRiderPose 가 처리
         }
         if (Plat == PlatformType.Mobile) MobileBtn(false, null);
+    }
+
+    // ── VR 높이 안전장치 ──────────────────────────────────────
+    // 누울 때 VR 눈높이(AutoHandPlayer.heightOffset)를 낮추고 시야를 젖힌다(VrLieView). 일어날 때 되돌리지 못한 경우
+    // (크리퍼가 사라짐·연결 끊김·탑승 상태가 꼬임 등) 낮은 높이가 그대로 남으면 내 시점과 다른 사람 화면의 내 아바타 키가 계속 틀어진다.
+    // → 처음 본 값(누운 적 없을 때)을 기준으로 기억해 두고, 어느 크리퍼에도 타고 있지 않은데 기준과 다르면 1초 안에 되돌린다.
+    //   AutoHand 자체 웅크리기(crouching)로 낮춘 만큼은 정상으로 본다.
+    private static AutoHandPlayer s_guardPlayer;
+    private static float s_vrBaseOffset;
+    private static bool s_vrBaseKnown;
+    private static float s_nextGuard;
+
+    private static void VrHeightGuard()
+    {
+        if (Time.unscaledTime < s_nextGuard) return;
+        s_nextGuard = Time.unscaledTime + 1f;
+        if (s_guardPlayer == null || !s_guardPlayer.isActiveAndEnabled) { s_guardPlayer = FindVrPlayer(); s_vrBaseKnown = false; }
+        var p = s_guardPlayer;
+        if (p == null) return;
+        float crouch = p.crouching ? p.crouchHeight : 0f;
+        if (s_mine != null) return;                       // 지금 누워 있음 — 낮춘 값이 정상
+        if (!s_vrBaseKnown) { s_vrBaseOffset = p.heightOffset + crouch; s_vrBaseKnown = true; return; }
+        float want = s_vrBaseOffset - crouch;
+        if (Mathf.Abs(p.heightOffset - want) > 0.01f)
+        {
+            Debug.Log($"[Creeper] VR 높이 안전장치: 누워 있지 않은데 눈높이 보정이 {p.heightOffset:0.00} → 기준 {want:0.00} 으로 되돌림");
+            p.heightOffset = want;
+        }
+        VrLieView.End();   // 젖힌 시야가 남아 있으면 세운다(없으면 아무 일 없음)
     }
 
     private static AutoHandPlayer FindVrPlayer()

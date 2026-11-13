@@ -55,7 +55,16 @@ public class PcAvatarIKDriver : MonoBehaviour
         Quaternion bodyRot = _controller != null ? _controller.transform.rotation : transform.rotation;
 
         float scale = _controller != null ? _controller.AvatarScale : 1f;
-        if (crouch != null) crouch.ApplyPreIK(crouch01, scale);
+        bool lying = _controller != null && _controller.Lying;
+        if (lying)
+        {
+            // 누운 몸: 걷기 값이 남아 있거나(원격은 동기화 지연) 발 IK 가 바닥을 찾으면 다리가 허우적거린다 → 발 고정
+            anim.SetFloat(PcAvatarAnimParams.MoveXHash, 0f);
+            anim.SetFloat(PcAvatarAnimParams.MoveZHash, 0f);
+            anim.SetFloat(PcAvatarAnimParams.SpeedHash, 0f);
+            if (crouch != null) crouch.SuspendFeet();
+        }
+        else if (crouch != null) crouch.ApplyPreIK(crouch01, scale);
         if (headAim != null) headAim.ComputeTarget(isOwner, headPitch, bodyRot);
         if (armReach != null)
         {

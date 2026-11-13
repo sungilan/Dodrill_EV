@@ -330,8 +330,9 @@ public class PcMobileAvatarController : NetworkBehaviour
         }
 
         // ── 로코모션 블렌드 트리 ──────────────────────
+        // 크리퍼에 누운 동안엔 바퀴로 미끄러지는 것이라 걷기 블렌드를 0 으로(예전엔 누운 몸에서 발이 걸음을 걸었다)
         if (locomotion != null && avatarAnimator != null && _look != null)
-            locomotion.TickOwner(avatarAnimator, _look.CurrentPlanarVelocity, transform, dt, _look.MoveSpeed);
+            locomotion.TickOwner(avatarAnimator, Lying ? Vector3.zero : _look.CurrentPlanarVelocity, transform, dt, _look.MoveSpeed);
 
         // ── 루트 Y 접지 (뜨지 않게) ───────────────────
         if (pinRootToGround)

@@ -369,7 +369,9 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
             if(t.fingerId == lookTouchId && t.phase == TouchPhase.Moved)
             {
                 if((t.position - _lookTouchStartPos).sqrMagnitude > TapMaxMovePixels * TapMaxMovePixels) _lookTouchMoved = true;
-                Vector2 delta = LookLocked ? Vector2.zero : t.position - lastLookTouchPos;
+                // 크리퍼에 누운 동안(LookLocked): 위아래 시선은 고정, 좌우 방향 전환만 받는다
+                Vector2 delta = t.position - lastLookTouchPos;
+                if(LookLocked) delta.y = 0f;
                 rotY += delta.x * lookSensitivity * 0.02f;
                 rotX = Mathf.Clamp(rotX + (delta.y * lookSensitivity * -0.02f), minLookX, maxLookX);
                 if(UseAvatarRig)
