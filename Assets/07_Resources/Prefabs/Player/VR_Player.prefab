@@ -3028,7 +3028,7 @@ Transform:
   m_GameObject: {fileID: 807701352683628952}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.1, z: 0}
+  m_LocalPosition: {x: 0, y: -0.1, z: -0.09}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -16757,7 +16757,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d619012772bc7049b46e7220feee5a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  currentAnchor: {fileID: 0}
 --- !u!1 &5263051845878865654
 GameObject:
   m_ObjectHideFlags: 0
@@ -23600,6 +23599,34 @@ MonoBehaviour:
   syncInterval: 0.025
   positionLerp: 0.33
   rotationLerp: 0.33
+  fingerFollowSpeed: 18
+  followAvatarRoot: 1
+  rootFollowSpeed: 10
+  rootTurnSpeed: 6
+  matchAvatarHeight: 1
+  avatarScaleRange: {x: 0.8, y: 1.15}
+  restHeadHeight: 1.638
+  leanForward: 0.35
+  leanBackward: 0.15
+  leanSide: 0.2
+  yawDeadZoneDeg: 35
+  probeFloor: 1
+  floorMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  floorProbeUp: 0.4
+  floorProbeDown: 1.2
+  floorMaxDeviation: 0.6
+  minHeadHeightOverride: 0.3
+  stepThresholdOverride: 0.5
+  debugLog: 1
+  debugInterval: 2
+  lowerElbows: 1
+  elbowGoalWeight: 0.75
+  elbowGoalOffset: {x: 0.2, y: -0.75, z: -0.3}
+  fingerSendInterval: 0.08
+  fingerKeepAlive: 0.5
+  fingerChangeDeg: 0.7
 --- !u!114 &234713862711689801
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23672,6 +23699,10 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 234713862711689801}
   _networkObjectCache: {fileID: 0}
   _uiCamera: {fileID: 1713494296017458274}
+  _nameTagCanvas: {fileID: 0}
+  _nameText: {fileID: 0}
+  nameTagAboveHead: 0.34
+  nameTagScale: 0.8
 --- !u!114 &320829472605696711
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23684,10 +23715,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76e060d33c4336546a51e4f16eda5b1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerGloveVisualizer
-  leftHandMesh: {fileID: 4206645340859574304}
-  rightHandMesh: {fileID: 473788539895579814}
-  bareHandMaterial: {fileID: 2100000, guid: aa3c8a4484645e147b088d50a3599f0b, type: 2}
-  insulatedGloveMaterial: {fileID: 2100000, guid: 5874b28730677d041ad4f711fb092ab4, type: 2}
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 234713862711689801}
+  _networkObjectCache: {fileID: 0}
+  equipments: []
 --- !u!1 &7659404753540851005
 GameObject:
   m_ObjectHideFlags: 0

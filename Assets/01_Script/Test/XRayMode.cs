@@ -12,6 +12,7 @@ using UnityEngine;
 //  · 단계가 바뀌면 비추는 대상도 따라 바뀐다. 다 푼(사라진)·다 조인 볼트는 빠진다.
 //  그리기: 대상 렌더러에 렌더링 레이어 'XRayTarget' 표시를 붙이면 HeldItemOnTopFeature 의 엑스레이 패스가
 //          깊이를 무시하고 반투명 하늘색으로 한 번 더 그린다(물체 위치·충돌·다른 사람 화면은 그대로).
+//  · 메시가 없는 대상(클릭 구역)은 그 자리에 하늘색 구를 띄워 비춘다. 켜져 있는 동안 내 눈과 대상 사이 차체는 하얀 반투명(FocusMode).
 //  씬 배치 불필요 — 게임 시작 시 자동 생성된다.
 // ============================================================
 public class XRayMode : MonoBehaviour
@@ -98,6 +99,7 @@ public class XRayMode : MonoBehaviour
     private void Refresh()
     {
         _want.Clear();
+        _zoneFor = null;
         var gs = GuideSystem.Instance;
         if (gs != null && gs.XRayTarget != null) AddTarget(gs.XRayTarget.transform);
 
@@ -109,14 +111,76 @@ public class XRayMode : MonoBehaviour
             if (f != null) AddTarget(f);
         }
 
+        if (_zoneFor == null && _zoneMarker != null && _zoneMarker.activeSelf) _zoneMarker.SetActive(false);
+        if (_want.Count == 0 && !_warnedEmpty)
+        {
+            _warnedEmpty = true;
+            WarningPopup.Show("xray_empty", "엑스레이", "지금 단계에는 비춰 볼 부품이 없습니다", new Color(0.05f, 0.3f, 0.42f, 0.92f), 1.6f);
+        }
+        if (_want.Count > 0) _warnedEmpty = false;
         foreach (var r in _marked) if (r != null && !_want.Contains(r)) Mark(r, false);
         _marked.RemoveWhere(r => r == null || !_want.Contains(r));
         foreach (var r in _want) if (_marked.Add(r)) Mark(r, true);
     }
 
+    // 메시가 없는 대상(클릭 구역·트리거만 있는 '후드 래치' 같은 점)은 비출 렌더러가 없어 엑스레이를 켜도 아무 변화가 없었다.
+    // 그 구역 콜라이더 자리에 빛나는 구를 띄워 같은 엑스레이 패스로 비춘다.
+    private GameObject _zoneMarker;
+    private Transform _zoneFor;
+
     private void AddTarget(Transform root)
     {
         if (root == null || !root.gameObject.activeInHierarchy) return;
+        int before = _want.Count;
+        AddTargetInner(root);
+        if (_want.Count == before && !HasSolidRenderer(root)) MarkZone(root);   // 다 푼 볼트 묶음처럼 '이미 끝나서' 빈 경우는 제외
+    }
+
+    private static bool HasSolidRenderer(Transform root)
+    {
+        if (root.GetComponentInChildren<Bolt>(true) != null) return true;
+        foreach (var r in root.GetComponentsInChildren<Renderer>())
+        {
+            if (r == null || !r.enabled || r is LineRenderer || r is TrailRenderer || r is ParticleSystemRenderer) continue;
+            int l = r.gameObject.layer;
+            if (l == 1 || l == 2 || l == 5) continue;
+            return true;
+        }
+        return false;
+    }
+
+    private void MarkZone(Transform root)
+    {
+        bool any = false; Bounds b = default;
+        foreach (var c in root.GetComponentsInChildren<Collider>())
+        {
+            if (c == null || !c.enabled) continue;
+            if (!any) { b = c.bounds; any = true; } else b.Encapsulate(c.bounds);
+        }
+        if (!any) b = new Bounds(root.position, Vector3.one * 0.08f);
+        if (_zoneMarker == null)
+        {
+            _zoneMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _zoneMarker.name = "[XRayZoneMarker]";
+            Destroy(_zoneMarker.GetComponent<Collider>());
+            DontDestroyOnLoad(_zoneMarker);
+            var mr = _zoneMarker.GetComponent<MeshRenderer>();
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+        }
+        EnsureMaterial();
+        var r = _zoneMarker.GetComponent<MeshRenderer>();
+        if (OverrideMaterial != null) r.sharedMaterial = OverrideMaterial;   // 평소 화면에서도 같은 하늘색 구
+        float size = Mathf.Clamp(Mathf.Max(b.size.x, b.size.y, b.size.z), 0.06f, 0.3f);
+        _zoneMarker.transform.position = b.center;
+        _zoneMarker.transform.localScale = Vector3.one * size;
+        if (!_zoneMarker.activeSelf) _zoneMarker.SetActive(true);
+        _zoneFor = root;
+        _want.Add(r);
+    }
+
+    private void AddTargetInner(Transform root)
+    {
 
         // 볼트 묶음이면 남은 볼트만
         var bolts = root.GetComponentsInChildren<Bolt>();
@@ -155,8 +219,12 @@ public class XRayMode : MonoBehaviour
         r.renderingLayerMask = on ? (r.renderingLayerMask | Bit) : (r.renderingLayerMask & ~Bit);
     }
 
+    private bool _warnedEmpty;
+
     private void ClearAll()
     {
+        if (_zoneMarker != null && _zoneMarker.activeSelf) _zoneMarker.SetActive(false);
+        _warnedEmpty = false;
         foreach (var r in _marked) Mark(r, false);
         _marked.Clear();
     }
@@ -164,6 +232,7 @@ public class XRayMode : MonoBehaviour
     private void OnDestroy()
     {
         ClearAll();
+        if (_zoneMarker != null) Destroy(_zoneMarker);
         if (s_inst == this) s_inst = null;
     }
 

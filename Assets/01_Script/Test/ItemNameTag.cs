@@ -90,9 +90,14 @@ public static class ItemNameTag
     private class Follow : MonoBehaviour
     {
         public Transform target;
+        private Vector3 _baseScale;
+        private bool _scaleSaved;
         private void LateUpdate()
         {
             if (target == null) return;
+            if (!_scaleSaved) { _baseScale = transform.localScale; _scaleSaved = true; }
+            // 남은 시간·엑스레이 같은 경고 카드가 떠 있는 동안은 이름표를 숨겨 서로 겹치지 않게 한다
+            transform.localScale = WarningPopup.AnyActive ? Vector3.zero : _baseScale;
             if (!TryTop(target, out var top)) return;
             transform.position = Vector3.Lerp(transform.position, top, Time.deltaTime * 10f);
         }

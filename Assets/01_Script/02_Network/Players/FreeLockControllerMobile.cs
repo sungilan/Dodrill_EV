@@ -44,14 +44,24 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
     private PcMobileAvatarController _avatarCtrl;
     public Vector3 CurrentPlanarVelocity => _planarVelocity;
     public float CurrentPitch => rotX;
+
+    /// <summary>시선 상하각을 정한다(도). 음수 = 위. 정비 크리퍼에 누울 때 위를 올려다보게 하는 데 쓴다.</summary>
+    /// <summary>시선 고정(정비 크리퍼에 누웠을 때) — 터치로 시선이 돌아가지 않는다</summary>
+    [System.NonSerialized] public bool LookLocked;
+
+    public void SetPitch(float deg)
+    {
+        rotX = Mathf.Clamp(deg, minLookX, maxLookX);
+        if (cameraPivot != null) cameraPivot.localRotation = Quaternion.Euler(rotX, 0f, 0f);
+    }
     public float CrouchInput => _crouchInput;
     public float MoveSpeed => moveSpeed;
 
     private bool UseAvatarRig => cameraPivot != null && _avatarCtrl != null;
 
     // 높이(크라우치) 버튼용 — MoveUp = 일어서기, MoveDown = 낮추기
-    public void MoveUp() { _crouchInput = -1f; desiredVertical = 0f; }
-    public void MoveDown() { _crouchInput = 1f; desiredVertical = 0f; }
+    public void MoveUp() { if (LadderProp.TryClimbStep(transform, +1)) return; _crouchInput = -1f; desiredVertical = 0f; }   // 사다리 가까이면 한 칸 오르기
+    public void MoveDown() { if (LadderProp.TryClimbStep(transform, -1)) return; _crouchInput = 1f; desiredVertical = 0f; }
     public void StopMove() { _crouchInput = 0f; desiredVertical = 0f; }
 
     [Header("Joystick/Touch")]
@@ -166,7 +176,7 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
     public override void OnStopClient()
     {
         base.OnStopClient();
-        if(IsOwner) { MobileHeightButtons.Hide(); MobileWorkButton.SetVisible(false); }
+        if(IsOwner) { MobileHeightButtons.Hide(); MobileWorkButton.SetVisible(false); MobileQuickButtons.HideAll(); }
     }
 
     // ───────────────────────────────────────────────────────
@@ -249,6 +259,7 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         {
             ClearHoverVisuals();
             HideDropButton();  // ★ 인벤토리 열리면 Drop 버튼 숨기기
+            MobileQuickButtons.Set("drop", false);
             ReleaseLiftButton();
             return;
         }
@@ -358,7 +369,7 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
             if(t.fingerId == lookTouchId && t.phase == TouchPhase.Moved)
             {
                 if((t.position - _lookTouchStartPos).sqrMagnitude > TapMaxMovePixels * TapMaxMovePixels) _lookTouchMoved = true;
-                Vector2 delta = t.position - lastLookTouchPos;
+                Vector2 delta = LookLocked ? Vector2.zero : t.position - lastLookTouchPos;
                 rotY += delta.x * lookSensitivity * 0.02f;
                 rotX = Mathf.Clamp(rotX + (delta.y * lookSensitivity * -0.02f), minLookX, maxLookX);
                 if(UseAvatarRig)
@@ -605,6 +616,8 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
             return true;
         }
 
+        var wcFirst = WorldClickPriority.Nearer(col);   // 후드 아래 달린 덮개·뚜껑이 후드보다 먼저
+        if(wcFirst != null) { wcFirst.OnPCClick(); return true; }
         var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
         if(anim != null)
         {
@@ -612,6 +625,16 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
             anim.OnPCClick();
             return true;
         }
+
+        var wclick = col.GetComponentInParent<IWorldClickable>();   // 차량 프렁크·냉각수 뚜껑·경적 등
+        if(wclick != null) { wclick.OnPCClick(); return true; }
+
+        var openable = col.GetComponentInParent<Openable>();
+        if(openable != null) { openable.OnPCClick(); return true; }
+        var swatch = col.GetComponentInParent<PaintSwatch>();
+        if(swatch != null) { swatch.OnPCClick(); return true; }
+        var mbtn = col.GetComponentInParent<ManualBoardButton>();
+        if(mbtn != null) { mbtn.OnPCClick(); return true; }
 
         var zone = col.GetComponent<TaskInteractionZone>() ?? col.GetComponentInParent<TaskInteractionZone>();
         if(zone != null && zone.gameObject.activeInHierarchy)
@@ -633,6 +656,8 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
     /// </summary>
     private void UpdateDropButton()
     {
+        // 물건을 들고 있으면 '내려놓기' 버튼(작업 버튼 아래). 예전엔 두 번 탭만 있어 버리는 방법을 몰랐다
+        MobileQuickButtons.Set("drop", _heldObject != null, "내려놓기", MobileQuickButtons.SlotDrop, () => { if(_heldObject != null) DropHeldObject(); });
         if(_heldObject == null)
         {
             HideDropButton();
@@ -805,11 +830,22 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
 
     private string GetHoverTargetName(Collider col)
     {
+        var wcName = col.GetComponentInParent<IWorldClickable>();   // 차량 프렁크·냉각수 뚜껑·경적 등(차량 루트의 TaskItem 보다 먼저)
+        if(wcName != null) return wcName.DisplayName;
+
         var item = col.GetComponent<TaskItem>() ?? col.GetComponentInParent<TaskItem>();
         if(item != null) return item.prefabId;
 
         var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
         if(anim != null) return anim.uniqueId;
+
+        var openable = col.GetComponentInParent<Openable>();
+        if(openable != null) return openable.displayName;
+
+        var swatchN = col.GetComponentInParent<PaintSwatch>();
+        if(swatchN != null) return swatchN.DisplayName;
+        var mbtnN = col.GetComponentInParent<ManualBoardButton>();
+        if(mbtnN != null) return mbtnN.DisplayName;
 
         var zone = col.GetComponent<TaskInteractionZone>() ?? col.GetComponentInParent<TaskInteractionZone>();
         if(zone != null) return zone.zoneId;
@@ -822,8 +858,18 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         if(col == null) return string.Empty;
         if(_heldObject != null) return "더블 탭 또는 DROP 버튼으로 내려놓기";
 
+        var wcMsg = col.GetComponentInParent<IWorldClickable>();
+        if(wcMsg != null) return wcMsg.HoverMessage(true);
+
         var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
         if(anim != null) return anim.IsOpen ? "터치하여 닫기" : "터치하여 열기";
+
+        var openable = col.GetComponentInParent<Openable>();
+        if(openable != null) return openable.HoverMessage(true);
+
+        if(col.GetComponentInParent<PaintSwatch>() != null) return "터치하여 이 색 고르기";
+        var mbtnM = col.GetComponentInParent<ManualBoardButton>();
+        if(mbtnM != null) return mbtnM.HoverMessage("터치");
 
         var item = col.GetComponent<TaskItem>() ?? col.GetComponentInParent<TaskItem>();
         if(item != null)
@@ -844,7 +890,12 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         if(worldLabelPrefab == null) return;
         Vector3 pos = worldPos + Vector3.up * labelHeightOffset;
         _worldLabel = Instantiate(worldLabelPrefab, pos, Quaternion.identity);
-        SetLayerRecursively(_worldLabel, 2);
+        SetLayerRecursively(_worldLabel, 1);
+        // 예전엔 Ignore Raycast(2)였는데, PC 카메라는 2번 레이어를 그리지 않아(내 장비 숨김용) 라벨이 씬뷰에만 보이고 게임 화면엔 안 보였다.
+        // TransparentFX(1)로 두고, 마우스·터치를 막지 않게 UI 레이캐스트만 끈다(라벨엔 물리 콜라이더가 없다).
+        foreach(var gr in _worldLabel.GetComponentsInChildren<UnityEngine.UI.GraphicRaycaster>(true)) gr.enabled = false;
+        foreach(var gfx in _worldLabel.GetComponentsInChildren<UnityEngine.UI.Graphic>(true)) gfx.raycastTarget = false;
+        foreach(var lc in _worldLabel.GetComponentsInChildren<Collider>(true)) lc.enabled = false;
 
         var label = _worldLabel.GetComponent<WorldHoverLabel>();
         if(label != null)
@@ -1011,6 +1062,7 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
 
     private void ApplyHoldScale(Transform t)
     {
+        if(HoldScalePolicy.IsExempt(t)) return;   // 큰 장비(오일 받이·크리퍼 등)는 줄이지 않는다
         float maxDim = 0f;
         foreach(var r in t.GetComponentsInChildren<Renderer>())
         {

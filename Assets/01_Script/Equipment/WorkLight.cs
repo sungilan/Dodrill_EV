@@ -11,6 +11,9 @@ using UnityEngine;
 // ============================================================
 public class WorkLight : EquipmentBase
 {
+    protected override string MobileActionSub => "누르기";
+    protected override string MobileActionName => "작업등 켜기/끄기";
+
     [Tooltip("렌즈(빛나는 면) 렌더러")] public Renderer lens;
     [Tooltip("빛이 나가는 기준(없으면 자기 자신, 앞쪽 +Z)")] public Transform emitter;
     public float range = 7f;

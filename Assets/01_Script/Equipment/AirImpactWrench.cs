@@ -16,10 +16,13 @@ using XRAirpotrSecurity;
 //      27mm : 과대 소켓 + 과토크 → 볼트 머리 파손 연출(불꽃·파편·깨지는 소리), 진행 없음
 //  · 에어 호스 연결 + 컴프레서 밸브 열림이어야 돈다(AirCompressor)
 //  · VR: 에어 입구(손잡이 아래)를 컴프레서 호스 끝에 갖다 대면 연결. PC·모바일: 들고 호스 끝 2m 안으로 가면 자동 연결
-//  · PC: Q 로 소켓 바꾸기(거치대 1.5m 안), F 로 작동
+//  · PC: Q 로 소켓 바꾸기(거치대 1.5m 안), F 로 작동 — 화면 가운데로 볼트를 겨누면 그 볼트를 돌린다
+//  · 휠 너트(FreeWorkBolt): 해머 타격 진동·소리 → '툭' 풀림 → 빠른 헛돌기 / 조일 때는 반대 순서(손맛)
 // ============================================================
 public class AirImpactWrench : EquipmentBase
 {
+    protected override string MobileActionName => "볼트 돌리기";
+
     private static readonly List<AirImpactWrench> s_all = new List<AirImpactWrench>();
 
     [Tooltip("소켓이 꽂히는 사각 축(앞쪽 = 로컬 +Z)")] public Transform anvil;
@@ -67,7 +70,10 @@ public class AirImpactWrench : EquipmentBase
 
     private AirCompressor Air => AirCompressor.ConnectedTo(NetworkObject);
     private bool AirReady { get { var a = Air; return a != null && a.ValveOpen; } }
-    private bool TwoHands => !IsVR || HandCount >= 2;
+    // VR: 예전엔 두 손으로 잡아야 들리고(한 손이면 4cm 이상 안 들림) 작동했다 → 들고 소켓·호스를 끼우려면 손이 모자라 떨어뜨리기 일쑤.
+    // 기본은 한 손으로 들고 작동. 무거운 공구 느낌이 필요하면 requireTwoHands 를 켠다.
+    [UnityEngine.Tooltip("VR: 두 손으로 잡아야 들고 작동(끄면 한 손 사용)")] public bool requireTwoHands = false;
+    private bool TwoHands => !IsVR || !requireTwoHands || HandCount >= 2;
 
     private Vector3 SocketTip
     {
@@ -86,7 +92,7 @@ public class AirImpactWrench : EquipmentBase
     {
         // 누른 순간 왜 안 도는지 알려 준다
         if (!TwoHands) EquipFx.Notice("aiw_hands", "두 손으로 잡으세요", "에어 임팩렌치는 무거워서 앞 손잡이까지 두 손으로 잡아야 작동합니다", EquipFx.Warn, 2.5f, 4f);
-        else if (_socket.Value == 0) EquipFx.Notice("aiw_socket", "소켓이 없습니다", IsVR ? "소켓 거치대의 소켓에 앤빌(앞쪽 사각 축)을 꽂으세요" : "소켓 거치대 근처에서 Q 로 소켓을 끼우세요", EquipFx.Warn, 2.5f, 4f);
+        else if (_socket.Value == 0) EquipFx.Notice("aiw_socket", "소켓이 없습니다", IsVR ? "소켓 거치대의 소켓에 앤빌(앞쪽 사각 축)을 꽂으세요" : Platform == PlatformType.Mobile ? "소켓 거치대 근처에서 '소켓 끼우기' 버튼을 누르세요" : "소켓 거치대 근처에서 Q 로 소켓을 끼우세요", EquipFx.Warn, 2.5f, 4f);
         else if (Air == null) EquipFx.Notice("aiw_hose", "에어 호스 미연결", "손잡이 아래 에어 입구에 컴프레서 호스를 연결하세요", EquipFx.Warn, 2.5f, 4f);
         else if (!Air.ValveOpen) EquipFx.Notice("aiw_valve", "공기가 안 나옵니다", "컴프레서의 밸브를 여세요", EquipFx.Warn, 2.5f, 4f);
     }
@@ -103,7 +109,7 @@ public class AirImpactWrench : EquipmentBase
         ApplySocketVisual();
         EquipFx.Drive(_rattle, run ? 0.75f : 0f, 1f);
 
-        if (!IsLocalHeld) { _prevHands = HandCount; return; }
+        if (!IsLocalHeld) { HideMobileSocketButton(); _prevHands = HandCount; return; }
 
         if (run && IsVR && Time.frameCount % 3 == 0) HapticAll(0.04f, 0.55f);
 
@@ -115,7 +121,7 @@ public class AirImpactWrench : EquipmentBase
 
     private void LateUpdate()
     {
-        if (!IsLocalHeld || !IsVR) return;
+        if (!IsLocalHeld || !IsVR || !requireTwoHands) return;
         int hands = HandCount;
         if (hands == 1 && _prevHands == 0) _grabY = transform.position.y;
         if (hands == 2) _grabY = transform.position.y;
@@ -148,15 +154,39 @@ public class AirImpactWrench : EquipmentBase
             }
             return;
         }
+        bool nearRack = false;
+        foreach (var r in SocketRack.All) if (r != null && (r.transform.position - transform.position).sqrMagnitude < 1.5f * 1.5f) nearRack = true;
+        if (Platform == PlatformType.Mobile)
+        {
+            // 모바일: Q 키가 없으므로 거치대 가까이에서 '소켓 바꾸기' 버튼을 띄운다
+            _mobileSocketBtn = true;
+            string label = _socket.Value == 0 ? "소켓 끼우기" : $"소켓 바꾸기\n<size=70%>지금 {SocketRack.SizeName(_socket.Value)}</size>";
+            MobileQuickButtons.Set("aiw_socket", nearRack, label, MobileQuickButtons.SlotLeft, CycleSocket);
+            return;
+        }
         if (Platform == PlatformType.PC && Input.GetKeyDown(KeyCode.Q))
         {
-            bool near = false;
-            foreach (var r in SocketRack.All) if (r != null && (r.transform.position - transform.position).sqrMagnitude < 1.5f * 1.5f) near = true;
-            if (!near) { EquipFx.Notice("aiw_rack", "소켓 거치대가 멀리 있습니다", "거치대 가까이에서 Q 로 소켓을 바꾸세요", EquipFx.Info, 2f, 3f); return; }
-            int next = _socket.Value;
-            for (int i = 0; i < 3; i++) { next = next % 3 + 1; if (!AnyHasSocket(next) || next == _socket.Value) break; }
-            SetSocket(next);
+            if (!nearRack) { EquipFx.Notice("aiw_rack", "소켓 거치대가 멀리 있습니다", "거치대 가까이에서 Q 로 소켓을 바꾸세요", EquipFx.Info, 2f, 3f); return; }
+            CycleSocket();
         }
+    }
+
+    private bool _mobileSocketBtn;
+
+    /// <summary>다음 크기 소켓으로 바꾼다(다른 렌치가 쓰는 크기는 건너뜀).</summary>
+    private void CycleSocket()
+    {
+        if (Sync == null || !Sync.IsOwner || !Sync.IsGrabbed) return;
+        int next = _socket.Value;
+        for (int i = 0; i < 3; i++) { next = next % 3 + 1; if (!AnyHasSocket(next) || next == _socket.Value) break; }
+        SetSocket(next);
+    }
+
+    private void HideMobileSocketButton()
+    {
+        if (!_mobileSocketBtn) return;
+        _mobileSocketBtn = false;
+        MobileQuickButtons.Set("aiw_socket", false);
     }
 
     private void SetSocket(int size)
@@ -185,7 +215,12 @@ public class AirImpactWrench : EquipmentBase
             var v = socketVisuals[i];
             if (v == null) continue;
             bool on = _socket.Value == i + 1;
-            if (v.activeSelf != on) v.SetActive(on);
+            if (v.activeSelf != on)
+            {
+                v.SetActive(on);
+                // 소켓 모양은 눈에 보이기만 하면 된다 — 콜라이더가 켜지면 소켓이 끼워질 때 플레이어 몸을 밀어 몸이 올라갔다
+                if (on) foreach (var c in v.GetComponentsInChildren<Collider>(true)) c.enabled = false;
+            }
             if (on) v.transform.localRotation = Quaternion.Euler(0f, 0f, _spin);
         }
     }
@@ -216,7 +251,9 @@ public class AirImpactWrench : EquipmentBase
     {
         Vector3 tip = SocketTip;
         var bolt = BoltWork.Nearest(tip, 0.06f);
+        if (bolt == null && !IsVR) bolt = AimedBolt();   // PC·모바일: 화면 가운데로 겨눈 볼트
         if (bolt == null || bolt.isloosened) return;
+        if (!IsVR) tip = bolt.transform.position;
         int s = _socket.Value;
 
         if (s == 1)
@@ -248,8 +285,70 @@ public class AirImpactWrench : EquipmentBase
             EquipFx.Notice("seized", "녹슬어 뻑뻑한 볼트", "윤활 방청제를 뿌리면 잘 풀립니다", EquipFx.Warn, 3f, 10f);
 
         float t = Mathf.Max(0.1f, bolt.timeToComplete);
-        bolt.InteractWithTool(1f / t * speed * BoltWork.SpeedFactor(bolt) * Time.deltaTime, (anvil != null ? anvil : transform).forward);
+        float k = 1f;
+        var free = bolt.GetComponent<FreeWorkBolt>();
+        if (free != null) k = ImpactFeel(bolt, free);
+        bolt.InteractWithTool(1f / t * speed * k * BoltWork.SpeedFactor(bolt) * Time.deltaTime, (anvil != null ? anvil : transform).forward);
+        if (free != null)
+        {
+            string act = bolt.isAssembleMode ? "휠 너트 조이는 중" : "휠 너트 푸는 중";
+            InteractionProgressBarUI.Instance?.ShowBoltProgress(bolt.Progress, act, "휠 너트", IsVR ? "트리거를 계속 당기세요" : Platform == PlatformType.PC ? "F 키를 계속 누르세요" : "작업 버튼을 계속 누르세요");
+        }
     }
+
+    // ── 휠 너트 손맛 ─────────────────────────────
+    // 실제 에어 임팩렌치: 꽉 조여진 너트는 '타다다닥' 해머가 때리다가 '툭' 하고 풀린 뒤 빠르게 헛돌며 빠져나온다.
+    // 조일 때는 반대로 빠르게 돌아 들어가다 마지막에 '타다다닥' 때리며 조여진다.
+    private float _nextHammer;
+    private bool _hammerAlt;
+    private Bolt _feelBolt;
+    private bool _brokeFree;
+
+    private float ImpactFeel(Bolt bolt, FreeWorkBolt free)
+    {
+        if (_feelBolt != bolt) { _feelBolt = bolt; _brokeFree = bolt.isAssembleMode ? false : bolt.Progress >= free.breakAway; }
+        float p = bolt.Progress;
+        bool hammer = bolt.isAssembleMode ? p >= 0.75f : p < free.breakAway;
+
+        if (!bolt.isAssembleMode && !_brokeFree && p >= free.breakAway)
+        {
+            // '툭' — 풀리는 순간 큰 반동
+            _brokeFree = true;
+            HapticAll(0.14f, 1f);
+            AudioSource.PlayClipAtPoint(EquipFx.Crack, bolt.transform.position, 0.35f);
+            EquipFx.Notice("lug_free", "툭! 너트가 풀렸습니다", "이제 빠르게 돌아 빠져나옵니다", EquipFx.Info, 1.2f, 20f);
+        }
+
+        if (hammer && Time.time >= _nextHammer)
+        {
+            // 해머 타격: 초당 약 16번, 강약 번갈아
+            _nextHammer = Time.time + 0.06f;
+            _hammerAlt = !_hammerAlt;
+            if (IsVR) HapticAll(0.035f, _hammerAlt ? 1f : 0.6f);
+            AudioSource.PlayClipAtPoint(EquipFx.Ratchet, bolt.transform.position, _hammerAlt ? 0.9f : 0.55f);
+        }
+        if (bolt.isAssembleMode && p >= 0.97f)
+            EquipFx.Notice("lug_tight", "체결 완료", "대각선 순서(별 모양)로 조이면 휠이 고르게 붙습니다", EquipFx.Info, 2f, 20f);
+
+        return hammer ? 0.35f : 2.2f;
+    }
+
+    /// <summary>PC·모바일: 카메라 앞 2.5m, 화면 가운데에서 가장 가까운 볼트.</summary>
+    private Bolt AimedBolt()
+    {
+        var cam = Camera.main;
+        if (cam == null) return null;
+        BoltWork.InCone(cam.transform.position, cam.transform.forward, 2.5f, 7f, s_cone);
+        Bolt best = null; float bd = -1f;
+        foreach (var b in s_cone)
+        {
+            if (b == null || b.isloosened || b.isBroken) continue;
+            float d = Vector3.Dot((b.transform.position - cam.transform.position).normalized, cam.transform.forward);
+            if (d > bd) { bd = d; best = b; }
+        }
+        return best;
+    }
+    private static readonly List<Bolt> s_cone = new List<Bolt>();
 
     [ServerRpc(RequireOwnership = false)]
     private void BreakFxServerRpc(Vector3 pos, Vector3 normal) => BreakFxObserversRpc(pos, normal);

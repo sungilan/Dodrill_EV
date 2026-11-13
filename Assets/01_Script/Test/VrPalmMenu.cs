@@ -14,6 +14,10 @@ using UnityEngine.UI;
 //  · 단계 넘김   — 정면 UI 의 '완료' 버튼과 같은 동작(누를 수 없는 단계면 회색)
 //  · UI 정면으로 — 정면 UI 를 다시 시선 앞으로 (VRUIFollower 기본 따라오기로 복귀)
 //  · 엑스레이   — 지금 다룰 부품을 차체 너머로 비춰 보기 (XRayMode, 평가 모드에서는 회색)
+//  · 집중 모드   — 작업 대상 가까이에서 가리는 차체를 하얀 반투명으로 (FocusMode, 자동/끔)
+//  · 측정 기록   — 측정 기록지 보이기/숨기기 (MeasurementLog)
+//  · 버튼 안내   — 컨트롤러 버튼 설명을 항상 보이기/처음만 (VrControllerHints)
+//  · 연습장     — 기본 동작 연습 튜토리얼 다시 하기/끝내기 (VrPracticeTutorial, 평가 모드에서는 회색)
 //  누르면 손끝 진동 + 클릭음. 손바닥을 내리거나 물건을 잡으면 사라진다.
 //  씬 배치 불필요 — 게임 시작 시 자동 생성되고, VR 기기가 아니면 아무것도 하지 않는다.
 // ============================================================
@@ -52,6 +56,9 @@ public class VrPalmMenu : MonoBehaviour
 
     private GameObject _root;
     private readonly List<Btn> _btns = new List<Btn>();
+    private static VrPalmMenu s_inst;
+    /// <summary>지금 손바닥 메뉴가 떠 있는가(연습장 튜토리얼이 확인).</summary>
+    public static bool IsOpen => s_inst != null && s_inst._menuHand != null && s_inst._root != null && s_inst._root.activeSelf;
     private Hand _menuHand;        // 메뉴가 붙은 손
     private float _facingSince = -1f, _notFacingSince = -1f;
     private Hand _candidate;
@@ -74,6 +81,8 @@ public class VrPalmMenu : MonoBehaviour
         DontDestroyOnLoad(go);
         go.AddComponent<VrPalmMenu>();
     }
+
+    private void Awake() => s_inst = this;
 
     private void OnDestroy()
     {
@@ -169,7 +178,7 @@ public class VrPalmMenu : MonoBehaviour
     {
         var palm = _menuHand.palmTransform;
         Vector3 up = Vector3.ProjectOnPlane(Vector3.up, (palm.position - cam.position).normalized).normalized;
-        Vector3 pos = palm.position + palm.forward * 0.03f + up * 0.11f;   // 아래 넓은 버튼까지 손바닥 위에 오게
+        Vector3 pos = palm.position + palm.forward * 0.03f + up * 0.16f;   // 아래 넓은 버튼까지 손바닥 위에 오게(4줄 + 넓은 1줄)
         Vector3 look = pos - cam.position;
         if (look.sqrMagnitude < 1e-6f) look = cam.forward;
         _root.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(look, Vector3.up));
@@ -191,11 +200,16 @@ public class VrPalmMenu : MonoBehaviour
         _root.layer = 1;
         DontDestroyOnLoad(_root);
 
-        AddBtn("tasks", "단계 목록", new Vector2(-(BtnW + Gap) * 0.5f, (BtnH + Gap) * 0.5f), font);
-        AddBtn("minimap", "미니맵", new Vector2((BtnW + Gap) * 0.5f, (BtnH + Gap) * 0.5f), font);
-        AddBtn("skip", "단계 넘김", new Vector2(-(BtnW + Gap) * 0.5f, -(BtnH + Gap) * 0.5f), font);
-        AddBtn("recenter", "UI 정면으로", new Vector2((BtnW + Gap) * 0.5f, -(BtnH + Gap) * 0.5f), font);
-        AddBtn("xray", "엑스레이 켜기", new Vector2(0f, -(BtnH + Gap) * 1.5f), font, BtnW * 2f + Gap);
+        float cx = (BtnW + Gap) * 0.5f, ry = BtnH + Gap;
+        AddBtn("tasks", "단계 목록", new Vector2(-cx, ry * 1.5f), font);
+        AddBtn("minimap", "미니맵", new Vector2(cx, ry * 1.5f), font);
+        AddBtn("skip", "단계 넘김", new Vector2(-cx, ry * 0.5f), font);
+        AddBtn("recenter", "UI 정면으로", new Vector2(cx, ry * 0.5f), font);
+        AddBtn("xray", "엑스레이 켜기", new Vector2(-cx, -ry * 0.5f), font);
+        AddBtn("focus", "집중 모드", new Vector2(cx, -ry * 0.5f), font);
+        AddBtn("record", "측정 기록", new Vector2(-cx, -ry * 1.5f), font);
+        AddBtn("hints", "버튼 안내", new Vector2(cx, -ry * 1.5f), font);
+        AddBtn("practice", "연습장", new Vector2(0f, -ry * 2.5f), font, BtnW * 2f + Gap);
         _root.SetActive(false);
     }
 
@@ -263,6 +277,19 @@ public class VrPalmMenu : MonoBehaviour
                 case "xray":
                     b.enabled = XRayMode.Available;
                     SetText(b, XRayMode.Active ? "엑스레이 끄기" : "엑스레이 켜기");
+                    break;
+                case "focus":
+                    SetText(b, FocusMode.Enabled ? "집중 모드 끄기" : "집중 모드 자동");
+                    break;
+                case "record":
+                    SetText(b, MeasurementLog.Visible ? "측정 기록 닫기" : "측정 기록 보기");
+                    break;
+                case "hints":
+                    SetText(b, VrControllerHints.AlwaysShow ? "버튼 안내 끄기" : "버튼 안내 켜기");
+                    break;
+                case "practice":
+                    b.enabled = !EvaluationMode.ClientIsEvaluation;
+                    SetText(b, VrPracticeTutorial.Running ? "연습장 끝내기" : "연습장 (기본 동작 연습)");
                     break;
             }
             if (now < b.flashUntil) continue;
@@ -351,6 +378,21 @@ public class VrPalmMenu : MonoBehaviour
                 break;
             case "xray":
                 XRayMode.Toggle();
+                break;
+            case "focus":
+                FocusMode.Toggle();
+                break;
+            case "record":
+                MeasurementLog.Toggle();
+                break;
+            case "hints":
+                VrControllerHints.AlwaysShow = !VrControllerHints.AlwaysShow;
+                WarningPopup.Show("vrhints", VrControllerHints.AlwaysShow ? "버튼 안내 항상 표시" : "버튼 안내 끔",
+                    VrControllerHints.AlwaysShow ? "도구를 잡으면 손 옆에 버튼 설명이 나옵니다" : "", new Color(0.2f, 0.24f, 0.3f, 0.92f), 1.6f);
+                break;
+            case "practice":
+                if (VrPracticeTutorial.Running) VrPracticeTutorial.Stop();
+                else { Close(); VrPracticeTutorial.Restart(); }
                 break;
         }
     }

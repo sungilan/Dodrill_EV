@@ -257,6 +257,7 @@ public class SyncGrab : NetworkBehaviour
     public override void OnStartServer()
     {
         base.OnStartServer();
+        _restEuler = transform.eulerAngles;   // 스폰 때 기울기 = 놓은 뒤 세울 기준
         _rb = GetComponent<Rigidbody>();
         _isKinematic.Value = true; // 초기값 명시적 설정
         ApplyKinematic(true);
@@ -474,10 +475,63 @@ public class SyncGrab : NetworkBehaviour
             if(rest >= 0.5f) break;
             yield return null;
         }
+        if(_rb != null && !_isGrabbed.Value) ApplyKinematic(true);   // 멈춘 자리에서 고정
+
+        // 멈춘 뒤 처음 놓여 있던 기울기(보통 똑바로)로 세운다 — 라바콘 등 내려놓은 물건이 비스듬히 놓여 있던 문제
+        if(uprightOnRest && _rb != null && !_isGrabbed.Value)
+        {
+            Quaternion want = Quaternion.Euler(_restEuler.x, transform.eulerAngles.y, _restEuler.z);
+            if(Quaternion.Angle(transform.rotation, want) > 3f)
+            {
+                float lowBefore = LowestPointY();
+                for(float t = 0f; t < 0.25f && !_isGrabbed.Value; t += Time.deltaTime)
+                {
+                    transform.rotation = Quaternion.RotateTowards(transform.rotation, want, 540f * Time.deltaTime);
+                    yield return null;
+                }
+                if(!_isGrabbed.Value)
+                {
+                    transform.rotation = want;
+                    transform.position += Vector3.up * (lowBefore - LowestPointY());   // 세우면서 바닥을 파고들거나 뜨지 않게
+                }
+            }
+        }
+        if(_rb != null && !_isGrabbed.Value) LiftAboveGround();
         _settleCo = null;
         _serverSettling = false;
-        if(_rb != null && !_isGrabbed.Value) ApplyKinematic(true);   // 멈춘 자리에서 고정
     }
+
+    [Tooltip("내려놓아 멈춘 뒤 보이는 모델 아래끝을 바로 아래 바닥 면보다 이만큼 위에 둔다(m) — 콜라이더가 모델보다 작아 바닥에 묻혀 보이던 문제")]
+    public float groundClearance = 0.01f;
+
+    /// <summary>보이는 모델(렌더러) 아래끝이 바닥 면 아래로 들어가 있으면 그만큼 올린다(최대 15cm, 서버).</summary>
+    private void LiftAboveGround()
+    {
+        bool any = false; Bounds rb = default;
+        foreach(var r in GetComponentsInChildren<Renderer>())
+        {
+            if(r == null || !r.enabled || r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
+            if(!any) { rb = r.bounds; any = true; } else rb.Encapsulate(r.bounds);
+        }
+        if(!any) return;
+        float low = Mathf.Min(rb.min.y, LowestPointY());
+        Vector3 from = new Vector3(rb.center.x, rb.max.y + 0.05f, rb.center.z);
+        float ground = float.NegativeInfinity;
+        foreach(var h in Physics.RaycastAll(from, Vector3.down, rb.size.y + 1f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            if(h.collider == null || h.collider.transform.IsChildOf(transform)) continue;
+            if(h.collider.attachedRigidbody != null && !h.collider.attachedRigidbody.isKinematic) continue;
+            if(h.point.y > low + 0.15f) continue;   // 위에 걸친 다른 물체는 바닥이 아님
+            if(h.point.y > ground) ground = h.point.y;
+        }
+        if(float.IsNegativeInfinity(ground)) ground = serverFloorY;
+        float lift = ground + groundClearance - low;
+        if(lift > 0.0005f && lift < 0.15f) transform.position += Vector3.up * lift;
+    }
+
+    [Tooltip("놓아서 멈춘 뒤 처음 스폰됐을 때의 기울기(보통 똑바로)로 세운다. 일부러 눕혀 두는 물건은 끈다.")]
+    public bool uprightOnRest = true;
+    private Vector3 _restEuler;
 
     // ══════════════════════════════════════════════════════
     // VR AutoHand 콜백
@@ -607,6 +661,12 @@ public class SyncGrab : NetworkBehaviour
     }
 
 
+    /// <summary>
+    /// PC·모바일 들기 목표를 장비가 직접 정하고 싶을 때(바닥에 끌리는 오일 받이 등) 설정한다.
+    /// (HoldPoint 기준 목표 위치, 회전) → 실제 목표. '맨 앞에 그리기'가 필요 없으면 drawOnTopWhileHeld 도 함께 끈다.
+    /// </summary>
+    public System.Func<Vector3, Quaternion, Pose> PcHoldOverride;
+
     private void PCFlyTo(Vector3 targetPos, Quaternion targetRot)
     {
         _isTweening = true;
@@ -618,8 +678,10 @@ public class SyncGrab : NetworkBehaviour
         Vector3 finalPos = targetPos + (targetRot * holdPositionOffset);
         // HoldPoint의 회전에 오브젝트 고유의 오프셋 회전을 결합
         Quaternion finalRot = targetRot * Quaternion.Euler(holdRotationOffset);
+        bool overridden = PcHoldOverride != null;
+        if(overridden) { var pose = PcHoldOverride(finalPos, finalRot); finalPos = pose.position; finalRot = pose.rotation; }
 
-        Vector3 mid = (transform.position + finalPos) * 0.5f + Vector3.up * arcHeight;
+        Vector3 mid = (transform.position + finalPos) * 0.5f + Vector3.up * (overridden ? 0f : arcHeight);
         Vector3[] path = { mid, finalPos };
 
         Sequence seq = DOTween.Sequence();
@@ -770,6 +832,11 @@ public class SyncGrab : NetworkBehaviour
 
         // 차체 아래 등 좁은 곳에서 물체가 메시를 뚫고 잘려 보이는 문제 방지
         finalPos = AvoidGeometry(finalPos);
+        if(PcHoldOverride != null)
+        {
+            var pose = PcHoldOverride(finalPos, finalRot);
+            finalPos = pose.position; finalRot = pose.rotation;
+        }
 
         // 내 화면에서는 즉시 붙이고(지연 없음), 같은 목표를 LNT에 넘겨 서버·타 클라이언트로 전파한다.
         if(snapHoldToTarget)

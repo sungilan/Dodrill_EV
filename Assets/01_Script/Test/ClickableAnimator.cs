@@ -18,8 +18,9 @@ using UnityEngine;
 
 public struct AnimatorStateBroadcast : IBroadcast
 {
-    public string id;
+    public string id;       // 비어 있으면: 클라이언트 → 서버 '기억한 열림 상태 전부 보내 줘'(늦게 들어온 사람)
     public bool isOpen;
+    public bool replay;     // 서버가 늦게 들어온 사람에게 현재 상태를 다시 보내는 것 — 소리 없이 적용
 }
 
 public static class ClickableAnimatorManager
@@ -33,8 +34,27 @@ public static class ClickableAnimatorManager
         TryRegisterBroadcast();
     }
 
+    // ── 늦게 들어온 사람: lateJoinSync 가 켜진 오브젝트(차문·후드)의 마지막 열림 상태를 서버가 기억해 다시 보내 준다 ──
+    private static readonly Dictionary<string, bool> s_lateState = new Dictionary<string, bool>();
+    private static float s_lastLateAsk = -10f;
+    internal static bool Replaying;
+
+    internal static void RecordLate(string id, bool open) { s_lateState[id] = open; }
+
+    /// <summary>(클라이언트) 서버가 기억한 열림 상태를 달라고 한다. 1초에 한 번까지만.</summary>
+    public static void RequestLateJoinState()
+    {
+        var cm = InstanceFinder.ClientManager;
+        if(cm == null || !cm.Started || InstanceFinder.IsServerStarted) return;
+        if(Time.unscaledTime - s_lastLateAsk < 1f) return;
+        s_lastLateAsk = Time.unscaledTime;
+        TryRegisterBroadcast();
+        cm.Broadcast(new AnimatorStateBroadcast { id = "" });
+    }
+
     public static void Unregister(string id)
     {
+        if(InstanceFinder.IsServerStarted) s_lateState.Remove(id);
         _registry.Remove(id);
         if(_registry.Count == 0)
             TryUnregisterBroadcast();
@@ -86,6 +106,14 @@ public static class ClickableAnimatorManager
 
     private static void OnServerReceive(NetworkConnection conn, AnimatorStateBroadcast broadcast, Channel channel)
     {
+        if(string.IsNullOrEmpty(broadcast.id))
+        {
+            // 늦게 들어온 클라이언트가 현재 열림 상태를 요청
+            if(conn != null && conn.IsValid)
+                foreach(var kv in s_lateState)
+                    InstanceFinder.ServerManager.Broadcast(conn, new AnimatorStateBroadcast { id = kv.Key, isOpen = kv.Value, replay = true });
+            return;
+        }
         var target = Get(broadcast.id);
         if(target == null) return;
         if(!target.CanInteract()) return;
@@ -98,7 +126,9 @@ public static class ClickableAnimatorManager
     {
         if(InstanceFinder.IsServerStarted) return;
         var target = Get(broadcast.id);
-        target?.ApplyAnimState(broadcast.isOpen);
+        Replaying = broadcast.replay;
+        try { target?.ApplyAnimState(broadcast.isOpen); }
+        finally { Replaying = false; }
     }
 }
 
@@ -134,6 +164,9 @@ public class ClickableAnimator : MonoBehaviour
     public string openSound = "Door_Open";
     public string closeSound = "Door_Close";
     [Range(0f, 1f)] public float soundVolume = 1.0f;
+
+    [Tooltip("켜면 서버가 마지막 열림 상태를 기억해 늦게 들어온 플레이어에게 보내 준다(차문·후드 등). VehicleRig 가 런타임에 켠다.")]
+    public bool lateJoinSync = false;
 
     private Coroutine _autoCloseCoroutine;
     private string _currentModuleId = "";
@@ -333,6 +366,7 @@ public class ClickableAnimator : MonoBehaviour
         //else if(!CanInteract()) return;
 
         _isOpen = open;
+        if(lateJoinSync && InstanceFinder.IsServerStarted) ClickableAnimatorManager.RecordLate(uniqueId, open);
         if(_animator != null)
         {
             if(useTrigger) _animator.SetTrigger(open ? openTrigger : closeTrigger);
@@ -344,6 +378,7 @@ public class ClickableAnimator : MonoBehaviour
 
         // ── 사운드 재생 디버깅 ──
         string sound = open ? openSound : closeSound;
+        if(ClickableAnimatorManager.Replaying) sound = null;   // 늦게 들어온 사람에게 현재 상태를 맞춰 줄 때는 소리 없이
 
         Debug.Log($"<color=cyan>[Clickable-Sound]</color> {uniqueId} 사운드 시도: {sound} (Volume: {soundVolume})");
 

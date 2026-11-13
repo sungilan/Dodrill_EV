@@ -108,6 +108,7 @@ GameObject:
   - component: {fileID: 3955992188488722361}
   - component: {fileID: -6092415357178077016}
   - component: {fileID: 6703994904317688264}
+  - component: {fileID: 1427600021699643951}
   m_Layer: 15
   m_Name: GDS_Tablet
   m_TagString: Untagged
@@ -378,7 +379,9 @@ MonoBehaviour:
   snapHoldToTarget: 1
   gripPoint: {fileID: 0}
   handTargetAdjust: {x: 0, y: 0, z: 0}
+  serverFloorY: 0
   drawOnTopWhileHeld: 1
+  distanceGrabMaxSize: 0.7
 --- !u!114 &-6092415357178077016
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -417,6 +420,23 @@ MonoBehaviour:
   blinkDuration: 0.6
   outlineColor: {r: 0.8627452, g: 0.07843138, b: 0.2352941, a: 1}
   outlineDistance: {x: 2, y: -2}
+--- !u!114 &1427600021699643951
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1960370119849075638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1bf32b4f3637d1849aaea200535024b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GdsTablet
+  font: {fileID: 11400000, guid: 484d9dbb3a754474faae25d9d657ddc8, type: 2}
+  screenCenter: {x: 0.02775, y: 0.0097, z: -0.0035}
+  screenSize: {x: 0.2247, y: 0.1456}
+  cornerRadius: 22
+  connectDistance: 0.45
 --- !u!1 &2142792661212078606
 GameObject:
   m_ObjectHideFlags: 0

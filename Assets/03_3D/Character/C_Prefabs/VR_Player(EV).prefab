@@ -388,6 +388,7 @@ MonoBehaviour:
   rootTurnSpeed: 6
   matchAvatarHeight: 1
   avatarScaleRange: {x: 0.8, y: 1.15}
+  restHeadHeight: 1.638
   leanForward: 0.35
   leanBackward: 0.15
   leanSide: 0.2
@@ -403,6 +404,9 @@ MonoBehaviour:
   stepThresholdOverride: 0.5
   debugLog: 1
   debugInterval: 2
+  lowerElbows: 1
+  elbowGoalWeight: 0.75
+  elbowGoalOffset: {x: 0.2, y: -0.75, z: -0.3}
   fingerSendInterval: 0.08
   fingerKeepAlive: 0.5
   fingerChangeDeg: 0.7
@@ -16036,7 +16040,7 @@ Transform:
   m_GameObject: {fileID: 4407995982688725023}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.1, z: 0}
+  m_LocalPosition: {x: 0, y: -0.1, z: -0.09}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -26476,7 +26480,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d619012772bc7049b46e7220feee5a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  currentAnchor: {fileID: 0}
 --- !u!1 &6823756768971634918
 GameObject:
   m_ObjectHideFlags: 0

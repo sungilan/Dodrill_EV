@@ -63,6 +63,40 @@ public class PcMobileAvatarController : NetworkBehaviour
     private Renderer[] _uniformRenderers;
     private bool _uniformHidden;
 
+    // ── 정비 크리퍼(CreeperRide) ─────────────────────────────
+    /// <summary>크리퍼에 누워 있음. 모든 클라이언트에서 CreeperRide 가 켠다 → 아바타 모델을 눕히고, 소유자는 카메라를 바닥 높이로.</summary>
+    public bool Lying { get; private set; }
+    private bool _pivotZSaved;
+    private float _pivotX0, _pivotZ0;
+    private bool _modelPoseSaved;
+    private Vector3 _modelPos0;
+    private Quaternion _modelRot0;
+
+    public void SetLying(bool on)
+    {
+        if (Lying == on) return;
+        Lying = on;
+        if (on && cameraPivot != null && !_pivotZSaved) { _pivotX0 = cameraPivot.localPosition.x; _pivotZ0 = cameraPivot.localPosition.z; _pivotZSaved = true; }
+        var m = avatarAnimator != null ? avatarAnimator.transform : null;
+        if (m == null || m == transform) return;
+        if (!_modelPoseSaved) { _modelPos0 = m.localPosition; _modelRot0 = m.localRotation; _modelPoseSaved = true; }
+        if (!on) { m.localPosition = _modelPos0; m.localRotation = _modelRot0; }
+    }
+
+    /// <summary>선 자세 기본 높이로 되돌린다(크리퍼에서 일어날 때)</summary>
+    public void ResetCrouch() => _crouch01 = 0f;
+
+    private void LateUpdate()
+    {
+        if (!Lying || avatarAnimator == null) return;
+        var m = avatarAnimator.transform;
+        if (m == transform) return;
+        // 발이 뒤, 머리가 앞, 얼굴이 위를 보도록 눕힌다(모델 위쪽 → 앞, 모델 앞쪽 → 위)
+        float s = AvatarScale;
+        m.localRotation = Quaternion.LookRotation(Vector3.up, Vector3.forward);
+        m.localPosition = new Vector3(0f, 0.3f, -0.85f) * s;
+    }
+
     /// <summary>아바타 Animator (닉네임 태그가 머리 위치를 찾을 때 사용).</summary>
     public Animator AvatarAnimator => avatarAnimator;
 
@@ -252,7 +286,7 @@ public class PcMobileAvatarController : NetworkBehaviour
 
         // ── 크라우치 적분 ─────────────────────────────
         // 261026: 카메라 높이 범위만 넓힌다 — 크라우치 값이 0..1 밖(서기 위/크라우치 아래)이어도 되고, 애니메이터엔 0..1 로 자른 값만 준다
-        if (_look != null)
+        if (_look != null && !Lying)   // 누워 있는 동안엔 높이 조절 입력을 쌓지 않는다(일어난 뒤 높이가 끝까지 밀려 고정돼 보이던 문제)
         {
             float lo = crouchDepth > 0.0001f ? -extraRaise / crouchDepth : 0f;
             float hi = crouchDepth > 0.0001f ? 1f + extraLower / crouchDepth : 1f;
@@ -260,8 +294,14 @@ public class PcMobileAvatarController : NetworkBehaviour
         }
 
         // ── 카메라 피벗 높이 (소유자 시점) — 아바타 스케일에 비례 ──
-        if (cameraPivot != null)
+        if (cameraPivot != null && Lying)
         {
+            // 정비 크리퍼에 누움: 눈이 바닥 가까이(머리 쪽 = 앞), 위를 올려다본다
+            cameraPivot.localPosition = new Vector3(0f, 0.42f, 0.78f) * AvatarScale;
+        }
+        else if (cameraPivot != null)
+        {
+            if (_pivotZSaved) { var p0 = cameraPivot.localPosition; p0.x = _pivotX0; p0.z = _pivotZ0; cameraPivot.localPosition = p0; _pivotZSaved = false; }
             Vector3 lp = cameraPivot.localPosition;
             lp.y = (eyeHeight - _crouch01 * crouchDepth) * AvatarScale;
             cameraPivot.localPosition = lp;
@@ -341,7 +381,10 @@ public class PcMobileAvatarController : NetworkBehaviour
             // 루트 Y가 자기 콜라이더 위로 튕겨 올라가며 상하로 진동한다.
             if (h.collider != null && h.collider.transform.IsChildOf(transform)) continue;
             // 잡을 수 있는 물건·다른 플레이어(NetworkObject)와 직전 높이보다 한참 위의 면은 바닥이 아니다
+            // 단, 사다리 발판(ClimbSurface)은 밟고 올라설 수 있다
             if (h.collider != null && h.collider.GetComponentInParent<NetworkObject>() != null) continue;
+            // 사다리 발판은 바닥으로 보지 않는다 — 대신 아래에서 LadderProp.BonusAt 으로 '그 자리 높이'를 더한다(올라가고 내려오는 높이가 항상 일치)
+            if (h.collider != null && h.collider.GetComponentInParent<ClimbSurface>() != null) continue;
             if (h.point.y > transform.position.y + maxGroundStepUp * s) continue;
             if (h.distance < bestDist)
             {
@@ -353,7 +396,7 @@ public class PcMobileAvatarController : NetworkBehaviour
         if (found)
         {
             Vector3 p = transform.position;
-            p.y = (origin.y - bestDist) + rootYOffset * s;
+            p.y = (origin.y - bestDist) + rootYOffset * s + LadderProp.BonusAt(p);
             transform.position = p;
         }
     }

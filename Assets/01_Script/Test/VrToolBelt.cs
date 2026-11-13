@@ -44,6 +44,9 @@ public class VrToolBelt : MonoBehaviour
     private float _bodyYaw;
     private bool _yawInit;
     private Material _mat;
+    private static VrToolBelt s_inst;
+    private Quaternion _lastYaw = Quaternion.identity;
+    private bool _framed;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
@@ -54,7 +57,35 @@ public class VrToolBelt : MonoBehaviour
         go.AddComponent<VrToolBelt>();
     }
 
-    private void OnEnable() { if (!SyncGrab.VrReleaseInterceptors.Contains(TryHolster)) SyncGrab.VrReleaseInterceptors.Add(TryHolster); }
+    private void OnEnable() { s_inst = this; if (!SyncGrab.VrReleaseInterceptors.Contains(TryHolster)) SyncGrab.VrReleaseInterceptors.Add(TryHolster); }
+
+    // ── 연습장(VrPracticeTutorial) 등 네트워크 없는 물건용: 슬롯 위치만 알려 준다(꽂아 두기는 부르는 쪽이 한다) ──
+
+    /// <summary>슬롯 i(0 왼쪽, 1 오른쪽)의 이번 프레임 위치·몸 방향.</summary>
+    public static bool TryGetSlot(int i, out Vector3 pos, out Quaternion yaw)
+    {
+        pos = default; yaw = Quaternion.identity;
+        if (s_inst == null || !s_inst._framed || i < 0 || i >= s_inst._slots.Length) return false;
+        pos = s_inst._slots[i].pos; yaw = s_inst._lastYaw;
+        return true;
+    }
+
+    /// <summary>점 p 에서 radius 안의 빈 슬롯.</summary>
+    public static bool TryGetFreeSlotNear(Vector3 p, float radius, out int index, out Vector3 pos, out Quaternion yaw)
+    {
+        index = -1; pos = default; yaw = Quaternion.identity;
+        if (s_inst == null || !s_inst._framed) return false;
+        float best = radius;
+        for (int i = 0; i < s_inst._slots.Length; i++)
+        {
+            var s = s_inst._slots[i];
+            if (s.item != null) continue;
+            float d = Vector3.Distance(p, s.pos);
+            if (d < best) { best = d; index = i; pos = s.pos; }
+        }
+        yaw = s_inst._lastYaw;
+        return index >= 0;
+    }
 
     private void OnDisable()
     {
@@ -95,10 +126,17 @@ public class VrToolBelt : MonoBehaviour
         if (!VrProbeHandling.IsVRDevice) return;
         if (Time.unscaledTime >= _nextHandScan) { _nextHandScan = Time.unscaledTime + 2f; ScanHands(); }
         if (!BodyFrame(out var hip, out var yawRot)) return;
+        _lastYaw = yawRot;
+        _framed = true;
 
         bool holdingTool = false;
         foreach (var h in _hands)
-            if (h != null && h.GetHeld() != null && IsTool(h.GetHeld().GetComponentInParent<SyncGrab>())) { holdingTool = true; break; }
+        {
+            var held = h != null ? h.GetHeld() : null;
+            if (held == null) continue;
+            var pti = held.GetComponentInParent<PracticeTutorialItem>();
+            if (IsTool(held.GetComponentInParent<SyncGrab>()) || (pti != null && pti.holsterable)) { holdingTool = true; break; }
+        }
 
         foreach (var s in _slots)
         {

@@ -332,6 +332,7 @@ public static class BoltWork
     public static bool IsCurrentStep(Bolt bolt)
     {
         if (bolt == null) return false;
+        if (bolt.GetComponent<FreeWorkBolt>() != null) return true;   // 타이어 휠 너트 등 자유 실습
         var group = bolt.GetComponentInParent<BoltGroupCounter>();
         if (group == null) return false;
         var recv = ScenarioStateReceiver.Instance;

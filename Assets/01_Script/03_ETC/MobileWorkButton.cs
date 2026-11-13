@@ -13,9 +13,12 @@ public static class MobileWorkButton
 
     private static GameObject _root;
 
-    public static void SetVisible(bool visible)
+    private static TMPro.TextMeshProUGUI _label;
+
+    /// <summary>action: 버튼에 쓸 지금 할 일(예: '볼트 풀기', '도색'). 비우면 '작업'.</summary>
+    public static void SetVisible(bool visible, string action = null, string sub = null)
     {
-        if (visible) Ensure();
+        if (visible) { Ensure(); SetLabel(action, sub); }
         if (_root != null) _root.SetActive(visible);
         if (!visible) IsHeld = false;
     }
@@ -55,6 +58,7 @@ public static class MobileWorkButton
         lrt.offsetMin = lrt.offsetMax = Vector2.zero;
         var label = labelGo.AddComponent<TMPro.TextMeshProUGUI>();
         var kf = KoreanFont(); if (kf != null) label.font = kf;
+        _label = label;
         label.text = "작업\n<size=60%>누르고 있기</size>";
         label.alignment = TMPro.TextAlignmentOptions.Center;
         label.fontSize = 56;
@@ -66,6 +70,14 @@ public static class MobileWorkButton
         AddEntry(trigger, EventTriggerType.PointerDown, () => { IsHeld = true; img.color = new Color(0.95f, 0.55f, 0.10f, 0.95f); });
         AddEntry(trigger, EventTriggerType.PointerUp, () => { IsHeld = false; img.color = new Color(0.10f, 0.45f, 0.85f, 0.88f); });
         AddEntry(trigger, EventTriggerType.PointerExit, () => { IsHeld = false; img.color = new Color(0.10f, 0.45f, 0.85f, 0.88f); });
+    }
+
+    /// <summary>작업 버튼 글자를 지금 상황에 맞게 바꾼다(보일 때만 의미 있음).</summary>
+    public static void SetLabel(string action, string sub = null)
+    {
+        if (_label == null) return;
+        string t = (string.IsNullOrEmpty(action) ? "작업" : action) + "\n<size=60%>" + (sub ?? "누르고 있기") + "</size>";
+        if (_label.text != t) _label.text = t;
     }
 
     private static TMPro.TMP_FontAsset _font;

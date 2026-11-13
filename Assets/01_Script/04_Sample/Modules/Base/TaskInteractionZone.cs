@@ -53,6 +53,12 @@ public class TaskInteractionZone : MonoBehaviour
         {
             if(!IsCurrentTaskValid(item.prefabId)) return;
 
+            // 진단기(GDS)는 OBD 에 가까이 가기만 해서 단계가 끝나지 않는다 — 연결 후 '원클릭 진단'을 마쳤을 때 GdsTablet 이 같은 신호를 보낸다.
+            // (예전엔 가까이 대자마자 단계가 넘어가 진단을 해 볼 수 없었다)
+            // 서버에는 ScenarioStateReceiver 가 없어 '현재 단계' 로 거를 수 없으므로 GDS 의 OBD 접촉은 항상 무시한다.
+            if(zoneId == "OBD_Zone" && item.prefabId != null && item.prefabId.IndexOf("GDS", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return;
+
             Debug.Log($"<color=cyan>[Zone:{zoneId}]</color> ✅ 올바른 아이템 진입: {item.prefabId}");
             InteractionEvents.FireZoneActivated(zoneId, item.prefabId);
             return;

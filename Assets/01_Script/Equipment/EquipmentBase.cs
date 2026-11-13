@@ -76,6 +76,11 @@ public abstract class EquipmentBase : NetworkBehaviour
     /// <summary>트리거를 누른 손(진동용). PC 면 null.</summary>
     protected Hand PressHand => _squeezeHand;
 
+    /// <summary>모바일 작업 버튼에 보일 이름(지금 할 일).</summary>
+    protected virtual string MobileActionName => "작업";
+    /// <summary>작업 버튼 아랫줄(누르는 방식). 켜고 끄는 장비는 '누르기'.</summary>
+    protected virtual string MobileActionSub => "누르고 있기";
+
     /// <summary>누르는 순간(토글형 장비용). PC·모바일은 h == null.</summary>
     protected virtual void OnPressDown(Hand h) { }
 
@@ -99,7 +104,8 @@ public abstract class EquipmentBase : NetworkBehaviour
         }
         else { _vrSqueeze = false; _squeezeHand = null; }
 
-        if (Platform == PlatformType.Mobile && held != _mobileShown) { _mobileShown = held; MobileWorkButton.SetVisible(held); }
+        if (Platform == PlatformType.Mobile && held != _mobileShown) { _mobileShown = held; MobileWorkButton.SetVisible(held, MobileActionName, MobileActionSub); }
+        else if (_mobileShown) MobileWorkButton.SetLabel(MobileActionName, MobileActionSub);
 
         bool prev = LocalInput;
         LocalInput = input;

@@ -157,6 +157,15 @@ namespace DoDrill.Training
         {
             if (!InstanceFinder.IsClientStarted) return;
 
+            // 진단기(GDS)의 OBD 존 신호는 진단기 화면(원인 확인·고장 코드 소거)에서 낸 것만 서버로 보낸다.
+            // OBD 단자 접촉, PC E키/클릭 등으로 연결만 해도 진단 단계가 넘어가던 문제 방지.
+            if (zoneId == "OBD_Zone" && !GdsTablet.ObdSignalOpen
+                && (string.IsNullOrEmpty(itemId) || itemId.IndexOf("GDS", StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                Debug.Log($"<color=cyan>[Bridge]</color> OBD_Zone 신호 무시({itemId}) — 진단기 화면에서 진단을 진행해야 완료됩니다.");
+                return;
+            }
+
             // 데이터가 없을 경우 실시간 복구 시도
             if (_scenarioData == null) TryFillScenarioData();
 

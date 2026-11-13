@@ -107,6 +107,16 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     public float CrouchInput => _crouchInput;
     public float MoveSpeed => moveSpeed;
 
+    /// <summary>시선 상하각을 정한다(도). 음수 = 위. 정비 크리퍼에 누울 때 위를 올려다보게 하는 데 쓴다.</summary>
+    /// <summary>시선 고정(정비 크리퍼에 누웠을 때) — 마우스로 시선이 돌아가지 않는다</summary>
+    [System.NonSerialized] public bool LookLocked;
+
+    public void SetPitch(float deg)
+    {
+        _rotX = Mathf.Clamp(deg, minLookX, maxLookX);
+        if (cameraPivot != null && _avatarCtrl != null) cameraPivot.localRotation = Quaternion.Euler(_rotX, 0f, 0f);
+    }
+
     private bool UseAvatarRig => cameraPivot != null && _avatarCtrl != null;
 
     // ═══════════════════════════════════════════════════════
@@ -485,6 +495,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     private void HandleCameraLook()
     {
         if(!Input.GetMouseButton(1)) return;
+        if(LookLocked) return;
 
         float y = Input.GetAxis("Mouse X") * lookSensitivity;
         _rotX += Input.GetAxis("Mouse Y") * lookSensitivity * -1f;
@@ -504,8 +515,12 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
 
     private void HandleVerticalInput()
     {
-        if(Input.GetKeyDown(KeyCode.Q)) MoveUp();
-        if(Input.GetKeyDown(KeyCode.E)) MoveDown();
+        // 소켓 교체(에어 임팩트 렌치)·색 바꾸기(도색 건)처럼 Q 를 쓰는 도구를 든 동안엔 Q 로 높이를 올리지 않는다
+        // (예전엔 소켓을 끼울 때마다 시점이 올라가 '소켓에 밀려 몸이 뜨는' 것처럼 보였다)
+        bool qTool = _heldObject != null && (_heldObject.GetComponent<AirImpactWrench>() != null || _heldObject.GetComponent<PaintGun>() != null);
+        // 사다리 가까이에선 Q/E 가 한 칸 오르기/내려오기(LadderProp)
+        if(Input.GetKeyDown(KeyCode.Q) && !qTool && !LadderProp.TryClimbStep(transform, +1)) MoveUp();
+        if(Input.GetKeyDown(KeyCode.E) && !LadderProp.TryClimbStep(transform, -1)) MoveDown();
         if(Input.GetKeyUp(KeyCode.Q)) StopVertical();
         if(Input.GetKeyUp(KeyCode.E)) StopVertical();
 
@@ -626,8 +641,12 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         Vector3 pos = worldPos + Vector3.up * labelHeightOffset;
         _worldLabel = Instantiate(worldLabelPrefab, pos, Quaternion.identity);
 
-        // ★ [핵심 1] 라벨이 마우스 광선을 막아서 잔상을 유발하지 않도록 레이어를 Ignore Raycast(2)로 강제 고정
-        SetLayerRecursively(_worldLabel, 2);
+        SetLayerRecursively(_worldLabel, 1);
+        // 예전엔 Ignore Raycast(2)였는데, PC 카메라는 2번 레이어를 그리지 않아(내 장비 숨김용) 라벨이 씬뷰에만 보이고 게임 화면엔 안 보였다.
+        // TransparentFX(1)로 두고, 마우스·터치를 막지 않게 UI 레이캐스트만 끈다(라벨엔 물리 콜라이더가 없다).
+        foreach(var gr in _worldLabel.GetComponentsInChildren<UnityEngine.UI.GraphicRaycaster>(true)) gr.enabled = false;
+        foreach(var gfx in _worldLabel.GetComponentsInChildren<UnityEngine.UI.Graphic>(true)) gfx.raycastTarget = false;
+        foreach(var lc in _worldLabel.GetComponentsInChildren<Collider>(true)) lc.enabled = false;
 
         // 텍스트 설정
         var label = _worldLabel.GetComponent<WorldHoverLabel>();
@@ -681,11 +700,22 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     {
         //TODO. 수정 필요(로컬라이징)
         // 우선순위 순으로 이름 결정
+        var wcName = col.GetComponentInParent<IWorldClickable>();   // 차량 프렁크·냉각수 뚜껑·경적 등(차량 루트의 TaskItem 보다 먼저)
+        if(wcName != null) return wcName.DisplayName;
+
         var item = col.GetComponent<TaskItem>() ?? col.GetComponentInParent<TaskItem>();
         if(item != null) return item.prefabId;
 
         var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
         if(anim != null) return anim.gameObject.name;
+
+        var openable = col.GetComponentInParent<Openable>();
+        if(openable != null) return openable.displayName;
+
+        var swatchN = col.GetComponentInParent<PaintSwatch>();
+        if(swatchN != null) return swatchN.DisplayName;
+        var mbtnN = col.GetComponentInParent<ManualBoardButton>();
+        if(mbtnN != null) return mbtnN.DisplayName;
 
         var zone = col.GetComponent<TaskInteractionZone>() ?? col.GetComponentInParent<TaskInteractionZone>();
         if(zone != null) return zone.zoneId;
@@ -704,9 +734,19 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         // 들고 있는 상태
         if(_heldObject != null) return "클릭하여 내려놓기";
 
+        var wcMsg = col.GetComponentInParent<IWorldClickable>();
+        if(wcMsg != null) return wcMsg.HoverMessage(false);
+
         // ClickableAnimator
         var anim = col.GetComponent<ClickableAnimator>() ?? col.GetComponentInParent<ClickableAnimator>();
         if(anim != null) return anim.IsOpen ? "클릭하여 닫기" : "클릭하여 열기";
+
+        var openable = col.GetComponentInParent<Openable>();
+        if(openable != null) return openable.HoverMessage(false);
+
+        if(col.GetComponentInParent<PaintSwatch>() != null) return "클릭하여 이 색 고르기";
+        var mbtnM = col.GetComponentInParent<ManualBoardButton>();
+        if(mbtnM != null) return mbtnM.HoverMessage("클릭");
 
         // TaskItem
         var item = col.GetComponent<TaskItem>() ?? col.GetComponentInParent<TaskItem>();
@@ -805,7 +845,9 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             return true;
         }
 
-        // ClickableAnimator (문/후드) 확인
+        // ClickableAnimator (문/후드) 확인 — 그 아래 달린 덮개·뚜껑이 먼저
+        var wcFirst = WorldClickPriority.Nearer(hit.collider);
+        if(wcFirst != null) { wcFirst.OnPCClick(); return true; }
         var anim = hit.collider.GetComponent<ClickableAnimator>()
                 ?? hit.collider.GetComponentInParent<ClickableAnimator>();
         if(anim != null)
@@ -814,6 +856,16 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             anim.OnPCClick();
             return true;
         }
+
+        var wclick = hit.collider.GetComponentInParent<IWorldClickable>();   // 차량 프렁크·냉각수 뚜껑·경적 등
+        if(wclick != null) { wclick.OnPCClick(); return true; }
+
+        var openable = hit.collider.GetComponentInParent<Openable>();
+        if(openable != null) { openable.OnPCClick(); return true; }
+        var swatch = hit.collider.GetComponentInParent<PaintSwatch>();
+        if(swatch != null) { swatch.OnPCClick(); return true; }
+        var mbtn = hit.collider.GetComponentInParent<ManualBoardButton>();
+        if(mbtn != null) { mbtn.OnPCClick(); return true; }
 
         return false;
     }
@@ -927,7 +979,9 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             // 안전하다면 return하지 않고 아래의 TaskItem/SyncGrab 로직으로 내려갑니다.
         }
 
-        // ── 1순위: ClickableAnimator (문, 후드 등) ──
+        // ── 1순위: ClickableAnimator (문, 후드 등) — 단, 그 아래 달린 덮개·뚜껑(IWorldClickable)이 먼저 ──
+        var wcFirst = WorldClickPriority.Nearer(hit.collider);
+        if (wcFirst != null) { wcFirst.OnPCClick(); return true; }
         var clickableAnim = hit.collider.GetComponent<ClickableAnimator>()
                           ?? hit.collider.GetComponentInParent<ClickableAnimator>();
 
@@ -1291,7 +1345,9 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         SyncGrab sg = hit.collider.GetComponentInParent<SyncGrab>();
         if(sg != null) return sg;
 
-        // SyncGrab 없음 — ClickableAnimator 확인
+        // SyncGrab 없음 — ClickableAnimator 확인(그 아래 달린 덮개·뚜껑이 먼저)
+        var wcFirst = WorldClickPriority.Nearer(hit.collider);
+        if(wcFirst != null) { wcFirst.OnPCClick(); return null; }
         var anim = hit.collider.GetComponent<ClickableAnimator>()
                 ?? hit.collider.GetComponentInParent<ClickableAnimator>();
         if(anim != null)
@@ -1300,6 +1356,17 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             anim.OnPCClick();
             return null; // SyncGrab 없으므로 null, 하지만 이미 처리됨
         }
+
+        // 가구 문·서랍·뚜껑(Openable)
+        var wclick = hit.collider.GetComponentInParent<IWorldClickable>();
+        if(wclick != null) { wclick.OnPCClick(); return null; }
+
+        var openable = hit.collider.GetComponentInParent<Openable>();
+        if(openable != null) { openable.OnPCClick(); return null; }
+        var swatch = hit.collider.GetComponentInParent<PaintSwatch>();
+        if(swatch != null) { swatch.OnPCClick(); return null; }
+        var mbtn = hit.collider.GetComponentInParent<ManualBoardButton>();
+        if(mbtn != null) { mbtn.OnPCClick(); return null; }
 
         // InteractablePart 확인 (볼트, MSD 등 씬 고정 오브젝트)
         var part = hit.collider.GetComponent<InteractablePart>()
@@ -1546,8 +1613,8 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
 
         HeldItemUI.Instance?.ClearUI();
 
-        // 스케일 원복
-        dropping.transform.localScale = Vector3.one;
+        // 스케일 원복 — 들기 전 크기로(예전엔 무조건 1 로 돌려, 원래 크기가 1 이 아닌 장비가 놓을 때 커지거나 작아졌다)
+        dropping.transform.localScale = _heldOriginalScale;
 
         // ② 상태 파악 (조립 존 안에 있는지)
         bool isInsideSnapZone = part != null && part.currentState == InteractablePart.PartState.Detached && part._isInsideSnapZone;
@@ -1582,6 +1649,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     /// <summary>홀드 스케일 적용 — 렌더러 바운드 실제 크기 기준 축소</summary>
     private void ApplyHoldScale(Transform t)
     {
+        if(HoldScalePolicy.IsExempt(t)) return;   // 큰 장비(오일 받이·크리퍼 등)는 줄이지 않는다
         float maxDim = 0f;
         foreach(var r in t.GetComponentsInChildren<Renderer>())
         {

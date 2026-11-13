@@ -95,6 +95,8 @@ public class VRPlayer : BasePlayer
         {
             Destroy(applyAvatar);
             foreach (var go in localTrackingInfos) go.SetActive(true);
+            // 본인 시점 아바타를 내 키에 맞춘다(까치발 방지) + 팔이 몸을 뚫지 않게 팔꿈치 벌리기
+            if (GetComponent<LocalAvatarHeightFit>() == null) gameObject.AddComponent<LocalAvatarHeightFit>();
         }
         else
         {
@@ -230,6 +232,8 @@ public class VRPlayer : BasePlayer
     //   VRIK 의 보행(locomotion) 이 발을 옮기며 자연스럽게 서 있는다.
     [Header("원격 아바타 몸통 추종")]
     [SerializeField] private bool followAvatarRoot = true;
+    [Tooltip("크리퍼에 누운 동안 true — 루트 추종·키 맞춤을 멈춘다(VrLyingPose 가 켬)")]
+    [System.NonSerialized] public bool lyingPose;
     [SerializeField] private float rootFollowSpeed = 10f;
     [SerializeField] private float rootTurnSpeed = 6f;
     private Transform _avatarRoot;
@@ -273,13 +277,22 @@ public class VRPlayer : BasePlayer
     private float _maxHeadHeight;
     private Transform _avatarHeadBone;
 
+    // (2026-11-13) 까치발 수정
+    //  ① 예전 기준 높이에 +0.08m(눈 높이 보정)를 더했는데, 보내는 머리 값은 카메라가 아니라 HeadDummy(머리뼈 위치)라
+    //     아바타가 약 5% 작게 맞춰졌다 → 머리 목표에 닿으려고 다리가 쭉 펴지며 발뒤꿈치가 들렸다. 보정값 제거 + 2% 여유.
+    //  ② 머리 높이를 Anchor 기준이 아니라 아바타가 선 바닥 기준으로 잰다(Anchor 가 바닥과 다르면 체형이 틀어짐).
+    //  ③ '지금까지 본 최대값' 대신 0.6초 이상 유지된 높이만 키로 인정(헤드셋을 들어 올리는 등 순간 값 무시).
+    private StandingHeight _standing;
+    // (11/13 2차) 1.02 → 1.0 : 2% 크게 맞추면 팔·다리가 그만큼 남아 서 있어도 무릎·팔꿈치가 굽은 '엉거주춤' 자세가 됐다(까치발을 들어야 펴짐)
+    private const float KneeSlack = 1.0f;
+
     private void MatchAvatarHeight()
     {
-        if (!matchAvatarHeight || _avatarRoot == null || _avatarHeadBone == null) return;
-        // 앉거나 웅크려 있을 때를 키로 오인하지 않도록 지금까지 본 가장 높은 머리 높이를 쓴다(아바타 부모가 바닥 기준이라 가정)
-        _maxHeadHeight = Mathf.Max(_maxHeadHeight, targetHeadPos.y);
+        if (!matchAvatarHeight || _avatarRoot == null || _avatarHeadBone == null || anchor == null) return;
+        float headWorldY = anchor.position.y + (anchor.rotation * targetHeadPos).y;
+        _maxHeadHeight = _standing.Feed(headWorldY - _avatarFloorY, Time.deltaTime);
         if (_maxHeadHeight < 1.0f || _avatarEyeAtBase < 0.5f) return;
-        float factor = Mathf.Clamp(_maxHeadHeight / _avatarEyeAtBase, avatarScaleRange.x, avatarScaleRange.y);
+        float factor = Mathf.Clamp(_maxHeadHeight / _avatarEyeAtBase * KneeSlack, avatarScaleRange.x, avatarScaleRange.y);
         float cur = _avatarRoot.localScale.y / Mathf.Max(0.0001f, _avatarBaseScale.y);
         if (Mathf.Abs(factor - cur) < 0.03f) return;
         float next = Mathf.Lerp(cur, factor, 1f - Mathf.Exp(-3f * Time.deltaTime));
@@ -346,6 +359,7 @@ public class VRPlayer : BasePlayer
     private void FollowAvatarRoot(Vector3 headPos, Quaternion headRot, bool snap = false)
     {
         if (!followAvatarRoot || applyAvatar == null) return;
+        if (lyingPose && _avatarRoot != null) return;   // 크리퍼에 누운 동안은 VrLyingPose 가 루트를 잡는다(키 재측정도 멈춤)
 
         if (_avatarRoot == null)
         {
@@ -364,13 +378,15 @@ public class VRPlayer : BasePlayer
                 // 차렷 자세(프리팹 기본) 머리 높이를 하한으로 쓴다.
                 float lossy = Mathf.Max(0.01f, _avatarRoot.lossyScale.y);
                 float measured = _avatarHeadBone.position.y - _avatarRoot.position.y;
-                _avatarEyeAtBase = Mathf.Max(measured, restHeadHeight * lossy) + 0.08f * lossy;
+                _avatarEyeAtBase = Mathf.Max(measured, restHeadHeight * lossy);
             }
 
             vrik.solver.spine.minHeadHeight = minHeadHeightOverride;
             vrik.solver.locomotion.stepThreshold = stepThresholdOverride;
             CacheArmLengths();
             SetupElbowGoals(vrik);
+            // 손이 몸 쪽으로 오면 팔꿈치를 벌리고 손목이 몸통을 뚫지 않게(팔꿈치 목표를 만든 뒤에 붙여야 기본값을 그대로 이어받는다)
+            if (vrik.GetComponent<ArmBodyClearance>() == null) vrik.gameObject.AddComponent<ArmBodyClearance>().pushHands = true;
         }
 
         MatchAvatarHeight();

@@ -13,6 +13,8 @@ using UnityEngine;
 // ============================================================
 public class SprayTool : EquipmentBase
 {
+    protected override string MobileActionName => "분사";
+
     public enum Kind { Lubricant, Cleaner, Extinguisher }
 
     public Kind kind = Kind.Lubricant;
@@ -53,14 +55,14 @@ public class SprayTool : EquipmentBase
         var lib = EquipFx.Lib;
         if (lib != null && lib.mist != null)
         {
-            Color c = kind == Kind.Lubricant ? new Color(0.85f, 0.8f, 0.55f, 0.55f)
-                    : kind == Kind.Cleaner ? new Color(0.85f, 0.92f, 1f, 0.5f)
-                    : new Color(0.97f, 0.97f, 0.95f, 0.8f);
+            Color c = kind == Kind.Lubricant ? new Color(0.85f, 0.8f, 0.55f, 0.85f)    // 분사가 잘 안 보여 진하게
+                    : kind == Kind.Cleaner ? new Color(0.8f, 0.9f, 1f, 0.8f)
+                    : new Color(0.97f, 0.97f, 0.95f, 0.9f);
             _mist = EquipFx.MakeParticles(transform, "[Spray]", new EquipFx.PsSettings
             {
                 mat = lib.mist, color = c,
-                lifetime = IsExt ? 1.2f : 0.45f, speed = IsExt ? 6f : 3f,
-                size = IsExt ? 0.25f : 0.05f, sizeEnd = IsExt ? 4f : 3.5f,
+                lifetime = IsExt ? 1.2f : 0.65f, speed = IsExt ? 6f : 3.2f,
+                size = IsExt ? 0.25f : 0.08f, sizeEnd = IsExt ? 4f : 5f,
                 gravity = IsExt ? 0.15f : 0.02f, rate = 0f, coneAngle = IsExt ? 12f : 9f,
                 radius = 0.004f, max = IsExt ? 500 : 250, drag = IsExt ? 1.2f : 2.5f
             });
@@ -87,7 +89,7 @@ public class SprayTool : EquipmentBase
         Vector3 origin = transform.TransformPoint(_topLocal + UseDirLocal * _radius);
         _mist.transform.SetPositionAndRotation(origin, Quaternion.LookRotation(dirW));
         var em = _mist.emission;
-        em.rateOverTime = on ? (IsExt ? 260f : 140f) : 0f;
+        em.rateOverTime = on ? (IsExt ? 260f : 240f) : 0f;
         EquipFx.Drive(_audio, on ? (IsExt ? 0.7f : 0.45f) : 0f, IsExt ? 0.8f : 1.15f);
 
         if (!on) { _sprayTime = 0f; return; }

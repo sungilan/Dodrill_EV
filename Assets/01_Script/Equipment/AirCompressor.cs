@@ -44,7 +44,39 @@ public class AirCompressor : NetworkBehaviour
     public Vector3 FreeEnd => _freeEnd;
 
     private void OnEnable() { if (!All.Contains(this)) All.Add(this); }
-    private void OnDisable() { All.Remove(this); }
+    private void OnDisable() { All.Remove(this); if (_valveLabel != null) _valveLabel.SetActive(false); }
+
+    // ── 밸브(레버) 안내 라벨: 가까이(2m) 가면 레버 위에 '에어 밸브 — 열림/잠김 · 누르면 열기' 를 띄운다 ──
+    private GameObject _valveLabel;
+    private WorldHoverLabel _valveLabelComp;
+    private string _valveLabelKey;
+
+    private void UpdateValveLabel()
+    {
+        var cam = Camera.main;
+        bool show = valve != null && cam != null && (cam.transform.position - valve.position).sqrMagnitude < 2f * 2f;
+        if (!show) { if (_valveLabel != null && _valveLabel.activeSelf) _valveLabel.SetActive(false); return; }
+        if (_valveLabel == null)
+        {
+            var prefab = Resources.Load<GameObject>("ItemNameTagLabel");
+            if (prefab == null) return;
+            _valveLabel = Instantiate(prefab);
+            _valveLabel.name = "[AirValveLabel]";
+            foreach (var t in _valveLabel.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 1;
+            _valveLabelComp = _valveLabel.GetComponent<WorldHoverLabel>();
+        }
+        if (!_valveLabel.activeSelf) _valveLabel.SetActive(true);
+        _valveLabel.transform.position = valve.position + Vector3.up * 0.18f;
+
+        bool open = _valveOpen.Value;
+        string how = Platform == PlatformType.VR ? "검지로 레버를 누르면" : Platform == PlatformType.Mobile ? "레버를 탭하면" : "레버를 클릭(또는 바라보고 E)하면";
+        string title = open ? "에어 밸브 <color=#5BE37D>열림</color>" : "에어 밸브 <color=#FF6B6B>잠김</color>";
+        string sub = how + (open ? " 잠깁니다" : " 공기가 나옵니다");
+        string key = title + sub;
+        if (key != _valveLabelKey && _valveLabelComp != null) { _valveLabelKey = key; _valveLabelComp.SetText(title, sub); }
+    }
+
+    private void OnDestroy() { if (_valveLabel != null) Destroy(_valveLabel); }
 
     private void Start()
     {
@@ -138,6 +170,7 @@ public class AirCompressor : NetworkBehaviour
     private void Update()
     {
         PollValveInput();
+        UpdateValveLabel();
 
         // 밸브 손잡이 모양(열림 = 90° 돌아감)
         if (valve != null)

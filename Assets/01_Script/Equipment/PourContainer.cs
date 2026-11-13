@@ -8,6 +8,8 @@ using UnityEngine;
 //  · 기울기가 70° 를 넘으면 흐르기 시작하고, 거꾸로 들수록 많이 흐른다. 다 쏟으면 멈춘다.
 //  · 줄기가 떨어지는 곳: 오일 받이(FloorDragProp.catchLiquid) 위면 받은 양이 늘고, 바닥이면 웅덩이가 생겨 점점 커진다
 //  · 위치·자세는 SyncGrab 으로 모두에게 같으므로 흐름은 각 화면에서 따로 계산한다(네트워크 메시지 없음)
+//  · VR: 잡고 손목을 기울인다 / PC: 들고 F 를 누르고 있으면 앞으로 기울여 붓는다 / 모바일: 들고 작업 버튼을 누르고 있으면 기울인다
+//    (PC·모바일은 SyncGrab.PcHoldOverride 로 들기 자세에 기울기를 더한다 → 자세가 그대로 다른 사람에게도 전파)
 // ============================================================
 public class PourContainer : MonoBehaviour
 {
@@ -31,9 +33,56 @@ public class PourContainer : MonoBehaviour
     private static readonly List<float> s_puddleVol = new List<float>();
     private const int MaxPuddles = 6;
 
+    private SyncGrab _sync;
+    private XRAirpotrSecurity.PlatformType? _plat;
+    private XRAirpotrSecurity.PlatformType Platform => _plat ??= XRAirpotrSecurity.Utils.GetPlatformType();
+    private float _pcTilt;
+    private bool _mobileShown;
+    private const float PcTiltMax = 125f;
+
+    private void Awake()
+    {
+        _sync = GetComponent<SyncGrab>();
+        if (_sync != null) _sync.PcHoldOverride = PcHoldPose;
+    }
+
+    private bool LocalHeld => _sync != null && _sync.IsOwner && _sync.IsGrabbed && !_sync.IsHolstered;
+
+    /// <summary>PC·모바일: 들기 자세에 '앞으로 기울이기'를 더한다(카메라 오른쪽 축 기준 → 주둥이가 앞으로).</summary>
+    private Pose PcHoldPose(Vector3 pos, Quaternion rot)
+    {
+        if (_pcTilt <= 0.01f) return new Pose(pos, rot);
+        var cam = Camera.main;
+        Vector3 right = cam != null ? cam.transform.right : Vector3.right;
+        // 기울면 주둥이가 아래를 보게 조금 앞으로 내밀어 준다(손 쪽에 쏟아지지 않게)
+        Vector3 fwd = cam != null ? Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized : Vector3.forward;
+        float k = _pcTilt / PcTiltMax;
+        return new Pose(pos + fwd * 0.12f * k, Quaternion.AngleAxis(_pcTilt, right) * rot);
+    }
+
+    private void PollPcPourInput()
+    {
+        if (Platform == XRAirpotrSecurity.PlatformType.VR) return;
+        bool held = LocalHeld;
+        bool press = false;
+        if (held)
+        {
+            if (Platform == XRAirpotrSecurity.PlatformType.PC) press = Input.GetKey(KeyCode.F);
+            else press = MobileWorkButton.IsHeld;
+            EquipFx.Notice("pour_hint", "붓기", Platform == XRAirpotrSecurity.PlatformType.PC
+                ? "F 를 누르고 있으면 앞으로 기울여 붓습니다 (오일 받이 위에서)"
+                : "작업 버튼을 누르고 있으면 기울여 붓습니다 (오일 받이 위에서)", EquipFx.Info, 3f, 30f);
+        }
+        if (Platform == XRAirpotrSecurity.PlatformType.Mobile && held != _mobileShown) { _mobileShown = held; MobileWorkButton.SetVisible(held, "붓기"); }
+        // 누르는 동안 천천히 기울고(0.8초에 최대), 떼면 빨리 세운다
+        _pcTilt = Mathf.MoveTowards(_pcTilt, press ? PcTiltMax : 0f, (press ? 160f : 400f) * Time.deltaTime);
+        if (!held) _pcTilt = 0f;
+    }
+
     private void Start()
     {
         _amount = capacity;
+        LiquidGauge.Attach(gameObject, liquidName, capacity, () => _amount, () => LocalHeld);   // 현재 용량 패널(비었음/꽉 참)
         _upLocal = EquipFx.UpAxisLocal(transform);
         if (EquipFx.LocalBounds(transform, out var b))
         {
@@ -61,6 +110,7 @@ public class PourContainer : MonoBehaviour
 
     private void Update()
     {
+        PollPcPourInput();
         if (_stream == null) return;
         Vector3 up = transform.TransformDirection(_upLocal);
         float tilt = Vector3.Angle(up, Vector3.up);
@@ -108,6 +158,10 @@ public class PourContainer : MonoBehaviour
             if (h.distance < best) { best = h.distance; hit = h; any = true; }
         }
         if (!any) return;
+
+        // 차량 냉각수 탱크처럼 액체를 받는 물체(열려 있고 액체 종류가 맞으면 받는다 → 웅덩이 없음)
+        var sink = hit.collider.GetComponentInParent<ILiquidSink>();
+        if (sink != null && sink.AddLiquid(liters, liquidName)) return;
 
         var catcher = hit.collider.GetComponentInParent<FloorDragProp>();
         if (catcher != null && catcher.AddLiquid(liters)) return;

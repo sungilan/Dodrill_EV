@@ -121,6 +121,7 @@ public class ImpactWrench : MonoBehaviour
             _buttonHeld = MobileWorkButton.IsHeld;
         }
         SetMobileButton(_targetBolt != null);
+        if (_targetBolt != null && _mobileButtonShown) MobileWorkButton.SetLabel(_targetBolt.isAssembleMode ? "볼트 조이기" : "볼트 풀기");
 
         bool working = _buttonHeld;
         ApplyEffects(working);
@@ -210,6 +211,7 @@ public class ImpactWrench : MonoBehaviour
     private bool IsCorrectBoltTask(Bolt bolt)
     {
         if(bolt == null) return false;
+        if(bolt.GetComponent<FreeWorkBolt>() != null) return true;   // 타이어 휠 너트 등 자유 실습 — 시나리오 단계와 무관
 
         // 1. 볼트 그룹의 설정 ID 가져오기
         BoltGroupCounter group = bolt.GetComponentInParent<BoltGroupCounter>();
@@ -432,7 +434,9 @@ public class ImpactWrench : MonoBehaviour
 
     private void UpdateBoltSnap()
     {
-        if (!VrProbeHandling.IsVRDevice) return;
+        // PC·모바일도 정렬한다 — 렌치를 마음대로 기울일 수 없으므로 각도 제한 없이, 볼트를 잡은 거리(30cm) 안이면 비트를 볼트 축에 맞춘다
+        bool vr = VrProbeHandling.IsVRDevice;
+        float maxDist = vr ? SnapMaxDist : 0.3f, maxAng = vr ? SnapMaxAngle : 179f;
         InitBoltSnap();
         if (_snapBody == null) return;
 
@@ -449,7 +453,7 @@ public class ImpactWrench : MonoBehaviour
             Vector3 tipWorld = transform.TransformPoint(_tipLocal);
             Vector3 axisWorld = transform.TransformDirection(Vector3.right).normalized;
             float ang = Vector3.Angle(axisWorld, -outDir);
-            if (ang < SnapMaxAngle && Vector3.Distance(tipWorld, head) < SnapMaxDist)
+            if (ang < maxAng && Vector3.Distance(tipWorld, head) < maxDist)
             {
                 Vector3 targetL = transform.InverseTransformDirection(-outDir).normalized;
                 rFull = Quaternion.FromToRotation(Vector3.right, targetL);
@@ -497,15 +501,15 @@ public class ImpactWrench : MonoBehaviour
         if (!_handRestoreHooked)
         {
             _handRestoreHooked = true;
-            UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += OnBeginRendering;
-            UnityEngine.Rendering.RenderPipelineManager.endContextRendering += OnEndRendering;
+            Application.onBeforeRender += OnBeforeRenderHands;
         }
     }
 
-    private void OnBeginRendering(UnityEngine.Rendering.ScriptableRenderContext ctx, System.Collections.Generic.List<Camera> cams)
+    // 보이는 손은 VRIK 아바타의 손 뼈다(AutoHand Hand 는 물리·추적용이라 옮겨도 장갑이 안 따라왔다).
+    // 모든 LateUpdate(VRIK 풀이) 뒤, 스키닝 전에 불리는 onBeforeRender 에서 아바타 손 뼈를 렌치와 같은 만큼 옮긴다 — 다음 프레임 VRIK 가 다시 쓰므로 되돌릴 필요 없다.
+    private void OnBeforeRenderHands()
     {
-        RestoreHandVisuals();
-        // 이번 프레임에 스냅이 적용됐을 때만(놓았거나 볼트에서 떨어지면 바로 원래 손)
+        if (this == null || !isActiveAndEnabled) return;
         if (!_handOffsetWanted || _handOffFrame < Time.frameCount - 1 || !_snapApplied) return;
         if (_grabbable == null) _grabbable = GetComponentInParent<Autohand.Grabbable>();
         if (_grabbable == null) return;
@@ -515,18 +519,37 @@ public class ImpactWrench : MonoBehaviour
         Vector3 pivotW = transform.TransformPoint(_tipLocal);
         Quaternion rotW = transform.rotation * _handOffR * Quaternion.Inverse(transform.rotation);
         Vector3 dW = transform.TransformVector(_handOffD);
-
         foreach (var h in heldBy)
         {
             if (h == null) continue;
-            var c = h.transform;
-            if (transform.IsChildOf(c)) continue;   // 렌치가 손 아래로 붙은 경우(이미 같이 움직임)
-            _handVis.Add(c); _handVisPos.Add(c.position); _handVisRot.Add(c.rotation);
-            c.SetPositionAndRotation(rotW * (c.position - pivotW) + pivotW + dW, rotW * c.rotation);
+            var bone = AvatarHandBone(h);
+            if (bone == null) continue;
+            bone.SetPositionAndRotation(rotW * (bone.position - pivotW) + pivotW + dW, rotW * bone.rotation);
         }
     }
 
-    private void OnEndRendering(UnityEngine.Rendering.ScriptableRenderContext ctx, System.Collections.Generic.List<Camera> cams) => RestoreHandVisuals();
+    private readonly System.Collections.Generic.Dictionary<Autohand.Hand, Transform> _boneCache = new System.Collections.Generic.Dictionary<Autohand.Hand, Transform>();
+
+    /// <summary>이 AutoHand 손에 대응하는 보이는 아바타(VRIK)의 손 뼈 — 숨은 IK 복사본은 제외, 가장 가까운 것(25cm 안).</summary>
+    private Transform AvatarHandBone(Autohand.Hand h)
+    {
+        if (_boneCache.TryGetValue(h, out var cached) && cached != null) return cached;
+        var hidden = new System.Collections.Generic.HashSet<RootMotion.FinalIK.VRIK>();
+        foreach (var ah in FindObjectsByType<Autohand.AutoHandVRIK>(FindObjectsSortMode.None)) if (ah != null && ah.invisibleIK != null) hidden.Add(ah.invisibleIK);
+        Transform best = null; float bestD = 0.25f * 0.25f;
+        foreach (var ik in FindObjectsByType<RootMotion.FinalIK.VRIK>(FindObjectsSortMode.None))
+        {
+            if (ik == null || hidden.Contains(ik) || !ik.isActiveAndEnabled) continue;
+            foreach (var b in new[] { ik.references.leftHand, ik.references.rightHand })
+            {
+                if (b == null) continue;
+                float d = (b.position - h.transform.position).sqrMagnitude;
+                if (d < bestD) { bestD = d; best = b; }
+            }
+        }
+        if (best != null) _boneCache[h] = best;
+        return best;
+    }
 
     private void RestoreHandVisuals()
     {
@@ -639,8 +662,7 @@ public class ImpactWrench : MonoBehaviour
     {
         if (_handRestoreHooked)
         {
-            UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= OnBeginRendering;
-            UnityEngine.Rendering.RenderPipelineManager.endContextRendering -= OnEndRendering;
+            Application.onBeforeRender -= OnBeforeRenderHands;
             _handRestoreHooked = false;
         }
         RestoreHandVisuals();
