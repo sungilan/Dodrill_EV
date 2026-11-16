@@ -63,7 +63,31 @@ public abstract class EquipmentBase : NetworkBehaviour
         if (_mobileShown) MobileWorkButton.SetVisible(false);
     }
 
-    private void OnSqueeze(Hand h, Grabbable g) { _vrSqueeze = true; _squeezeHand = h; if (IsLocalHeld) OnPressDown(h); }
+    // 누르는 순간(OnPressDown)은 Update 의 실제 트리거 값 변화로 부른다(이벤트·폴링 두 번 불리지 않게)
+    private void OnSqueeze(Hand h, Grabbable g) { _vrSqueeze = true; _squeezeHand = h; }
+
+    /// <summary>
+    /// VR: 든 손의 실제 트리거 값(XR 기기)을 읽는다. AutoHand 누름/뗌 이벤트는 뗌을 놓치면 '누름'으로 고착돼
+    /// 키를 떼도 계속 작동하고, 다시 잡으면 안 되는 문제가 있었다(11/16). 기기를 못 읽을 때만 이벤트 값을 쓴다.
+    /// </summary>
+    private bool VrPolledInput()
+    {
+        if (Grab == null) return _vrSqueeze;
+        bool any = false, valid = false;
+        Hand pressed = null;
+        foreach (var h in Grab.GetHeldBy())
+        {
+            if (h == null) continue;
+            bool on = LocalHands.TriggerHeld(h, out bool v);
+            if (!v) continue;
+            valid = true;
+            if (on) { any = true; pressed = h; }
+        }
+        if (!valid) return _vrSqueeze;
+        _vrSqueeze = any;
+        if (any) _squeezeHand = pressed;
+        return any;
+    }
     private void OnUnsqueeze(Hand h, Grabbable g) { if (_squeezeHand == null || _squeezeHand == h) { _vrSqueeze = false; _squeezeHand = null; } }
     private void OnHandRelease(Hand h, Grabbable g) { if (g == null || g.GetHeldBy().Count == 0 || h == _squeezeHand) { _vrSqueeze = false; _squeezeHand = null; } }
 
@@ -100,7 +124,7 @@ public abstract class EquipmentBase : NetworkBehaviour
         {
             if (Platform == PlatformType.PC) input = Input.GetKey(KeyCode.F);
             else if (Platform == PlatformType.Mobile) input = MobileWorkButton.IsHeld;
-            else input = _vrSqueeze;
+            else input = VrPolledInput();
         }
         else { _vrSqueeze = false; _squeezeHand = null; }
 
@@ -109,7 +133,7 @@ public abstract class EquipmentBase : NetworkBehaviour
 
         bool prev = LocalInput;
         LocalInput = input;
-        if (input && !prev && !IsVR) OnPressDown(null);
+        if (input && !prev) OnPressDown(IsVR ? _squeezeHand : null);
 
         if (held)
         {

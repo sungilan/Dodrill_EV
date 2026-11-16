@@ -92,7 +92,7 @@ public class PcAvatarIKDriver : MonoBehaviour
             var found = SyncGrab.FindHeldBy(_controller.HolderId);
             if (found != null) _lastHeldSeen = Time.time;
             // 잠깐 안 보이는 것이면 직전 물체를 유지
-            if (found == null && _held != null && Time.time - _lastHeldSeen < holdGraceSeconds) found = _held;
+            if (found == null && _held != null && !_held.IsOnBelt && Time.time - _lastHeldSeen < holdGraceSeconds) found = _held;   // 벨트에 넣은 건 바로 손을 뗀다
             if (found != _held)
             {
                 _held = found;
@@ -106,7 +106,7 @@ public class PcAvatarIKDriver : MonoBehaviour
         }
 
         bool graceOk = _held != null && Time.time - _lastHeldSeen < holdGraceSeconds;
-        if (_held == null || (!_held.IsGrabbed && !graceOk))
+        if (_held == null || _held.IsOnBelt || (!_held.IsGrabbed && !graceOk))
         {
             _hasPose = false;
             armReach.SetHold(false, _holdRightHand, Vector3.zero, Quaternion.identity);

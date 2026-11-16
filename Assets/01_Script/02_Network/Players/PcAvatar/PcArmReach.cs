@@ -174,6 +174,20 @@ public class PcArmReach : MonoBehaviour
                 elbowT.rotation = Quaternion.FromToRotation(cur, want) * elbowT.rotation;
             // 팔 길이 안쪽이면 남은 차이만 손목 위치로 맞춘다(늘어나는 방향으로는 옮기지 않음)
             if (want.sqrMagnitude <= cur.sqrMagnitude) wrist.position = target;
+            else
+            {
+                // 11/16 PC 테스트: 볼트 정렬로 드릴이 비트 끝을 볼트에 맞추며 팔 길이 밖으로 나가면 손이 손잡이에서 떨어져 보였다.
+                // 정렬 중에만 팔 전체(어깨 뼈부터)를 남은 차이만큼 옮겨 손목을 손잡이에 붙인다 — 아래팔이 늘어나지 않고,
+                // 1인칭 화면에서 어깨는 카메라 뒤라 이음새가 보이지 않는다.
+                // 11/16 2차: 정렬 중이 아니어도 고개를 들거나 정면을 볼 때 HoldPoint(카메라 기준)가 팔 길이 밖으로 나가 같은 증상이 났다.
+                // 이 손목 맞춤은 본인 1인칭 화면에서만 돈다(SetWristSnap 은 소유자만) → 항상 어깨를 옮겨 손을 손잡이에 붙인다.
+                var shoulder = arm.solver.bone1 != null ? arm.solver.bone1.transform : null;
+                if (shoulder != null)
+                {
+                    Vector3 remain = target - wrist.position;
+                    if (remain.sqrMagnitude < 0.8f * 0.8f) shoulder.position += remain;
+                }
+            }
             wrist.rotation = wristRot;
         }
         else

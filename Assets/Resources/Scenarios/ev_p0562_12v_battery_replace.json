@@ -1,0 +1,921 @@
+{
+  "scenarioId": "ev_p0562_12v_battery_replace",
+  "scenarioName": {
+    "ko": "[P0562] 12V 보조 배터리 방전 진단 및 교환",
+    "en": "[P0562] 12V Auxiliary Battery - Diagnosis & Replacement",
+    "vi": ""
+  },
+  "version": "1.0",
+  "dtc": {
+    "code": "P0562",
+    "faultName": {
+      "ko": "시스템 전압 낮음 (12V 보조 배터리)",
+      "en": "System Voltage Low"
+    },
+    "symptom": {
+      "ko": "시동(READY) 불가, 계기판 경고등 점등",
+      "en": "Vehicle will not reach READY, warning lamps on"
+    },
+    "requiresLOTO": false,
+    "dischargeWaitSeconds": 0
+  },
+  "map": {
+    "objects": [
+      {
+        "prefabId": "Ioniq5N",
+        "position": {
+          "x": 0.781,
+          "y": 0,
+          "z": 0.08
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "vin",
+            "ko": "KMHC251XXXXXXXX",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "batteryStatus",
+            "ko": "SOC 68%",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": {
+    "tasks": [
+      {
+        "moduleId": "InitialDiagnosis",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "GDS_Tablet",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_OBD_Port"
+          }
+        ]
+      },
+      {
+        "moduleId": "LOTO_SmartKey",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "SmartKey",
+            "spawnPointId": "SP_Driver_Seat",
+            "guideId": "Guide_LockBox",
+            "targetGuideId": ""
+          }
+        ]
+      },
+      {
+        "moduleId": "LOTO_Gloves",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "InsulatedGloves",
+            "spawnPointId": "SP_Cart_Drawer",
+            "guideId": "Guide_Gloves"
+          }
+        ]
+      },
+      {
+        "moduleId": "Vehicle_Hood_Open",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Cover_Removal",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Neg_Disconnect",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Pos_Disconnect",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Sensor_Disconnect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Clamp_Removal",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Removal",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Old_12V_Battery",
+            "spawnPointId": "SP_12V_Battery",
+            "guideId": "Guide_12V_Removal_Zone"
+          }
+        ]
+      },
+      {
+        "moduleId": "Battery_12V_Install",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "New_12V_Battery",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_12V_Install_Zone"
+          }
+        ]
+      },
+      {
+        "moduleId": "Battery_12V_Clamp_Install",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Pos_Connect",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Neg_Connect",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Sensor_Connect",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Battery_12V_Cover_Install",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Vehicle_Hood_Close",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "FinalDiagnosis",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "GDS_Tablet",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_OBD_Port"
+          }
+        ]
+      }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "InitialDiagnosis",
+      "config": {
+        "actionType": "ScanDTC",
+        "requiredItems": [
+          "GDS_Tablet"
+        ],
+        "targetObjName": "OBD_Zone",
+        "targetZoneId": "OBD_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "초기 고장 진단",
+            "en": "Initial Fault Diagnosis",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "GDS 진단기를 OBD-II 단자에 연결해 고장 코드와 12V 전압을 확인하세요.",
+            "en": "Connect the GDS to the OBD-II port and check DTCs and 12V voltage.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "시동(READY)이 걸리지 않는 차량입니다. P0562는 12V 전원 전압이 낮다는 뜻입니다. 서비스 데이터에서 '보조 배터리(12V) 전압'이 규정(11.5~15.0V)보다 낮은지 확인하세요.",
+            "en": "The vehicle will not reach READY. P0562 means low system voltage. Check that 'Auxiliary battery (12V) voltage' in service data is below spec (11.5–15.0 V).",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "진단기 연결 → 원클릭 진단 → P0562 상세 → 12V 전압 확인",
+            "en": "Connect → Quick scan → P0562 detail → Check 12V voltage",
+            "vi": ""
+          },
+          {
+            "key": "expectedDTC",
+            "ko": "P0562",
+            "en": "P0562",
+            "vi": ""
+          },
+          {
+            "key": "resultNote",
+            "ko": "P0562(시스템 전압 낮음) 검출. 12V 보조 배터리 방전·노화 → 교환 필요.",
+            "en": "P0562 (system voltage low) detected. 12V auxiliary battery discharged/aged → replace.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "LOTO_SmartKey",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "SmartKey"
+        ],
+        "targetObjName": "Guide_LockBox",
+        "targetZoneId": "LockBox_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "POWER OFF · 스마트키 보관",
+            "en": "POWER OFF · Store Smart Key",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "POWER OFF 후 스마트키를 잠금박스에 보관하세요.",
+            "en": "Turn POWER OFF and put the smart key in the lock box.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "전원이 켜진 상태에서 12V 단자를 분리하면 제어기에 순간 전압 변동이 생깁니다. 반드시 POWER OFF 후 스마트키를 차량에서 멀리 두세요.",
+            "en": "Disconnecting 12V with power ON causes voltage spikes in the controllers. Always turn POWER OFF and keep the smart key away from the car.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "POWER OFF → 스마트키 → 잠금박스",
+            "en": "POWER OFF → Smart key → Lock box",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "LOTO_Gloves",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "InsulatedGloves"
+        ],
+        "targetObjName": "InsulatedGloves",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "보호 장갑 착용",
+            "en": "Wear Protective Gloves",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "작업 전 보호 장갑을 착용하세요.",
+            "en": "Put on protective gloves before work.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "12V 작업은 고전압 차단 대상이 아니라 절연 장갑이 필수는 아니지만, 배터리 전해액·단자 단락 불꽃으로부터 손을 보호해야 합니다.",
+            "en": "12V work is not high-voltage, so insulated gloves are not mandatory, but protect your hands from electrolyte and terminal sparks.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "장갑 상태 확인 → 착용",
+            "en": "Check gloves → Wear",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Vehicle_Hood_Open",
+      "config": {
+        "actionType": "ConfirmTask",
+        "targetObjName": "Hood_Latch_Point",
+        "extra": [
+          {
+            "key": "title",
+            "ko": "차량 후드 개방",
+            "en": "Open Vehicle Hood",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "후드를 열어 12V 배터리에 접근하세요.",
+            "en": "Open the hood to reach the 12V battery.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "12V 보조 배터리는 앞 후드 아래에 있습니다. 안전 레버를 풀고 후드를 끝까지 들어 올리세요.",
+            "en": "The 12V auxiliary battery is under the front hood. Release the safety latch and lift the hood fully.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Cover_Removal",
+      "config": {
+        "actionType": "ConfirmTask",
+        "targetObjName": "Battery_12V_Cover",
+        "extra": [
+          {
+            "key": "title",
+            "ko": "12V 배터리 커버 탈거",
+            "en": "12V Battery Cover Removal"
+          },
+          {
+            "key": "description",
+            "ko": "12V 배터리 상단의 보호 커버를 제거하세요.",
+            "en": "Remove the protective cover on top of the 12V battery."
+          },
+          {
+            "key": "guideText",
+            "ko": "고전압 차단 작업 전 보조 배터리(12V) 확인을 위해 전면 상단 커버를 탈거합니다. 고정 클립이 손상되지 않도록 주의하세요.",
+            "en": "Remove the front top cover to check the auxiliary (12V) battery before HV isolation. Be careful not to damage clips."
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Neg_Disconnect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "12V_Terminal_Neg",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "(−) 단자 분리",
+            "en": "Disconnect (−) Terminal",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "12V 배터리 (−) 단자 너트를 풀어 케이블을 분리하세요.",
+            "en": "Loosen the 12V (−) terminal nut and remove the cable.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "분리는 반드시 (−) 단자부터 합니다. (+)를 먼저 풀면 공구가 차체(접지)에 닿는 순간 단락돼 불꽃·화상이 생길 수 있습니다. (−) 단자를 분리하면 차량과 진단기 통신이 끊깁니다.",
+            "en": "Always disconnect (−) first. Loosening (+) first can short the tool to the body (ground), causing sparks and burns. Vehicle communication is lost once (−) is off.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "(−) 단자 너트 풀기 → 케이블 분리 → 단자가 배터리에 닿지 않게 고정",
+            "en": "Loosen (−) nut → Remove cable → Keep it away from the post",
+            "vi": ""
+          },
+          {
+            "key": "safetyNote",
+            "ko": "(+) 단자를 먼저 분리하면 순서 위반입니다.",
+            "en": "Disconnecting (+) first is an order violation.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Pos_Disconnect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "12V_Terminal_Pos",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "(+) 단자 분리",
+            "en": "Disconnect (+) Terminal",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "단자 커버를 열고 (+) 단자 케이블을 분리하세요.",
+            "en": "Open the terminal cover and remove the (+) cable.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "(−) 단자가 분리된 뒤에는 (+) 단자를 풀다가 공구가 차체에 닿아도 회로가 이어지지 않습니다.",
+            "en": "With (−) already off, touching the body while loosening (+) no longer completes a circuit.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "(+) 단자 커버 열기 → 너트 풀기 → 케이블 분리",
+            "en": "Open (+) cover → Loosen nut → Remove cable",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Sensor_Disconnect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "12V_Battery_Sensor",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 센서 커넥터 분리",
+            "en": "Disconnect Battery Sensor",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "배터리 센서 커넥터를 분리하세요.",
+            "en": "Disconnect the battery sensor connector.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "배터리 센서는 12V 배터리의 전압·전류·온도를 측정해 충전 제어에 씁니다. 커넥터 잠금을 누른 상태로 당겨 분리하세요.",
+            "en": "The battery sensor measures 12V voltage, current and temperature for charge control. Press the lock and pull to disconnect.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Clamp_Removal",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "12V_Battery_Clamp",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 클램프 탈거",
+            "en": "Remove Battery Clamp",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "배터리를 고정하는 클램프 볼트를 풀고 클램프를 떼어 내세요.",
+            "en": "Loosen the clamp bolt and remove the hold-down clamp.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "클램프는 주행 중 배터리가 움직이지 않게 잡아 줍니다. 볼트를 떨어뜨려 엔진룸 안으로 빠뜨리지 않게 주의하세요.",
+            "en": "The clamp keeps the battery from moving while driving. Don't drop the bolt into the engine bay.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Removal",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "Old_12V_Battery"
+        ],
+        "targetObjName": "12V_Removal_Zone",
+        "targetZoneId": "12V_Removal_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "기존 배터리 탈거",
+            "en": "Remove Old Battery",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "기존 12V 배터리를 들어 정비 카트에 내려놓으세요.",
+            "en": "Lift the old 12V battery out and put it on the service cart.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "배터리는 무겁고 전해액이 들어 있습니다. 기울이지 말고 두 손으로 수평을 유지해 옮기세요.",
+            "en": "The battery is heavy and contains electrolyte. Carry it level with both hands; do not tilt it.",
+            "vi": ""
+          },
+          {
+            "key": "snapDelay",
+            "ko": "1.0",
+            "en": "1.0",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Install",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "New_12V_Battery"
+        ],
+        "targetObjName": "12V_Install_Zone",
+        "targetZoneId": "12V_Install_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "신품 배터리 장착",
+            "en": "Install New Battery",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "신품 12V 배터리를 트레이에 올리세요.",
+            "en": "Place the new 12V battery on the tray.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "신품 배터리의 규격(용량·단자 방향)이 기존 것과 같은지 확인하고, (+) 단자가 차량 (+) 케이블 쪽으로 오게 놓으세요.",
+            "en": "Check the new battery matches the old one (capacity, terminal layout) and place it with (+) toward the vehicle's (+) cable.",
+            "vi": ""
+          },
+          {
+            "key": "snapDelay",
+            "ko": "1.0",
+            "en": "1.0",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Clamp_Install",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "12V_Battery_Clamp",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 클램프 체결",
+            "en": "Install Battery Clamp",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "클램프를 장착하고 토크렌치로 규정 토크로 체결하세요.",
+            "en": "Install the clamp and tighten to spec with a torque wrench.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "규정 토크 0.9~1.4 kgf·m. 너무 세게 조이면 배터리 케이스가 깨질 수 있습니다.",
+            "en": "Spec 0.9–1.4 kgf·m. Overtightening can crack the battery case.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "클램프 장착 → 토크렌치 설정 → 체결 (0.9~1.4 kgf·m)",
+            "en": "Fit clamp → Set torque wrench → Tighten (0.9–1.4 kgf·m)",
+            "vi": ""
+          },
+          {
+            "key": "torqueSpec",
+            "ko": "0.9~1.4",
+            "en": "0.9~1.4",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Pos_Connect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "12V_Terminal_Pos",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "(+) 단자 연결",
+            "en": "Connect (+) Terminal",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "(+) 케이블을 연결하고 규정 토크로 체결한 뒤 단자 커버를 닫으세요.",
+            "en": "Connect the (+) cable, tighten to spec and close the terminal cover.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "연결은 분리의 반대 순서로 (+) 단자부터 합니다. 규정 토크 0.8~1.0 kgf·m.",
+            "en": "Connect in reverse order — (+) first. Spec 0.8–1.0 kgf·m.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "(+) 케이블 연결 → 체결 (0.8~1.0 kgf·m) → 단자 커버 닫기",
+            "en": "Connect (+) → Tighten (0.8–1.0 kgf·m) → Close cover",
+            "vi": ""
+          },
+          {
+            "key": "safetyNote",
+            "ko": "(−) 단자를 먼저 연결하면 순서 위반입니다.",
+            "en": "Connecting (−) first is an order violation.",
+            "vi": ""
+          },
+          {
+            "key": "torqueSpec",
+            "ko": "0.8~1.0",
+            "en": "0.8~1.0",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Neg_Connect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "12V_Terminal_Neg",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "(−) 단자 연결",
+            "en": "Connect (−) Terminal",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "(−) 케이블을 연결하고 규정 토크로 체결하세요.",
+            "en": "Connect the (−) cable and tighten to spec.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "(−) 단자를 연결하면 차량 전원이 다시 들어옵니다. 규정 토크 0.8~1.0 kgf·m.",
+            "en": "Power returns to the vehicle once (−) is connected. Spec 0.8–1.0 kgf·m.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "(−) 케이블 연결 → 체결 (0.8~1.0 kgf·m)",
+            "en": "Connect (−) → Tighten (0.8–1.0 kgf·m)",
+            "vi": ""
+          },
+          {
+            "key": "torqueSpec",
+            "ko": "0.8~1.0",
+            "en": "0.8~1.0",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Sensor_Connect",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "12V_Battery_Sensor",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배터리 센서 커넥터 연결",
+            "en": "Connect Battery Sensor",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "배터리 센서 커넥터를 '딸깍' 소리가 날 때까지 끼우세요.",
+            "en": "Push the battery sensor connector in until it clicks.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "센서가 빠져 있으면 12V 충전 제어가 되지 않아 신품 배터리도 다시 방전될 수 있습니다. 센서 고정 볼트 규정 토크는 2.7~3.3 kgf·m입니다.",
+            "en": "Without the sensor, 12V charging is not controlled and the new battery can drain again. Sensor bolt spec: 2.7–3.3 kgf·m.",
+            "vi": ""
+          },
+          {
+            "key": "torqueSpec",
+            "ko": "2.7~3.3",
+            "en": "2.7~3.3",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Battery_12V_Cover_Install",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Battery_12V_Cover",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "12V 배터리 커버 장착",
+            "en": "Install 12V Battery Cover",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "12V 배터리 상단 커버를 다시 장착하세요.",
+            "en": "Reinstall the 12V battery top cover.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "고정 클립이 모두 걸렸는지 확인하세요.",
+            "en": "Make sure all clips are engaged.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Vehicle_Hood_Close",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Hood_Latch_Point",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "차량 후드 닫기",
+            "en": "Close Vehicle Hood",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "후드를 내려 완전히 잠기게 닫으세요.",
+            "en": "Lower the hood and latch it fully.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "후드 안에 공구나 볼트를 두고 닫지 않았는지 먼저 확인하세요.",
+            "en": "Check that no tools or bolts are left inside before closing.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "FinalDiagnosis",
+      "config": {
+        "actionType": "ScanDTC",
+        "requiredItems": [
+          "GDS_Tablet"
+        ],
+        "targetObjName": "OBD_Port",
+        "targetZoneId": "OBD_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "최종 진단 및 고장 코드 소거",
+            "en": "Final Diagnosis & DTC Clear",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "GDS로 P0562를 소거하고 12V 전압이 규정 범위인지 확인하세요.",
+            "en": "Clear P0562 with the GDS and confirm 12V voltage is within spec.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "배터리 교환 후 고장 코드를 소거하고 재검색해 다시 나오지 않는지 확인합니다. 서비스 데이터 '보조 배터리(12V) 전압'이 11.5~15.0V 안에 있어야 합니다.",
+            "en": "After replacement, clear and rescan DTCs to confirm they do not return. 'Auxiliary battery (12V) voltage' must be 11.5–15.0 V.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "GDS 연결 → P0562 소거 → 재검색 → 12V 전압 확인",
+            "en": "Connect → Clear P0562 → Rescan → Check 12V voltage",
+            "vi": ""
+          },
+          {
+            "key": "clearDTC",
+            "ko": "true",
+            "en": "true",
+            "vi": ""
+          },
+          {
+            "key": "expectedResult",
+            "ko": "고장코드 없음",
+            "en": "No fault codes",
+            "vi": ""
+          },
+          {
+            "key": "completionMessage",
+            "ko": "12V 보조 배터리 교환 완료. 차량이 정상 상태입니다.",
+            "en": "12V battery replacement complete. Vehicle status is normal.",
+            "vi": ""
+          },
+          {
+            "key": "resultNote",
+            "ko": "P0562 소거 및 12V 전압 정상 확인 → 정비 완료",
+            "en": "P0562 cleared and 12V voltage normal → Repair complete",
+            "vi": ""
+          }
+        ]
+      }
+    }
+  ]
+}

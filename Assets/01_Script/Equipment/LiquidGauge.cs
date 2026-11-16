@@ -5,7 +5,7 @@ using UnityEngine;
 //  LiquidGauge.cs
 //
 //  오일류(PourContainer)·오일 받이(FloorDragProp catchLiquid)의 현재 용량을 물체 위 작은 패널로 보여 준다.
-//  · 들고 있거나 가까이(1.6m) 있을 때, 또는 양이 바뀌는 동안 보인다
+//  · 들고 있거나 가까이(1.6m) 있을 때, 또는 양이 바뀌는 동안 보인다 — 여러 개면 하나만(들고 있는 것 우선)
 //  · '0.6 / 1.0 L (60%)' + 막대, 비었으면 '비었음', 가득이면 '꽉 참' 을 함께 표시
 //  패널은 이름표와 같은 ItemNameTagLabel(WorldHoverLabel) 프리팹을 쓴다.
 // ============================================================
@@ -28,16 +28,46 @@ public class LiquidGauge : MonoBehaviour
         return g;
     }
 
+    // 오일병이 여러 개 모인 선반 앞에서 패널이 겹쳐 뜨던 문제(11/16) — 한 번에 하나만 보인다.
+    // 들고 있는 것 > 양이 바뀌는 중인 것 > 카메라에서 가장 가까운 것 순으로 하나를 고른다.
+    private static readonly System.Collections.Generic.List<LiquidGauge> s_all = new System.Collections.Generic.List<LiquidGauge>();
+    private float _score = float.MaxValue;   // 작을수록 우선, MaxValue = 보일 조건 아님
+    private float _a;
+
+    private void OnEnable() { if (!s_all.Contains(this)) s_all.Add(this); }
+
+    private void Update()
+    {
+        _score = float.MaxValue;
+        if (amount == null) return;
+        _a = amount();
+        if (!Mathf.Approximately(_a, _last)) { _last = _a; _changedAt = Time.time; }
+
+        var cam = Camera.main;
+        float d2 = cam != null ? (cam.transform.position - transform.position).sqrMagnitude : float.MaxValue;
+        bool isHeld = held != null && held();
+        bool changing = Time.time - _changedAt < 2f;
+        if (isHeld) _score = -2f;
+        else if (changing && d2 < 4f * 4f) _score = -1f + d2 * 0.0001f;
+        else if (d2 < 1.6f * 1.6f) _score = d2;
+    }
+
+    private bool IsWinner()
+    {
+        if (_score == float.MaxValue) return false;
+        foreach (var g in s_all)
+        {
+            if (g == null || g == this || !g.isActiveAndEnabled) continue;
+            if (g._score < _score || (g._score == _score && g.GetInstanceID() < GetInstanceID())) return false;
+        }
+        return true;
+    }
+
     private void LateUpdate()
     {
         if (amount == null) return;
-        float a = amount();
-        if (!Mathf.Approximately(a, _last)) { _last = a; _changedAt = Time.time; }
-
-        var cam = Camera.main;
-        bool near = cam != null && (cam.transform.position - transform.position).sqrMagnitude < 1.6f * 1.6f;
-        bool show = (held != null && held()) || near || Time.time - _changedAt < 2f;
-        if (!show) { if (_label != null && _label.activeSelf) _label.SetActive(false); return; }
+        float a = _a;
+        if (!IsWinner()) { if (_label != null && _label.activeSelf) _label.SetActive(false); return; }
 
         if (_label == null)
         {
@@ -63,6 +93,6 @@ public class LiquidGauge : MonoBehaviour
         if (key != _shown && _comp != null) { _shown = key; _comp.SetText(text, bar); }
     }
 
-    private void OnDisable() { if (_label != null) _label.SetActive(false); }
+    private void OnDisable() { s_all.Remove(this); if (_label != null) _label.SetActive(false); }
     private void OnDestroy() { if (_label != null) Destroy(_label); }
 }

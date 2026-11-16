@@ -253,6 +253,8 @@ public static class EquipFx
 
     public static void Notice(string key, string title, string message, Color tint, float show = 2.5f, float cooldown = 4f)
     {
+        // VR 손바닥 메뉴 '설명창' 끔 → 사용법·매뉴얼(파랑 Info) 카드만 숨긴다. 막힘·녹슨 볼트·위험(주황·빨강)은 작업 피드백이라 계속 띄운다
+        if (!VrPalmMenu.InfoCardsAllowed && tint == Info) return;
         float now = Time.unscaledTime;
         if (s_noticeCooldown.TryGetValue(key, out var until) && now < until) return;
         s_noticeCooldown[key] = now + cooldown;
@@ -383,6 +385,106 @@ public static class BoltWork
     }
 }
 
+/// <summary>
+/// 볼트 윤곽선 색 규칙(CMS 2021 참고) — 도구를 볼트에 댔을 때 '왜 안 풀리는지'를 색으로 바로 알린다.
+///  · 초록 : 지금 단계의 볼트 — 바로 작업 가능
+///  · 노랑 : 다른 단계의 볼트 — 먼저(또는 나중에) 할 작업이 있다(잠깐 깜빡이고 지금 단계 이름을 알려 준다)
+///  · 갈색 : 녹슬어 뻑뻑한 볼트 — 윤활 방청제를 뿌리면 초록으로 바뀌고 잘 풀린다
+/// 평가 모드에서는 노랑·갈색 힌트를 끈다(작업 중 초록 표시만 — CMS Expert 모드처럼 순서·상태는 스스로 판단).
+/// </summary>
+public static class BoltHint
+{
+    public static readonly Color Workable = new Color(0.25f, 1f, 0.35f, 1f);
+    public static readonly Color Blocked = new Color(1f, 0.82f, 0.1f, 1f);
+    public static readonly Color Seized = new Color(0.78f, 0.42f, 0.12f, 1f);
+
+    public static bool HintsAllowed => !EvaluationMode.ClientIsEvaluation;
+
+    public static bool NeedsLube(Bolt b) => BoltWork.IsSeized(b) && !BoltWork.IsLubed(b);
+
+    /// <summary>지금 단계 볼트를 작업할 때 윤곽선 색(녹슨 볼트면 갈색).</summary>
+    public static Color WorkColor(Bolt b) => HintsAllowed && NeedsLube(b) ? Seized : Workable;
+
+    /// <summary>지금 단계 제목(시나리오 extra.title). 없으면 null.</summary>
+    public static string CurrentStepTitle()
+    {
+        var recv = ScenarioStateReceiver.Instance;
+        var data = recv != null ? recv.CurrentScenario : null;
+        if (data == null || data.scenario == null || data.scenario.tasks == null) return null;
+        int i = recv.CurrentTaskState.taskIndex;
+        if (i < 0 || i >= data.scenario.tasks.Count) return null;
+        string id = data.scenario.tasks[i].moduleId;
+        string title = data.GetModuleConfig(id)?.GetExtra("title");
+        return string.IsNullOrEmpty(title) ? HoverNameFormatter.Prettify(id) : title;
+    }
+
+    /// <summary>다른 단계의 볼트에 도구를 댔다 — 노랑으로 잠깐 깜빡이고 지금 할 단계를 알려 준다.</summary>
+    public static void ShowBlocked(Bolt b)
+    {
+        if (b == null || !HintsAllowed || b.IsMarkedDone || b.isloosened) return;
+        var flash = b.GetComponent<BoltHintFlash>() ?? b.gameObject.AddComponent<BoltHintFlash>();
+        flash.Flash(Blocked, 1.6f);
+        string step = CurrentStepTitle();
+        EquipFx.Notice("bolt_blocked", "아직 작업할 볼트가 아닙니다",
+            string.IsNullOrEmpty(step) ? "안내 표시가 있는 볼트부터 작업하세요" : $"지금 단계: {step} — 노란 볼트는 다른 단계에서 작업합니다",
+            EquipFx.Warn, 2.5f, 6f);
+    }
+
+    /// <summary>녹슨 볼트를 처음 겨눴을 때 안내.</summary>
+    public static void NoticeSeized()
+    {
+        if (!HintsAllowed) return;
+        EquipFx.Notice("seized", "녹슬어 뻑뻑한 볼트 (갈색)", "윤활 방청제를 뿌리면 초록으로 바뀌고 잘 풀립니다", EquipFx.Warn, 3f, 10f);
+    }
+}
+
+/// <summary>볼트 윤곽선을 잠깐 다른 색으로 바꿨다가 원래대로 돌린다(BoltHint 노랑 표시용).</summary>
+public class BoltHintFlash : MonoBehaviour
+{
+    private EPOOutline.Outlinable _o;
+    private bool _created, _prevEnabled, _active;
+    private Color _prevColor;
+    private float _until;
+
+    public void Flash(Color c, float seconds)
+    {
+        if (_o == null)
+        {
+            _o = GetComponent<EPOOutline.Outlinable>();
+            _created = _o == null;
+            if (_created) { _o = gameObject.AddComponent<EPOOutline.Outlinable>(); _o.AddAllChildRenderersToRenderingList(); _o.enabled = false; }
+        }
+        if (!_active)
+        {
+            _active = true;
+            _prevEnabled = _o.enabled;
+            _prevColor = _o.OutlineParameters.Color;
+        }
+        _o.enabled = true;
+        _o.OutlineParameters.Enabled = true;
+        _o.OutlineParameters.Color = c;
+        _until = Time.unscaledTime + seconds;
+    }
+
+    private void Update()
+    {
+        if (!_active || _o == null) return;
+        // 깜빡임(0.25초 주기) — 정지된 노랑보다 눈에 띈다
+        float a = Mathf.PingPong(Time.unscaledTime * 4f, 1f) > 0.5f ? 1f : 0.35f;
+        var col = _o.OutlineParameters.Color; col.a = a; _o.OutlineParameters.Color = col;
+        if (Time.unscaledTime < _until) return;
+        _active = false;
+        _o.OutlineParameters.Color = _prevColor;
+        _o.enabled = _prevEnabled;
+    }
+
+    private void OnDisable()
+    {
+        if (_active && _o != null) { _o.OutlineParameters.Color = _prevColor; _o.enabled = _prevEnabled; }
+        _active = false;
+    }
+}
+
 /// <summary>내 손 목록(다른 사람 아바타 손 제외). 2초마다 갱신.</summary>
 public static class LocalHands
 {
@@ -407,6 +509,64 @@ public static class LocalHands
             }
             return s_hands;
         }
+    }
+
+    /// <summary>
+    /// 이 손 컨트롤러의 트리거를 지금 실제로 누르고 있는가(XR 기기 값을 직접 읽음). 기기를 못 읽으면 false 반환 + valid=false.
+    /// 11/16 VR 테스트: 드릴 등 도구가 AutoHand 누름/뗌 이벤트(onSqueeze/onUnsqueeze)에만 의존해, '뗌' 이벤트를 놓치면
+    /// 키를 떼도 계속 돌고(누름 상태 고착), 다시 잡으면 반대로 안 도는 문제가 있었다 → 매 프레임 실제 입력으로 판정한다.
+    /// </summary>
+    public static bool TriggerHeld(Hand h, out bool valid)
+    {
+        valid = false;
+        if (h == null) return false;
+
+        // 1순위: AutoHand 가 실제로 쓰는 입력(Input System 액션)의 트리거 축 값.
+        // (11/16 2차) XR 기기 직접 읽기(InputDevices)는 이 프로젝트(OpenXR + Input System)에서 값을 못 받아(valid=false)
+        // 예전 이벤트 값으로 돌아가 드릴이 계속 돌았다 → 손에 연결된 OpenXRHandControllerLink 의 squeezeAxis 를 읽는다.
+        var link = LinkOf(h);
+        if (link != null && link.squeezeAxis.action != null)
+        {
+            if (!link.squeezeAxis.action.enabled) link.squeezeAxis.action.Enable();
+            valid = true;
+            return link.squeezeAxis.action.ReadValue<float>() > 0.45f;
+        }
+
+        var dev = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(h.left ? UnityEngine.XR.XRNode.LeftHand : UnityEngine.XR.XRNode.RightHand);
+        if (!dev.isValid) return false;
+        if (dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.trigger, out float f)) { valid = true; return f > 0.45f; }
+        if (dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out bool b)) { valid = true; return b; }
+        return false;
+    }
+
+    private static readonly Dictionary<Hand, Autohand.Demo.OpenXRHandControllerLink> s_links = new Dictionary<Hand, Autohand.Demo.OpenXRHandControllerLink>();
+    private static float s_nextLinkScan;
+
+    private static Autohand.Demo.OpenXRHandControllerLink LinkOf(Hand h)
+    {
+        if (s_links.TryGetValue(h, out var l) && l != null && l.isActiveAndEnabled) return l;
+        if (Time.unscaledTime < s_nextLinkScan) return null;
+        s_nextLinkScan = Time.unscaledTime + 1f;
+        s_links.Clear();
+        foreach (var x in Object.FindObjectsByType<Autohand.Demo.OpenXRHandControllerLink>(FindObjectsSortMode.None))
+            if (x != null && x.hand != null && x.isActiveAndEnabled) s_links[x.hand] = x;
+        return s_links.TryGetValue(h, out l) ? l : null;
+    }
+
+    /// <summary>이 손 컨트롤러의 트리거 값을 읽을 수 있는가.</summary>
+    public static bool TriggerHeldValid(Hand h) { TriggerHeld(h, out bool v); return v; }
+
+    /// <summary>이 물체(또는 그 부모·자식)를 들고 있는 내 VR 손. 없으면 null.</summary>
+    public static Hand HoldingHand(Transform t)
+    {
+        if (t == null) return null;
+        foreach (var h in All)
+        {
+            if (h == null || h.holdingObj == null) continue;
+            var ht = h.holdingObj.transform;
+            if (ht == t || t.IsChildOf(ht) || ht.IsChildOf(t)) return h;
+        }
+        return null;
     }
 
     public static Transform IndexTip(Hand h)

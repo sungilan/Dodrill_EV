@@ -397,6 +397,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             if(_mainCamera == null) return;
         }
 
+        ClearStaleHeld();
         HandleLiftButtonRelease(); // LiftButton MouseUp 항상 체크
         CheckHoldScaleReady();     // 날아오기 완료 감지는 항상 체크 (애니메이션 끊김 방지)
 
@@ -429,6 +430,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         HandleUseInput();
         HandleClick();
         HandleDropKey();      // G키 내려놓기 
+        HandleBeltKey();      // B키 허리 벨트
         UpdateLaserLine();    // 레이저 호버/홀드 상태 렌더링
     }
 
@@ -731,7 +733,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         if(col == null) return string.Empty;
 
         // 들고 있는 상태
-        if(_heldObject != null) return "클릭하여 내려놓기";
+        if(_heldObject != null) return "클릭하여 내려놓기 · B 허리 벨트";
 
         var wcMsg = col.GetComponentInParent<IWorldClickable>();
         if(wcMsg != null) return wcMsg.HoverMessage(false);
@@ -1414,6 +1416,186 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             DropHeldObject();
     }
 
+    // ═══════════════════════════════════════════════════════
+    // PC 허리 벨트 (11/16) — PC 는 한 손(한 물체)만 들 수 있어, 방청제를 뿌리고 드릴로 푸는 식의 작업이 번거로웠다.
+    //   B        : 들고 있으면 벨트와 교환(벨트가 비었으면 넣기만) / 빈손이면 마지막에 넣은 것 꺼내기
+    //   Shift+B  : 교환 없이 넣기만(최대 2개)
+    // 벨트에 있는 동안은 내 소유·잡힘 상태를 유지한다(다른 사람이 못 가져가고, 다른 화면에도 허리에 붙어 보인다).
+    // ═══════════════════════════════════════════════════════
+    public KeyCode beltKey = KeyCode.B;
+    private const int BeltSlots = 2;
+    private readonly List<SyncGrab> _belt = new List<SyncGrab>();
+    private readonly Dictionary<SyncGrab, int> _beltSlotOf = new Dictionary<SyncGrab, int>();
+    private Transform[] _beltAnchors;
+
+    private void HandleBeltKey()
+    {
+        UpdateBeltAnchors();
+        PruneBelt();
+        if(!Input.GetKeyDown(beltKey)) return;
+        bool stowOnly = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
+        if(_heldObject != null)
+        {
+            if(!_heldObject.IsGrabbed || !_heldObject.IsOwner || !_heldObject.LocalPcHoldActive) return;   // 아직 날아오는 중 등
+            if(!CanBelt(_heldObject, out string why))
+            {
+                EquipFx.Notice("pcbelt", "허리 벨트에 넣을 수 없습니다", why, EquipFx.Warn, 2.2f, 1f);
+                return;
+            }
+            SyncGrab swapOut = (!stowOnly && _belt.Count > 0) ? _belt[_belt.Count - 1] : null;
+            if(swapOut == null && _belt.Count >= BeltSlots)
+            {
+                EquipFx.Notice("pcbelt", "허리 벨트가 꽉 찼습니다", "B 로 바꿔 들거나, 하나를 꺼내 내려놓으세요", EquipFx.Warn, 2.2f, 1f);
+                return;
+            }
+            var stowing = _heldObject;
+            int slot = swapOut != null ? BeltSlotOf(swapOut) : FreeBeltSlot();
+            if(slot < 0) slot = FreeBeltSlot();
+
+            // 꺼낼 물체를 먼저 벨트 목록에서 빼고(같은 슬롯을 쓰므로), 든 물체를 넣은 뒤 꺼낸다
+            if(swapOut != null) _belt.Remove(swapOut);
+            if(!StowToBelt(stowing, slot))
+            {
+                if(swapOut != null) _belt.Add(swapOut);
+                return;
+            }
+            if(swapOut != null) GrabFromBelt(swapOut);
+            if(swapOut != null)
+                EquipFx.Notice("pcbelt", $"바꿔 들기: {ItemName(swapOut)}", $"{ItemName(stowing)} 은(는) 허리 벨트에 — B 로 다시 바꿔 듭니다", EquipFx.Info, 2.2f, 0.3f);
+            else
+                EquipFx.Notice("pcbelt", $"허리 벨트에 넣음: {ItemName(stowing)}", "B: 다시 꺼내기 · 다른 도구를 집은 뒤 B: 바꿔 들기", EquipFx.Info, 2.2f, 0.3f);
+        }
+        else
+        {
+            if(_belt.Count == 0)
+            {
+                EquipFx.Notice("pcbelt", "허리 벨트가 비어 있습니다", "도구를 든 채 B 를 누르면 허리 벨트에 넣습니다", EquipFx.Info, 2f, 1f);
+                return;
+            }
+            var take = _belt[_belt.Count - 1];
+            _belt.Remove(take);
+            GrabFromBelt(take);
+            EquipFx.Notice("pcbelt", $"꺼냄: {ItemName(take)}", _belt.Count > 0 ? $"벨트에 {_belt.Count}개 남음" : "B: 다시 넣기", EquipFx.Info, 1.6f, 0.3f);
+        }
+    }
+
+    private static string ItemName(SyncGrab sg)
+    {
+        var ti = sg != null ? sg.GetComponent<TaskItem>() : null;
+        return ti != null && !string.IsNullOrEmpty(ti.prefabId) ? ti.prefabId : (sg != null ? sg.name : "");
+    }
+
+    // 큰 장비(오일 받이·사다리·크리퍼 등 바닥 장비)나 떼어 낸 부품은 허리에 넣지 않는다
+    private bool CanBelt(SyncGrab sg, out string why)
+    {
+        why = "";
+        if(sg.PcHoldOverride != null || HoldScalePolicy.IsExempt(sg.transform)) { why = "큰 장비는 바닥에 내려놓으세요 (G)"; return false; }
+        if(sg.GetComponent<InteractablePart>() != null) { why = "떼어 낸 부품은 바닥·부품대에 내려놓으세요 (G)"; return false; }
+        float maxDim = 0f;
+        foreach(var r in sg.GetComponentsInChildren<Renderer>())
+        {
+            var sz = r.bounds.size;
+            maxDim = Mathf.Max(maxDim, Mathf.Max(sz.x, Mathf.Max(sz.y, sz.z)));
+        }
+        // 들고 있는 동안 줄여 보이는 물체는 원래 크기로 따진다
+        Vector3 cur = sg.transform.localScale;
+        float k = Mathf.Abs(cur.x) > 0.0001f ? Mathf.Abs(_heldOriginalScale.x / cur.x) : 1f;
+        if(maxDim * k > 0.75f) { why = "너무 큰 물체입니다 — G 로 내려놓으세요"; return false; }
+        return true;
+    }
+
+    private int BeltSlotOf(SyncGrab sg) => sg != null && _beltSlotOf.TryGetValue(sg, out int i) ? i : -1;
+
+    private int FreeBeltSlot()
+    {
+        for(int i = 0; i < BeltSlots; i++)
+        {
+            bool used = false;
+            foreach(var b in _belt) if(BeltSlotOf(b) == i) { used = true; break; }
+            if(!used) return i;
+        }
+        return 0;
+    }
+
+    private bool StowToBelt(SyncGrab sg, int slot)
+    {
+        if(_beltAnchors == null) UpdateBeltAnchors();
+        slot = Mathf.Clamp(slot, 0, BeltSlots - 1);
+        Vector3 prevScale = sg.transform.localScale;
+        sg.transform.localScale = _heldOriginalScale;   // 들 때 줄인 크기 원복
+        if(!sg.PcHolster(_beltAnchors[slot])) { sg.transform.localScale = prevScale; return false; }
+
+        sg.OnReleased -= OnHeldObjectReleased;
+        if(_heldObject == sg)
+        {
+            _heldObject = null;
+            _isFlying = false;
+            _laserHoverTarget = null;
+            HeldItemUI.Instance?.ClearUI();
+        }
+        _belt.Add(sg);
+        _beltSlotOf[sg] = slot;
+        Managers.Sound.Play(dropSound);
+        Log($"[Belt] 허리 벨트에 넣음: {sg.name} (슬롯 {slot})");
+        return true;
+    }
+
+    private void GrabFromBelt(SyncGrab sg)
+    {
+        _beltSlotOf.Remove(sg);
+        if(!sg.PcUnholster()) { Log($"[Belt] {sg.name} 꺼내기 실패(회수됨)"); return; }
+        _heldOriginalScale = sg.transform.localScale;
+        _isFlying = true;
+        _heldObject = sg;
+        HeldItemUI.Instance?.UpdateUI(sg.gameObject);
+        if(laserLine != null) laserLine.enabled = false;
+        _laserHoverTarget = null;
+        SetOutline(null);
+        sg.OnReleased += OnHeldObjectReleased;
+        Managers.Sound.Play(grabSound);
+        Log($"[Belt] 꺼냄: {sg.name}");
+    }
+
+    // 서버가 회수했거나(단계 전환) 파괴된 물체는 벨트 목록에서 뺀다
+    private void PruneBelt()
+    {
+        for(int i = _belt.Count - 1; i >= 0; i--)
+        {
+            var b = _belt[i];
+            if(b != null && b.IsPcBelted) continue;
+            _belt.RemoveAt(i);
+            if(!ReferenceEquals(b, null)) _beltSlotOf.Remove(b);
+        }
+    }
+
+    // 허리 양옆(0 오른쪽, 1 왼쪽). 카메라 높이 기준 아래 — 앉거나 높이를 바꿔도 따라온다.
+    private void UpdateBeltAnchors()
+    {
+        if(_beltAnchors == null)
+        {
+            _beltAnchors = new Transform[BeltSlots];
+            for(int i = 0; i < BeltSlots; i++)
+            {
+                var go = new GameObject($"[PcBeltSlot{i}]");
+                go.transform.SetParent(transform, false);
+                _beltAnchors[i] = go.transform;
+            }
+        }
+        Transform head = _mainCamera != null ? _mainCamera.transform : transform;
+        Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+        if(fwd.sqrMagnitude < 1e-4f) fwd = Vector3.forward;
+        fwd.Normalize();
+        Vector3 right = Vector3.Cross(Vector3.up, fwd);
+        for(int i = 0; i < BeltSlots; i++)
+        {
+            float side = i == 0 ? 1f : -1f;
+            _beltAnchors[i].SetPositionAndRotation(
+                head.position + Vector3.down * 0.72f + right * (0.26f * side) + fwd * 0.04f,
+                Quaternion.LookRotation(Vector3.down, fwd));
+        }
+    }
+
     /// <summary>매 프레임 — 호버/홀드 상태에 맞게 곡선 레이저 갱신.</summary>
     /// <summary>매 프레임 — 호버/홀드 상태에 맞게 곡선 레이저 갱신.</summary>
     private void UpdateLaserLine()
@@ -1572,6 +1754,34 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         // 자신의 인스펙터에 설정된 오프셋을 사용하여 날아갑니다.
         target.OnPCClick();
         Log($"[LaserGrab] 집기: {target.name}");
+    }
+
+    // ── 손에 없는데 '들고 있음'으로 남은 물체 정리 ──
+    // 11/16 PC 테스트: 단계가 끝나 서버가 드릴을 원래 자리로 돌려놓았는데(놓기 이벤트 없이) _heldObject 가 그대로 남아
+    // 'held=True' 로 판정 → 클릭해도 새로 집기 로직까지 가지 않아 드릴을 다시 잡을 수 없었다.
+    // 잡기 요청 직후(서버 승인 전)는 아직 잡힘이 아니므로 1.5초 이상 계속 '잡힘 아님 + 내 PC 들기 아님'이면 놓은 것으로 정리한다.
+    private float _staleHeldSince = -1f;
+    private void ClearStaleHeld()
+    {
+        if(ReferenceEquals(_heldObject, null)) { _staleHeldSince = -1f; return; }
+        bool gone = _heldObject == null || !_heldObject.gameObject.activeInHierarchy;   // 파괴·비활성
+        bool notMine = !gone && !_heldObject.IsGrabbed && !_heldObject.LocalPcHoldActive;
+        if(!gone && !notMine) { _staleHeldSince = -1f; return; }
+        if(!gone)
+        {
+            if(_staleHeldSince < 0f) { _staleHeldSince = Time.time; return; }
+            if(Time.time - _staleHeldSince < 1.5f) return;
+        }
+        _staleHeldSince = -1f;
+        Log("[Held] 손에 없는 물체가 '들고 있음'으로 남아 정리 (단계 전환으로 회수됨 등)");
+        if(gone)
+        {
+            _heldObject = null;
+            _isFlying = false;
+            _laserHoverTarget = null;
+            HeldItemUI.Instance?.ClearUI();
+        }
+        else OnHeldObjectReleased();
     }
 
     private void OnHeldObjectReleased()

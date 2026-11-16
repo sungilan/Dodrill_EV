@@ -122,7 +122,7 @@ public class SyncGrab : NetworkBehaviour
         {
             var g = s_held[i];
             if(g == null) { s_held.RemoveAt(i); continue; }
-            if(g.IsGrabbed && g.Owner != null && g.Owner.IsValid && g.Owner.ClientId == clientId) return g;
+            if(g.IsGrabbed && !g.IsOnBelt && g.Owner != null && g.Owner.IsValid && g.Owner.ClientId == clientId) return g;
         }
         return null;
     }
@@ -182,9 +182,13 @@ public class SyncGrab : NetworkBehaviour
         }
         if(_gripPoses == null) return false;
 
+        // 11/16 PC 테스트 '오른손에 왼손 포즈': 드릴에 GrabPose_R·GrabPose_L 두 개가 있고 둘 다 좌우 포즈가 저장돼 있어,
+        // 오른손 포즈가 있는 '첫 번째'(계층 순서상 GrabPose_L 일 수 있음)를 집었다 → 이름이 그 손(_R/_L)인 포즈를 먼저 쓴다.
+        for(int pass = 0; pass < 2; pass++)
         foreach(var gp in _gripPoses)
         {
             if(gp == null || !gp.poseEnabled) continue;
+            if(pass == 0 && !NameMatchesHand(gp.name, rightHand)) continue;
             bool set = rightHand ? gp.rightPoseSet : gp.leftPoseSet;
             if(!set) continue;
             var data = rightHand ? gp.rightPose : gp.leftPose;
@@ -194,6 +198,14 @@ public class SyncGrab : NetworkBehaviour
             return true;
         }
         return false;
+    }
+
+    /// <summary>포즈 오브젝트 이름이 그 손용인가(GrabPose_R / Right …).</summary>
+    private static bool NameMatchesHand(string n, bool rightHand)
+    {
+        if(string.IsNullOrEmpty(n)) return false;
+        string u = n.ToUpperInvariant();
+        return rightHand ? (u.EndsWith("_R") || u.Contains("RIGHT")) : (u.EndsWith("_L") || u.Contains("LEFT"));
     }
 
     private void TrackHeld(bool held)
@@ -218,7 +230,26 @@ public class SyncGrab : NetworkBehaviour
     private readonly SyncVar<bool> _isDespawning = new(
         new SyncTypeSettings(WritePermission.ServerOnly, ReadPermission.Observers));
 
+    /// <summary>잡힘 상태지만 손이 아니라 허리 벨트에 있다(PC·VR 벨트). 다른 화면의 아바타 손이 허리까지 따라가지 않게 전파한다.</summary>
+    private readonly SyncVar<bool> _beltedNet = new(
+        new SyncTypeSettings(WritePermission.ServerOnly, ReadPermission.Observers));
+
+    /// <summary>손에 있지 않고 벨트에 있음(내 화면은 IsHolstered, 다른 화면은 서버 전파값).</summary>
+    public bool IsOnBelt => IsHolstered || _beltedNet.Value;
+
+    /// <summary>벨트에 넣고/꺼낼 때 소유자가 부른다.</summary>
+    public void SetBeltedNet(bool on)
+    {
+        if(!IsOwner || _beltedNet.Value == on) return;
+        SetBeltedServerRpc(on);
+    }
+
+    [ServerRpc(RequireOwnership = true)]
+    private void SetBeltedServerRpc(bool on) { _beltedNet.Value = on; }
+
     public bool IsGrabbed => _isGrabbed.Value;
+    /// <summary>이 클라이언트가 PC·모바일로 들고 있거나 들어 오는 중(트윈)·잡기 요청 대기 중인가.</summary>
+    public bool LocalPcHoldActive => _isPCHolding || _isTweening || _onGranted != null;
 
     /// <summary>holdPoint 도달 완료(PC) 또는 VR 집기 완료 시 발행</summary>
     public event System.Action OnGrabbed;
@@ -430,7 +461,7 @@ public class SyncGrab : NetworkBehaviour
     {
         if(_rb == null) _rb = GetComponent<Rigidbody>();
         StopServerSettle();
-        _isGrabbed.Value = false;
+        _isGrabbed.Value = false; _beltedNet.Value = false;
         _isDespawning.Value = false;
         if(NetworkObject != null && NetworkObject.Owner != null && NetworkObject.Owner.IsValid) NetworkObject.GiveOwnership(null);
         _isKinematic.Value = true;
@@ -709,6 +740,7 @@ public class SyncGrab : NetworkBehaviour
         }
         UpdateDrawOnTop();
         FollowHoldPointNow();
+        FollowBeltNow();
         ReconcilePhysics();
     }
 
@@ -936,6 +968,65 @@ public class SyncGrab : NetworkBehaviour
         _lnt?.ClearTargetPosition();
     }
 
+    // ── PC 허리 벨트(FreeLookController 의 B 키) ──
+    // VR 벨트와 같은 방식: 서버에는 놓기를 보내지 않고(내 소유·잡힘 유지) 손에서만 빼서 허리 자리에 붙여 둔다.
+    // 그동안 IsHolstered=true 라 장비들은 '손에 없음'으로 보고 작업하지 않는다. 충돌체는 꺼서 몸·볼트에 걸리지 않게 한다.
+    private Transform _pcBeltAnchor;
+    private Collider[] _beltCols;
+    private bool[] _beltColWas;
+    public bool IsPcBelted => IsHolstered && _pcBeltAnchor != null;
+
+    public bool PcHolster(Transform anchor)
+    {
+        if(!IsOwner || !_isPCHolding || _isTweening || anchor == null) return false;
+        _isPCHolding = false;
+        _holdRadius = -1f;
+        _avoidReduction = 0f;
+        DOTween.Kill(transform);
+        IsHolstered = true;
+        _pcBeltAnchor = anchor;
+        SetBeltedNet(true);
+        _beltCols = GetComponentsInChildren<Collider>(true);
+        _beltColWas = new bool[_beltCols.Length];
+        for(int i = 0; i < _beltCols.Length; i++) { _beltColWas[i] = _beltCols[i].enabled; _beltCols[i].enabled = false; }
+        FollowBeltNow();
+        return true;
+    }
+
+    /// <summary>벨트에서 꺼내 다시 손(HoldPoint)으로. 실패하면 false.</summary>
+    public bool PcUnholster()
+    {
+        if(!IsPcBelted) return false;
+        ClearPcBelt();
+        if(!IsOwner || !_isGrabbed.Value) return false;
+        EnsureOwnHoldPoint();
+        if(holdPoint == null) { RequestRelease(); return false; }
+        PCFlyTo(holdPoint.position, holdPoint.rotation);
+        return true;
+    }
+
+    private void ClearPcBelt()
+    {
+        IsHolstered = false;
+        SetBeltedNet(false);
+        _pcBeltAnchor = null;
+        if(_beltCols != null)
+            for(int i = 0; i < _beltCols.Length; i++) if(_beltCols[i] != null) _beltCols[i].enabled = _beltColWas[i];
+        _beltCols = null; _beltColWas = null;
+    }
+
+    private void FollowBeltNow()
+    {
+        if(!IsPcBelted) return;
+        // 단계 전환 등으로 서버가 회수했으면(소유·잡힘 해제) 벨트에서도 뺀다
+        if(!IsOwner || !_isGrabbed.Value) { ClearPcBelt(); return; }
+        if(_rb != null) _rb.isKinematic = true;
+        Vector3 p = _pcBeltAnchor.position;
+        Quaternion r = _pcBeltAnchor.rotation;
+        transform.SetPositionAndRotation(p, r);
+        if(_lnt != null) _lnt.SetTargetPosition(p, r);
+    }
+
     // ══════════════════════════════════════════════════════
     // 공통 API
     // ══════════════════════════════════════════════════════
@@ -1029,7 +1120,7 @@ public class SyncGrab : NetworkBehaviour
     [Server]
     private void ServerForceReset()
     {
-        _isGrabbed.Value = false;
+        _isGrabbed.Value = false; _beltedNet.Value = false;
         NetworkObject.GiveOwnership(null);
         ServerSetKinematic(true);
     }
@@ -1053,7 +1144,7 @@ public class SyncGrab : NetworkBehaviour
             return;
         }
 
-        _isGrabbed.Value = true;
+        _isGrabbed.Value = true; _beltedNet.Value = false;
         NetworkObject.GiveOwnership(sender);
 
         // 서버에서 Kinematic 해제 → SyncVar → 전체 클라 자동 전파
@@ -1083,7 +1174,7 @@ public class SyncGrab : NetworkBehaviour
     [ServerRpc(RequireOwnership = true)]
     private void PlaceServerRpc(Vector3 position, Quaternion rotation)
     {
-        _isGrabbed.Value = false;
+        _isGrabbed.Value = false; _beltedNet.Value = false;
         StopServerSettle();
         transform.SetPositionAndRotation(position, rotation);
         _isKinematic.Value = true;
@@ -1094,7 +1185,7 @@ public class SyncGrab : NetworkBehaviour
     [ServerRpc(RequireOwnership = true)]
     private void ReleaseServerRpc(Vector3 position, Quaternion rotation)
     {
-        _isGrabbed.Value = false;
+        _isGrabbed.Value = false; _beltedNet.Value = false;
         transform.SetPositionAndRotation(position, rotation);
 
         // 클라이언트에는 Kinematic(고정)으로 알리고, 서버에서만 중력으로 떨어뜨린 뒤 멈추면 고정한다(BeginServerSettle)

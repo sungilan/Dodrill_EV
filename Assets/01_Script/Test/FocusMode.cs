@@ -18,7 +18,9 @@ using UnityEngine;
 // ============================================================
 public class FocusMode : MonoBehaviour
 {
-    private const string PrefOff = "focusmode_off";
+    // 11/16 VR 테스트: 드릴 볼트 작업 때 차량 하부가 하얀 반투명으로 바뀌어 오히려 볼트가 안 보였다 → 기본 끔.
+    // 새 키를 써서 예전 기기 저장값(자동)을 무시한다. 손바닥 메뉴 '집중 모드' / PC K 키로 켤 수 있다.
+    private const string PrefOff = "focusmode_off_v2";
     private const int MaxFaded = 60;
     private const float HandNear = 0.45f;       // VR: 손이 대상에서 이만큼 안
     private const float CamNear = 1.3f;         // PC·모바일: 카메라가 대상에서 이만큼 안
@@ -28,7 +30,7 @@ public class FocusMode : MonoBehaviour
 
     public static bool Enabled
     {
-        get => PlayerPrefs.GetInt(PrefOff, 0) == 0;
+        get => PlayerPrefs.GetInt(PrefOff, 1) == 0;
         set { PlayerPrefs.SetInt(PrefOff, value ? 0 : 1); PlayerPrefs.Save(); if (!value && s_inst != null) s_inst.RestoreAll(); }
     }
     /// <summary>지금 무언가를 반투명으로 바꾸고 있는가.</summary>

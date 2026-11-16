@@ -98,6 +98,10 @@ public class GdsTablet : MonoBehaviour
     {
         _sync = GetComponent<SyncGrab>();
         _item = GetComponent<TaskItem>();
+        // 11/16 VR 테스트 '진단기 고정 안 됨': 놓으면 서버 중력 낙하로 바닥에 떨어져, 계속 들고 있어야 했다.
+        // 작업등(자석 받침)처럼 손을 놓은 자리·자세 그대로 공중에 고정한다 — 문틀·차체 옆에 세워 두고 검지로 누르고, 다시 잡으면 든다.
+        // (단자 앞 자동 거치는 계기판 안쪽에 박혀 손이 안 닿아 11/13 에 껐다)
+        if (_sync != null && GetComponent<StayOnRelease>() == null) gameObject.AddComponent<StayOnRelease>();
     }
 
     private void OnEnable() => GdsSync.Register(this);
@@ -365,6 +369,7 @@ public class GdsTablet : MonoBehaviour
     {
         if (_canvas == null) return;
 
+        GdsSync.CheckScenario();
         UpdateVci();
         UpdateOverlay();
 
@@ -639,6 +644,7 @@ public class GdsTablet : MonoBehaviour
         _shownScreen = Screen; _shownArg = Arg;
         _screenTime = Time.time;
         _live.Clear();
+        GdsModel.AirBleedRunning = false;   // 에어빼기 화면을 벗어나면 펌프 구동 중지
         for (int i = _content.childCount - 1; i >= 0; i--)
         {
             var c = _content.GetChild(i);
@@ -697,7 +703,7 @@ public class GdsTablet : MonoBehaviour
             ("원클릭 전체 진단", "모든 제어기 고장 코드 검색", "scan", Accent),
             ("고장 코드 (DTC)", "코드 · 고장 시 데이터 · 소거", "dtc", new Color32(231, 76, 60, 255)),
             ("센서 데이터", "BMS 실시간 값 · 규정값 비교", "data", new Color32(39, 174, 96, 255)),
-            ("부가 기능", "절연파괴 부품 검사 · 융착 점검", "func", new Color32(142, 68, 173, 255)),
+            ("부가 기능", "절연파괴 검사 · 융착 점검 · 에어빼기", "func", new Color32(142, 68, 173, 255)),
             ("고전압 차단 가이드", "정비 매뉴얼 순서 · 진행 확인", "guide", new Color32(230, 126, 34, 255)),
             ("차량 정보", "VIN · 배터리 · 제어기 버전", "info", new Color32(52, 73, 94, 255)),
         };
@@ -818,6 +824,11 @@ public class GdsTablet : MonoBehaviour
     public static bool ObdSignalOpen { get; private set; }
     private void FireObd()
     {
+        if (!GdsSync.NavigatedThisScenario)
+        {
+            Debug.Log($"[GDS] 단계 신호 무시 — 이번 시나리오에서 진단기를 아직 조작하지 않음(넘어온 화면 다시 그리기). 단계 {GdsModel.CurrentModule}");
+            return;
+        }
         Debug.Log($"[GDS] 단계 신호 보냄 — 단계 {GdsModel.CurrentModule}, 고장 {GdsModel.FaultPresent}");
         ObdSignalOpen = true;
         try { InteractionEvents.FireZoneActivated("OBD_Zone", _item != null ? _item.prefabId : "GDS_Tablet"); }
@@ -860,7 +871,11 @@ public class GdsTablet : MonoBehaviour
         string ff =
             $"배터리 충전 상태(SOC) ..... {GdsModel.Soc:0.0} %\n" +
             $"배터리 팩 전압 ................. {GdsModel.PackVoltage:0.0} V\n" +
-            $"절연 저항 .......................... <color=#FF5252>{(d.code == "P0AA6" ? 176 : 2400)} kΩ</color>\n" +
+            (d.code == "P0562"
+                ? $"보조 배터리(12V) 전압 ........ <color=#FF5252>{GdsModel.AuxVoltage:0.00} V</color>\n"
+                : d.code == "P0C73"
+                ? "구동 모터 온도 ................. <color=#FF5252>121 °C</color>\n냉각수 온도 (전장) ............ 86 °C\n"
+                : $"절연 저항 .......................... <color=#FF5252>{(d.code == "P0AA6" ? 176 : 2400)} kΩ</color>\n") +
             "배터리 최고/최저 온도 ....... 26 / 23 °C\n" +
             "차속 ...................................... 0 km/h\n" +
             "누적 주행 거리 ..................... 18,452 km";
@@ -877,17 +892,36 @@ public class GdsTablet : MonoBehaviour
               "5. 메가옴 테스터 1000V, (−) 케이스 / (+) PRA 단자\n    약 1분 후 <b>2 MΩ 이상</b> (20°C)\n" +
               "6. 불량 부품(PRA) 교환 → 조립\n" +
               "7. 고장 코드 소거 → 재검색으로 재발생 확인"
-            : "1. 서비스 데이터로 관련 값 확인\n2. 고전압 차단 절차 수행\n3. 관련 커넥터·배선 점검\n4. 불량 부품 교환\n5. 고장 코드 소거 후 재검색";
+            : d.code == "P0562"
+            ? "1. 서비스 데이터 '보조 배터리(12V) 전압' 확인\n    <size=18>규정 11.5 ~ 15.0 V</size>\n" +
+              "2. POWER OFF · 스마트키 보관 → 후드 열기\n" +
+              "3. 12V 배터리 커버 탈거\n" +
+              "4. <b>(−) 단자 → (+) 단자</b> 순으로 분리, 센서 커넥터 분리\n" +
+              "5. 클램프 탈거 → 배터리 교환\n" +
+              "6. 클램프 0.9~1.4 → <b>(+) → (−)</b> 단자 0.8~1.0 kgf·m\n" +
+              "7. 고장 코드 소거 → 재검색, 12V 전압 정상 확인"
+            : d.code == "P0C73"
+            ? "1. 리저버 탱크 수위 확인 (평지 · 냉간 기준)\n" +
+              "2. 서비스 데이터 '냉각수 온도' 확인\n    <size=18>뜨거울 때 캡 개방 금지 — 식은 뒤 천천히 개방</size>\n" +
+              "3. 리프트 상승 → 드레인 플러그로 냉각수 배출\n" +
+              "4. 드레인 플러그 체결 → <b>전기차 전용(저전도) 냉각수</b> 주입\n" +
+              "5. 부가기능 <b>'냉각수 에어빼기'</b> 실행\n    (전동 워터펌프 구동 · 캡 열어 둔 상태)\n" +
+              "6. 내려간 수위를 MAX 선까지 보충 → 캡 체결\n" +
+              "7. 고장 코드 소거 → 재검색으로 재발생 확인"
+            :"1. 서비스 데이터로 관련 값 확인\n2. 고전압 차단 절차 수행\n3. 관련 커넥터·배선 점검\n4. 불량 부품 교환\n5. 고장 코드 소거 후 재검색";
         T(proc, steps, 20, Color.white, TextAlignmentOptions.TopLeft, 24, 56, 580, 440);
         Btn(proc, "부가 기능 ▶", new Color32(142, 68, 173, 255), 24, 500, 270, 64, () => Go("func", ""));
         Btn(proc, "센서 데이터 ▶", new Color32(39, 174, 96, 255), 314, 500, 280, 64, () => Go("data", ""));
-        _footer.text = "매뉴얼: 배터리 제어 시스템 > 절연 저항 점검";
+        _footer.text = d.code == "P0C73" ? "매뉴얼: 냉각 시스템 > 냉각수 교환 및 에어빼기"
+                     : d.code == "P0562" ? "매뉴얼: 차량 제어 시스템 > 12V 배터리 탈거 및 장착"
+                     : "매뉴얼: 배터리 제어 시스템 > 절연 저항 점검";
     }
 
     // ── 센서 데이터 ──
     private void PageData()
     {
-        _title.text = "센서 데이터 — BMS (배터리 관리 시스템)";
+        bool coolant = GdsModel.IsCoolantScenario;
+        _title.text = coolant ? "센서 데이터 — VCU · MCU (냉각 시스템)" : "센서 데이터 — BMS (배터리 관리 시스템)";
         if (!NeedVci("센서 데이터 확인")) return;
         var head = Px(_content, "Head", 40, 0, 1200, 44); Img(head, Bar);
         T(head, "<b>항목</b>", 20, Dim, TextAlignmentOptions.Left, 20, 0, 480, 44);
@@ -895,7 +929,7 @@ public class GdsTablet : MonoBehaviour
         T(head, "<b>단위</b>", 20, Dim, TextAlignmentOptions.Left, 820, 0, 100, 44);
         T(head, "<b>규정값</b>", 20, Dim, TextAlignmentOptions.Left, 940, 0, 240, 44);
 
-        var items = GdsModel.BmsData();
+        var items = coolant ? GdsModel.CoolantData() : GdsModel.BmsData();
         var vals = new List<TextMeshProUGUI>();
         var names = new List<TextMeshProUGUI>();
         for (int i = 0; i < items.Count; i++)
@@ -912,7 +946,7 @@ public class GdsTablet : MonoBehaviour
         {
             if (Time.time < next) return;
             next = Time.time + 0.5f;
-            var cur = GdsModel.BmsData();
+            var cur = coolant ? GdsModel.CoolantData() : GdsModel.BmsData();
             for (int i = 0; i < cur.Count && i < vals.Count; i++)
             {
                 vals[i].text = cur[i].bad ? $"<color=#FF5252><b>{cur[i].value}</b></color>" : cur[i].value;
@@ -926,22 +960,28 @@ public class GdsTablet : MonoBehaviour
     private void PageFunc()
     {
         _title.text = "부가 기능";
-        if (!NeedVci("부가 기능")) return;
-        var funcs = new (string id, string t, string s)[]
+        // 기밀 점검은 배터리 팩을 차에서 내린 상태에서 기밀 시험기와 연결하므로 차량 통신이 필요 없다
+        bool linked = Vci && !GdsModel.CommLost;
+        if (!linked && !GdsModel.IsAirtightScenario) { NeedVci("부가 기능"); return; }
+        var all = new (string id, string t, string s)[]
         {
             ("insul", "절연파괴 부품 검사", "고전압 절연파괴(P0AA6) 발생 부위를 3구역으로 구별"),
             ("weld", "BMS 릴레이 융착 점검", "메인 릴레이·프리차지 릴레이 융착 여부"),
             ("cell", "셀 전압 · 편차 점검", "192셀 최대/최소 전압과 편차(40 mV 이하)"),
+            ("bleed", "냉각수 에어빼기", "전동 워터펌프 구동 · 밸브 전환으로 냉각 회로 공기 배출"),
+            ("airtight", "고전압 배터리 팩 및 냉각수라인 기밀 점검", "기밀 시험기(ULT-M100) 블루투스 연결 · 차량 연결 불필요"),
         };
+        var funcs = linked ? all : Array.FindAll(all, f => f.id == "airtight");
         for (int i = 0; i < funcs.Length; i++)
         {
             var f = funcs[i];
-            var b = Btn(_content, "", Card, 40, 10 + i * 130, 1200, 116, () => Go("run", f.id + ":0"));
-            T(b.transform, $"<b>{f.t}</b>", 30, Color.white, TextAlignmentOptions.Left, 30, 10, 900, 56);
-            T(b.transform, f.s, 22, Dim, TextAlignmentOptions.Left, 30, 62, 1000, 44);
-            T(b.transform, "실행 ▶", 24, Accent, TextAlignmentOptions.Right, 1000, 0, 170, 116);
+            var b = Btn(_content, "", Card, 40, 10 + i * 112, 1200, 104, () => Go("run", f.id + ":0"));
+            T(b.transform, $"<b>{f.t}</b>", 30, Color.white, TextAlignmentOptions.Left, 30, 6, 900, 54);
+            T(b.transform, f.s, 22, Dim, TextAlignmentOptions.Left, 30, 56, 1000, 42);
+            T(b.transform, "실행 ▶", 24, Accent, TextAlignmentOptions.Right, 1000, 0, 170, 104);
         }
-        _footer.text = "부가 기능은 POWER ON (EV READY 금지) 상태에서 실행합니다";
+        _footer.text = linked ? "부가 기능은 POWER ON (EV READY 금지) 상태에서 실행합니다"
+                              : "차량 통신 없음 — 차량 연결이 필요 없는 기능만 표시합니다";
     }
 
     private void PageRun()
@@ -949,9 +989,12 @@ public class GdsTablet : MonoBehaviour
         string id = Arg, phase = "0";
         int c = Arg.IndexOf(':');
         if (c >= 0) { id = Arg.Substring(0, c); phase = Arg.Substring(c + 1); }
-        string name = id == "insul" ? "절연파괴 부품 검사" : id == "weld" ? "BMS 릴레이 융착 점검" : "셀 전압 · 편차 점검";
+        string name = id == "insul" ? "절연파괴 부품 검사" : id == "weld" ? "BMS 릴레이 융착 점검" : id == "bleed" ? "냉각수 에어빼기"
+                    : id == "airtight" ? "고전압 배터리 팩 및 냉각수라인 기밀 점검" : "셀 전압 · 편차 점검";
         _title.text = name;
+        if (id == "airtight") { RunAirtight(phase); return; }   // 시험기와 연결 — 차량 통신 불필요
         if (!NeedVci(name)) return;
+        if (id == "bleed") { RunAirBleed(phase); return; }
 
         if (phase == "0")
         {
@@ -1010,6 +1053,272 @@ public class GdsTablet : MonoBehaviour
                     result.text = "<color=#2ECC71><b>판정: Relay Welding not detection</b></color>\n릴레이 융착이 없습니다 — 고전압 차단 절차를 진행할 수 있습니다.";
                 else
                     result.text = $"<color=#2ECC71><b>판정: 정상</b></color>\n최대 {GdsModel.CellMax:0.000} V · 최소 {GdsModel.CellMin:0.000} V · 편차 {(GdsModel.CellMax - GdsModel.CellMin) * 1000f:0} mV (규정 40 mV 이하)";
+            }
+        });
+    }
+
+    // ── 냉각수 에어빼기 ──
+    // 전동 워터펌프(배터리 · 전장)를 돌리고 냉각수 밸브를 통합 순환으로 바꿔 회로 안 공기를 리저버로 밀어낸다.
+    // 시나리오 'Coolant_Air_Bleed' 단계에서 끝까지 실행하면 단계 완료 신호를 보낸다.
+    private void RunAirBleed(string phase)
+    {
+        bool scen = GdsModel.IsCoolantScenario;
+        if (phase == "0")
+        {
+            // 냉각수를 넣기 전에 펌프를 돌리면 공회전으로 펌프가 상한다
+            if (scen && !GdsModel.Done("Coolant_Fill"))
+            {
+                Box(_content, 140, 40, 1000, 300, "<size=30><b>실행 불가 — 냉각수 부족</b></size>\n\n냉각수를 넣지 않은 상태에서 전동 워터펌프를 돌리면\n펌프가 공회전해 손상될 수 있습니다.\n\n리저버 탱크에 냉각수를 먼저 주입하세요.", WarnC);
+                Btn(_content, "돌아가기", Card, 540, 380, 200, 80, Back);
+                _footer.text = "매뉴얼: 냉각수 주입 후 에어빼기를 실행한다";
+                return;
+            }
+            Box(_content, 140, 40, 1000, 320, "<size=30><b>실행 조건 확인</b></size>\n\n• 리저버 탱크 캡 <b>열림</b> (공기가 빠져나갈 길)\n• 냉각수 <b>MAX 선</b>까지 주입\n• 차량 상태: <b>POWER ON</b> (EV READY 금지)\n• 실행 중 수위가 내려가면 보충\n\n조건을 만족하면 [확인]을 누르세요.", Accent);
+            Btn(_content, "확인", Accent, 440, 400, 200, 80, () => Go("run", "bleed:1"));
+            Btn(_content, "취소", Card, 660, 400, 200, 80, Back);
+            _footer.text = "매뉴얼: 진단 기기 부가 기능으로 전동 워터펌프를 구동해 에어빼기";
+            return;
+        }
+
+        var stages = new[] { "배터리 냉각 회로 — 워터펌프(배터리) 구동", "전장 냉각 회로 — 워터펌프(전장) 구동", "밸브 전환 — 통합 순환 · 잔류 공기 배출" };
+        var rows = new List<TextMeshProUGUI>();
+        for (int i = 0; i < stages.Length; i++)
+        {
+            var bg = Px(_content, "S", 140, 20 + i * 80, 1000, 68); Img(bg, Card);
+            T(bg, $"{i + 1}.  {stages[i]}", 24, Color.white, TextAlignmentOptions.Left, 24, 0, 640, 68);
+            rows.Add(T(bg, "대기", 24, Dim, TextAlignmentOptions.Right, 660, 0, 310, 68));
+        }
+        var prog = Px(_content, "Prog", 140, 270, 1000, 14); Img(prog, Card);
+        var fill = Px(prog, "Fill", 0, 0, 0, 14); Img(fill, Accent);
+        var info = T(_content, "", 22, Color.white, TextAlignmentOptions.TopLeft, 140, 300, 1000, 280);
+        const float per = 6f;
+        bool done = false;
+        GdsModel.AirBleedRunning = true;
+        _live.Add(() =>
+        {
+            float t = Time.time - _screenTime;
+            int n = Mathf.Min(stages.Length, Mathf.FloorToInt(t / per));
+            fill.sizeDelta = new Vector2(1000f * Mathf.Clamp01(t / (per * stages.Length)), 14);
+            for (int i = 0; i < rows.Count; i++)
+                rows[i].text = i < n ? "<color=#2ECC71>완료</color>"
+                             : i == n ? $"<color=#00A0E9>구동 중… {Mathf.CeilToInt(per - (t - i * per))}초</color>" : "대기";
+            if (!done)
+            {
+                info.text = $"펌프 회전수 {2800f + Mathf.Sin(t * 3f) * 60f:0} rpm · 냉각수 온도 {GdsModel.CoolantTemp:0} °C\n" +
+                            "<color=#FFB000>리저버에서 기포가 올라옵니다 — 수위가 MIN 아래로 내려가지 않게 지켜보세요.</color>";
+                _footer.text = "에어빼기 중 — 리저버 캡을 닫지 마세요";
+            }
+            if (n >= stages.Length && !done)
+            {
+                done = true;
+                GdsModel.AirBleedRunning = false;
+                AudioSource.PlayClipAtPoint(EquipFx.Click, transform.position, 0.6f);
+                info.text = "<color=#2ECC71><b>에어빼기 완료</b></color>\n회로 안 공기가 빠지면서 리저버 수위가 내려갔습니다.\n→ 냉각수를 <b>MAX 선</b>까지 보충한 뒤 캡을 닫고, 고장 코드를 소거하세요.";
+                _footer.text = "에어빼기 완료";
+                if (GdsModel.CurrentModule == "Coolant_Air_Bleed")
+                {
+                    InteractionEvents.FireTaskConfirmed("Coolant_Air_Bleed");
+                    EquipFx.Notice("gds_bleed", "냉각수 에어빼기 완료", "내려간 수위를 MAX 선까지 보충하세요", EquipFx.Info, 3.5f, 2f);
+                }
+            }
+        });
+    }
+
+    // ── 고전압 배터리 팩 및 냉각수라인 기밀 점검 ──
+    // 매뉴얼 「배터리 제어 시스템 - 기밀 점검」의 GDS 화면 흐름을 줄여 옮김.
+    //  0 배터리 코드 입력(QR) → 1 장비 연결(ULT-M100 검색) → 2 기능 선택 → 3 점검(시나리오 단계에 맞춰 화면이 정해짐)
+    // 시나리오 단계(Airtight_Tester_Setup / Coolant_Line_Test / Pack_Zero_Adjust / Pack_Test / Pack_Retest) 중이면
+    // 해당 화면을 끝까지 진행했을 때 단계 완료 신호를 보낸다.
+    private const string BatteryCode = "BS37A2K0N4115";
+
+    private void RunAirtight(string phase)
+    {
+        if (phase == "0")
+        {
+            Box(_content, 140, 40, 1000, 300, "<size=30><b>배터리 코드 입력</b></size>\n\n배터리 팩 라벨의 <b>QR 코드</b>를 스캔하거나 배터리 코드(BSXXXX…)를 입력하세요.\n\n• 점검은 배터리 팩(BSA)을 차량에서 탈거한 상태에서 진행\n• 냉각수 라인 점검은 <b>상부 케이스 장착 전</b>에 실시", Accent);
+            Btn(_content, "QR 스캔", Accent, 440, 380, 200, 80, () => Go("run", "airtight:1"));
+            Btn(_content, "취소", Card, 660, 380, 200, 80, Back);
+            _footer.text = "매뉴얼: 부가기능 > 배터리제어 > 고전압 배터리 팩 및 냉각수라인 기밀 점검";
+            return;
+        }
+        if (phase == "1")
+        {
+            Box(_content, 140, 40, 1000, 300, $"<size=30><b>장비 연결</b></size>\n\n배터리 코드 <color=#00A0E9><b>{BatteryCode}</b></color> 확인\n\n기밀 시험기(ULT-M100) 전원을 켠 뒤 [장비 검색]을 누르세요.\n시험기 화면에 '연결됨'이 표시되면 연결 완료입니다.", Accent);
+            var status = T(_content, "", 26, Color.white, TextAlignmentOptions.Center, 140, 360, 1000, 50);
+            bool searching = false; float t0 = 0f;
+            Btn(_content, "장비 검색", Accent, 440, 430, 200, 80, () => { if (!searching) { searching = true; t0 = Time.time; } });
+            var next = Btn(_content, "다음", Card, 660, 430, 200, 80, () => Go("run", "airtight:2"));
+            next.gameObject.SetActive(false);
+            _live.Add(() =>
+            {
+                if (!searching) { status.text = "<color=#96A5B9>시험기 미연결</color>"; return; }
+                if (Time.time - t0 < 2f) { status.text = "<color=#00A0E9>ULT-M100 검색 중…</color>"; return; }
+                if (!next.gameObject.activeSelf)
+                {
+                    next.gameObject.SetActive(true);
+                    AudioSource.PlayClipAtPoint(EquipFx.Click, transform.position, 0.6f);
+                }
+                status.text = "<color=#2ECC71><b>ULT-M100 연결됨</b></color>";
+            });
+            _footer.text = "매뉴얼: 시험기 전원 ON → 장비 검색 → '연결됨' 확인";
+            return;
+        }
+        if (phase == "2")
+        {
+            var items = new (string t, string s, string go)[]
+            {
+                ("기밀 점검", "냉각수 라인 · 배터리 팩 기밀 점검", "airtight:3"),
+                ("냉각수 피팅 셀프 테스트", "피팅 [IN]/[OUT] 자체 누설 확인", "airtight:self"),
+                ("배터리 팩 에어주입 어댑터 셀프 테스트", "에어 주입 어댑터 · 압력 센서 모듈 자체 누설 확인", "airtight:self"),
+            };
+            for (int i = 0; i < items.Length; i++)
+            {
+                var f = items[i];
+                var b = Btn(_content, "", Card, 40, 10 + i * 130, 1200, 116, () => Go("run", f.go));
+                T(b.transform, $"<b>{f.t}</b>", 30, Color.white, TextAlignmentOptions.Left, 30, 10, 900, 56);
+                T(b.transform, f.s, 22, Dim, TextAlignmentOptions.Left, 30, 62, 1000, 44);
+                T(b.transform, "선택 ▶", 24, Accent, TextAlignmentOptions.Right, 1000, 0, 170, 116);
+            }
+            _footer.text = "ULT-M100 연결됨 · 기능을 고르세요";
+            return;
+        }
+        if (phase == "self")
+        {
+            AirtightTest("셀프 테스트", new[] { "공기 주입", "압력 유지", "리크 측정" }, 6f, () => 0f, true,
+                "<color=#2ECC71><b>셀프 테스트 합격</b></color>\n장비 자체 누설이 없습니다.", null);
+            return;
+        }
+
+        // phase "3": 시나리오 단계에 맞는 점검 화면
+        bool scen = GdsModel.IsAirtightScenario;
+        string cur = GdsModel.CurrentModule;
+        if (scen && !GdsModel.Done("Airtight_Coolant_Line_Test"))
+        {
+            if (!GdsModel.Done("Airtight_Coolant_Fitting_Install"))
+            {
+                AirtightBlock("냉각수 피팅 미장착", "냉각수 입구에 피팅 [IN], 출구에 피팅 [OUT]을 장착하고\n피팅 [OUT] 밸브를 잠근 뒤 다시 실행하세요.\n\n※ 그 전에 BSA 안의 냉각수를 완전히 배출해야 합니다.");
+                return;
+            }
+            if (!GdsModel.Done("Airtight_Tester_Setup"))
+            {
+                AirtightZero("냉각수 라인 영점 조정", "시험기와 냉각수 라인의 <b>모든 연결을 분리</b>한 상태에서 [영점 조정]을 누르세요.",
+                    "Airtight_Tester_Setup", "냉각수 라인 영점 조정 완료", "호스를 피팅 [IN]과 시험기 H AIR OUTPUT 에 연결하세요");
+                return;
+            }
+            if (!GdsModel.Done("Airtight_Coolant_Hose_Connect"))
+            {
+                AirtightBlock("장비 미연결", "피팅 [IN]에 호스를 연결하고, 피팅 [OUT] 밸브 잠금을 확인한 뒤\n호스 반대쪽을 시험기 <b>H (HIGH PRESSURE AIR OUTPUT)</b>에 연결하세요.");
+                return;
+            }
+            AirtightTest("냉각수 라인 기밀 점검", new[] { "공기 주입", "압력 안정화", "리크 측정" }, 20f, () => 0.01f, true,
+                "<color=#2ECC71><b>냉각수 라인 기밀 점검: 합격 (PASS)</b></color>\n→ 드레인 호스를 고정한 뒤 열어 잔류 공기를 빼고 피팅을 탈거하세요.\n→ 이후 상부 케이스를 장착하고 배터리 팩 기밀 점검을 진행합니다.",
+                cur == "Airtight_Coolant_Line_Test" ? "Airtight_Coolant_Line_Test" : null);
+            return;
+        }
+        if (scen)
+        {
+            if (!GdsModel.Done("Airtight_Adapter_Install"))
+            {
+                AirtightBlock("배터리 팩 점검 준비 안 됨", "막음 커넥터(E004 · E007 · E008 · E010) 장착 → 벤팅 밸브 실링 지그 장착 →\n에어 주입 어댑터 · 압력 센서 모듈을 압력 조절기에 <b>5초 이상</b> 눌러 부착한 뒤 실행하세요.");
+                return;
+            }
+            if (!GdsModel.Done("Airtight_Pack_Zero_Adjust"))
+            {
+                AirtightZero("막음 커넥터 결합 확인 · 영점 조정",
+                    "• 막음 커넥터 E004 · E007 · E008 · E010 결합 확인 (<b>해당 차종용 커넥터</b> 사용)\n• 압력 센서 모듈을 시험기 <b>LOW SENSOR INPUT</b> 에 연결\n• 센서 모듈을 개방한 상태에서 [영점 조정]",
+                    "Airtight_Pack_Zero_Adjust", "배터리 팩 영점 조정 완료", "어댑터 호스를 시험기 L AIR OUTPUT · SENSOR INPUT 에 연결하세요");
+                return;
+            }
+            if (!GdsModel.Done("Airtight_Pack_Hose_Connect"))
+            {
+                AirtightBlock("장비 미연결", "에어 주입 어댑터 호스를 시험기 <b>L AIR OUTPUT</b>, 압력 센서 모듈 호스를 <b>SENSOR INPUT</b> 에 연결하고\n압력 조절기 상태를 확인한 뒤 실행하세요.");
+                return;
+            }
+        }
+
+        float leak = GdsModel.PackLeakMbar;
+        bool pass = leak <= 0.5f;
+        string send = cur == "Airtight_Pack_Test" || cur == "Airtight_Pack_Retest" ? cur : null;
+        string table = $"냉각수 라인 기밀 점검   <color=#2ECC71>합격</color>   0.00 mbar\n배터리팩 기밀 점검      {(pass ? "<color=#2ECC71>합격</color>" : "<color=#FF5252>불합격</color>")}   {leak:0.00} mbar\n\n";
+        AirtightTest("배터리 팩 기밀 점검", new[] { "공기 주입", "압력 안정화", "리크 측정" }, 20f, () => GdsModel.PackLeakMbar, pass,
+            pass ? table + "<color=#2ECC71><b>판정: 합격 (PASS)</b></color> — 잔압을 뺀 뒤 어댑터 · 지그 · 막음 커넥터를 탈거하세요."
+                 : table + "<color=#FF5252><b>판정: 불합격 (FAIL) — 누설 의심</b></color>\n→ 헬륨 누설 탐지: 어댑터 호스를 시험기에서 분리 → 헬륨 밸브에 연결 → <b>500 mbar 로 약 30초</b> 가압 후 밸브 잠금\n→ 리크 디텍터로 하부 케이스 용접부 · 커넥터 결합부 · 상부 케이스 가스켓 확인",
+            send);
+    }
+
+    private void AirtightBlock(string title, string body)
+    {
+        Box(_content, 140, 40, 1000, 300, $"<size=30><b>{title}</b></size>\n\n{body}", WarnC);
+        Btn(_content, "돌아가기", Card, 540, 380, 200, 80, Back);
+        _footer.text = "매뉴얼 순서대로 장비를 준비한 뒤 다시 실행하세요";
+    }
+
+    // 영점 조정: [영점 조정] → 3초 → 완료(시나리오 단계면 완료 신호)
+    private void AirtightZero(string title, string body, string module, string doneTitle, string doneMsg)
+    {
+        Box(_content, 140, 40, 1000, 300, $"<size=30><b>{title}</b></size>\n\n{body}", Accent);
+        var status = T(_content, "", 26, Color.white, TextAlignmentOptions.Center, 140, 360, 1000, 50);
+        bool running = false, done = false; float t0 = 0f;
+        Btn(_content, "영점 조정", Accent, 540, 430, 200, 80, () => { if (!running) { running = true; t0 = Time.time; } });
+        _live.Add(() =>
+        {
+            if (!running) { status.text = "<color=#96A5B9>대기</color>"; return; }
+            float t = Time.time - t0;
+            if (t < 3f) { status.text = $"<color=#00A0E9>영점 조정 중… {t / 3f * 100f:0}%</color>"; return; }
+            status.text = "<color=#2ECC71><b>영점 조정 완료 (0.00 mbar)</b></color>";
+            if (done) return;
+            done = true;
+            AudioSource.PlayClipAtPoint(EquipFx.Click, transform.position, 0.6f);
+            _footer.text = doneMsg;
+            if (GdsModel.CurrentModule == module)
+            {
+                InteractionEvents.FireTaskConfirmed(module);
+                EquipFx.Notice("gds_" + module, doneTitle, doneMsg, EquipFx.Info, 3.5f, 2f);
+            }
+        });
+        _footer.text = "매뉴얼: 영점 조정은 연결을 분리(개방)한 상태에서 실시";
+    }
+
+    // 점검 실행 화면: 진행 단계 · 리크 압력 변화(mbar) · 진행 시간 → 판정
+    private void AirtightTest(string title, string[] stages, float total, Func<float> leak, bool pass, string resultText, string module)
+    {
+        var rows = new List<TextMeshProUGUI>();
+        for (int i = 0; i < stages.Length; i++)
+        {
+            var bg = Px(_content, "S", 140, 20 + i * 70, 1000, 60); Img(bg, Card);
+            T(bg, $"{i + 1}.  {stages[i]}", 24, Color.white, TextAlignmentOptions.Left, 24, 0, 600, 60);
+            rows.Add(T(bg, "대기", 24, Dim, TextAlignmentOptions.Right, 600, 0, 370, 60));
+        }
+        var prog = Px(_content, "Prog", 140, 235, 1000, 14); Img(prog, Card);
+        var fill = Px(prog, "Fill", 0, 0, 0, 14); Img(fill, Accent);
+        var info = T(_content, "", 22, Color.white, TextAlignmentOptions.TopLeft, 140, 260, 1000, 330);
+        float per = total / stages.Length;
+        bool done = false;
+        _live.Add(() =>
+        {
+            float t = Time.time - _screenTime;
+            int n = Mathf.Min(stages.Length, Mathf.FloorToInt(t / per));
+            fill.sizeDelta = new Vector2(1000f * Mathf.Clamp01(t / total), 14);
+            for (int i = 0; i < rows.Count; i++)
+                rows[i].text = i < n ? "<color=#2ECC71>완료</color>" : i == n ? "<color=#00A0E9>진행 중…</color>" : "대기";
+            if (done) return;
+            if (n < stages.Length)
+            {
+                // 마지막(리크 측정) 단계 동안 압력 변화값이 판정값 쪽으로 올라간다
+                float k = Mathf.Clamp01((t - per * (stages.Length - 1)) / per);
+                info.text = $"<b>{title}</b>\n진행 단계: {stages[n]}\n리크 압력 변화: <b>{leak() * k:0.00} mbar</b>\n진행 시간: {t:0}초 / 약 {total:0}초";
+                _footer.text = "점검 중 — 호스 · 어댑터 · 밸브를 건드리지 마세요";
+                return;
+            }
+            done = true;
+            AudioSource.PlayClipAtPoint(EquipFx.Click, transform.position, 0.6f);
+            info.text = resultText;
+            _footer.text = pass ? $"{title} 완료 — 합격" : $"{title} 완료 — 불합격";
+            if (module != null && GdsModel.CurrentModule == module)
+            {
+                InteractionEvents.FireTaskConfirmed(module);
+                EquipFx.Notice("gds_" + module, $"{title} {(pass ? "합격" : "불합격")}",
+                    pass ? "다음 단계를 진행하세요" : "헬륨으로 누설 부위를 찾으세요", pass ? EquipFx.Info : EquipFx.Warn, 3.5f, 2f);
             }
         });
     }
@@ -1101,7 +1410,35 @@ public static class GdsSync
         if (t == null) return;
         if (!s_all.Contains(t)) s_all.Add(t);
         EnsureRegistered();
+        CheckScenario();
         t.ApplyState(s_state.screen, s_state.arg, s_state.vci, s_state.cleared);
+    }
+
+    // ── 시나리오가 바뀌면 진단기 상태를 처음으로 (11/16) ──
+    // s_state 는 정적이라 앞 시나리오(냉각수)의 화면·VCI 연결·소거 여부가 다음 시나리오(12V)로 넘어갔다.
+    // 새 진단기가 생기며 넘어온 '고장 코드 상세' 화면을 다시 그리는 순간 초기 진단 완료 신호가 나가 1단계가 저절로 넘어갔다.
+    // 시나리오 ID 가 바뀌거나 같은 시나리오를 처음부터 다시 시작하면(단계 번호가 줄어듦) 홈 · VCI 미연결 · 소거 안 함으로 되돌린다.
+    // 각 기기에서 같은 조건으로 각자 되돌리므로 따로 방송하지 않는다.
+    private static string s_scenarioKey;
+    private static int s_lastTask = -1;
+    /// <summary>이번 시나리오에서 사용자가 진단기 화면을 직접 넘겼는가(넘어온 화면이 단계 완료 신호를 내지 않게).</summary>
+    public static bool NavigatedThisScenario { get; private set; }
+
+    public static void CheckScenario()
+    {
+        var sc = GdsModel.Scenario;
+        string key = sc != null ? sc.scenarioId : null;
+        int task = GdsModel.TaskIndex;
+        bool changed = key != s_scenarioKey || (key != null && task >= 0 && s_lastTask >= 0 && task < s_lastTask);
+        if (task >= 0) s_lastTask = task;
+        if (!changed) return;
+        bool first = s_scenarioKey == null && key == null;
+        s_scenarioKey = key;
+        s_lastTask = task;
+        if (first) return;
+        NavigatedThisScenario = false;
+        Debug.Log($"[GDS] 시나리오 변경({key ?? "없음"}) — 진단기 상태 초기화");
+        Apply(new GdsBroadcast { screen = "home", arg = "", vci = false, cleared = false });
     }
 
     public static void Unregister(GdsTablet t) => s_all.Remove(t);
@@ -1122,6 +1459,7 @@ public static class GdsSync
     public static void Request(string screen, string arg, bool vci, bool cleared)
     {
         EnsureRegistered();
+        NavigatedThisScenario = true;
         var b = new GdsBroadcast { screen = screen, arg = arg ?? "", vci = vci, cleared = cleared };
         if (InstanceFinder.IsServerStarted) { ServerSet(b); return; }
         if (InstanceFinder.IsClientStarted) { InstanceFinder.ClientManager.Broadcast(b); Apply(b); return; }   // 내 화면은 바로 바꾼다

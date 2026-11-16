@@ -7,8 +7,10 @@ using UnityEngine;
 //  · 고전압 커넥터 커버  0.8 ~ 1.2 kgf·m   (고전압 차단 절차 8-(4))
 //  · 프런트/리어 언더커버 0.8 ~ 1.2 kgf·m   (모터 및 감속기 - 언더 커버)
 //  · 12V 배터리 단자     0.8 ~ 1.0 kgf·m   (차량 제어 - 12V 배터리)
+//  · 12V 배터리 클램프   0.9 ~ 1.4 / 배터리 센서 2.7 ~ 3.3 kgf·m
 //  · 배터리 팩 볼트 등 개별값이 매뉴얼에 없는 것은 '일반 조임 토크표' M8·8T(2.3 ~ 3.1) 를 쓴다
 //  · 휠 너트            11 ~ 13 kgf·m
+//  · 차체 부품 탈거·장착(CarPartService) 볼트는 FreeWorkBolt 에 부위별 규정값을 담아 온다
 //  토크렌치는 Presets 중 하나로 맞춰 쓰고, 규정 범위 밖이면 조여지지 않는다.
 // ============================================================
 public static class TorqueSpec
@@ -28,9 +30,10 @@ public static class TorqueSpec
     {
         s = default;
         if (b == null) return false;
-        if (b.GetComponent<FreeWorkBolt>() != null)
+        var free = b.GetComponent<FreeWorkBolt>();
+        if (free != null)
         {
-            s = new Spec { min = 11f, max = 13f, part = "휠 너트", source = "승용 휠 너트 규정" };
+            s = new Spec { min = free.torqueMin, max = free.torqueMax, part = free.specPart, source = free.specSource };
             return true;
         }
         var g = b.GetComponentInParent<BoltGroupCounter>();
@@ -40,6 +43,8 @@ public static class TorqueSpec
         {
             s = id.Contains("CLAMP")
                 ? new Spec { min = 0.9f, max = 1.4f, part = "12V 배터리 클램프", source = "12V 배터리 탈거 및 장착" }
+                : id.Contains("SENSOR")
+                ? new Spec { min = 2.7f, max = 3.3f, part = "12V 배터리 센서", source = "12V 배터리 탈거 및 장착" }
                 : new Spec { min = 0.8f, max = 1.0f, part = "12V 배터리 단자", source = "12V 배터리 탈거 및 장착" };
             return true;
         }

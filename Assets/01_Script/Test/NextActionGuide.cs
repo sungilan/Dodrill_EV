@@ -331,6 +331,7 @@ public class NextActionGuide : MonoBehaviour
             case "ScanDTC": return "진단기를 이곳에 연결하세요";
             case "Swap": return "이곳에 가져다 놓으세요";
             case "ZoneAndUse": return "이곳으로 옮기세요";
+            case "GdsFunction": return "진단기 부가 기능을 실행하세요";
         }
         switch (GameScenePlatformManager.CurrentPlatform)
         {

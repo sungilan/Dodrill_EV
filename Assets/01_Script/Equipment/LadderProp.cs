@@ -129,6 +129,14 @@ public class LadderProp : MonoBehaviour
         return transform.TransformPoint(local);
     }
 
+    /// <summary>놓여 있는(누가 들고 있지 않은) 사다리 발판 근처인가 — VR 오르기 보조가 쓴다.</summary>
+    public static bool AnyNear(Vector3 worldPos, float margin)
+    {
+        foreach (var l in s_all)
+            if (l != null && l._n > 0 && (l._sync == null || !l._sync.IsGrabbed) && l.NearFootprint(worldPos, margin)) return true;
+        return false;
+    }
+
     private bool NearFootprint(Vector3 worldPos, float margin)
     {
         Vector3 lp = transform.InverseTransformPoint(worldPos) - _fpCenter;
@@ -184,7 +192,7 @@ public class LadderProp : MonoBehaviour
             bc.size = size;
             bc.center = new Vector3(b.center.x, bottom + h - 0.02f, b.center.z);
         }
-        if (Utils.GetPlatformType() == PlatformType.VR) BuildRungs(b, bottom);
+        if (Utils.GetPlatformType() == PlatformType.VR) { BuildRungs(b, bottom); VrLadderClimbAssist.Ensure(); }
     }
 
     /// <summary>
@@ -271,3 +279,90 @@ public class LadderProp : MonoBehaviour
 
 /// <summary>밟고 올라설 수 있는 면(사다리 발판 등). 네트워크 물체 위라도 PC·모바일 접지가 바닥으로 인정한다.</summary>
 public class ClimbSurface : MonoBehaviour { }
+
+// ============================================================
+//  VrLadderClimbAssist — VR 사다리 오르기 보조
+//
+//  원인(11/16 VR 테스트 '사다리 여전히 안 올라가짐'): VR 플레이어 몸통 Rigidbody 가 높이(Y) 고정(Constraints 116)이고
+//  접지(useGrounding)도 꺼져 있어, 가로대를 잡고 당겨도(AutoHand 오르기 힘) 몸이 위로 움직일 수 없었다. 발판 콜라이더도 마찬가지.
+//  대책: 사다리 가까이 있거나 가로대를 잡고 오르는 동안에만 Y 고정을 풀고 접지를 켠다(발판 위에 서고, 걸어 나가면 바닥으로 내려옴).
+//  사다리에서 떨어져 원래 바닥 높이로 돌아오면 원래 설정(Y 고정·접지 끔)으로 되돌린다 — 평소 이동감은 그대로.
+// ============================================================
+public class VrLadderClimbAssist : MonoBehaviour
+{
+    private static VrLadderClimbAssist s_inst;
+    private AutoHandPlayer _player;
+    private Rigidbody _body;
+    private float _nextFind;
+    private bool _active;
+    private float _baseY;
+    private RigidbodyConstraints _origConstraints;
+    private bool _origGrounding, _origGravity;
+
+    /// <summary>LadderProp 가 VR 에서 생성될 때 부른다.</summary>
+    public static void Ensure()
+    {
+        if (s_inst != null) return;
+        var go = new GameObject("[VrLadderClimbAssist]") { hideFlags = HideFlags.HideInHierarchy };
+        DontDestroyOnLoad(go);
+        s_inst = go.AddComponent<VrLadderClimbAssist>();
+    }
+
+    private void FindPlayer()
+    {
+        if (_player != null || Time.unscaledTime < _nextFind) return;
+        _nextFind = Time.unscaledTime + 2f;
+        foreach (var p in FindObjectsByType<AutoHandPlayer>(FindObjectsSortMode.None))
+        {
+            if (p == null || !p.isActiveAndEnabled) continue;
+            var nob = p.GetComponentInParent<FishNet.Object.NetworkObject>();
+            if (nob != null && nob.IsSpawned && !nob.IsOwner) continue;   // 다른 사람 아바타 제외
+            _player = p;
+            _body = p.GetComponent<Rigidbody>();
+            break;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        FindPlayer();
+        if (_player == null || _body == null) { _active = false; return; }
+
+        Vector3 pos = _body.position;
+        bool climbing = _player.IsClimbing();
+        bool near = LadderProp.AnyNear(pos, 0.6f);
+
+        if (!_active)
+        {
+            if (!climbing && !near) return;
+            _active = true;
+            _baseY = pos.y;
+            _origConstraints = _body.constraints;
+            _origGrounding = _player.useGrounding;
+            _origGravity = _body.useGravity;
+            _body.constraints = _origConstraints & ~RigidbodyConstraints.FreezePositionY;
+            _player.useGrounding = true;
+            return;
+        }
+
+        // 바닥보다 아래로 빠지면 바로 원래 높이로(바닥 콜라이더가 접지 레이어에 없을 때 대비)
+        if (pos.y < _baseY - 0.03f)
+        {
+            pos.y = _baseY;
+            _body.position = pos;
+            var v = _body.linearVelocity; if (v.y < 0f) v.y = 0f; _body.linearVelocity = v;
+        }
+
+        // 사다리에서 벗어나 원래 바닥 높이로 돌아왔으면 원래 설정으로
+        if (!climbing && !near && pos.y <= _baseY + 0.03f)
+        {
+            pos.y = _baseY;
+            _body.position = pos;
+            var v = _body.linearVelocity; v.y = 0f; _body.linearVelocity = v;
+            _body.constraints = _origConstraints;
+            _player.useGrounding = _origGrounding;
+            _body.useGravity = _origGravity;
+            _active = false;
+        }
+    }
+}

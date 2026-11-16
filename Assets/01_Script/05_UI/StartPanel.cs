@@ -20,6 +20,7 @@ public class StartPanel : UIView
     private void Start()
     {
         AddSoloButton();
+        AddSoloScenarioButton();
     }
 
     // StartButton OnClick에 연결
@@ -93,6 +94,73 @@ public class StartPanel : UIView
         {
             Debug.LogWarning($"[StartPanel] 혼자 하기 버튼 추가 실패: {e.Message}");
         }
+    }
+
+    // ── 혼자 하기 시나리오 고르기 ─────────────────────────────
+    // 혼자 하기는 방 옵션이 없어 시나리오가 SoloModeLauncher.ScenarioId 로 고정이었다.
+    // '혼자 하기' 아래에 버튼을 하나 더 복제해, 누를 때마다 Resources/Scenarios 의 시나리오를 차례로 넘긴다.
+
+    private const string SoloScenarioButtonName = "BTN_SoloScenario";
+
+    [Serializable] private class ScenarioHead { public string scenarioId; public NameHead scenarioName; }
+    [Serializable] private class NameHead { public string ko; public string en; }
+
+    private readonly System.Collections.Generic.List<(string id, string name)> _soloScenarios = new();
+    private int _soloScenarioIndex;
+    private TMP_Text _soloScenarioLabel;
+
+    private void AddSoloScenarioButton()
+    {
+        try
+        {
+            if (transform.Find(SoloScenarioButtonName) != null) return;
+            var solo = transform.Find(SoloButtonName);
+            if (solo == null) return;
+
+            foreach (var ta in Resources.LoadAll<TextAsset>("Scenarios"))
+            {
+                ScenarioHead h = null;
+                try { h = JsonUtility.FromJson<ScenarioHead>(ta.text); } catch { }
+                if (h == null || string.IsNullOrEmpty(h.scenarioId)) continue;
+                string n = h.scenarioName != null && !string.IsNullOrEmpty(h.scenarioName.ko) ? h.scenarioName.ko : h.scenarioId;
+                _soloScenarios.Add((h.scenarioId, n));
+            }
+            if (_soloScenarios.Count <= 1) return;
+            _soloScenarios.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            _soloScenarioIndex = Mathf.Max(0, _soloScenarios.FindIndex(s => s.id == SoloModeLauncher.ScenarioId));
+
+            var go = Instantiate(solo.gameObject, solo.parent, false);
+            go.name = SoloScenarioButtonName;
+            var button = go.GetComponent<Button>();
+            if (button != null)
+            {
+                button.onClick = new Button.ButtonClickedEvent();
+                button.onClick.AddListener(OnSoloScenarioButtonClick);
+            }
+            _soloScenarioLabel = go.GetComponentInChildren<TMP_Text>(true);
+            if (_soloScenarioLabel != null) { _soloScenarioLabel.enableAutoSizing = true; _soloScenarioLabel.fontSizeMin = 12; }
+            go.transform.SetSiblingIndex(solo.GetSiblingIndex() + 1);
+            ApplySoloScenario();
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[StartPanel] 혼자 하기 시나리오 버튼 추가 실패: {e.Message}");
+        }
+    }
+
+    private void OnSoloScenarioButtonClick()
+    {
+        if (_soloScenarios.Count == 0) return;
+        _soloScenarioIndex = (_soloScenarioIndex + 1) % _soloScenarios.Count;
+        ApplySoloScenario();
+    }
+
+    private void ApplySoloScenario()
+    {
+        var s = _soloScenarios[_soloScenarioIndex];
+        SoloModeLauncher.ScenarioId = s.id;
+        if (_soloScenarioLabel != null) _soloScenarioLabel.text = $"▶ {s.name}";
+        Debug.Log($"[StartPanel] 혼자 하기 시나리오: {s.id}");
     }
 
     public void OnSoloButtonClick()

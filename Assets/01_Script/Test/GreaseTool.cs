@@ -97,6 +97,13 @@ public class GreaseTool : MonoBehaviour
 
     private void Update()
     {
+        // VR: 뗌 이벤트를 놓쳐 계속 분사되던 문제(11/16) — 손에 없거나 실제 트리거가 떼어져 있으면 끈다
+        if (isActivated && _grabbable != null && VrProbeHandling.IsVRDevice)
+        {
+            var h = LocalHands.HoldingHand(transform);
+            bool on = h != null && LocalHands.TriggerHeld(h, out bool valid) && valid;
+            if (!on && (h == null || LocalHands.TriggerHeldValid(h))) OnDeactivate(h, _grabbable);
+        }
         if (!isActivated) return;
 
         DetectTarget();

@@ -8,6 +8,8 @@ using UnityEngine;
 //  · 고장 코드: 시나리오 ID(ev_p0aa6_…)에서 코드를 뽑고, 수리 단계(PRA 교체)가 끝나기 전까지 '현재 고장'
 //  · 통신: 서비스 플러그 분리 ~ 재장착 사이에는 차량 통신 불가(고전압 차단·12V 분리 상태)
 //  · 센서 데이터: 매뉴얼 규정값(팩 480~826V, 셀 2.5~4.2V, 편차 40mV 이하, 절연 500kΩ 이상) 기준으로 자연스럽게 흔들리는 값
+//  · 12V 보조 배터리 교환(ev_p0562_…): 새 배터리 장착 전까지 12V 전압 낮음, (−) 단자 분리 ~ 재연결 사이 통신 불가
+//  · 냉각수 교환 · 에어빼기(ev_p0c73_…): 에어빼기 전까지 P0C73 현재 고장, 냉각 대기 단계에서 냉각수 온도가 내려감
 //  시나리오 없이(자유 실습) 쓰면 P0AA6 절연 고장이 있는 차로 가정한다.
 // ============================================================
 public static class GdsModel
@@ -25,6 +27,7 @@ public static class GdsModel
         ["P0D21"] = new Dtc { code = "P0D21", name = "ICCU(통합 충전 제어) 고장", system = "ICCU", symptom = "충전 불가, 12V 충전 불가", condition = "ICCU 내부 고장 검출" },
         ["P0A94"] = new Dtc { code = "P0A94", name = "LDC(DC-DC 컨버터) 성능 이상", system = "ICCU", symptom = "12V 배터리 방전", condition = "LDC 출력 전압 이상" },
         ["P0AEE"] = new Dtc { code = "P0AEE", name = "고전압 배터리 온도 센서 회로 이상", system = "BMS", symptom = "출력 제한", condition = "온도 센서 값 범위 이탈" },
+        ["P0562"] = new Dtc { code = "P0562", name = "시스템 전압 낮음 (12V 보조 배터리)", system = "VCU", symptom = "시동(READY) 불가, 계기판 경고등", condition = "12V 전원 전압 11.5 V 미만 지속" },
         ["U1112"] = new Dtc { code = "U1112", name = "CAN 통신 이상", system = "VCU", symptom = "경고등 점등", condition = "제어기 메시지 미수신" },
     };
 
@@ -109,14 +112,90 @@ public static class GdsModel
         {
             if (string.IsNullOrEmpty(DtcCode)) return false;
             if (!HasScenario) return true;
+            if (IsAirtightScenario) return !Done("Airtight_Leak_Repair");
             if (IndexOf("PRA_Replace") >= 0) return !Done("PRA_Replace");
+            if (Is12VScenario) return !Done("Battery_12V_Install");
+            if (IsCoolantScenario) return !Done("Coolant_Air_Bleed");
             int fin = IndexOf("FinalDiagnosis");
             return fin < 0 || TaskIndex < fin;
         }
     }
 
     /// <summary>고전압 차단(서비스 플러그 분리·12V 분리) 중이라 차량과 통신할 수 없는가</summary>
-    public static bool CommLost => HasScenario && Done("MSD_Removal") && !Done("MSD_Reinstall");
+    public static bool CommLost => HasScenario &&
+        ((Done("MSD_Removal") && !Done("MSD_Reinstall")) ||
+         (Done("Battery_12V_Neg_Disconnect") && !Done("Battery_12V_Neg_Connect")));
+
+    // ── 고전압 배터리 팩 · 냉각수 라인 기밀 점검(ev_p0aa6_battery_airtight) ──
+    // 고장 원인: 팩 커넥터 결합부 실링 불량으로 수분이 들어가 절연 저항이 떨어짐(P0AA6). 누설 부위를 보수하면 해소.
+    // 첫 팩 기밀 점검은 누설로 FAIL, 보수 후 재점검은 PASS.
+
+    /// <summary>기밀 점검 시나리오인가</summary>
+    public static bool IsAirtightScenario => IndexOf("Airtight_Pack_Test") >= 0;
+
+    /// <summary>배터리 팩 기밀 점검 압력 변화(mbar) — 누설 부위를 보수하기 전에는 판정 기준을 넘는다</summary>
+    public static float PackLeakMbar => IsAirtightScenario && !Done("Airtight_Leak_Repair") ? 4.8f + N(11.3f, 0.3f) : 0f;
+
+    /// <summary>12V 보조 배터리 교환 시나리오인가</summary>
+    public static bool Is12VScenario => IndexOf("Battery_12V_Install") >= 0;
+
+    /// <summary>12V 보조 배터리 전압 — 교환 시나리오에서 새 배터리를 달기 전에는 방전 상태(약 10.9 V)</summary>
+    public static float AuxVoltage => Is12VScenario && !Done("Battery_12V_Install") ? 10.9f + N(9.1f, 0.03f) : 12.6f + N(9.1f, 0.03f);
+
+    // ── 냉각수 교환 · 에어빼기(ev_p0c73_…) ──────────────
+    // 고장 원인: 냉각 회로에 공기가 차 순환이 안 됨 → 모터 온도 상승(P0C73). 에어빼기가 끝나면 해소.
+    // 냉각수 온도: 처음엔 뜨겁고(약 84°C), '냉각 대기' 단계 동안 식어서 40°C 아래로 내려간다.
+
+    /// <summary>냉각수 교환 · 에어빼기 시나리오인가</summary>
+    public static bool IsCoolantScenario => IndexOf("Coolant_Air_Bleed") >= 0;
+
+    /// <summary>GDS 부가 기능 '냉각수 에어빼기' 실행 중 (태블릿이 켜고 끈다)</summary>
+    public static bool AirBleedRunning;
+
+    public const float CoolantSafeTemp = 40f;
+    private static float s_coolStart = -1f;
+
+    public static float CoolantTemp
+    {
+        get
+        {
+            if (!IsCoolantScenario) return 27f + N(10.2f, 0.4f, 0.1f);
+            if (Done("Coolant_Cool_Down")) { s_coolStart = -1f; return 31f + N(10.2f, 0.4f, 0.1f); }
+            if (CurrentModule != "Coolant_Cool_Down") return 84f + N(10.2f, 0.8f, 0.2f);
+
+            // 이 단계에 들어온 시점부터 대기 시간 동안 84 → 36°C
+            if (s_coolStart < 0f) s_coolStart = Time.time;
+            float wait = DischargeTimerUI.GetWaitSeconds(Scenario?.GetModuleConfig("Coolant_Cool_Down"), 60f);
+            float k = Mathf.Clamp01((Time.time - s_coolStart) / Mathf.Max(1f, wait));
+            return Mathf.Lerp(84f, 36f, 1f - (1f - k) * (1f - k)) + N(10.2f, 0.4f, 0.2f);
+        }
+    }
+
+    /// <summary>구동 모터 온도 — 냉각 회로에 공기가 있는 동안은 높다</summary>
+    public static float MotorTemp => IsCoolantScenario && FaultPresent
+        ? Mathf.Max(CoolantTemp + 30f, 70f) + N(11.4f, 1.2f, 0.3f)
+        : CoolantTemp + 6f + N(11.4f, 0.6f, 0.3f);
+
+    public static List<Item> CoolantData()
+    {
+        float ct = CoolantTemp, mt = MotorTemp;
+        bool bleed = AirBleedRunning;
+        bool air = IsCoolantScenario && FaultPresent;
+        string pump = bleed ? $"{2800f + N(12.6f, 60f, 1.5f):0}" : "0";
+        return new List<Item>
+        {
+            new Item { name = "냉각수 온도 (전장 회로)", value = $"{ct:0}", unit = "°C", spec = $"캡 개방 {CoolantSafeTemp:0} 이하", bad = ct > CoolantSafeTemp },
+            new Item { name = "냉각수 온도 (배터리 입구)", value = $"{ct - 4f:0}", unit = "°C", spec = "" },
+            new Item { name = "구동 모터 온도", value = $"{mt:0}", unit = "°C", spec = "", bad = air },
+            new Item { name = "인버터 온도", value = $"{mt - 12f:0}", unit = "°C", spec = "" },
+            new Item { name = "전동 워터펌프 (전장) 회전수", value = pump, unit = "rpm", spec = "" },
+            new Item { name = "전동 워터펌프 (배터리) 회전수", value = pump, unit = "rpm", spec = "" },
+            new Item { name = "냉각수 밸브 모드", value = bleed ? "통합 순환 (에어빼기)" : "분리 순환", unit = "", spec = "" },
+            new Item { name = "모터 출력 제한", value = air ? "작동" : "해제", unit = "", spec = "해제", bad = air },
+            new Item { name = "보조 배터리(12V) 전압", value = $"{AuxVoltage:0.00}", unit = "V", spec = "11.5 ~ 15.0", bad = AuxVoltage < 11.5f },
+            new Item { name = "고장 코드 개수", value = FaultPresent ? "1" : "0", unit = "", spec = "0", bad = FaultPresent },
+        };
+    }
 
     public static string Vin
     {
@@ -187,7 +266,7 @@ public static class GdsModel
             new Item { name = "프리차지 릴레이", value = "OFF", unit = "", spec = "" },
             new Item { name = "릴레이 융착 상태", value = "Relay Welding not detection", unit = "", spec = "not detection" },
             new Item { name = "배터리 건강 상태(SOH)", value = "97.8", unit = "%", spec = "" },
-            new Item { name = "보조 배터리(12V) 전압", value = $"{12.6f + N(9.1f, 0.03f):0.00}", unit = "V", spec = "11.5 ~ 15.0" },
+            new Item { name = "보조 배터리(12V) 전압", value = $"{AuxVoltage:0.00}", unit = "V", spec = "11.5 ~ 15.0", bad = AuxVoltage < 11.5f },
             new Item { name = "고장 코드 개수", value = FaultPresent ? "1" : "0", unit = "", spec = "0", bad = FaultPresent },
         };
         return l;

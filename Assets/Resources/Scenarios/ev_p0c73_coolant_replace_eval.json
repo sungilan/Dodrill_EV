@@ -1,0 +1,915 @@
+{
+  "scenarioId": "ev_p0c73_coolant_replace_eval",
+  "scenarioName": {
+    "ko": "[평가] [P0C73] 냉각수 교환 및 에어빼기",
+    "en": "[Assessment] [P0C73] Coolant Replacement & Air Bleeding",
+    "vi": ""
+  },
+  "version": "1.0",
+  "dtc": {
+    "code": "P0C73",
+    "faultName": {
+      "ko": "구동 모터 냉각 시스템 성능 저하",
+      "en": "Drive Motor Cooling System Performance"
+    },
+    "symptom": {
+      "ko": "주행 중 출력 제한, 계기판 경고등 점등",
+      "en": "Reduced power while driving, warning lamp on"
+    },
+    "requiresLOTO": false,
+    "dischargeWaitSeconds": 0
+  },
+  "map": {
+    "objects": [
+      {
+        "prefabId": "Ioniq5N",
+        "position": {
+          "x": 0.781,
+          "y": 0,
+          "z": 0.08
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "vin",
+            "ko": "KMHC251XXXXXXXX",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "batteryStatus",
+            "ko": "SOC 68%",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": {
+    "tasks": [
+      {
+        "moduleId": "InitialDiagnosis",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "GDS_Tablet",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_OBD_Port",
+            "persist": true
+          }
+        ]
+      },
+      {
+        "moduleId": "LOTO_Gloves",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "InsulatedGloves",
+            "spawnPointId": "SP_Cart_Drawer",
+            "guideId": "Guide_Gloves"
+          }
+        ]
+      },
+      {
+        "moduleId": "Vehicle_Hood_Open",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Level_Check",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Cool_Down",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Cap_Open",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Car_Lift_Up",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Drain_Pan_Place",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Drain_Pan",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_Coolant_Drain_Zone"
+          }
+        ]
+      },
+      {
+        "moduleId": "Coolant_Drain_Plug_Open",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Drain_Plug_Close",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Car_Lift_Down",
+        "timeout": 90,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Fill",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "Coolant_Bottle",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_Coolant_Fill_Zone"
+          }
+        ]
+      },
+      {
+        "moduleId": "Coolant_Air_Bleed",
+        "timeout": 180,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "GDS_Tablet",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_OBD_Port",
+            "persist": true
+          }
+        ]
+      },
+      {
+        "moduleId": "Coolant_Top_Up",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Coolant_Cap_Close",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "Vehicle_Hood_Close",
+        "timeout": 60,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": []
+      },
+      {
+        "moduleId": "FinalDiagnosis",
+        "timeout": 120,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "GDS_Tablet",
+            "spawnPointId": "SP_Cart_Top",
+            "guideId": "Guide_OBD_Port",
+            "persist": true
+          }
+        ]
+      }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "InitialDiagnosis",
+      "config": {
+        "actionType": "ScanDTC",
+        "requiredItems": [
+          "GDS_Tablet"
+        ],
+        "targetObjName": "OBD_Zone",
+        "targetZoneId": "OBD_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "초기 고장 진단",
+            "en": "Initial Fault Diagnosis",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "GDS 진단기를 OBD-II 단자에 연결해 고장 코드와 냉각 계통 데이터를 확인하세요.",
+            "en": "Connect the GDS to the OBD-II port and check DTCs and cooling data.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "주행 중 출력 제한이 걸린 차량입니다. P0C73은 구동 모터 냉각 성능이 떨어졌다는 뜻입니다. 서비스 데이터에서 모터 온도가 높고, 냉각 회로 순환이 원활하지 않은지 확인하세요.",
+            "en": "The vehicle went into reduced power. P0C73 means drive motor cooling performance is low. Check in service data that motor temperature is high and the coolant is not circulating well.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "진단기 연결 → 원클릭 진단 → P0C73 상세 → 센서 데이터(모터 · 냉각수 온도)",
+            "en": "Connect → Quick scan → P0C73 detail → Service data (motor/coolant temp)",
+            "vi": ""
+          },
+          {
+            "key": "expectedDTC",
+            "ko": "P0C73",
+            "en": "P0C73",
+            "vi": ""
+          },
+          {
+            "key": "resultNote",
+            "ko": "P0C73(모터 냉각 성능 저하) 검출. 냉각수 부족 · 냉각 회로 공기 유입 → 냉각수 교환 및 에어빼기 필요.",
+            "en": "P0C73 (motor cooling performance) detected. Low coolant / air in circuit → replace coolant and bleed air.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "LOTO_Gloves",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "InsulatedGloves"
+        ],
+        "targetObjName": "InsulatedGloves",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "보호 장갑 착용",
+            "en": "Wear Protective Gloves",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "작업 전 보호 장갑을 착용하세요.",
+            "en": "Put on protective gloves before work.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "냉각수는 피부에 닿으면 자극이 있고 뜨거울 때는 화상을 입을 수 있습니다. 장갑을 끼고 작업하세요.",
+            "en": "Coolant irritates skin and can burn when hot. Wear gloves while working.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "장갑 상태 확인 → 착용",
+            "en": "Check gloves → Wear",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Vehicle_Hood_Open",
+      "config": {
+        "actionType": "ConfirmTask",
+        "targetObjName": "Hood_Latch_Point",
+        "extra": [
+          {
+            "key": "title",
+            "ko": "차량 후드 개방",
+            "en": "Open Vehicle Hood",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "후드를 열어 냉각수 리저버 탱크에 접근하세요.",
+            "en": "Open the hood to reach the coolant reservoir.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "냉각수 리저버 탱크는 앞 후드 아래에 있습니다. 안전 레버를 풀고 후드를 끝까지 들어 올리세요.",
+            "en": "The coolant reservoir is under the front hood. Release the safety latch and lift the hood fully.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Level_Check",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Reservoir",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "냉각수 수위 확인",
+            "en": "Check Coolant Level",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "리저버 탱크의 냉각수 수위가 MIN~MAX 사이인지 확인하세요.",
+            "en": "Check that the coolant level in the reservoir is between MIN and MAX.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "캡은 열지 말고 탱크 옆면의 눈금으로 봅니다. 수위가 MIN 아래면 냉각수가 부족하거나 회로에 공기가 찬 상태입니다.",
+            "en": "Do not open the cap — read the marks on the side of the tank. Below MIN means low coolant or air in the circuit.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "리저버 탱크 확인 → MIN 아래 수위 확인",
+            "en": "Look at reservoir → Level below MIN",
+            "vi": ""
+          },
+          {
+            "key": "safetyNote",
+            "ko": "냉각수가 뜨거울 때 캡을 열면 냉각수가 분출해 화상을 입을 수 있습니다.",
+            "en": "Opening the cap while hot can spray coolant and cause burns.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Cool_Down",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "냉각수 식히기",
+            "en": "Let Coolant Cool Down",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "진단기 서비스 데이터에서 냉각수 온도가 40°C 아래로 내려갈 때까지 기다린 뒤 [완료]를 누르세요.",
+            "en": "Wait until coolant temperature in GDS service data drops below 40 °C, then press [Done].",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "방금 주행한 차량이라 냉각 회로에 압력이 걸려 있습니다. 식기 전에 캡을 열거나 완료를 누르면 감점입니다.",
+            "en": "The car was just driven, so the circuit is pressurized. Opening the cap or pressing Done before it cools is penalized.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "진단기 → 센서 데이터 → '냉각수 온도' 40°C 이하 확인 → 완료",
+            "en": "GDS → Service data → Coolant temp ≤ 40 °C → Done",
+            "vi": ""
+          },
+          {
+            "key": "safetyNote",
+            "ko": "냉각수가 식기 전에 리저버 캡을 열면 안 됩니다.",
+            "en": "Never open the reservoir cap before the coolant cools.",
+            "vi": ""
+          },
+          {
+            "key": "waitSeconds",
+            "ko": "60",
+            "en": "60",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Cap_Open",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Reservoir_Cap",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "리저버 캡 개방",
+            "en": "Open Reservoir Cap",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "리저버 탱크 캡을 천천히 돌려 압력을 뺀 뒤 여세요.",
+            "en": "Turn the reservoir cap slowly to release pressure, then remove it.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "캡을 열어 두어야 배출할 때 냉각수가 잘 빠지고, 나중에 에어빼기 때 공기가 빠져나갈 길이 생깁니다.",
+            "en": "With the cap off, coolant drains freely and air has a way out during bleeding later.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "캡을 반 바퀴 돌려 압력 빼기 → 완전히 열기",
+            "en": "Turn half a turn to release pressure → Remove",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Car_Lift_Up",
+      "config": {
+        "actionType": "ConfirmTask",
+        "targetObjName": "Lift_Button_Up",
+        "targetZoneId": "Car_Lift_Up",
+        "targetValue": 1.5,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "차량 리프트 상승",
+            "en": "Vehicle Lift Up",
+            "vi": "Nâng xe lên"
+          },
+          {
+            "key": "description",
+            "ko": "리프트 조작 버튼을 눌러 차량을 작업 높이까지 올리세요.",
+            "en": "Press the lift button to raise the vehicle to working height.",
+            "vi": "Nhấn nút điều khiển để nâng xe lên độ cao làm việc."
+          },
+          {
+            "key": "guideText",
+            "ko": "하부 정비를 위해 차량을 상승시킵니다. 상승 중에는 차량 주변에 사람이 없는지 확인하고, 안전 고정 장치가 체결되는 소리를 확인하세요.",
+            "en": "Raise the vehicle for underbody maintenance. Ensure no one is near and listen for the safety lock engagement.",
+            "vi": "Nâng xe lên để bảo trì gầm. Đảm bảo không có ai ở gần và kiểm tra tiếng khóa an toàn."
+          },
+          {
+            "key": "subguideText",
+            "ko": "상승 버튼 클릭 → 작업 높이 도달 → 안전 잠금 확인",
+            "en": "Click Up Button → Reach Height → Verify Safety Lock",
+            "vi": "Bấm nút nâng → Đạt độ cao → Kiểm tra khóa an toàn"
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Drain_Pan_Place",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "Drain_Pan",
+          "Equip_OilDrainer"
+        ],
+        "targetObjName": "Coolant_Drain_Zone",
+        "targetZoneId": "Coolant_Drain_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "배출 받침 놓기",
+            "en": "Place Drain Pan",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "배출 받침(드레인 팬)을 드레인 플러그 바로 아래에 놓으세요.",
+            "en": "Place the drain pan right under the drain plug.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "폐냉각수는 바닥에 흘리면 안 되고 지정된 폐액 통에 모아 처리해야 합니다.",
+            "en": "Waste coolant must not spill on the floor; collect it for proper disposal.",
+            "vi": ""
+          },
+          {
+            "key": "snapDelay",
+            "ko": "0.5",
+            "en": "0.5",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Drain_Plug_Open",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Drain_Plug",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "드레인 플러그 풀기",
+            "en": "Open Drain Plug",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "차량 하부의 드레인 플러그를 풀어 냉각수를 배출하세요.",
+            "en": "Loosen the drain plug under the car to drain the coolant.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "플러그를 풀면 냉각수가 한꺼번에 쏟아집니다. 얼굴을 플러그 바로 아래에 두지 마세요.",
+            "en": "Coolant gushes out when the plug comes off. Keep your face out from under it.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "드레인 플러그 위치 확인 → 풀기 → 배출 시작",
+            "en": "Find drain plug → Loosen → Draining",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Drain_Plug_Close",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Drain_Plug",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "드레인 플러그 잠그기",
+            "en": "Close Drain Plug",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "냉각수가 다 빠지면 드레인 플러그를 잠그세요.",
+            "en": "When the coolant has fully drained, tighten the drain plug.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "배출이 끝나기 전에 잠그면 헌 냉각수가 남아 교환 효과가 떨어집니다. O-링이 손상됐으면 새것으로 바꾸세요.",
+            "en": "Closing before draining finishes leaves old coolant inside. Replace the O-ring if damaged.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "배출 완료 확인 → 플러그 체결",
+            "en": "Confirm drained → Tighten plug",
+            "vi": ""
+          },
+          {
+            "key": "waitSeconds",
+            "ko": "30",
+            "en": "30",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Car_Lift_Down",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Lift_Button_Down",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "차량 리프트 하강",
+            "en": "Vehicle Lift Down",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "리프트 하강 버튼을 눌러 차량을 내리세요.",
+            "en": "Press the lift down button to lower the vehicle.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "하강 전에 차량 아래에 사람·공구·배출 받침이 없는지 확인하세요.",
+            "en": "Before lowering, make sure no people, tools or the drain pan are under the vehicle.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "차량 하부 확인 → 하강 버튼 → 바닥 도달",
+            "en": "Check underbody → Down button → Reach floor",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Fill",
+      "config": {
+        "actionType": "Swap",
+        "requiredItems": [
+          "Coolant_Bottle"
+        ],
+        "targetObjName": "Coolant_Fill_Zone",
+        "targetZoneId": "Coolant_Fill_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "냉각수 주입",
+            "en": "Fill Coolant",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "전기차 전용 냉각수를 리저버 탱크에 MAX 선까지 넣으세요.",
+            "en": "Fill the reservoir with EV coolant up to the MAX line.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "전기차는 배터리 냉각 회로가 있어 전기가 잘 통하지 않는 '저전도 냉각수'를 씁니다. 일반 냉각수를 섞으면 절연 성능이 떨어집니다.",
+            "en": "EVs use low-conductivity coolant because of the battery cooling circuit. Mixing regular coolant reduces insulation.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "냉각수 종류 확인 → 리저버에 주입 → MAX 선",
+            "en": "Check coolant type → Pour into reservoir → MAX line",
+            "vi": ""
+          },
+          {
+            "key": "safetyNote",
+            "ko": "일반 엔진용 냉각수를 넣으면 안 됩니다.",
+            "en": "Do not use regular engine coolant.",
+            "vi": ""
+          },
+          {
+            "key": "snapDelay",
+            "ko": "1.0",
+            "en": "1.0",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Air_Bleed",
+      "config": {
+        "actionType": "GdsFunction",
+        "requiredItems": [
+          "GDS_Tablet"
+        ],
+        "targetObjName": "",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "냉각수 에어빼기",
+            "en": "Coolant Air Bleeding",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "진단기 부가 기능 '냉각수 에어빼기'를 실행해 냉각 회로의 공기를 빼세요.",
+            "en": "Run the GDS function 'Coolant air bleeding' to purge air from the circuit.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "전기차는 엔진이 없어 시동으로 냉각수를 돌릴 수 없습니다. 진단기로 전동 워터펌프를 돌리고 밸브를 전환해 공기를 리저버로 밀어냅니다. 실행 중에는 캡을 열어 두세요.",
+            "en": "With no engine, coolant can't be circulated by idling. The GDS runs the electric water pumps and switches valves to push air to the reservoir. Keep the cap open while it runs.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "진단기 → 부가 기능 → 냉각수 에어빼기 → 확인 → 완료까지 대기",
+            "en": "GDS → Functions → Coolant air bleeding → OK → Wait to finish",
+            "vi": ""
+          },
+          {
+            "key": "safetyNote",
+            "ko": "에어빼기 중 리저버 캡을 닫으면 공기가 빠지지 않습니다.",
+            "en": "Closing the cap during bleeding traps the air.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Top_Up",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Reservoir",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "냉각수 보충",
+            "en": "Top Up Coolant",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "에어빼기로 내려간 수위를 MAX 선까지 보충하세요.",
+            "en": "Top up the level that dropped during bleeding to the MAX line.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "회로 안 공기가 빠진 만큼 수위가 내려갑니다. 보충하지 않으면 다시 냉각 성능이 떨어집니다.",
+            "en": "The level drops as air leaves the circuit. Without topping up, cooling performance drops again.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "수위 확인 → MAX 선까지 보충",
+            "en": "Check level → Top up to MAX",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Coolant_Cap_Close",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Coolant_Reservoir_Cap",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "리저버 캡 닫기",
+            "en": "Close Reservoir Cap",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "리저버 탱크 캡을 끝까지 돌려 닫으세요.",
+            "en": "Turn the reservoir cap until fully closed.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "캡이 덜 닫히면 냉각 회로에 압력이 유지되지 않아 냉각수가 끓거나 샐 수 있습니다.",
+            "en": "A loose cap won't hold pressure; coolant can boil over or leak.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "Vehicle_Hood_Close",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [],
+        "targetObjName": "Hood_Latch_Point",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "차량 후드 닫기",
+            "en": "Close Vehicle Hood",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "후드를 내려 완전히 잠기게 닫으세요.",
+            "en": "Lower the hood and latch it fully.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "후드 안에 공구나 냉각수 통을 두고 닫지 않았는지 먼저 확인하세요.",
+            "en": "Check that no tools or coolant bottle are left inside before closing.",
+            "vi": ""
+          }
+        ]
+      }
+    },
+    {
+      "moduleId": "FinalDiagnosis",
+      "config": {
+        "actionType": "ScanDTC",
+        "requiredItems": [
+          "GDS_Tablet"
+        ],
+        "targetObjName": "OBD_Port",
+        "targetZoneId": "OBD_Zone",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "최종 진단 및 고장 코드 소거",
+            "en": "Final Diagnosis & DTC Clear",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "GDS로 P0C73을 소거하고 모터 온도와 출력 제한이 정상인지 확인하세요.",
+            "en": "Clear P0C73 with the GDS and confirm motor temperature and power limit are normal.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "고장 코드를 소거하고 재검색해 다시 나오지 않는지 확인합니다. 서비스 데이터에서 '모터 출력 제한'이 해제인지 봅니다.",
+            "en": "Clear and rescan DTCs to confirm they do not return. Check 'Motor power limit' is released in service data.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "GDS 연결 → P0C73 소거 → 재검색 → 센서 데이터 확인",
+            "en": "Connect → Clear P0C73 → Rescan → Check service data",
+            "vi": ""
+          },
+          {
+            "key": "clearDTC",
+            "ko": "true",
+            "en": "true",
+            "vi": ""
+          },
+          {
+            "key": "expectedResult",
+            "ko": "고장코드 없음",
+            "en": "No fault codes",
+            "vi": ""
+          },
+          {
+            "key": "completionMessage",
+            "ko": "냉각수 교환 및 에어빼기 완료. 차량이 정상 상태입니다.",
+            "en": "Coolant replacement and air bleeding complete. Vehicle status is normal.",
+            "vi": ""
+          },
+          {
+            "key": "resultNote",
+            "ko": "P0C73 소거 및 출력 제한 해제 확인 → 정비 완료",
+            "en": "P0C73 cleared and power limit released → Repair complete",
+            "vi": ""
+          }
+        ]
+      }
+    }
+  ]
+}

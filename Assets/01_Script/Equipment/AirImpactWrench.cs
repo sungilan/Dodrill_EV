@@ -299,45 +299,47 @@ public class AirImpactWrench : EquipmentBase
         _workBolt = bolt;
         if (!IsVR) tip = bolt.transform.position;
         int s = _socket.Value;
+        var free = bolt.GetComponent<FreeWorkBolt>();
+        int need = free != null ? Mathf.Clamp(free.socket, 1, 3) : 2;   // 볼트 머리에 맞는 소켓(차체 부품 볼트는 10mm)
 
-        if (s == 1)
+        if (s < need || (s > need && s != 3))
         {
             if (Time.time >= _nextWorkFx)
             {
                 _nextWorkFx = Time.time + 0.45f;
                 AudioSource.PlayClipAtPoint(EquipFx.Slip, tip, 0.8f);
             }
-            EquipFx.Notice("aiw_small", "소켓이 헛돕니다", "10mm 는 볼트 머리보다 작습니다 — 17mm 소켓으로 바꾸세요", EquipFx.Warn, 2.5f, 4f);
+            EquipFx.Notice("aiw_small", "소켓이 헛돕니다",
+                $"{SocketRack.SizeName(s)} 는 볼트 머리{(s < need ? "보다 작습니다" : "보다 큽니다")} — {SocketRack.SizeName(need)} 소켓으로 바꾸세요", EquipFx.Warn, 2.5f, 4f);
             return;
         }
-        if (s == 3)
+        if (s == 3 && need != 3)
         {
             if (_lastBroken == bolt && Time.time - _lastBrokenAt < 2.5f) return;
             _lastBroken = bolt; _lastBrokenAt = Time.time;
             BreakFxServerRpc(bolt.transform.position, (tip - bolt.transform.position).normalized);
             HapticAll(0.25f, 1f);
-            EquipFx.Notice("aiw_big", "과대 소켓·과토크 — 볼트 머리 파손!", "소형 승용차에는 17mm 소켓을 쓰세요. 큰 소켓은 볼트·부품을 망가뜨립니다", EquipFx.Danger, 3.5f, 3f);
+            EquipFx.Notice("aiw_big", "과대 소켓·과토크 — 볼트 머리 파손!", $"이 볼트에는 {SocketRack.SizeName(need)} 소켓을 쓰세요. 큰 소켓은 볼트·부품을 망가뜨립니다", EquipFx.Danger, 3.5f, 3f);
             return;
         }
 
         if (!BoltWork.IsCurrentStep(bolt))
         {
-            EquipFx.Notice("aiw_step", "지금 단계의 볼트가 아닙니다", "안내에 표시된 볼트를 작업하세요", EquipFx.Info, 2f, 5f);
+            BoltHint.ShowBlocked(bolt);   // 노랑: 다른 단계의 볼트
             return;
         }
-        if (BoltWork.IsSeized(bolt) && !BoltWork.IsLubed(bolt))
-            EquipFx.Notice("seized", "녹슬어 뻑뻑한 볼트", "윤활 방청제를 뿌리면 잘 풀립니다", EquipFx.Warn, 3f, 10f);
+        if (BoltHint.NeedsLube(bolt)) BoltHint.NoticeSeized();   // 갈색: 녹슨 볼트
 
         float t = Mathf.Max(0.1f, bolt.timeToComplete);
         float k = 1f;
-        var free = bolt.GetComponent<FreeWorkBolt>();
         if (free != null) k = ImpactFeel(bolt, free);
         bolt.InteractWithTool(1f / t * speed * k * BoltWork.SpeedFactor(bolt) * Time.deltaTime, (anvil != null ? anvil : transform).forward);
         if (bolt.isloosened) { _needRelease = true; _workBolt = null; }
         if (free != null)
         {
-            string act = bolt.isAssembleMode ? "휠 너트 조이는 중" : "휠 너트 푸는 중";
-            InteractionProgressBarUI.Instance?.ShowBoltProgress(bolt.Progress, act, "휠 너트", IsVR ? "트리거를 계속 당기세요" : Platform == PlatformType.PC ? "F 키를 계속 누르세요" : "작업 버튼을 계속 누르세요");
+            string what = string.IsNullOrEmpty(free.specPart) ? "볼트" : free.specPart;
+            string act = bolt.isAssembleMode ? $"{what} 조이는 중" : $"{what} 푸는 중";
+            InteractionProgressBarUI.Instance?.ShowBoltProgress(bolt.Progress, act, what, IsVR ? "트리거를 계속 당기세요" : Platform == PlatformType.PC ? "F 키를 계속 누르세요" : "작업 버튼을 계속 누르세요");
         }
     }
 

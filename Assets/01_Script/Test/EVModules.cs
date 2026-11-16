@@ -436,6 +436,15 @@ public class MSD_ReinstallModule : ConfirmTaskModule
             registry.Register(new Insulation_Test_Inverter_PlusModule());
             registry.Register(new Insulation_Test_Inverter_MinusModule());
 
+            // 12V 보조 배터리 교환 시나리오(ev_p0562_12v_battery_replace)
+            EV12VModules.RegisterAll(registry);
+
+            // 냉각수 교환 · 에어빼기 시나리오(ev_p0c73_coolant_replace)
+            EVCoolantModules.RegisterAll(registry);
+
+            // 고전압 배터리 팩 · 냉각수 라인 기밀 점검 시나리오(ev_p0aa6_battery_airtight)
+            EVAirtightModules.RegisterAll(registry);
+
         Debug.Log($"[EVModules] P0AA6 시나리오 전체 모듈 등록 완료 (v2 포함)");
         }
     }

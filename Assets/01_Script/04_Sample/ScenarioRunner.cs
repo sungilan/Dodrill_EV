@@ -1116,6 +1116,17 @@ public class ScenarioRunner : MonoBehaviour
         _eval.Record(clientId, ruleId, _currentTaskState.taskIndex, "디버그 명령");
     }
 
+    /// <summary>
+    /// 모듈이 '이 단계에서 만지면 안 되는 부품'을 조작한 사람을 감점할 때 쓴다(서버 전용).
+    /// 그 오브젝트(ClickableAnimator)를 최근 3초 안에 조작한 사람에게 기록한다. 누가 했는지 모르면 기록하지 않는다.
+    /// </summary>
+    public void RecordObjectViolation(string objId, string ruleId, string detail)
+    {
+        if (!InstanceFinder.IsServerStarted || _currentTaskState.status != TaskStatus.Running) return;
+        if (!ClickableAnimatorManager.TryGetRecentActor(objId, 3f, out int actor) || actor < 0) return;
+        _eval.Record(actor, ruleId, _currentTaskState.taskIndex, detail);
+    }
+
     /// <summary>디버그: 지금 시나리오가 끝난 것처럼 평가 결과를 보낸다(결과 화면 확인용). 시나리오는 계속 진행된다.</summary>
     public void DebugSendEvaluationResults() => FinishEvaluation();
     public void ForceFailCurrentTask() => FailCurrentTask();

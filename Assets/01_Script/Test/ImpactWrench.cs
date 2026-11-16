@@ -72,6 +72,9 @@ public class ImpactWrench : MonoBehaviour
 
     /// <summary>내가 든 렌치가 지금 겨누고 있는 볼트(다음 단계 안내가 같은 볼트에 링을 겹쳐 그리지 않게 쓴다).</summary>
     public static Bolt LocalTargetBolt { get; private set; }
+    /// <summary>내가 든 렌치가 볼트 정렬로 옮겨진 정도(0~1). PC 아바타 손목이 팔 길이를 넘어서도 손잡이를 따라가게 할 때 쓴다(PcArmReach).</summary>
+    public static float LocalSnapWeight => s_snapOwner != null && s_snapOwner.isActiveAndEnabled ? s_snapOwner._snapW : 0f;
+    private static ImpactWrench s_snapOwner;
     /// <summary>지금 작업 버튼을 누르고 있는가(진동 피드백용).</summary>
     public bool IsWorking => _wasWorking;
     /// <summary>지금 겨누고 있는 볼트(진동 피드백용).</summary>
@@ -121,6 +124,19 @@ public class ImpactWrench : MonoBehaviour
         {
             _buttonHeld = MobileWorkButton.IsHeld;
         }
+        else if (CachedPlatform == PlatformType.VR)
+        {
+            // VRPress/VRRelease(AutoHand 누름·뗌 이벤트)는 뗌을 놓치면 계속 도는 상태로 남았다 → 든 손의 실제 트리거 값으로 덮어쓴다
+            var hand = LocalHands.HoldingHand(transform);
+            if (hand == null) _buttonHeld = false;
+            else
+            {
+                bool on = LocalHands.TriggerHeld(hand, out bool valid);
+                bool next = valid ? on : hand.IsSqueezing();   // 입력을 못 읽으면 손의 현재 누름 상태(이벤트 누적값 대신)
+                if (next != _buttonHeld) Debug.Log($"[ImpactWrench] VR 트리거 {(next ? "누름" : "뗌")} — {(valid ? "입력 축" : "손 상태")} 기준");
+                _buttonHeld = next;
+            }
+        }
         SetMobileButton(_targetBolt != null);
         if (_targetBolt != null && _mobileButtonShown) MobileWorkButton.SetLabel(_targetBolt.isAssembleMode ? "볼트 조이기" : "볼트 풀기");
 
@@ -128,6 +144,7 @@ public class ImpactWrench : MonoBehaviour
         if (!working) _needRelease = false;
         ApplyEffects(working);
         if (working) s_lastWorkTime = Time.unscaledTime;
+        UpdateBlockedHint();
 
         if (_targetBolt != null)
         {
@@ -154,6 +171,13 @@ public class ImpactWrench : MonoBehaviour
                 return;
             }
 
+            // 윤곽선 색 갱신: 방청제를 뿌리면 갈색 → 초록
+            if (_currentOutlinable != null)
+            {
+                var wc = BoltHint.WorkColor(_targetBolt);
+                if (_currentOutlinable.OutlineParameters.Color != wc) _currentOutlinable.OutlineParameters.Color = wc;
+            }
+
             // ✅ 렌치 모드와 상관없이 볼트 자체의 모드에 따라 문구 결정
             string actionName = _targetBolt.isAssembleMode ? "볼트 체결" : "볼트 분해";
 
@@ -161,8 +185,7 @@ public class ImpactWrench : MonoBehaviour
             {
                 // 렌치 회전 방향은 물리적 일관성을 위해 currentMode 유지 가능 (필요시 수정)
                 float dir = (currentMode == WrenchMode.Unscrew) ? 1f : -1f;
-                if (BoltWork.IsSeized(_targetBolt) && !BoltWork.IsLubed(_targetBolt))
-                    EquipFx.Notice("seized", "녹슬어 뻑뻑한 볼트", "윤활 방청제를 뿌리면 잘 풀립니다", EquipFx.Warn, 3f, 10f);
+                if (BoltHint.NeedsLube(_targetBolt)) BoltHint.NoticeSeized();
                 _targetBolt.InteractWithTool(dir * rotationSpeed * BoltWork.SpeedFactor(_targetBolt) * Time.deltaTime, transform.forward);
 
                 // [작업 중]
@@ -329,8 +352,10 @@ public class ImpactWrench : MonoBehaviour
         // 이미 작업이 끝난 볼트는 대상으로 삼지 않는다 (진행도 UI가 100%로 남는 것 방지)
         if (detectedBolt.isloosened) return;
 
-        // 검증 로직 실행
-        if (!IsCorrectBoltTask(detectedBolt)) return;
+        // 검증 로직 실행 — 다른 단계의 볼트면 노랑으로 깜빡이고 지금 단계를 알려 준다(조용히 무시하면 '왜 안 풀리지?'에서 막혔다)
+        // 이웃 그룹 볼트가 트리거에 스치기만 해도 경고가 뜨던 문제(11/16) — 바로 띄우지 않고 후보로만 둔다.
+        // 실제로 맞는 볼트를 못 잡은 채, 그 볼트에 대고 작업 버튼을 누르고 있을 때만 UpdateBlockedHint 가 띄운다.
+        if (!IsCorrectBoltTask(detectedBolt)) { _blockedCandidate = detectedBolt; return; }
 
         // 일치할 경우에만 아래 로직 실행
         _targetBolt = detectedBolt;
@@ -342,11 +367,26 @@ public class ImpactWrench : MonoBehaviour
 
         string actionName = _targetBolt.isAssembleMode ? "볼트 체결" : "볼트 분해";
         ShowProgress(actionName, GetPlatformInstruction(actionName, false));
+        if (BoltHint.NeedsLube(_targetBolt)) BoltHint.NoticeSeized();
+    }
+
+    private Bolt _blockedCandidate;
+    private float _blockedPressT;
+
+    private void UpdateBlockedHint()
+    {
+        var b = _blockedCandidate;
+        if (b == null || _targetBolt != null || !_buttonHeld || !b.gameObject.activeInHierarchy) { _blockedPressT = 0f; return; }
+        _blockedPressT += Time.deltaTime;
+        if (_blockedPressT < 0.35f) return;
+        _blockedPressT = -999f;   // 누르는 동안 한 번만
+        BoltHint.ShowBlocked(b);
     }
 
     private void OnTriggerExit(Collider other)
     {
         if (!other.CompareTag("Bolt")) return;
+        if (_blockedCandidate != null && _blockedCandidate.gameObject == other.gameObject) _blockedCandidate = null;
 
         if (_currentBoltGameObject != null && _currentBoltGameObject == other.gameObject)
             ClearTarget();
@@ -365,7 +405,7 @@ public class ImpactWrench : MonoBehaviour
 
         _currentOutlinable.enabled = true;
         var parameters = _currentOutlinable.OutlineParameters;
-        parameters.Color = WorkingOutlineColor;   // 예전 노란색(targetOutlineColor) 대신 초록 — '지금 이 볼트를 작업 중' 표시
+        parameters.Color = BoltHint.WorkColor(_targetBolt);   // 초록 = 지금 작업 가능, 갈색 = 녹슨 볼트(방청제 필요)
         parameters.BlurShift = outlineWidth;
         parameters.Enabled = true;
     }
@@ -407,9 +447,14 @@ public class ImpactWrench : MonoBehaviour
     private const float SnapMaxAngle = 45f;     // 비트 방향과 볼트 축이 이보다 어긋나면 붙이지 않는다
     private Transform _snapBody, _snapBit;
     private Vector3 _bodyPos0, _tipLocal;
+    private Vector3 _snapPivot, _gripLocal;   // 정렬 회전 중심(루트 로컬) / 손잡이(손목) 위치
     private Quaternion _bodyRot0;
     private bool _snapReady, _snapApplied;
     private float _snapW;
+    // 손이 붙는 기준(Auto Hand 잡기 포즈) — 모델과 같이 옮겨야 PC 아바타 손목(SetWristSnap)·팔 IK 가 드릴을 따라온다
+    private Transform[] _snapPoses;
+    private Vector3[] _snapPosePos;
+    private Quaternion[] _snapPoseRot;
 
     private void InitBoltSnap()
     {
@@ -429,10 +474,25 @@ public class ImpactWrench : MonoBehaviour
         if (big == null || small == null || big == small) return;
         _snapBody = big.transform;
         _snapBit = small.transform;
+        var gps = GetComponentsInChildren<Autohand.GrabbablePose>(true);
+        _snapPoses = new Transform[gps.Length];
+        _snapPosePos = new Vector3[gps.Length];
+        _snapPoseRot = new Quaternion[gps.Length];
+        for (int i = 0; i < gps.Length; i++)
+        {
+            var t = gps[i].transform;
+            _snapPoses[i] = t;
+            _snapPosePos[i] = transform.InverseTransformPoint(t.position);
+            _snapPoseRot[i] = Quaternion.Inverse(transform.rotation) * t.rotation;
+        }
         _bodyPos0 = _snapBody.localPosition;
         _bodyRot0 = _snapBody.localRotation;
         var mb = small.sharedMesh.bounds;
         _tipLocal = transform.InverseTransformPoint(_snapBit.TransformPoint(mb.center + Vector3.right * mb.extents.x));
+        // 손잡이 위치 — 아직 정렬 전(포즈가 원위치)이라 잡기 포즈의 손목 위치를 그대로 쓴다
+        if (_sync == null) _sync = GetComponentInParent<SyncGrab>();
+        _gripLocal = _sync != null ? transform.InverseTransformPoint(_sync.HandTargetPoint(true)) : Vector3.zero;
+        _snapPivot = _tipLocal;
     }
 
     private void UpdateBoltSnap()
@@ -447,6 +507,9 @@ public class ImpactWrench : MonoBehaviour
         Quaternion rFull = Quaternion.identity;
         Vector3 dFull = Vector3.zero;
         bool want = false;
+        // 11/16 VR 테스트: 정렬하면서 렌치 모델이 최대 8cm·45° 옮겨져 쥔 손에서 떨어져 보였다(손 모델 보정이 아바타 IK 와 어긋남).
+        // VR 은 손에 쥔 그대로 두고(볼트 링·진행도는 그대로), 정렬은 PC·모바일만 한다.
+        if (vr) { if (_snapApplied || _snapW > 0f) { ResetBoltSnap(); RestoreHandVisuals(); } return; }
         if (_targetBolt != null && _targetBolt.gameObject.activeInHierarchy && IsLocalHeld)
         {
             var bt = _targetBolt.transform;
@@ -458,6 +521,7 @@ public class ImpactWrench : MonoBehaviour
             float ang = Vector3.Angle(axisWorld, -outDir);
             if (ang < maxAng && Vector3.Distance(tipWorld, head) < maxDist)
             {
+                _snapPivot = _tipLocal;
                 Vector3 targetL = transform.InverseTransformDirection(-outDir).normalized;
                 rFull = Quaternion.FromToRotation(Vector3.right, targetL);
                 dFull = transform.InverseTransformPoint(head) - _tipLocal;
@@ -466,6 +530,8 @@ public class ImpactWrench : MonoBehaviour
         }
 
         _snapW = Mathf.MoveTowards(_snapW, want ? 1f : 0f, Time.deltaTime * (want ? 8f : 6f));
+        if (_snapW > 0f && IsLocalHeld) s_snapOwner = this;
+        else if (s_snapOwner == this) s_snapOwner = null;
         if (_snapW <= 0f)
         {
             if (_snapApplied) ResetBoltSnap();
@@ -477,6 +543,7 @@ public class ImpactWrench : MonoBehaviour
         Vector3 d = _lastD * _snapW;
         ApplySnap(_snapBody, _bodyPos0, _bodyRot0, r, d);
         ApplySnap(_snapBit, _snapBit.localPosition, _snapBit.localRotation, r, d);   // Animator 가 막 쓴 값 기준
+        ApplySnapPoses(r, d);
         _snapApplied = true;
         OffsetHandVisuals(r, d);
     }
@@ -524,7 +591,7 @@ public class ImpactWrench : MonoBehaviour
         var heldBy = _grabbable.GetHeldBy();
         if (heldBy == null || heldBy.Count == 0) return;
 
-        Vector3 pivotW = transform.TransformPoint(_tipLocal);
+        Vector3 pivotW = transform.TransformPoint(_snapPivot);
         Quaternion rotW = transform.rotation * _handOffR * Quaternion.Inverse(transform.rotation);
         Vector3 dW = transform.TransformVector(_handOffD);
         foreach (var h in heldBy)
@@ -576,8 +643,21 @@ public class ImpactWrench : MonoBehaviour
 
     private void ApplySnap(Transform t, Vector3 basePos, Quaternion baseRot, Quaternion r, Vector3 d)
     {
-        t.localPosition = r * (basePos - _tipLocal) + _tipLocal + d;
+        t.localPosition = r * (basePos - _snapPivot) + _snapPivot + d;
         t.localRotation = r * baseRot;
+    }
+
+    /// <summary>잡기 포즈 기준점도 모델과 같은 이동·회전(루트 로컬 기준)으로 옮긴다. r = identity, d = 0 이면 원위치.</summary>
+    private void ApplySnapPoses(Quaternion r, Vector3 d)
+    {
+        if (_snapPoses == null) return;
+        for (int i = 0; i < _snapPoses.Length; i++)
+        {
+            var t = _snapPoses[i];
+            if (t == null) continue;
+            Vector3 lp = r * (_snapPosePos[i] - _snapPivot) + _snapPivot + d;
+            t.SetPositionAndRotation(transform.TransformPoint(lp), transform.rotation * (r * _snapPoseRot[i]));
+        }
     }
 
     private void ResetBoltSnap()
@@ -586,6 +666,7 @@ public class ImpactWrench : MonoBehaviour
         if (!_snapApplied) return;
         _snapApplied = false;
         if (_snapBody != null) { _snapBody.localPosition = _bodyPos0; _snapBody.localRotation = _bodyRot0; }
+        ApplySnapPoses(Quaternion.identity, Vector3.zero);
         // 비트는 다음 프레임 Animator 가 원래 값으로 되돌린다
     }
 
@@ -630,7 +711,7 @@ public class ImpactWrench : MonoBehaviour
 
         float p = Mathf.Clamp01(bolt.Progress);
         SetArc(_progTrack, c, u, v, radius, 1f, new Color(1f, 1f, 1f, 0.28f));
-        SetArc(_progRing, c, u, v, radius, Mathf.Max(p, 0.001f), WorkingOutlineColor);
+        SetArc(_progRing, c, u, v, radius, Mathf.Max(p, 0.001f), BoltHint.WorkColor(bolt));
         _progRing.widthMultiplier = _progTrack.widthMultiplier = Mathf.Clamp(radius * 0.18f, 0.0025f, 0.007f);
     }
 

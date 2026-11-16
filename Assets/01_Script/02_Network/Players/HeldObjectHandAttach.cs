@@ -90,7 +90,7 @@ public class HeldObjectHandAttach : MonoBehaviour
             _nextSearch = Time.unscaledTime + 0.1f;
             _held = SyncGrab.FindHeldBy(HolderId);
         }
-        if (_held == null || !_held.IsGrabbed) return;
+        if (_held == null || !_held.IsGrabbed || _held.IsOnBelt) return;   // 벨트에 꽂힌 도구는 손에 붙이지 않는다
 
         // PC·모바일 + 도구에 잡기 포즈가 있으면: 손목(IK 결과) 기준으로 도구의 위치·회전을 포즈대로 맞춘다.
         // 물체는 카메라 앞(HoldPoint), 손은 어깨에서 IK 로 따로 움직여서 둘이 어긋나고 움직일 때 손이 따로 노는 것처럼 보였다.

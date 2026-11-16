@@ -93,8 +93,8 @@ public class TireService : NetworkBehaviour
     private static Material s_nutMat, s_hubMat;
 
     // 시나리오 볼트에서 가져온 모양
-    private static Mesh s_boltMesh;
-    private static Material[] s_boltMats;
+    internal static Mesh s_boltMesh;
+    internal static Material[] s_boltMats;
     private static float s_nextTemplateSearch;
 
     private static readonly Color IdleOutline = new Color(0.92f, 0.96f, 1f, 1f);
@@ -389,7 +389,7 @@ public class TireService : NetworkBehaviour
     //  너트·허브 만들기
     // ══════════════════════════════════════════
 
-    private static Material NutMat
+    internal static Material NutMat
     {
         get
         {
@@ -417,7 +417,7 @@ public class TireService : NetworkBehaviour
         }
     }
 
-    private static GameObject Cyl(Transform parent, string name, Vector3 lp, float dia, float len, Material m)
+    internal static GameObject Cyl(Transform parent, string name, Vector3 lp, float dia, float len, Material m)
     {
         var g = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         g.name = name;
@@ -463,7 +463,7 @@ public class TireService : NetworkBehaviour
         return true;
     }
 
-    private static bool EnsureBoltTemplate()
+    internal static bool EnsureBoltTemplate()
     {
         if (s_boltMesh != null) return true;
         if (Time.unscaledTime < s_nextTemplateSearch) return false;
@@ -662,7 +662,7 @@ public class TireService : NetworkBehaviour
         StartCoroutine(ShrinkAndDestroy(go.transform, 0.35f));
     }
 
-    private static IEnumerator ShrinkAndDestroy(Transform t, float dur)
+    internal static IEnumerator ShrinkAndDestroy(Transform t, float dur)
     {
         Vector3 s0 = t.localScale;
         for (float e = 0f; e < dur && t != null; e += Time.deltaTime)
@@ -673,7 +673,7 @@ public class TireService : NetworkBehaviour
         if (t != null) Destroy(t.gameObject);
     }
 
-    private static IEnumerator ScaleIn(Transform t, float delay, float dur)
+    internal static IEnumerator ScaleIn(Transform t, float delay, float dur)
     {
         if (t == null) yield break;
         Vector3 s1 = t.localScale;
@@ -694,7 +694,7 @@ public class TireService : NetworkBehaviour
     }
 
     /// <summary>다 풀린 너트: 원래 것은 숨기고 물리 복사본을 바닥에 떨어뜨린다(이 화면에서만, 8초 뒤 사라짐).</summary>
-    private static void DropNut(Bolt b)
+    internal static void DropNut(Bolt b)
     {
         var copy = new GameObject("[LooseNut]");
         var mf = b.GetComponentInChildren<MeshFilter>();
@@ -756,6 +756,9 @@ public class TireService : NetworkBehaviour
             // (11/13) 차 안(운전석)·차 밑(크리퍼)에서도 2.2m 안이라 너트 링·'분해 0/5' 카드·'타이어 교체' 안내가
             // 차체를 뚫고(맨 앞 그리기) 보였다 → 바퀴 바깥쪽(차 옆)에 있을 때만 보여 준다
             bool outside = hasCam && h.frame != null && Vector3.Dot(cp - HubCenter(w), -h.frame.up) > 0.05f;
+            // (11/16) 시나리오 작업 중 바퀴 옆을 지나기만 해도 너트 링·카드·안내가 떠서 시나리오 볼트와 섞였다 → 렌치·휠을 들고 있을 때만
+            bool holding = CarPartService.LocalHoldsBoltTool || CarPartService.LocalHoldsWheel;
+            outside &= holding;
             bool nearHub = outside && (HubCenter(w) - cp).sqrMagnitude < near * near;
             bool anyActive = false;
             int done = 0;
@@ -771,7 +774,8 @@ public class TireService : NetworkBehaviour
                 bool active = open && b.Progress > 0f && Time.time - _activeAt[idx] < 0.5f;
                 if (active) anyActive = true;
 
-                DrawNutRing(h, n, b, open && nearHub, active, cam);
+                // 드릴이 물고 있는 너트는 드릴이 진행 링을 그린다 — 같은 너트에 링이 두 겹으로 보였다
+                DrawNutRing(h, n, b, open && nearHub && b != ImpactWrench.LocalTargetBolt, active, cam);
                 SetNutOutline(h, n, b, open && nearHub ? (active ? 2 : 1) : 0);
             }
 
@@ -788,7 +792,7 @@ public class TireService : NetworkBehaviour
         }
     }
 
-    private static Outlinable EnsureOutline(Bolt b)
+    internal static Outlinable EnsureOutline(Bolt b)
     {
         var o = b.GetComponent<Outlinable>();
         if (o == null)
@@ -820,7 +824,7 @@ public class TireService : NetworkBehaviour
 
     // ── 진행 링 ──
 
-    private static LineRenderer MakeRing(string goName, Transform parent)
+    internal static LineRenderer MakeRing(string goName, Transform parent)
     {
         var go = new GameObject(goName);
         go.layer = 1;   // TransparentFX — VR·PC 카메라 모두 그림
@@ -839,7 +843,7 @@ public class TireService : NetworkBehaviour
         return lr;
     }
 
-    private static void SetArc(LineRenderer lr, Vector3 c, Vector3 u, Vector3 v, float r, float frac, Color col)
+    internal static void SetArc(LineRenderer lr, Vector3 c, Vector3 u, Vector3 v, float r, float frac, Color col)
     {
         if (!lr.gameObject.activeSelf) lr.gameObject.SetActive(true);
         lr.startColor = lr.endColor = col;
@@ -962,11 +966,11 @@ public class TireService : NetworkBehaviour
         {
             bool assemble = st == (int)WheelState.Mounted;
             if (st == (int)WheelState.Off)
-                text = "<b>분해됨</b>\n<size=62%><color=#8FD3FF>휠을 이 허브에 끼우면 조립 단계로</color></size>";
+                text = "<b>휠 탈거됨</b>\n<size=62%><color=#8FD3FF>휠을 이 허브에 끼우면 조립 단계로</color></size>";
             else if (assemble)
-                text = $"<b>조립(체결) {done}/{NutsPerWheel}</b>\n<size=62%><color=#8FD3FF>휠 너트를 조이세요</color></size>";
+                text = $"<b>휠</b> 장착 — 너트 조임 {done}/{NutsPerWheel}\n<size=62%><color=#8FD3FF>임팩트 렌치(17mm)로 조이세요</color></size>";
             else
-                text = $"<b>분해 {done}/{NutsPerWheel}</b>\n<size=62%><color=#8FD3FF>휠 너트를 푸세요</color></size>";
+                text = $"<b>휠</b> 탈거 — 너트 풀림 {done}/{NutsPerWheel}\n<size=62%><color=#8FD3FF>임팩트 렌치(17mm)로 푸세요</color></size>";
         }
         if (lb.text != text) { lb.text = text; lb.txt.text = text; }
 
@@ -994,7 +998,7 @@ public class TireService : NetworkBehaviour
     private int _ghostFrame = -10;
     private bool _ghostInRange;
 
-    private static Material MakeGhostMaterial()
+    internal static Material MakeGhostMaterial()
     {
         var sh = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default");
         var m = new Material(sh) { name = "WheelGhost" };
@@ -1089,7 +1093,7 @@ public class TireService : NetworkBehaviour
         if (h.nutRoot != null && !h.nutRoot.gameObject.activeSelf) h.nutRoot.gameObject.SetActive(true);
     }
 
-    private static float EaseOutBack(float t)
+    internal static float EaseOutBack(float t)
     {
         const float c1 = 1.0f, c3 = c1 + 1f;
         float x = t - 1f;

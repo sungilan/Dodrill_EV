@@ -1,3 +1,4 @@
+using Autohand;
 using UnityEngine;
 
 // ============================================================
@@ -118,6 +119,10 @@ public class FloorDragProp : MonoBehaviour
                 : _origConstraints;
         }
         if (!held) _vrHeld = false;
+
+        // VR: 잡은 손(컨트롤러)을 직접 따라가는 키네마틱 끌기(11/16) — 아래 설명
+        if (VrKinematicDrag(held)) return;
+
         if (!held || _rb.isKinematic) return;
 
         // 높이·기울기 보정
@@ -138,6 +143,85 @@ public class FloorDragProp : MonoBehaviour
     }
 
     private bool _vrHeld;
+
+    // ── VR 키네마틱 끌기 ─────────────────────────────
+    // 11/16 VR 테스트: 리프트·사다리를 잡으면 손(팔)이 늘어나고, 잘 안 잡히고, 잡거나 놓을 때 날아갔다.
+    // 동적 Rigidbody 에 속도를 주는 방식은 AutoHand 손 조인트·플레이어 몸 충돌·놓을 때 던지기 속도와 계속 싸웠다.
+    // 이제 VR 로 잡고 있는 동안은 키네마틱으로 바꾸고, 잡은 순간의 '컨트롤러 → 장비' 수평 오프셋을 유지하며 직접 옮긴다.
+    //  · 키네마틱이라 손·몸에 밀려 튀지 않고, 놓을 때 던지기 속도도 받지 않는다(AutoHand 는 키네마틱이면 속도를 안 줌)
+    //  · 손목을 돌리면 장비가 손잡이를 축으로 천천히 돈다(세로축만, 부드럽게)
+    //  · 놓으면 키네마틱 그대로 그 자리에 선다(서버 낙하 처리는 SyncGrab 이 맡음)
+    private bool _kinDrag;
+    private Hand _kinHand;
+    private Vector3 _kinOffset;      // 컨트롤러 기준(수평 회전만) 장비 위치
+    private float _kinYawOffset;     // 장비 yaw - 컨트롤러 yaw
+    private float _kinYaw;
+
+    private static float FlatYaw(Quaternion q)
+    {
+        Vector3 f = q * Vector3.forward; f.y = 0f;
+        if (f.sqrMagnitude < 1e-4f) { f = q * Vector3.up; f.y = 0f; }
+        return Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg;
+    }
+
+    private Hand HoldingHand()
+    {
+        foreach (var h in LocalHands.All)
+        {
+            if (h == null || h.holdingObj == null || h.moveTo == null) continue;
+            if (h.holdingObj.transform == transform || h.holdingObj.transform.IsChildOf(transform)) return h;
+        }
+        return null;
+    }
+
+    private bool VrKinematicDrag(bool held)
+    {
+        Hand h = held ? HoldingHand() : null;
+        if (h == null)
+        {
+            if (_kinDrag)
+            {
+                _kinDrag = false;
+                _kinHand = null;
+                // 놓았거나 손에서 빠짐 → 그 자리에 멈춰 선다
+                if (!_rb.isKinematic) { _rb.linearVelocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
+                _rb.isKinematic = true;
+            }
+            return false;
+        }
+
+        _vrHeld = true;
+        Transform c = h.moveTo;
+        float cYaw = FlatYaw(c.rotation);
+        if (!_kinDrag || _kinHand != h)
+        {
+            _kinDrag = true;
+            _kinHand = h;
+            if (!_rb.isKinematic) { _rb.linearVelocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
+            _rb.isKinematic = true;
+            Vector3 d = _rb.position - c.position; d.y = 0f;
+            _kinOffset = Quaternion.Euler(0f, -cYaw, 0f) * d;
+            _kinYaw = FlatYaw(_rb.rotation);
+            _kinYawOffset = Mathf.DeltaAngle(cYaw, _kinYaw);
+        }
+        if (!_rb.isKinematic) _rb.isKinematic = true;   // SyncGrab 이 잡힘 처리 중 다시 풀어도 유지
+
+        // 세로축 회전: 손목 돌림을 부드럽게(지터가 긴 장비 끝에서 커지지 않게)
+        float wantYaw = cYaw + _kinYawOffset;
+        _kinYaw = Mathf.LerpAngle(_kinYaw, wantYaw, 1f - Mathf.Exp(-6f * Time.fixedDeltaTime));
+        float yawDelta = Mathf.DeltaAngle(cYaw + _kinYawOffset, _kinYaw);   // 회전이 늦게 따라오는 만큼 위치도 맞춘다
+        Vector3 target = c.position + Quaternion.Euler(0f, cYaw + yawDelta, 0f) * _kinOffset;
+        target.y = _floorY;
+
+        // 무거운 느낌: 한 스텝 이동 거리 제한(걷는 속도보다는 빠르게)
+        Vector3 cur = _rb.position;
+        Vector3 step = target - cur; step.y = 0f;
+        float maxStep = Mathf.Max(maxSpeed, 3f) * Time.fixedDeltaTime;
+        if (step.magnitude > maxStep) step = step.normalized * maxStep;
+        _rb.MovePosition(new Vector3(cur.x + step.x, _floorY, cur.z + step.z));
+        _rb.MoveRotation(Quaternion.Euler(0f, _kinYaw, 0f) * Quaternion.Inverse(Quaternion.Euler(0f, FlatYaw(_rb.rotation), 0f)) * _rb.rotation);
+        return true;
+    }
 
     /// <summary>VR 로 잡고 있으면 잡은 지점→컨트롤러 수평 차이를 메우는 속도.</summary>
     private bool VrDriveVelocity(out Vector3 v)
@@ -171,7 +255,10 @@ public class FloorDragProp : MonoBehaviour
             if (h == null || h.holdingObj == null || h.moveTo == null) continue;
             if (h.holdingObj.transform != transform && !h.holdingObj.transform.IsChildOf(transform)) continue;
             Vector3 grip = h.handGrabPoint != null ? h.handGrabPoint.position : h.transform.position;
-            if ((grip - h.moveTo.position).sqrMagnitude > vrReleaseDistance * vrReleaseDistance)
+            // 장비는 수평으로 손을 따라오므로 벌어지는 건 주로 높이(허리를 펴거나 손을 들 때) — 높이는 조금 더 봐준다
+            Vector3 gap = grip - h.moveTo.position;
+            float horiz = new Vector2(gap.x, gap.z).magnitude;
+            if (horiz > vrReleaseDistance || Mathf.Abs(gap.y) > vrReleaseDistance * 1.6f)
             {
                 h.ForceReleaseGrab();
                 EquipFx.Haptic(h, 0.08f, 0.5f);

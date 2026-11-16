@@ -201,6 +201,7 @@ public class VrToolBelt : MonoBehaviour
         best.relRot = Quaternion.Inverse(yawRot) * sg.transform.rotation;
         best.pos = SlotPos(best, hip, yawRot);
         sg.IsHolstered = true;
+        sg.SetBeltedNet(true);
         if (best.rb != null) { best.rb.isKinematic = true; best.rb.useGravity = false; }
 
         WorldSfx.Click(best.pos);
@@ -214,6 +215,7 @@ public class VrToolBelt : MonoBehaviour
         if (s.item != null)
         {
             s.item.IsHolstered = false;
+            s.item.SetBeltedNet(false);
             // 손에 꺼낸 게 아니면(소유권을 잃음 등) 손이 가까울 때 풀어 둔 물리를 다시 고정 — 중력 없이 떠다니지 않게
             if (!taken && s.rb != null && !s.rb.isKinematic)
             {

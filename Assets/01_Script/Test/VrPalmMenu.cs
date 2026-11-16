@@ -73,6 +73,22 @@ public class VrPalmMenu : MonoBehaviour
     private Button _confirmBtn;
     private float _nextRefFind;
 
+    // ── 정면 UI 켜기/끄기 (VR 만) ─────────────────────────────
+    // 26.11.16 VR 테스트: 정면의 메뉴바·미니맵·설명 카드가 시야를 가린다는 의견 → 기본은 전부 끄고 손바닥 메뉴에서 켜 보며 비교.
+    //  · 메뉴바  : 정면 UI 의 BottomBar(진행 n/전체 · 단계 설명 · 홈/소리/종료). TaskProgressUI 가 붙어 있어 SetActive 대신 투명 처리 + 손가락 콜라이더 끔
+    //  · 미니맵  : CanvasMiniMap_PC_01
+    //  · 설명창  : EquipFx.Notice 로 뜨는 장비 사용법·매뉴얼 카드(사다리·리프트·타이어 교체 안내 등). 고전압·남은 시간 경고는 그대로 뜬다
+    public static bool ShowMenuBar = false;
+    public static bool ShowMiniMap = false;
+    public static bool ShowInfoCards = false;
+    /// <summary>VR 에서 설명 카드를 띄울지(EquipFx.Notice 가 확인). VR 이 아니면 항상 true.</summary>
+    public static bool InfoCardsAllowed => ShowInfoCards || !VrProbeHandling.IsVRDevice;
+
+    private GameObject _menuBar;
+    private CanvasGroup _menuBarGroup;
+    private readonly List<Collider> _menuBarCols = new List<Collider>();
+    private float _nextHudApply;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
     {
@@ -93,6 +109,7 @@ public class VrPalmMenu : MonoBehaviour
     private void LateUpdate()
     {
         if (!VrProbeHandling.IsVRDevice) return;
+        if (Time.unscaledTime >= _nextHudApply) { _nextHudApply = Time.unscaledTime + 0.5f; ApplyHud(); }
         if (Time.unscaledTime >= _nextHandScan) { _nextHandScan = Time.unscaledTime + 2f; ScanHands(); }
         var cam = Camera.main;
         if (cam == null) { Close(); return; }
@@ -178,7 +195,7 @@ public class VrPalmMenu : MonoBehaviour
     {
         var palm = _menuHand.palmTransform;
         Vector3 up = Vector3.ProjectOnPlane(Vector3.up, (palm.position - cam.position).normalized).normalized;
-        Vector3 pos = palm.position + palm.forward * 0.03f + up * 0.16f;   // 아래 넓은 버튼까지 손바닥 위에 오게(4줄 + 넓은 1줄)
+        Vector3 pos = palm.position + palm.forward * 0.03f + up * 0.185f;   // 아래 넓은 버튼까지 손바닥 위에 오게(5줄 + 넓은 1줄)
         Vector3 look = pos - cam.position;
         if (look.sqrMagnitude < 1e-6f) look = cam.forward;
         _root.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(look, Vector3.up));
@@ -209,7 +226,9 @@ public class VrPalmMenu : MonoBehaviour
         AddBtn("focus", "집중 모드", new Vector2(cx, -ry * 0.5f), font);
         AddBtn("record", "측정 기록", new Vector2(-cx, -ry * 1.5f), font);
         AddBtn("hints", "버튼 안내", new Vector2(cx, -ry * 1.5f), font);
-        AddBtn("practice", "연습장", new Vector2(0f, -ry * 2.5f), font, BtnW * 2f + Gap);
+        AddBtn("menubar", "메뉴바", new Vector2(-cx, -ry * 2.5f), font);
+        AddBtn("infocards", "설명창", new Vector2(cx, -ry * 2.5f), font);
+        AddBtn("practice", "연습장", new Vector2(0f, -ry * 3.5f), font, BtnW * 2f + Gap);
         _root.SetActive(false);
     }
 
@@ -263,7 +282,14 @@ public class VrPalmMenu : MonoBehaviour
             {
                 case "minimap":
                     b.enabled = _miniMap != null;
-                    SetText(b, _miniMap != null && _miniMap.activeSelf ? "미니맵 끄기" : "미니맵 켜기");
+                    SetText(b, ShowMiniMap ? "미니맵 끄기" : "미니맵 켜기");
+                    break;
+                case "menubar":
+                    b.enabled = _menuBar != null;
+                    SetText(b, ShowMenuBar ? "메뉴바 끄기" : "메뉴바 켜기");
+                    break;
+                case "infocards":
+                    SetText(b, ShowInfoCards ? "설명창 끄기" : "설명창 켜기");
                     break;
                 case "skip":
                     b.enabled = _confirmBtn != null && _confirmBtn.gameObject.activeInHierarchy && _confirmBtn.interactable;
@@ -368,7 +394,17 @@ public class VrPalmMenu : MonoBehaviour
                 FindAnyObjectByType<VrTaskListToggle>()?.Toggle();
                 break;
             case "minimap":
-                if (_miniMap != null) _miniMap.SetActive(!_miniMap.activeSelf);
+                ShowMiniMap = !ShowMiniMap;
+                ApplyHud();
+                break;
+            case "menubar":
+                ShowMenuBar = !ShowMenuBar;
+                ApplyHud();
+                break;
+            case "infocards":
+                ShowInfoCards = !ShowInfoCards;
+                if (!ShowInfoCards) WarningPopup.Hide("equip");
+                else WarningPopup.Show("vrinfo", "설명창 켜짐", "장비 사용법 · 매뉴얼 카드가 다시 뜹니다", new Color(0.2f, 0.24f, 0.3f, 0.92f), 1.6f);
                 break;
             case "skip":
                 if (_confirmBtn != null && _confirmBtn.interactable) _confirmBtn.onClick.Invoke();
@@ -401,16 +437,49 @@ public class VrPalmMenu : MonoBehaviour
 
     private void FindRefs()
     {
-        if (_follower != null && _confirmBtn != null && _miniMap != null) return;
+        if (_follower != null && _confirmBtn != null && _miniMap != null && _menuBar != null) return;
         if (Time.unscaledTime < _nextRefFind) return;
         _nextRefFind = Time.unscaledTime + 1.5f;
 
-        if (_follower == null) _follower = FindAnyObjectByType<VRUIFollower>();
+        if (_follower == null) _follower = FindAnyObjectByType<VRUIFollower>(FindObjectsInactive.Include);
         if (_follower == null) return;
         foreach (var t in _follower.GetComponentsInChildren<Transform>(true))
         {
             if (_miniMap == null && t.name == "CanvasMiniMap_PC_01") _miniMap = t.gameObject;
             if (_confirmBtn == null && t.name == "ConfirmButton_01") _confirmBtn = t.GetComponent<Button>();
+            if (_menuBar == null && t.name == "BottomBar" && t.parent == _follower.transform) _menuBar = t.gameObject;
+        }
+    }
+
+    /// <summary>메뉴바·미니맵 표시 상태를 설정값에 맞춘다(다른 코드가 다시 켜도 0.5초마다 되돌림).</summary>
+    private void ApplyHud()
+    {
+        FindRefs();
+        if (_miniMap != null && _miniMap.activeSelf != ShowMiniMap) _miniMap.SetActive(ShowMiniMap);
+
+        if (_menuBar == null) return;
+        if (_menuBarGroup == null)
+        {
+            _menuBarGroup = _menuBar.GetComponent<CanvasGroup>();
+            if (_menuBarGroup == null) _menuBarGroup = _menuBar.AddComponent<CanvasGroup>();
+        }
+        float a = ShowMenuBar ? 1f : 0f;
+        if (!Mathf.Approximately(_menuBarGroup.alpha, a))
+        {
+            _menuBarGroup.alpha = a;
+            _menuBarGroup.interactable = ShowMenuBar;
+            _menuBarGroup.blocksRaycasts = ShowMenuBar;
+        }
+        // 손가락으로 누르는 버튼(FingerTriggerAreaEvents)은 콜라이더로 동작 → 숨긴 동안 꺼 둔다
+        if (!ShowMenuBar)
+        {
+            foreach (var c in _menuBar.GetComponentsInChildren<Collider>(true))
+                if (c != null && c.enabled) { c.enabled = false; if (!_menuBarCols.Contains(c)) _menuBarCols.Add(c); }
+        }
+        else if (_menuBarCols.Count > 0)
+        {
+            foreach (var c in _menuBarCols) if (c != null) c.enabled = true;
+            _menuBarCols.Clear();
         }
     }
 
