@@ -82,6 +82,12 @@ public class LadderProp : MonoBehaviour
     {
         if (player == null || dir == 0) return false;
         Vector3 pos = player.position;
+
+        // 11/16 테스트: 사다리 근처에서 Q/E 가 높이 조절 대신 소비되고 앞뒤로 순간이동했다.
+        // 올라가 있다는 기록(s_pcLadder)이 남은 채 사다리에서 떨어졌거나(크리퍼·걸어서 이탈, BonusAt 이 안 불리는 동안) 누가 사다리를 들었으면 기록을 버린다.
+        if (s_pcLadder != null && (s_pcLadder._sync != null && s_pcLadder._sync.IsGrabbed || !s_pcLadder.isActiveAndEnabled || !s_pcLadder.NearFootprint(pos, 0.5f)))
+        { s_pcLadder = null; s_pcLevel = 0; }
+
         if (s_pcLadder != null && s_pcLevel > 0)
         {
             int lv = Mathf.Clamp(s_pcLevel + dir, 0, s_pcLadder._n);
@@ -96,12 +102,19 @@ public class LadderProp : MonoBehaviour
         }
         if (dir < 0) return false;
 
+        // 오르기 시작은 '사다리를 바라보고 바로 앞(발판 가장자리 0.4m 안)에 섰을 때'만 — 예전엔 발판 0.7m 안이면 어느 쪽을 보든 Q 가 사다리로 가로채져
+        // 차 밑·작업대 옆에서 높이를 못 올리고 사다리 위로 순간이동했다. 아니면 false → 원래 높이 조절.
+        var cam = Camera.main;
+        Vector3 look = cam != null ? cam.transform.forward : player.forward; look.y = 0f;
+        look = look.sqrMagnitude > 1e-4f ? look.normalized : player.forward;
+
         LadderProp best = null; float bestD = float.MaxValue;
         foreach (var l in s_all)
         {
             if (l == null || l._n <= 0 || (l._sync != null && l._sync.IsGrabbed)) continue;
-            if (!l.NearFootprint(pos, 0.7f)) continue;
+            if (!l.NearFootprint(pos, 0.4f)) continue;
             Vector3 d = l.transform.TransformPoint(l._fpCenter) - pos; d.y = 0f;
+            if (d.sqrMagnitude > 1e-4f && Vector3.Dot(look, d.normalized) < 0.3f) continue;   // 사다리를 등지거나 옆으로 보고 있으면 제외
             if (d.sqrMagnitude < bestD) { bestD = d.sqrMagnitude; best = l; }
         }
         if (best == null) return false;
@@ -268,6 +281,13 @@ public class LadderProp : MonoBehaviour
         if (held || cam == null || _n <= 0) return;
         if (!NearFootprint(cam.transform.position, 0.7f)) return;
         var plat = Utils.GetPlatformType();
+        if (plat != PlatformType.VR && s_pcLevel <= 0)
+        {
+            // Q 오르기는 사다리를 바라보고 0.4m 안일 때만 동작 — 안내도 그때만 (TryClimbStep 과 같은 조건)
+            Vector3 dd = transform.TransformPoint(_fpCenter) - cam.transform.position; dd.y = 0f;
+            Vector3 lk = cam.transform.forward; lk.y = 0f;
+            if (!NearFootprint(cam.transform.position, 0.4f) || (dd.sqrMagnitude > 1e-4f && lk.sqrMagnitude > 1e-4f && Vector3.Dot(lk.normalized, dd.normalized) < 0.3f)) return;
+        }
         if (plat == PlatformType.VR)
             EquipFx.Notice("ladder_hint_vr", "사다리", "발판 앞 가로대를 잡고 아래로 당기면 올라갑니다. 발판 위로 걸어 올라서도 됩니다", EquipFx.Info, 2.5f, 40f);
         else if (plat == PlatformType.PC)

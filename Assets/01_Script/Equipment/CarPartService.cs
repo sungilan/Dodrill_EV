@@ -49,6 +49,8 @@ public class CarPartService : NetworkBehaviour
         public string[] requires = new string[0];
         public float tMin, tMax, boltScale = 1f;
         public int socket = 1;   // 에어 임팩렌치 소켓(1=10mm, 2=17mm) — 소켓 거치대에 있는 크기 중 볼트 머리에 맞는 것
+        public bool needsWheelOff; // 휠(타이어)을 하나 이상 먼저 떼야 접근되는 부위(브레이크) — TireService 상태를 본다
+        public bool hv;          // 고전압 부품(모터·컴프레서) — 매뉴얼: 고전압 차단 절차(보호구 → 12V(−) → 서비스 플러그 → 3분 방전 → 단자 전압 확인) 뒤에만 작업
         public string specPart, specSource;
         public G[] gen;          // 차 모델에 메시가 없는 부품 — 상자·원통으로 만든다(좌표는 차 루트 기준). objects 대신 쓴다
     }
@@ -79,6 +81,7 @@ public class CarPartService : NetworkBehaviour
 
     private const string SrcM6 = "일반 조임 토크 — 플랜지 볼트 M6·8T (부위별 값 미기재)";
     private const string SrcM8 = "일반 조임 토크 — 플랜지 볼트 M8·8T (부위별 값 미기재)";
+    private const string SrcM10 = "일반 조임 토크 — 플랜지 볼트 M10·8T (부위별 값 미기재)";
 
     public static readonly PartDef[] Defs =
     {
@@ -122,13 +125,13 @@ public class CarPartService : NetworkBehaviour
             tMin = 1.0f, tMax = 1.4f, specPart = "프렁크 장착 볼트(M6)", specSource = SrcM6 },
         new PartDef {
             id = "FrontMotor", name = "전륜 모터·감속기",
-            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
-            hint = "고전압 차단 → 냉각수 배출(리저버 캡 열고 드레인 플러그) → 프렁크를 뗀 뒤 특수공구(09200-AL100)·크레인 잭으로 받치고 LH·RH·RR 마운팅 볼트를 푼다",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, hv = true,
+            hint = "고전압 차단 → 냉각수 배출(리저버 캡 열고 드레인 플러그) → 프렁크·프런트 언더 커버를 뗀 뒤 특수공구(09200-AL100)·크레인 잭으로 받치고 LH·RH·RR 마운팅 볼트를 푼다",
             objects = new[] { "SM_Gearbox", "SM_ElectricEngine" },
             bolts = new[] {
                 new F(-0.0035f, 0.0113f, -0.2045f, 0f, 1f, 0f), new F(-0.0035f, 0.1323f, 0.1955f, 0f, 1f, 0f),
                 new F(0.0703f, 0.0037f, -0.0045f, 1f, 0f, 0f) },
-            requires = new[] { "Frunk" },
+            requires = new[] { "Frunk", "FrontUnderCover", "FrontInverter" },
             tMin = 11f, tMax = 13f, boltScale = 1.6f, specPart = "모터 마운팅 볼트", specSource = "전륜 모터 및 감속기 마운팅 탈거 및 장착" },
         // ── 차 모델에 메시가 없어 상자·원통으로 만든 부품 (사고차 수리 영상: 범퍼 → 백빔 → 냉각 모듈, 프렁크 아래 전동 컴프레서) ──
         new PartDef {
@@ -162,7 +165,7 @@ public class CarPartService : NetworkBehaviour
             tMin = 1.0f, tMax = 1.4f, specPart = "냉각 모듈 장착 볼트(M6)", specSource = SrcM6 },
         new PartDef {
             id = "AcCompressor", name = "전동식 A/C 컴프레서",
-            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)", hv = true,
             hint = "냉매 회수기로 냉매를 먼저 회수하고 고전압을 차단 → 냉각 모듈을 뗀 자리에서 고전압·저전압 커넥터, 석션·디스차지 라인 분리 → 앞쪽 마운팅 볼트 3개를 푼다",
             gen = new[] {
                 G.Cyl(-2.26f, 0.41f, 0.45f, 0.13f, 0.22f, Alu, 0.7f, 90f),                                 // 본체(축 = 좌우)
@@ -222,7 +225,233 @@ public class CarPartService : NetworkBehaviour
                 new F(-0.9242f, 0.4315f, 2.0125f, -1f, 0f, 0f), new F(0.9242f, 0.4315f, 2.0125f, 1f, 0f, 0f),
                 new F(-0.4547f, 0.5976f, 2.1625f, 0f, 1f, 0f),  new F(0.4453f, 0.5985f, 2.1625f, 0f, 1f, 0f) },
             tMin = 1.0f, tMax = 1.4f, specPart = "뒤 범퍼 장착 볼트(M6)", specSource = SrcM6 },
+
+        // ══════════════════════════════════════════════════════════════
+        //  11/16 추가 — 같은 방식으로 하부(언더 커버·서스펜션)·후륜 모터·실내(시트·대시보드·HVAC)까지 넓힘.
+        //  근거: 정비 매뉴얼(고전압 차단 절차 8단계의 프런트·리어 언더 커버 탈거, 모터 마운팅, 서스펜션 구성부품, 크래쉬 패드·시트 구성부품)과
+        //  Car&Man 사고 수리·블로워/컴프레서 영상(범퍼 → 하부 → 모터 → 실내 HVAC 순). 볼트 자리는 Ioniq5N 메시에 광선을 쏴 잰 값.
+        //  차 모델에 이 이름의 메시가 없으면 FindCar 가 통째로 실패하므로 이름을 바꾸지 말 것.
+        // ══════════════════════════════════════════════════════════════
+        new PartDef {
+            id = "FrontUnderCover", name = "프런트 언더 커버",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "리프트로 차를 올린 뒤(배터리 케이스는 리프트 포인트 금지) 차 밑에서 볼트를 푼다 — 고전압 차단 절차 8단계(인버터 단자 전압 확인) 전에 프런트·리어 언더 커버를 모두 뗀다",
+            objects = new[] { "SM_Bottom_01" },
+            bolts = new[] {
+                new F(-0.6896f, -4.2370f, 0.0152f, 0f, 0f, -1f), new F(-0.2396f, -4.2370f, 0.0151f, 0f, 0f, -1f),
+                new F(0.2604f, -4.2370f, 0.0152f, 0f, 0f, -1f),  new F(0.7104f, -4.1870f, 0.0143f, 0f, 0f, -1f),
+                new F(-0.6896f, -3.0370f, 0.0257f, 0f, 0f, -1f), new F(-0.2396f, -3.1370f, 0.0191f, 0f, 0f, -1f),
+                new F(0.2604f, -3.1370f, 0.0191f, 0f, 0f, -1f),  new F(0.7104f, -3.0370f, 0.0257f, 0f, 0f, -1f) },
+            tMin = 0.8f, tMax = 1.2f, specPart = "프런트 언더 커버 볼트", specSource = "전륜 모터 및 감속기 시스템 — 프런트 언더 커버 탈거 및 장착" },
+        new PartDef {
+            id = "RearUnderCover", name = "리어 언더 커버",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "차 뒤쪽 밑에서 볼트를 푼다 — 고전압 차단 절차 8단계 전에 프런트·리어 언더 커버를 모두 뗀다",
+            objects = new[] { "SM_Bottom_02" },
+            bolts = new[] {
+                new F(-0.6047f, -0.9372f, 0.0000f, 0f, 0f, -1f), new F(-0.6047f, -0.5872f, 0.0189f, 0f, 0f, -1f), new F(-0.5547f, -0.1872f, 0.0423f, 0f, 0f, -1f),
+                new F(0.5953f, -0.9372f, 0.0000f, 0f, 0f, -1f),  new F(0.5953f, -0.5872f, 0.0190f, 0f, 0f, -1f),  new F(0.5953f, -0.1872f, 0.0420f, 0f, 0f, -1f) },
+            tMin = 0.8f, tMax = 1.2f, specPart = "리어 언더 커버 볼트", specSource = "후륜 모터 및 감속기 시스템 — 리어 언더 커버 탈거 및 장착" },
+        new PartDef {
+            id = "FrontSuspension", name = "전륜 서브 프레임·서스펜션",
+            tool = "에어 임팩렌치(27mm 소켓)", socket = 3,
+            hint = "전륜 모터·감속기를 뗀 뒤 서브 프레임 장착 볼트(4개)를 푼다 — 크레인 잭·리프트 테이블로 받치고, 스티어링 기어박스·스태빌라이저 바·드라이브 샤프트를 분리한 뒤 내린다",
+            objects = new[] { "SM_FrontSuspension" },
+            bolts = new[] {
+                new F(0.1086f, -0.1372f, -0.4000f, 0f, -1f, 0f), new F(0.1086f, -0.1372f, 0.4000f, 0f, -1f, 0f),
+                new F(0.3086f, -0.1672f, -0.4000f, 0f, -1f, 0f), new F(0.3086f, -0.1672f, 0.4000f, 0f, -1f, 0f) },
+            requires = new[] { "FrontMotor", "SteeringRack", "FrontStabilizer" },
+            tMin = 13.8f, tMax = 18.6f, boltScale = 1.6f, specPart = "서브 프레임 장착 볼트(M14)", specSource = "일반 조임 토크 — 플랜지 볼트 M14·8T (부위별 값 미기재)" },
+        new PartDef {
+            id = "RearMotor", name = "후륜 모터·감속기(IDA)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, hv = true,
+            hint = "고전압 차단 → 냉각수 배출 → 리어 언더 커버를 뗀 뒤 크레인 잭으로 받치고 마운팅 볼트를 푼다 (HV 커넥터·냉각 호스 분리, 오일 쿨러 호스 주의)",
+            objects = new[] { "SM_RearElectricengine", "SM_RearPowerDistribution" },
+            bolts = new[] {
+                new F(-0.1098f, -0.0760f, -0.0670f, 0f, -1f, 0f), new F(-0.1098f, -0.0289f, 0.1030f, 0f, -1f, 0f),
+                new F(0.0902f, -0.0830f, 0.0030f, 0f, -1f, 0f) },
+            requires = new[] { "RearUnderCover" },
+            tMin = 11f, tMax = 13f, boltScale = 1.4f, specPart = "후륜 모터 마운팅 볼트", specSource = "전륜 모터 마운팅 규정 준용 (후륜 값 미기재)" },
+        new PartDef {
+            id = "RearSuspension", name = "리어 크로스 멤버·서스펜션",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "후륜 모터·감속기를 뗀 뒤 크로스 멤버 장착 볼트(4개)를 푼다 — 스태빌라이저 바·쇽 업소버·로어 암 연결을 확인하고 받쳐 내린다",
+            objects = new[] { "SM_RearSuspension" },
+            bolts = new[] {
+                new F(-0.3596f, -0.0903f, -0.6000f, 0f, -1f, 0f), new F(-0.3596f, -0.0903f, 0.6000f, 0f, -1f, 0f),
+                new F(0.2404f, -0.1373f, -0.5000f, 0f, -1f, 0f),  new F(0.2404f, -0.1373f, 0.5000f, 0f, -1f, 0f) },
+            requires = new[] { "RearMotor", "RearStabilizer" },
+            tMin = 8.6f, tMax = 11.6f, boltScale = 1.5f, specPart = "크로스 멤버 장착 볼트(M12)", specSource = "일반 조임 토크 — 플랜지 볼트 M12·8T (부위별 값 미기재)" },
+        new PartDef {
+            id = "Seats", name = "시트(앞·뒤 좌석)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "도어를 열고 시트 밑 레일 볼트를 푼다 — 시트 하부 커넥터(에어백·열선·벨트 경고)를 분리하고, 에어백 커넥터는 배터리(−) 분리 뒤에 뺀다",
+            objects = new[] { "SM_Seats" },
+            bolts = new[] {
+                new F(-0.4256f, 0.4779f, -1.1085f, 0f, 1f, 0f), new F(-0.4256f, 0.4996f, -0.8086f, 0f, 1f, 0f), new F(-0.4256f, 0.3358f, 0.1912f, 0f, 1f, 0f),
+                new F(0.3742f, 0.4552f, -1.1085f, 0f, 1f, 0f),  new F(0.3742f, 0.4765f, -0.8086f, 0f, 1f, 0f),  new F(0.3742f, 0.3349f, 0.1912f, 0f, 1f, 0f) },
+            tMin = 4.9f, tMax = 6.7f, specPart = "시트 장착 볼트(M10)", specSource = "일반 조임 토크 — 플랜지 볼트 M10·8T (부위별 값 미기재)" },
+        new PartDef {
+            id = "Cockpit", name = "크래시 패드(대시보드)",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "12V (−) 단자를 분리한 뒤 센터 가니쉬·에어 벤트·글로브 박스를 떼고 메인 크래쉬 패드 볼트를 푼다 — 클러스터·모니터·에어백 커넥터를 분리해 들어낸다 (HVAC·블로워는 그 안쪽)",
+            objects = new[] { "SM_Ioniq_Cockpit" },
+            bolts = new[] {
+                new F(-0.2222f, -0.5406f, -0.1607f, 0f, 0f, -1f), new F(0.0278f, -0.5406f, -0.1389f, 0f, 0f, -1f),
+                new F(-0.1222f, 0.0094f, -0.1519f, 0f, 0f, -1f),
+                new F(-0.2222f, 0.5594f, -0.1604f, 0f, 0f, -1f),  new F(0.0278f, 0.5594f, -0.1363f, 0f, 0f, -1f) },
+            tMin = 1.0f, tMax = 1.4f, specPart = "크래시 패드 장착 볼트(M6)", specSource = SrcM6 },
+        // 대시 안쪽 HVAC·블로워 — 차 모델에 없어 상자·원통으로 만든다 (영상: 블로워 모터 진동·냉매 라인 점검은 대시를 뜯어야 보인다)
+        new PartDef {
+            id = "Hvac", name = "HVAC·블로워 유닛",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "크래시 패드를 뗀 뒤 케이스 윗면 볼트를 푼다 — 냉매 회수를 먼저 하고 에어컨 라인(팽창밸브)·블로워 커넥터·드레인 호스를 분리해 들어낸다",
+            gen = new[] {
+                G.Box(-1.05f, 0.80f, 0f, 0.34f, 0.20f, 0.72f, Plastic, 0f),                                       // 케이스
+                G.Box(-1.21f, 0.80f, -0.10f, 0.02f, 0.17f, 0.46f, Alu, 0.8f),                                      // 증발기 코어
+                G.Cyl(-1.02f, 0.93f, 0.25f, 0.26f, 0.12f, Fin, 0.2f),                                              // 블로워 스크롤(축 = 위아래)
+                G.Cyl(-1.02f, 0.99f, 0.25f, 0.10f, 0.05f, DarkAlu, 0.7f),                                          // 블로워 모터
+                G.Cyl(-1.17f, 0.80f, 0.40f, 0.03f, 0.08f, Alu, 0.8f, 0f, 0f, 90f), G.Cyl(-1.17f, 0.80f, 0.32f, 0.025f, 0.08f, Alu, 0.8f, 0f, 0f, 90f) },   // 냉매 라인 포트
+            bolts = new[] {
+                new F(-1.17f, 0.905f, -0.28f, 0f, 1f, 0f), new F(-0.93f, 0.905f, -0.28f, 0f, 1f, 0f), new F(-1.05f, 0.905f, 0.02f, 0f, 1f, 0f) },
+            requires = new[] { "Cockpit" },
+            tMin = 1.0f, tMax = 1.4f, specPart = "HVAC 케이스 장착 볼트(M6)", specSource = SrcM6 },
+
+        // ══════════════════════════════════════════════════════════════
+        //  11/16 추가(2) — 차를 이루는 나머지 부품: 12V 배터리·브레이크(차 모델 메시) + 모델에 없는 하부·구동 내부 부품(생성 파츠).
+        //  정비 매뉴얼 구성부품 목록(배터리 제어 시스템: 인버터·ICCU·고전압 정션 블록, 프런트/리어 서스펜션: 스티어링 기어박스·스태빌라이저 바·스트럿·쇽 업소버)을 따름.
+        //  생성 파츠는 전부 외판 안쪽(프렁크·후드·언더 커버 밑)에 있어 바깥 부품을 떼기 전에는 보이지 않는다.
+        //  ※ 펜더·루프·유리·미러·도어 패널 등 외판은 차 모델에서 SM_Ioniq_Electric 한 덩어리라 분리할 수 없다(모델러가 메시를 나눠야 한다).
+        // ══════════════════════════════════════════════════════════════
+        new PartDef {
+            id = "Battery12VCover", name = "12V 배터리 커버",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "프렁크를 뗀 뒤 12V 배터리 위 커버 볼트를 풀고 들어낸다",
+            objects = new[] { "Battery_12V_Cover" },
+            bolts = new[] { new F(-0.0888f, 0.0354f, 0.0059f, 0f, 1f, 0f), new F(0.1112f, 0.0354f, 0.0059f, 0f, 1f, 0f) },
+            requires = new[] { "Frunk" },
+            tMin = 1.0f, tMax = 1.4f, specPart = "12V 배터리 커버 볼트(M6)", specSource = SrcM6 },
+        new PartDef {
+            id = "Battery12V", name = "12V 보조 배터리",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "Drive Ready OFF → (−) 단자 → (+) 단자 순서로 분리(단자 0.8~1.0) → 클램프 볼트(0.9~1.4)를 풀고 들어낸다. 장착은 같은 규격 배터리로, (+) → (−) 순서",
+            objects = new[] { "SM_12v" },
+            bolts = new[] { new F(0f, 0.04f, -0.10f, 0f, 1f, 0f), new F(0.10f, 0.03f, -0.10f, 0f, 1f, 0f), new F(-0.2383f, -0.0664f, 0.0898f, 0f, 1f, 0f) },
+            requires = new[] { "Battery12VCover" },
+            tMin = 0.9f, tMax = 1.4f, specPart = "12V 배터리 클램프 볼트", specSource = "차량 제어 시스템 — 12V 배터리 탈거 및 장착" },
+        new PartDef {
+            id = "BrakeSystem", name = "브레이크 시스템(캘리퍼·디스크)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheelOff = true,
+            hint = "휠을 먼저 떼고 캘리퍼 장착 볼트를 푼다 — 디스크·패드 점검은 이 상태에서 (브레이크 라인은 건드리지 않는다)",
+            objects = new[] { "SM_Breaksystem" },
+            bolts = new[] {
+                new F(-1.4847f, -0.1256f, -0.8892f, 0f, 0f, -1f), new F(-1.4847f, -0.1256f, 0.8963f, 0f, 0f, 1f),
+                new F(1.5153f, -0.1256f, -0.8899f, 0f, 0f, -1f),  new F(1.5153f, -0.1256f, 0.8944f, 0f, 0f, 1f) },
+            tMin = 8.6f, tMax = 11.6f, boltScale = 1.4f, specPart = "캘리퍼 장착 볼트(M12)", specSource = "일반 조임 토크 — 플랜지 볼트 M12·8T (부위별 값 미기재)" },
+
+        // ── 프렁크 아래 구동·고전압 부품 ──
+        new PartDef {
+            id = "FrontInverter", name = "전륜 인버터(EPCU)", hv = true,
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "고전압 차단 후 프렁크를 뗀다 — 인버터 단자 전압(30V 이하)을 확인하고 HV 커넥터(오렌지)·냉각 호스를 분리한 뒤 윗면 볼트를 푼다. 모터보다 먼저 뗀다",
+            gen = new[] {
+                G.Box(-1.96f, 0.725f, -0.02f, 0.32f, 0.15f, 0.40f, DarkAlu, 0.6f),
+                G.Box(-1.96f, 0.805f, -0.02f, 0.26f, 0.02f, 0.34f, Alu, 0.8f),
+                G.Box(-2.14f, 0.74f, 0.12f, 0.04f, 0.05f, 0.08f, HvOrange, 0f), G.Box(-2.14f, 0.74f, -0.16f, 0.04f, 0.05f, 0.08f, HvOrange, 0f) },
+            bolts = new[] {
+                new F(-2.06f, 0.815f, -0.17f, 0f, 1f, 0f), new F(-1.86f, 0.815f, -0.17f, 0f, 1f, 0f),
+                new F(-2.06f, 0.815f, 0.13f, 0f, 1f, 0f),  new F(-1.86f, 0.815f, 0.13f, 0f, 1f, 0f) },
+            requires = new[] { "Frunk" },
+            tMin = 2.5f, tMax = 3.3f, specPart = "인버터 장착 볼트(M8)", specSource = SrcM8 },
+        new PartDef {
+            id = "Iccu", name = "통합 충전기·컨버터(ICCU)", hv = true,
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "고전압 차단 후 프렁크를 뗀다 — HV 커넥터와 12V 출력 케이블을 분리하고 윗면 볼트 4개를 푼다 (OBC·LDC 통합 유닛)",
+            gen = new[] {
+                G.Box(-1.62f, 0.64f, 0.42f, 0.30f, 0.12f, 0.38f, Alu, 0.7f),
+                G.Box(-1.62f, 0.705f, 0.42f, 0.24f, 0.012f, 0.32f, DarkAlu, 0.6f),
+                G.Box(-1.46f, 0.66f, 0.30f, 0.04f, 0.05f, 0.07f, HvOrange, 0f) },
+            bolts = new[] {
+                new F(-1.72f, 0.712f, 0.28f, 0f, 1f, 0f), new F(-1.52f, 0.712f, 0.28f, 0f, 1f, 0f),
+                new F(-1.72f, 0.712f, 0.56f, 0f, 1f, 0f), new F(-1.52f, 0.712f, 0.56f, 0f, 1f, 0f) },
+            requires = new[] { "Frunk" },
+            tMin = 2.5f, tMax = 3.3f, specPart = "ICCU 장착 볼트(M8)", specSource = SrcM8 },
+        new PartDef {
+            id = "JunctionBlock", name = "고전압 정션 블록", hv = true,
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "고전압 차단 후 프렁크를 뗀다 — 배터리·인버터·ICCU로 가는 HV 커넥터를 모두 분리하고 윗면 볼트를 푼다 (절연 저항 점검 때 여기서 부품별 커넥터를 하나씩 뽑는다)",
+            gen = new[] {
+                G.Box(-1.62f, 0.63f, -0.12f, 0.22f, 0.10f, 0.28f, DarkAlu, 0.5f),
+                G.Box(-1.49f, 0.64f, -0.20f, 0.03f, 0.04f, 0.06f, HvOrange, 0f), G.Box(-1.49f, 0.64f, -0.04f, 0.03f, 0.04f, 0.06f, HvOrange, 0f) },
+            bolts = new[] {
+                new F(-1.69f, 0.683f, -0.22f, 0f, 1f, 0f), new F(-1.55f, 0.683f, -0.22f, 0f, 1f, 0f),
+                new F(-1.69f, 0.683f, -0.02f, 0f, 1f, 0f), new F(-1.55f, 0.683f, -0.02f, 0f, 1f, 0f) },
+            requires = new[] { "Frunk" },
+            tMin = 1.0f, tMax = 1.4f, specPart = "정션 블록 장착 볼트(M6)", specSource = SrcM6 },
+
+        // ── 서스펜션·조향 ──
+        new PartDef {
+            id = "SteeringRack", name = "스티어링 기어박스",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "프런트 언더 커버를 뗀 뒤 타이로드 엔드·컬럼 조인트를 분리하고 장착 볼트를 푼다 (서브 프레임보다 먼저)",
+            gen = new[] {
+                G.Cyl(-1.33f, 0.42f, 0f, 0.07f, 0.85f, Alu, 0.7f, 90f, 0f, 0f),
+                G.Cyl(-1.33f, 0.42f, -0.50f, 0.09f, 0.18f, Plastic, 0f, 90f, 0f, 0f), G.Cyl(-1.33f, 0.42f, 0.50f, 0.09f, 0.18f, Plastic, 0f, 90f, 0f, 0f) },
+            bolts = new[] { new F(-1.33f, 0.382f, -0.20f, 0f, -1f, 0f), new F(-1.33f, 0.382f, 0.20f, 0f, -1f, 0f) },
+            requires = new[] { "FrontUnderCover" },
+            tMin = 4.9f, tMax = 6.7f, specPart = "스티어링 기어박스 장착 볼트(M10)", specSource = SrcM10 },
+        new PartDef {
+            id = "FrontStabilizer", name = "프런트 스태빌라이저 바",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "프런트 언더 커버를 뗀 뒤 부싱 브래킷 볼트 2개와 엔드 링크를 풀어 뺀다",
+            gen = new[] {
+                G.Cyl(-2.25f, 0.33f, 0f, 0.022f, 1.15f, DarkAlu, 0.7f, 90f, 0f, 0f),
+                G.Box(-2.25f, 0.33f, -0.30f, 0.05f, 0.05f, 0.07f, Plastic, 0f), G.Box(-2.25f, 0.33f, 0.30f, 0.05f, 0.05f, 0.07f, Plastic, 0f),
+                G.Cyl(-2.25f, 0.43f, -0.55f, 0.012f, 0.18f, Alu, 0.7f), G.Cyl(-2.25f, 0.43f, 0.55f, 0.012f, 0.18f, Alu, 0.7f) },
+            bolts = new[] { new F(-2.25f, 0.305f, -0.30f, 0f, -1f, 0f), new F(-2.25f, 0.305f, 0.30f, 0f, -1f, 0f) },
+            requires = new[] { "FrontUnderCover" },
+            tMin = 2.5f, tMax = 3.3f, specPart = "스태빌라이저 부싱 볼트(M8)", specSource = SrcM8 },
+        new PartDef {
+            id = "FrontStrutL", name = "프런트 스트럿(왼쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "후드를 열고 스트럿 타워 위 너트를 풀고 너클 쪽 볼트를 분리해 뺀다 (코일 스프링은 압축 상태 — 전용 공구 없이 분해 금지)",
+            gen = new[] {
+                G.Cyl(-1.75f, 0.62f, -0.60f, 0.075f, 0.50f, Alu, 0.7f), G.Cyl(-1.75f, 0.70f, -0.60f, 0.12f, 0.24f, Plastic, 0f),
+                G.Box(-1.75f, 0.875f, -0.60f, 0.12f, 0.02f, 0.12f, DarkAlu, 0.6f) },
+            bolts = new[] { new F(-1.80f, 0.886f, -0.60f, 0f, 1f, 0f), new F(-1.70f, 0.886f, -0.60f, 0f, 1f, 0f) },
+            requires = new[] { "Hood" },
+            tMin = 4.9f, tMax = 6.7f, specPart = "스트럿 상단 너트(M10)", specSource = SrcM10 },
+        new PartDef {
+            id = "FrontStrutR", name = "프런트 스트럿(오른쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "후드를 열고 스트럿 타워 위 너트를 풀고 너클 쪽 볼트를 분리해 뺀다 (코일 스프링은 압축 상태 — 전용 공구 없이 분해 금지)",
+            gen = new[] {
+                G.Cyl(-1.75f, 0.62f, 0.60f, 0.075f, 0.50f, Alu, 0.7f), G.Cyl(-1.75f, 0.70f, 0.60f, 0.12f, 0.24f, Plastic, 0f),
+                G.Box(-1.75f, 0.875f, 0.60f, 0.12f, 0.02f, 0.12f, DarkAlu, 0.6f) },
+            bolts = new[] { new F(-1.80f, 0.886f, 0.60f, 0f, 1f, 0f), new F(-1.70f, 0.886f, 0.60f, 0f, 1f, 0f) },
+            requires = new[] { "Hood" },
+            tMin = 4.9f, tMax = 6.7f, specPart = "스트럿 상단 너트(M10)", specSource = SrcM10 },
+        new PartDef {
+            id = "RearStabilizer", name = "리어 스태빌라이저 바",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "리어 언더 커버를 뗀 뒤 부싱 브래킷 볼트 2개와 엔드 링크를 풀어 뺀다",
+            gen = new[] {
+                G.Cyl(1.48f, 0.34f, 0f, 0.02f, 1.10f, DarkAlu, 0.7f, 90f, 0f, 0f),
+                G.Box(1.48f, 0.34f, -0.30f, 0.05f, 0.05f, 0.07f, Plastic, 0f), G.Box(1.48f, 0.34f, 0.30f, 0.05f, 0.05f, 0.07f, Plastic, 0f) },
+            bolts = new[] { new F(1.48f, 0.315f, -0.30f, 0f, -1f, 0f), new F(1.48f, 0.315f, 0.30f, 0f, -1f, 0f) },
+            requires = new[] { "RearUnderCover" },
+            tMin = 2.5f, tMax = 3.3f, specPart = "스태빌라이저 부싱 볼트(M8)", specSource = SrcM8 },
     };
+
+    /// <summary>이 볼트가 속한 부위의 한글 이름(차체 부품 탈거·장착 볼트가 아니면 null).</summary>
+    public static string NameOfBolt(Bolt b)
+    {
+        var s = Instance;
+        if (s == null || s._parts == null || b == null) return null;
+        foreach (var pt in s._parts)
+            if (pt != null && pt.frame != null && b.transform.IsChildOf(pt.frame)) return pt.def.name;
+        return null;
+    }
 
     public static int PartCount => Defs.Length;
     public static int IndexOf(string id) { for (int i = 0; i < Defs.Length; i++) if (Defs[i].id == id) return i; return -1; }
@@ -286,11 +515,13 @@ public class CarPartService : NetworkBehaviour
         public GameObject snapObj;
         public bool visible = true;
         public float nextEnforce;
+        public Bounds wb;                // 부품 메시 전체의 월드 범위(0.3초마다 갱신) — 시선이 어느 부품을 보는지 판정
+        public bool wbOk;
     }
 
     private Part[] _parts;
     [System.NonSerialized] private bool _found;
-    private float _nextFind;
+    private float _nextFind, _wheelPollAt;
     private float[] _sendAt, _pending, _activeAt, _allDoneSince, _resendAt;
 
     private static readonly Color IdleOutline = new Color(0.92f, 0.96f, 1f, 1f);
@@ -350,6 +581,19 @@ public class CarPartService : NetworkBehaviour
     {
         if (asServer || !_found) return;
         RebuildAll();   // 한 부위의 상태가 바뀌면 다른 부위의 '먼저 할 일'도 바뀐다
+        CheckAllDone();
+    }
+
+    // 하나라도 떼었다가 전부 다시 체결되면 '정비 완료' 한 번
+    private bool _disturbed;
+    private void CheckAllDone()
+    {
+        bool allTight = _state.Count >= Defs.Length;
+        for (int i = 0; i < Defs.Length && allTight; i++) if (StateOf(i) != (int)PartState.Tight) allTight = false;
+        if (!allTight) { _disturbed = true; return; }
+        if (!_disturbed) return;
+        _disturbed = false;
+        EquipFx.Notice("carpart_done", "정비 완료", "떼어낸 부품을 모두 제자리에 장착하고 규정 토크로 체결했습니다", EquipFx.Info, 4f, 1f);
     }
 
     public int StateOf(int p) => p >= 0 && p < _state.Count ? _state[p] : (int)PartState.Tight;
@@ -362,8 +606,12 @@ public class CarPartService : NetworkBehaviour
             int q = IndexOf(r);
             if (q >= 0 && StateOf(q) != (int)PartState.Off) return false;
         }
+        if (Defs[p].needsWheelOff && !WheelOff) return false;
         return true;
     }
+
+    // 휠을 하나 이상 떼어 둔 상태 — 브레이크(캘리퍼·디스크)는 휠 안쪽이라 휠을 떼야 접근된다
+    private static bool WheelOff => TireService.Instance != null && TireService.Instance.AnyHubFree;
 
     /// <summary>이 부위를 다시 끼울 수 있는가 — 이 부위를 먼저 떼야 하는(requires 로 가진) 부위가 모두 달려 있어야 한다.</summary>
     public bool CanMount(int p)
@@ -397,7 +645,9 @@ public class CarPartService : NetworkBehaviour
     {
         var list = new List<string>();
         foreach (var r in Defs[p].requires) { int q = IndexOf(r); if (q >= 0 && StateOf(q) != (int)PartState.Off) list.Add(r); }
-        return NamesOf(list);
+        string s = NamesOf(list);
+        if (Defs[p].needsWheelOff && !WheelOff) s = s.Length > 0 ? s + ", 휠(바퀴 하나 이상)" : "휠(바퀴 하나 이상)";
+        return s;
     }
 
     // ══════════════════════════════════════════
@@ -419,7 +669,15 @@ public class CarPartService : NetworkBehaviour
 
         // 차가 사라졌으면(씬 전환·재생성) 다시 찾는다
         foreach (var pt in _parts) if (pt == null || pt.anchor == null) { ResetLocal(false); return; }
+        if (IsServerStarted) ServerWatch();
         if (!IsClientStarted) return;
+
+        // 휠을 떼고 달 때 '휠 먼저' 잠금이 바뀐다 — 서비스 상태가 안 바뀌어도 볼트 표시를 다시 맞춘다(키가 같으면 바로 끝나서 가볍다)
+        if (Time.unscaledTime >= _wheelPollAt)
+        {
+            _wheelPollAt = Time.unscaledTime + 0.5f;
+            for (int q = 0; q < _parts.Length; q++) if (_parts[q] != null && Defs[q].needsWheelOff) Rebuild(q);
+        }
 
         for (int p = 0; p < _parts.Length; p++)
         {
@@ -475,6 +733,7 @@ public class CarPartService : NetworkBehaviour
     {
         _found = false;
         HideGhost();
+        DestroyHighlights();
         if (_parts == null) return;
         foreach (var pt in _parts)
         {
@@ -511,6 +770,8 @@ public class CarPartService : NetworkBehaviour
             if (t == null || t.name != name || !t.gameObject.activeInHierarchy) continue;
             if (t.GetComponentInChildren<Renderer>(true) == null) continue;
             string path = PathOf(t);
+            // 고전압 케이블 보기용 복제본(…/Cables/SM_*)은 이름이 같고 경로가 더 앞서서, 켜져 있으면 진짜 부위 대신 잡혔다 — 새 부위(서스펜션·모터 등)는 복제본이 있다
+            if (path.Contains("/Cables/")) continue;
             if (best == null || string.CompareOrdinal(path, bestPath) < 0) { best = t; bestPath = path; }
         }
         return best;
@@ -855,19 +1116,48 @@ public class CarPartService : NetworkBehaviour
     // 어느 볼트가 어느 부품 것인지 알 수 없었다 → 볼트 공구를 들고 있을 때만, 겨눈 부위 하나만 보여 준다.
     private static float s_heldCheckAt = -1f;
     private static bool s_toolHeld, s_wheelHeld;
+    private static readonly List<Transform> s_toolTf = new List<Transform>();   // 내가 든 볼트 공구들(위치는 매 프레임 읽는다)
+
+    // 공구가 볼트에서 이만큼(m) 안이면 시선이 어디를 보든 그 볼트를 '작업 중'으로 본다.
+    // 11/16 테스트: 범퍼에 바짝 다가가면 볼트가 시선 중심에서 벗어나(각도 ↑) 숨겨지고 콜라이더까지 꺼져 드릴이 볼트를 못 잡았다.
+    private const float ToolNear = 0.45f;
 
     private static void RefreshHeld()
     {
         if (Time.unscaledTime < s_heldCheckAt && s_heldCheckAt - Time.unscaledTime < 1f) return;
         s_heldCheckAt = Time.unscaledTime + 0.2f;
         s_toolHeld = s_wheelHeld = false;
+        s_toolTf.Clear();
         foreach (var g in FindObjectsByType<SyncGrab>(FindObjectsSortMode.None))
         {
             if (g == null || !g.IsOwner || !g.IsGrabbed || g.IsOnBelt) continue;
             if (g.GetComponentInChildren<ImpactWrench>(true) != null || g.GetComponentInChildren<AirImpactWrench>(true) != null
-                || g.GetComponentInChildren<ManualTool>(true) != null || g.GetComponentInChildren<TorqueWrench>(true) != null) s_toolHeld = true;
+                || g.GetComponentInChildren<ManualTool>(true) != null || g.GetComponentInChildren<TorqueWrench>(true) != null)
+            { s_toolHeld = true; s_toolTf.Add(g.transform); }
             if (g.GetComponentInChildren<TireWheel>(true) != null) s_wheelHeld = true;
         }
+    }
+
+    private static float ToolDist(Vector3 p)
+    {
+        float best = 999f;
+        for (int i = 0; i < s_toolTf.Count; i++)
+        {
+            var t = s_toolTf[i];
+            if (t == null) continue;
+            best = Mathf.Min(best, Vector3.Distance(t.position, p));
+        }
+        return best;
+    }
+
+    // 시선과 볼트가 이루는 '유효 각도'. 가까이 가면 같은 거리 차이도 각도가 크게 벌어지므로, 1m 보다 가까운 볼트는 1m 에 있는 것으로 쳐서
+    // 시선 옆 몇십 cm 안이면 계속 겨눈 것으로 본다. 시선 뒤쪽이면 180.
+    private static float EffAngle(Vector3 d, Vector3 fwd)
+    {
+        float f = Vector3.Dot(d, fwd);
+        if (f <= 0.02f) return 180f;
+        float perp = Mathf.Sqrt(Mathf.Max(0f, d.sqrMagnitude - f * f));
+        return Mathf.Atan2(perp, Mathf.Max(f, 1f)) * Mathf.Rad2Deg;
     }
 
     /// <summary>내가 볼트 공구(드릴·에어 임팩렌치·스패너·토크렌치)를 들고 있는가.</summary>
@@ -894,7 +1184,9 @@ public class CarPartService : NetworkBehaviour
             if (b == null || !b.gameObject.activeInHierarchy || b.Progress >= 1f) continue;
             Vector3 d = b.transform.position - cp;
             if (d.sqrMagnitude > near * near) continue;
-            best = Mathf.Min(best, Vector3.Angle(fwd, d));
+            float a = EffAngle(d, fwd);
+            if (ToolDist(b.transform.position) < ToolNear) a = Mathf.Min(a, 1f);
+            best = Mathf.Min(best, a);
         }
         return best;
     }
@@ -904,9 +1196,12 @@ public class CarPartService : NetworkBehaviour
         float best = 999f;
         for (int n = 0; n < pt.def.bolts.Length; n++)
         {
-            Vector3 d = BoltWorld(pt, n) - cp;
+            Vector3 bw = BoltWorld(pt, n);
+            Vector3 d = bw - cp;
             if (d.sqrMagnitude > near * near) continue;
-            best = Mathf.Min(best, Vector3.Angle(fwd, d));
+            float a = EffAngle(d, fwd);
+            if (ToolDist(bw) < ToolNear) a = Mathf.Min(a, 1f);   // 공구를 볼트 옆에 댔으면 시선과 상관없이 이 부위
+            best = Mathf.Min(best, a);
         }
         return best;
     }
@@ -946,6 +1241,8 @@ public class CarPartService : NetworkBehaviour
         {
             var pt = _parts[p];
             if (pt == null || pt.anchor == null || pt.snap != null || StateOf(p) == (int)PartState.Off) continue;
+            // 다른 부품에 가려 아직 못 푸는 부위(예: 범퍼 안쪽 인버터)는 겨눠지지 않게 — 안 그러면 차 속 부품 카드가 한꺼번에 떴다
+            if (StateOf(p) == (int)PartState.Tight && !CanRemove(p)) continue;
             float a = PartAngle(pt, cp, fwd, near);
             if (p == _focus) curA = a;
             if (a < bestA) { bestA = a; best = p; }
@@ -958,13 +1255,14 @@ public class CarPartService : NetworkBehaviour
         return best;
     }
 
-    private static void ShowBolt(Part pt, int n, Bolt b, bool on)
+    // vis = 볼트 모습, col = 드릴이 잡는 콜라이더. 공구가 바로 옆에 있으면(col) 모습이 꺼져 있어도 콜라이더는 살려 둔다 — 안 그러면 다가가는 중에 볼트가 풀리다 말고 사라진다
+    private static void ShowBolt(Part pt, int n, Bolt b, bool vis, bool col)
     {
-        int v = on ? 1 : 0;
+        int v = (vis ? 1 : 0) | (col ? 2 : 0);
         if (pt.shown[n] == v) return;
         pt.shown[n] = v;
-        foreach (var r in b.GetComponentsInChildren<Renderer>(true)) r.enabled = on;
-        foreach (var c in b.GetComponentsInChildren<Collider>(true)) c.enabled = on;
+        foreach (var r in b.GetComponentsInChildren<Renderer>(true)) r.enabled = vis;
+        foreach (var c in b.GetComponentsInChildren<Collider>(true)) c.enabled = col;
     }
 
     private void UpdateVisuals()
@@ -973,7 +1271,19 @@ public class CarPartService : NetworkBehaviour
         if (cam == null) return;
         float near = IsVRPlatform ? Mathf.Min(markerDist, 1.8f) : markerDist;
 
+        if (Time.unscaledTime >= _boundsAt)
+        {
+            _boundsAt = Time.unscaledTime + 0.3f;
+            foreach (var bp in _parts) RefreshBounds(bp);
+        }
+        // 시나리오 중에도 표시는 켜 두되, 한 번에 한 부위(겨눈 부위)만 보여 준다 — 카드는 아래 cardPart 하나만
+        int hover = PickHover(cam);
         int focus = PickFocus(cam, near);
+        // 볼트가 시선 각도 밖이어도 공구를 든 채 부품을 바라보면 그 부품을 작업 대상으로 (시나리오·타이어 볼트를 겨누는 중이면 제외)
+        if (focus < 0 && hover >= 0 && OtherBoltAngle(cam.transform.position, cam.transform.forward, near) > 20f) focus = hover;
+        UpdateHover(hover);
+        UpdateSlotGhosts(cam);
+        int cardPart = focus >= 0 ? focus : hover;   // 카드는 한 번에 한 부위만
         if (focus != _focus)
         {
             _focus = focus;
@@ -984,7 +1294,10 @@ public class CarPartService : NetworkBehaviour
                 string body = fst == (int)PartState.Mounted ? $"{fd.tool}로 볼트를 조이세요 — 규정 {fd.tMin:0.0#} ~ {fd.tMax:0.0#} kgf·m"
                             : !CanRemove(focus) ? $"먼저 {RemoveBlockers(focus)}을(를) 떼어야 합니다"
                             : fd.hint;
-                EquipFx.Notice("carpart_" + fd.id, fd.name + " 탈거·장착", body, EquipFx.Info, 4f, 60f);
+                // 이름·공구·규정·접근 위치는 부품 카드에 이미 있다 — 겨눌 때마다 큰 안내 배너(후드 탈거·장착 …)까지 띄우면 시나리오 안내와 겹친다.
+                // 작업 절차 설명(hint)은 그 부위 볼트를 처음 돌릴 때 한 번만 보여 준다(아래 UpdateVisuals).
+                _ = body;
+                if (HvUnsafe(fd)) NoticeHv(fd, 4f, 20f);
             }
         }
 
@@ -1006,7 +1319,11 @@ public class CarPartService : NetworkBehaviour
                     if (b == null) continue;
                     int idx = s_off[p] + n;
                     if (b.isloosened) done++;
-                    if (b.gameObject.activeInHierarchy) ShowBolt(pt, n, b, on || working || b.IsMarkedDone);
+                    if (b.gameObject.activeInHierarchy)
+                    {
+                        bool vis = on || working || b.IsMarkedDone;
+                        ShowBolt(pt, n, b, vis, vis || (!b.isloosened && ToolDist(b.transform.position) < ToolNear));
+                    }
                     bool open = b.gameObject.activeInHierarchy && !b.isloosened;
                     bool active = open && b.Progress > 0f && Time.time - _activeAt[idx] < 0.5f;
                     if (active) anyActive = true;
@@ -1016,10 +1333,179 @@ public class CarPartService : NetworkBehaviour
                     SetOutline(pt, n, b, open && on ? (active ? 2 : 1) : 0);
                 }
             }
-            UpdateCard(pt, p, st, done, anyActive && on, on, cam);
+            if (anyActive && on && HvUnsafe(pt.def)) NoticeHv(pt.def, 3f, 8f);   // 차단 안 된 채 고전압 부품 볼트를 돌리는 중
+            else if (anyActive && on)   // 작업 절차 설명은 볼트를 처음 돌릴 때 한 번(부위별 3분에 한 번까지)
+                EquipFx.Notice("carpart_" + pt.def.id, pt.def.name + (st == (int)PartState.Mounted ? " 장착" : " 탈거"),
+                    st == (int)PartState.Mounted ? $"{pt.def.tool}로 규정 {pt.def.tMin:0.0#} ~ {pt.def.tMax:0.0#} kgf·m까지 조이세요" : pt.def.hint,
+                    EquipFx.Info, 4f, 180f);
+            if ((cardPart >= 0 && p != cardPart) || TireService.LabelShowing) { pt.flashUntil = 0f; pt.cardUntil = 0f; }   // 다른 부위·휠 카드가 떠 있으면 내린다
+            UpdateCard(pt, p, st, done, anyActive && on, p == cardPart && !TireService.LabelShowing, cam);
             UpdateLeads(pt, on && pt.card != null && pt.card.root.activeSelf);
         }
     }
+
+    // ══════════════════════════════════════════
+    //  부품 단위 강조 — Car Mechanic Simulator VR 영상 참고
+    //   · 볼트 공구를 들고 부품을 바라보면 그 부품 윤곽선(노랑) + 이름·접근 위치 카드
+    //   · 떼어낸 부품의 자리에는 반투명 흰 고스트가 계속 남는다(무엇이 빠졌는지, 어디에 끼우는지)
+    // ══════════════════════════════════════════
+
+    private int _hover = -1;
+    private float _boundsAt;
+    private GameObject _hoverObj;
+    private Outlinable _hoverOutline;
+    private int _hoverBuilt = -1;
+    private Material _hoverMat, _slotMat;
+    private readonly Dictionary<int, GameObject> _slotGhosts = new Dictionary<int, GameObject>();
+
+    private static string AccessOf(PartDef d)
+    {
+        switch (d.id)
+        {
+            case "FrontUnderCover": case "RearUnderCover": case "FrontMotor": case "RearMotor":
+            case "FrontSuspension": case "RearSuspension": case "SteeringRack": case "FrontStabilizer": case "RearStabilizer":
+                return "차 밑 — 리프트로 올리고 작업";
+            case "BrakeSystem": return "휠 안쪽 — 휠을 떼고 작업";
+            case "Seats": case "Cockpit": case "Hvac": return "실내 — 도어를 열고 작업";
+            case "Hood": case "Frunk": case "Headlamp": case "FrontBeam": case "Cooling": case "AcCompressor":
+            case "FrontInverter": case "Iccu": case "JunctionBlock": case "Battery12VCover": case "Battery12V":
+            case "FrontStrutL": case "FrontStrutR":
+                return "엔진룸 — 후드를 열고 작업";
+            default: return "차 바깥에서 작업";
+        }
+    }
+
+    private static void RefreshBounds(Part pt)
+    {
+        if (pt == null || pt.rends == null) return;
+        bool any = false; Bounds b = default;
+        foreach (var r in pt.rends)
+        {
+            if (r == null) continue;
+            if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
+        }
+        pt.wb = b; pt.wbOk = any;
+    }
+
+    /// <summary>볼트 공구를 든 채 시선(화면 가운데)이 가리키는, 지금 작업할 수 있는 부품. 안 쪽에 가려 접근 못 하는 부품은 제외.</summary>
+    private int PickHover(Camera cam)
+    {
+        _hover = -1;
+        if (!LocalHoldsBoltTool) return -1;
+        var ray = new Ray(cam.transform.position, cam.transform.forward);
+        int best = -1; float bd = 3.5f, bv = float.MaxValue;
+        for (int p = 0; p < _parts.Length; p++)
+        {
+            var pt = _parts[p];
+            if (pt == null || !pt.wbOk || pt.snap != null) continue;
+            int st = StateOf(p);
+            if (st == (int)PartState.Off) continue;
+            if (st == (int)PartState.Tight && !CanRemove(p)) continue;
+            if (!pt.wb.IntersectRay(ray, out float dist) || dist > bd + 0.05f) continue;
+            float vol = pt.wb.size.x * pt.wb.size.y * pt.wb.size.z;
+            // 거의 같은 거리면 더 작은(구체적인) 부품 — 후드 안의 프렁크·모터처럼
+            if (dist < bd - 0.05f || vol < bv) { bd = Mathf.Min(bd, dist); bv = vol; best = p; }
+        }
+        _hover = best;
+        return best;
+    }
+
+    // 부품 전체 윤곽선(노란 선) — 시야를 어지럽힌다는 의견(26.11.16)으로 끔. 부품 이름은 카드와 볼트 진행 패널 제목에 나온다.
+    private const bool ShowPartOutline = false;
+
+    private void UpdateHover(int hover)
+    {
+        if (!ShowPartOutline) { if (_hoverObj != null && _hoverObj.activeSelf) _hoverObj.SetActive(false); return; }
+        if (hover < 0)
+        {
+            if (_hoverObj != null && _hoverObj.activeSelf) _hoverObj.SetActive(false);
+            return;
+        }
+        if (_hoverObj == null) _hoverObj = new GameObject("[CarPartHover]");
+        if (_hoverBuilt != hover)
+        {
+            // 부품 메시를 복사해 반투명으로 덮으면 원래 메시와 같은 자리라 깊이가 겹쳐 줄무늬(z-fighting)가 생겼다
+            // → 복사본 없이 진짜 부품 렌더러에 윤곽선만 건다(렌더러 목록을 비우려고 윤곽선 오브젝트를 통째로 새로 만든다)
+            foreach (Transform c in _hoverObj.transform) Destroy(c.gameObject);
+            _hoverOutline = null;
+            _hoverBuilt = -1;
+            var pt = _parts[hover];
+            if (pt == null || pt.rends == null) { _hoverObj.SetActive(false); return; }
+            var oGo = new GameObject("Outline");
+            oGo.transform.SetParent(_hoverObj.transform, false);
+            try
+            {
+                var o = oGo.AddComponent<Outlinable>();
+                foreach (var r in pt.rends) if (r != null && (r is MeshRenderer || r is SkinnedMeshRenderer)) o.AddRenderer(r);
+                o.RenderStyle = RenderStyle.Single;
+                var prm = o.OutlineParameters; prm.Color = new Color(1f, 0.85f, 0.25f, 1f); prm.Enabled = true;
+                prm.DilateShift = 0.25f; prm.BlurShift = 0f;
+                _hoverOutline = o;
+                _hoverBuilt = hover;
+            }
+            catch (System.Exception e) { Debug.LogWarning("[CarPartService] 부품 윤곽선 실패: " + e.Message); _hoverOutline = null; }
+        }
+        if (_hoverBuilt < 0) { _hoverObj.SetActive(false); return; }
+        if (!_hoverObj.activeSelf) _hoverObj.SetActive(true);
+    }
+
+    // 떼어낸 부품 자리의 반투명 고스트 — 가까이 있을 때만(8m)
+    private void UpdateSlotGhosts(Camera cam)
+    {
+        if (_slotMat == null) { _slotMat = TireService.MakeGhostMaterial(); _slotMat.color = new Color(0.85f, 0.95f, 1f, 0.10f); }
+        for (int p = 0; p < _parts.Length; p++)
+        {
+            bool want = _parts[p] != null && _parts[p].anchor != null && StateOf(p) == (int)PartState.Off && _parts[p].snap == null
+                        && (PartCenter(p) - cam.transform.position).sqrMagnitude < 8f * 8f;
+            _slotGhosts.TryGetValue(p, out var g);
+            if (!want) { if (g != null && g.activeSelf) g.SetActive(false); continue; }
+            if (g == null)
+            {
+                g = new GameObject($"[CarPartSlot {Defs[p].id}]");
+                if (!BuildCopy(p, g.transform, _slotMat, out _)) { Destroy(g); continue; }
+                _slotGhosts[p] = g;
+            }
+            if (!g.activeSelf) g.SetActive(true);
+            g.transform.SetPositionAndRotation(PartCenter(p), PartRotation(p));
+        }
+    }
+
+    private void HideSlotGhosts()
+    {
+        foreach (var kv in _slotGhosts) if (kv.Value != null && kv.Value.activeSelf) kv.Value.SetActive(false);
+    }
+
+    /// <summary>시나리오(교육·평가)가 진행 중인가 — 이때는 자유 실습 표시를 끈다. 마지막 단계를 끝냈거나 시나리오가 없으면 false.</summary>
+    public static bool ScenarioRunning
+    {
+        get
+        {
+            var r = ScenarioStateReceiver.Instance;
+            if (r == null || r.CurrentScenario == null) return false;
+            var t = r.CurrentTaskState; int total = r.TotalTaskCount;
+            return !(total > 0 && t.taskIndex >= total - 1 && t.status == TaskStatus.Completed);
+        }
+    }
+
+    private void DestroyHighlights()
+    {
+        if (_hoverObj != null) Destroy(_hoverObj);
+        _hoverObj = null; _hoverOutline = null; _hoverBuilt = -1;
+        foreach (var kv in _slotGhosts) if (kv.Value != null) Destroy(kv.Value);
+        _slotGhosts.Clear();
+    }
+
+    // 고전압 부품인데 안전 상태(보호구 + 서비스 플러그 차단)가 아니다 — 막지는 않고 경고만 (자유 실습·시나리오 모두 같은 기준: ElectricSafetyManager)
+    private static bool HvUnsafe(PartDef d)
+    {
+        if (d == null || !d.hv) return false;
+        var sm = ElectricSafetyManager.Instance;
+        return sm != null && !sm.IsSafeToWork();
+    }
+
+    private static void NoticeHv(PartDef d, float show, float cooldown)
+        => EquipFx.Notice("carpart_hv", "고전압 차단 전입니다 — " + d.name,
+            "절연장갑 → 12V(−) 분리 → 서비스 플러그(MSD) 분리 → 3분 방전 → 인버터 단자 전압 30V 이하 확인 뒤에 작업하세요", EquipFx.Danger, show, cooldown);
 
     // 카드 아래 → 이 부품의 남은 볼트로 가는 가는 선 (어느 볼트가 이 부품 것인지)
     private void UpdateLeads(Part pt, bool show)
@@ -1107,7 +1593,7 @@ public class CarPartService : NetworkBehaviour
         cg.transform.SetParent(root.transform, false);
         var canvas = cg.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
-        ((RectTransform)cg.transform).sizeDelta = new Vector2(300f, 78f);
+        ((RectTransform)cg.transform).sizeDelta = new Vector2(340f, 98f);
         cg.transform.localScale = Vector3.one * 0.0016f;
 
         var bgGo = new GameObject("BG");
@@ -1128,8 +1614,9 @@ public class CarPartService : NetworkBehaviour
         t.richText = true;
         t.alignment = TextAlignmentOptions.Center;
         t.textWrappingMode = TextWrappingModes.NoWrap;
-        t.enableAutoSizing = false;
-        t.fontSize = 28f;
+        t.enableAutoSizing = true;   // 부품 이름·진행 줄이 카드보다 길면 줄여서 맞춘다(카드 밖으로 튀어나옴 방지)
+        t.fontSizeMin = 12f;
+        t.fontSizeMax = 28f;
         t.color = Color.white;
         t.raycastTarget = false;
         WorldHoverLabel.DrawOnTop(root);
@@ -1178,6 +1665,8 @@ public class CarPartService : NetworkBehaviour
             text = $"<b>{d.name}</b>\n<size=62%><color=#FFC870>먼저 {RemoveBlockers(p)} 탈거</color></size>";
         else
             text = $"<b>{d.name}</b> 탈거 — 볼트 풀림 {done}/{total}\n<size=62%><color=#8FD3FF>{d.tool}</color></size>";
+        // 어디서 접근하는 부품인지 — 영상(Car Mechanic Simulator VR)의 'Accessible from under the car' 안내처럼
+        if (Time.time >= pt.flashUntil) text += $"\n<size=55%><color=#9BE8B0>접근: {AccessOf(d)}</color></size>";
         if (lb.text != text) { lb.text = text; lb.txt.text = text; }
 
         Vector3 wp = WorkPoint(pt, out var outward);
@@ -1185,7 +1674,7 @@ public class CarPartService : NetworkBehaviour
         tr.position = wp + outward * 0.18f + Vector3.up * 0.18f;
         tr.rotation = Quaternion.LookRotation(cam.transform.forward, cam.transform.up);
         float dist = Vector3.Distance(cam.transform.position, tr.position);
-        tr.localScale = Vector3.one * Mathf.Clamp(dist / 1.8f, 0.4f, 1.1f);
+        tr.localScale = Vector3.one * Mathf.Clamp(dist / 2.4f, 0.3f, 0.65f);   // 가까이 가면 글씨가 화면을 덮던 문제 — 상한을 낮춤
     }
 
     // ══════════════════════════════════════════
@@ -1427,6 +1916,59 @@ public class CarPartService : NetworkBehaviour
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(nob.gameObject, gameObject.scene);
         ServerManager.Spawn(nob);
         _item[p] = nob.ObjectId;
+    }
+
+    // 떼어낸 부품이 사라졌거나(디스폰·서버 재시작 잔재) 바닥 밑·아주 먼 곳으로 떨어졌으면 서버가 되돌린다 — 안 그러면 그 부위는 영영 못 끼운다
+    private float _watchAt;
+
+    [Server]
+    private void ServerWatch()
+    {
+        if (Time.unscaledTime < _watchAt || _state.Count < Defs.Length || _item.Count < Defs.Length) return;
+        _watchAt = Time.unscaledTime + 2f;
+        var spawned = ServerManager.Objects.Spawned;
+        for (int p = 0; p < Defs.Length; p++)
+        {
+            if (_state[p] != (int)PartState.Off) continue;
+            NetworkObject nob = null;
+            bool have = _item[p] >= 0 && spawned.TryGetValue(_item[p], out nob) && nob != null;
+            if (!have) { SpawnItem(p); continue; }
+            var sg = nob.GetComponent<SyncGrab>();
+            if (sg != null && sg.IsGrabbed) continue;
+            Vector3 c = PartCenter(p);
+            if (nob.transform.position.y < c.y - 6f || (nob.transform.position - c).sqrMagnitude > 40f * 40f)
+            {
+                nob.transform.SetPositionAndRotation(c + Vector3.up * 0.3f, PartRotation(p));
+                var rb = nob.GetComponent<Rigidbody>();
+                if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+                Debug.LogWarning($"[CarPartService] {Defs[p].name}: 떨어진 부품을 차 옆으로 되돌렸습니다");
+            }
+        }
+    }
+
+    /// <summary>모든 부위를 원래대로(전부 체결된 상태) — 떼어낸 부품은 지운다. 디버그 커맨드 EV/ResetParts 가 부른다.</summary>
+    [Server]
+    public void ServerResetAll()
+    {
+        if (_state.Count < Defs.Length) return;
+        var spawned = ServerManager.Objects.Spawned;
+        for (int p = 0; p < Defs.Length; p++)
+        {
+            if (_item[p] >= 0 && spawned.TryGetValue(_item[p], out var nob) && nob != null) ServerManager.Despawn(nob);
+            _item[p] = -1;
+        }
+        for (int i = 0; i < _prog.Count; i++) _prog[i] = 0f;
+        for (int p = 0; p < Defs.Length; p++) _state[p] = (int)PartState.Tight;
+        ResetObserversRpc();
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    private void ResetObserversRpc()
+    {
+        if (_parts == null) return;
+        foreach (var pt in _parts) if (pt != null) { pt.builtKey = -999; }   // 부분만 풀던 볼트 진행도까지 새로 만든다
+        _disturbed = false;
+        RebuildAll();
     }
 
     /// <summary>부품을 놓은 클라이언트가 부른다. 자리가 비어 있고 순서가 맞으면 부품을 없애고 장착(체결 전) 상태로.</summary>

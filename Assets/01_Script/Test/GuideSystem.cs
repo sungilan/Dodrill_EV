@@ -1035,9 +1035,41 @@ public class GuideSystem : MonoBehaviour
     }
 
     // ★ 자동 숨기기 및 슬라이더 애니메이션 처리 핵심 로직
-    private void HandleCenterUI()
+    // ── 단계 설명 팝업(가운데 안내창) 켜기/끄기 ──
+    // 단계가 시작될 때마다 뜨는 '제목·설명·확인' 창이 시야를 가린다는 의견(26.11.16) → 끄고 켤 수 있게. 기기에 저장된다.
+    // 끄면 새 단계가 시작돼도 안 뜬다. 상단 단계 안내(진행 n/전체·한 줄 설명)와 손/전구 버튼으로 직접 다시 여는 것(ReopenGuideUI)은 그대로.
+    private const string StepPopupPref = "ev_step_popup";
+    private static int s_stepPopup = -1;
+    public static bool CenterPopupEnabled
+    {
+        get
+        {
+            if (s_stepPopup < 0) { try { s_stepPopup = PlayerPrefs.GetInt(StepPopupPref, 1); } catch { s_stepPopup = 1; } }
+            return s_stepPopup != 0;
+        }
+    }
+
+    public static void SetCenterPopupEnabled(bool on)
+    {
+        s_stepPopup = on ? 1 : 0;
+        try { PlayerPrefs.SetInt(StepPopupPref, s_stepPopup); PlayerPrefs.Save(); } catch { }
+        if (!on && Instance != null) Instance.HideCenterNow();
+    }
+
+    private void HideCenterNow()
+    {
+        if (_currentGuideSequence != null) { _currentGuideSequence.Kill(); _currentGuideSequence = null; }
+        if (centerGuideGroup == null) return;
+        DOTween.Kill(centerGuideGroup);
+        centerGuideGroup.alpha = 0f;
+        centerGuideGroup.interactable = false;
+        centerGuideGroup.blocksRaycasts = false;
+    }
+
+    private void HandleCenterUI(bool force = false)
     {
         if(centerGuideGroup == null) return;
+        if(!force && !CenterPopupEnabled) { HideCenterNow(); return; }
         if(_currentGuideSequence != null) { _currentGuideSequence.Kill(true); _currentGuideSequence = null; }
 
         centerGuideGroup.gameObject.SetActive(true);
@@ -1114,7 +1146,7 @@ public class GuideSystem : MonoBehaviour
             return;
         }
 
-        HandleCenterUI();
+        HandleCenterUI(true);   // 사용자가 직접 연 것 — 설정이 꺼져 있어도 보여 준다
     }
     private void SetLayerRecursive(GameObject obj, int newLayer)
     {

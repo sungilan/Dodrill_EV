@@ -928,8 +928,9 @@ public class TireService : NetworkBehaviour
         t.richText = true;
         t.alignment = TextAlignmentOptions.Center;
         t.textWrappingMode = TextWrappingModes.NoWrap;
-        t.enableAutoSizing = false;
-        t.fontSize = 30f;
+        t.enableAutoSizing = true;   // 카드(210폭)보다 글이 길면 줄여서 맞춘다 — '휠 탈거 — 너트 풀림 0/5'가 카드 밖으로 튀어나왔다
+        t.fontSizeMin = 12f;
+        t.fontSizeMax = 30f;
         t.color = Color.white;
         t.raycastTarget = false;
         WorldHoverLabel.DrawOnTop(root);   // 차체·림에 가려지지 않게
@@ -947,6 +948,23 @@ public class TireService : NetworkBehaviour
         h.labelUntil = Mathf.Max(h.labelUntil, h.flashUntil);
     }
 
+    /// <summary>이 볼트가 휠 너트면 '휠'(아니면 null) — 볼트 진행 패널에 부품 이름을 붙이는 데 쓴다.</summary>
+    public static string NameOfBolt(Bolt b)
+    {
+        var s = Instance;
+        if (s == null || b == null) return null;
+        for (int w = 0; w < Wheels; w++)
+        {
+            var h = s._hubs[w];
+            if (h != null && h.nuts != null && System.Array.IndexOf(h.nuts, b) >= 0) return "휠";
+        }
+        return null;
+    }
+
+    private static int s_labelFrame = -10;
+    /// <summary>휠(타이어) 카드가 지금 화면에 떠 있는가.</summary>
+    public static bool LabelShowing => Time.frameCount - s_labelFrame <= 2;
+
     private void UpdateLabel(Hub h, int w, int st, int done, bool anyActive, Camera cam)
     {
         if (anyActive) h.labelUntil = Time.time + 2.5f;
@@ -956,6 +974,7 @@ public class TireService : NetworkBehaviour
             if (h.label != null && h.label.root.activeSelf) h.label.root.SetActive(false);
             return;
         }
+        s_labelFrame = Time.frameCount;   // 휠 카드가 떠 있는 동안 차체 부품 카드는 숨긴다(한 번에 하나)
         if (h.label == null) h.label = MakeLabel(h, w);
         var lb = h.label;
         if (!lb.root.activeSelf) lb.root.SetActive(true);

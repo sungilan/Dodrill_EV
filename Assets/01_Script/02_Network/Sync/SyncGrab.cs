@@ -381,6 +381,8 @@ public class SyncGrab : NetworkBehaviour
     {
         base.OnOwnershipClient(prevOwner);
         ApplyKinematic(_isKinematic.Value);
+        // 내가 들고 있던 물체의 소유권을 서버가 가져갔으면(단계 실패·리스폰으로 제자리 복귀 등) 이 화면의 들기 상태도 푼다
+        if(!IsOwner && prevOwner != null && prevOwner == LocalConnection && (_isPCHolding || _isTweening)) DropLocalHold();
     }
 
     // ══════════════════════════════════════════════════════
@@ -1076,14 +1078,24 @@ public class SyncGrab : NetworkBehaviour
     }
 
     [ObserversRpc]
-    private void ForceDetachObserversRpc()
+    private void ForceDetachObserversRpc() => DropLocalHold();
+
+    /// <summary>
+    /// 이 화면에서 '들고 있음' 상태를 모두 푼다(손·PC 들기·날아오는 중). 서버가 잡힘·소유권을 되돌렸을 때 부른다.
+    /// (11/16) 드릴을 든 채 단계 시간 초과로 실패하면 서버가 드릴을 제자리로 되돌리며(ServerResetToRest) 잡힘·소유권만 풀었다.
+    /// 내 화면의 PC 들기 상태(_isPCHolding)는 그대로라 FreeLookController 가 계속 '들고 있음'으로 알아, 드릴이 서랍에 돌아가 있는데
+    /// 다시 클릭해도 잡히지 않았다(내려놓기 키를 눌러야 풀림).
+    /// </summary>
+    private void DropLocalHold()
     {
+        bool had = _isPCHolding || _isTweening || _pendingHand != null;
         DOTween.Kill(transform);
         _isPCHolding = false;
         _isTweening = false;
         _pendingHand = null;
         StopCoroutineIfRunning(ref _grabCoroutine);
         _grab?.ForceHandsRelease();
+        if(had) Debug.Log($"[SyncGrab] {name}: 서버가 잡힘을 풀어 이 화면의 들고 있음 상태도 해제");
         OnReleased?.Invoke();   // 강제 해제도 알림
     }
 
@@ -1305,6 +1317,9 @@ public class SyncGrab : NetworkBehaviour
     private void OnIsGrabbedChanged(bool prev, bool next, bool asServer)
     {
         TrackHeld(next);
+        // 내가 놓지 않았는데 서버에서 잡힘이 풀렸다(ServerResetToRest·ServerForceReset) → 이 화면의 들기 상태도 푼다.
+        // 정상 내려놓기(RequestRelease)는 _isPCHolding 을 먼저 끄므로 여기 걸리지 않는다.
+        if(!asServer && prev && !next && (_isPCHolding || _isTweening)) DropLocalHold();
         // 누군가(다른 클라이언트 포함)가 잡았으면 이 화면의 '여기 있음' 가이드 마커도 치운다.
         // 예전에는 잡은 클라이언트에서만 치워서, 다른 사람 화면에는 마커가 잡기 전 자리에 계속 남았다.
         if(next) GuideSystem.Instance?.OnItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");

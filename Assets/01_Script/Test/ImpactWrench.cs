@@ -206,7 +206,7 @@ public class ImpactWrench : MonoBehaviour
         var ui = InteractionProgressBarUI.Instance;
         if (ui == null || _targetBolt == null) return;
 
-        ui.ShowBoltProgress(_targetBolt.Progress, title,
+        ui.ShowBoltProgress(_targetBolt.Progress, BoltPartName.Title(title, _targetBolt),   // '볼트 분해 — 프런트 언더 커버'처럼 어느 부품 볼트인지
             _currentBoltGameObject != null ? _currentBoltGameObject.name : _targetBolt.name,
             instruction);
         _progressShown = true;

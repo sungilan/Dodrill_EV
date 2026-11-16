@@ -169,7 +169,9 @@ public class NextActionGuide : MonoBehaviour
                     int left = Mathf.Max(0, group.TotalCount - group.RemovedCount);
                     title = TaskTitle(cfg);
                     action = group.assembleMode ? $"볼트 {left}개 남음 · 렌치로 조이세요" : $"볼트 {left}개 남음 · 렌치로 푸세요";
-                    label = ring = true;
+                    // 11/16: 볼트 단계의 '전방 커버 탈거 / 볼트 n개 남음 · 렌치로 푸세요' 카드는 끈다(시야를 가리고 다른 안내와 겹침).
+                    // 링만 남기고, 어느 부품 볼트인지는 볼트 진행 패널 제목에 부품 이름으로 보여 준다(BoltPartName).
+                    label = false; ring = true;
                     radius = Radius(bolt.gameObject, 0.018f, 0.045f);
                 }
             }

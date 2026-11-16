@@ -10,7 +10,8 @@ using UnityEngine;
 public class WarningPopup : MonoBehaviour
 {
     private const float Distance = 0.9f;
-    private const float DropBelowEye = 0.12f;
+    // 카드를 시선 아래(0.12)에 두면 화면 가운데의 'F 키를 눌러 …' 작업 안내·조준점과 겹쳤다 → 시선보다 조금 위로(음수 = 위)
+    private const float DropBelowEye = -0.05f;
 
     private static GameObject s_prefab;
     private static readonly System.Collections.Generic.Dictionary<string, WarningPopup> s_active = new System.Collections.Generic.Dictionary<string, WarningPopup>();
@@ -54,6 +55,8 @@ public class WarningPopup : MonoBehaviour
             if (s_prefab == null) return;
             var go = Instantiate(s_prefab);
             go.name = "[WarningPopup] " + key;
+            // 장비·보호구 사용법 카드(보안경·안면 보호대 등)가 화면을 너무 차지한다는 의견(26.11.16) → 글씨·카드를 조금 줄인다(고전압·남은 시간 경고는 그대로)
+            if (key == "equip") go.transform.localScale *= 0.8f;
             foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 1;   // TransparentFX — VR 카메라가 그리는 레이어
             p = go.AddComponent<WarningPopup>();
             p._key = key;

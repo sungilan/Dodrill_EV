@@ -115,6 +115,23 @@ public class EVSetSafeModeCommand : IDebugCommand
     }
 }
 
+/// <summary>차체 부품 분해·조립 실습(CarPartService)을 처음 상태로 — 떼어낸 부품은 지우고 전부 체결된 상태로.</summary>
+public class EVResetPartsCommand : IDebugCommand
+{
+    public string Category => "EV";
+    public string Name => "ResetParts";
+    public string Description => "차체 부품 분해·조립 실습 초기화 (서버에서 실행)";
+
+    public void Execute(string[] args, int callerId)
+    {
+        var svc = CarPartService.Instance;
+        if (svc == null) { Debug.LogWarning("[Debug] EV/ResetParts: CarPartService 가 없습니다"); return; }
+        if (!FishNet.InstanceFinder.IsServerStarted) { Debug.LogWarning("[Debug] EV/ResetParts: 서버에서만 실행됩니다"); return; }
+        svc.ServerResetAll();
+        Debug.Log($"[Debug] Client#{callerId} → EV/ResetParts");
+    }
+}
+
 public class EVStartTrainingCommand : IDebugCommand
 {
     public string Category => "EV";
@@ -148,6 +165,7 @@ public static class EVDebugCommands
         registry.Register(new EVJumpToStepCommand());
         registry.Register(new EVGetStatusCommand());
         registry.Register(new EVSetSafeModeCommand());
+        registry.Register(new EVResetPartsCommand());
         registry.Register(new EVStartTrainingCommand());
     }
 }

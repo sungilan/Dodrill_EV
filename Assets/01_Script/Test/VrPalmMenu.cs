@@ -228,7 +228,8 @@ public class VrPalmMenu : MonoBehaviour
         AddBtn("hints", "버튼 안내", new Vector2(cx, -ry * 1.5f), font);
         AddBtn("menubar", "메뉴바", new Vector2(-cx, -ry * 2.5f), font);
         AddBtn("infocards", "설명창", new Vector2(cx, -ry * 2.5f), font);
-        AddBtn("practice", "연습장", new Vector2(0f, -ry * 3.5f), font, BtnW * 2f + Gap);
+        AddBtn("steppopup", "단계 팝업", new Vector2(-cx, -ry * 3.5f), font);
+        AddBtn("practice", "연습장", new Vector2(cx, -ry * 3.5f), font);
         _root.SetActive(false);
     }
 
@@ -291,6 +292,9 @@ public class VrPalmMenu : MonoBehaviour
                 case "infocards":
                     SetText(b, ShowInfoCards ? "설명창 끄기" : "설명창 켜기");
                     break;
+                case "steppopup":
+                    SetText(b, GuideSystem.CenterPopupEnabled ? "단계 팝업 끄기" : "단계 팝업 켜기");
+                    break;
                 case "skip":
                     b.enabled = _confirmBtn != null && _confirmBtn.gameObject.activeInHierarchy && _confirmBtn.interactable;
                     break;
@@ -315,7 +319,7 @@ public class VrPalmMenu : MonoBehaviour
                     break;
                 case "practice":
                     b.enabled = !EvaluationMode.ClientIsEvaluation;
-                    SetText(b, VrPracticeTutorial.Running ? "연습장 끝내기" : "연습장 (기본 동작 연습)");
+                    SetText(b, VrPracticeTutorial.Running ? "연습장 끝내기" : "연습장");
                     break;
             }
             if (now < b.flashUntil) continue;
@@ -405,6 +409,9 @@ public class VrPalmMenu : MonoBehaviour
                 ShowInfoCards = !ShowInfoCards;
                 if (!ShowInfoCards) WarningPopup.Hide("equip");
                 else WarningPopup.Show("vrinfo", "설명창 켜짐", "장비 사용법 · 매뉴얼 카드가 다시 뜹니다", new Color(0.2f, 0.24f, 0.3f, 0.92f), 1.6f);
+                break;
+            case "steppopup":
+                GuideSystem.SetCenterPopupEnabled(!GuideSystem.CenterPopupEnabled);
                 break;
             case "skip":
                 if (_confirmBtn != null && _confirmBtn.interactable) _confirmBtn.onClick.Invoke();
