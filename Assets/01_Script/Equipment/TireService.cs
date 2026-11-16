@@ -184,6 +184,7 @@ public class TireService : NetworkBehaviour
         for (int w = 0; w < Wheels; w++)
         {
             var h = _hubs[w];
+            ResendIfStuck(w, h);
             for (int n = 0; n < NutsPerWheel; n++)
             {
                 var b = h.nuts[n];
@@ -614,6 +615,31 @@ public class TireService : NetworkBehaviour
         else SetWheelVisible(h, true);
     }
 
+    // (11/13) 내 화면에선 너트 5개가 다 끝났는데(분해 5/5) 서버 상태가 그대로면 1.5초마다 완료를 다시 알린다
+    // (진행도 전송이 상태 전환과 엇갈려 빠지면 다음 단계로 영영 안 넘어갔다)
+    private readonly float[] _allDoneSince = new float[Wheels];
+    private readonly float[] _resendAt = new float[Wheels];
+    private void ResendIfStuck(int w, Hub h)
+    {
+        if (h == null || w >= _state.Count || _state[w] == (int)WheelState.Off || h.snap != null) { _allDoneSince[w] = 0f; return; }
+        for (int n = 0; n < NutsPerWheel; n++)
+            if (h.nuts[n] == null || !h.nuts[n].isloosened) { _allDoneSince[w] = 0f; return; }
+        if (_allDoneSince[w] <= 0f) { _allDoneSince[w] = Time.unscaledTime; _resendAt[w] = Time.unscaledTime + 1.5f; return; }
+        if (Time.unscaledTime < _resendAt[w]) return;
+        _resendAt[w] = Time.unscaledTime + 1.5f;
+        Debug.LogWarning($"[TireService] 바퀴 {w}: 너트 5개 완료인데 서버 상태가 그대로({(WheelState)_state[w]}) → 완료 다시 전송");
+        WheelNutsDoneServerRpc(w, _state[w]);
+    }
+
+    /// <summary>클라이언트가 '이 상태에서 너트 5개 완료'를 다시 알린다. 서버 상태가 그 사이 바뀌었으면(이미 넘어감) 무시한다.</summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void WheelNutsDoneServerRpc(int w, int expectState)
+    {
+        if (w < 0 || w >= Wheels || w >= _state.Count || _state[w] != expectState || expectState == (int)WheelState.Off) return;
+        for (int n = 0; n < NutsPerWheel; n++) _nut[w * NutsPerWheel + n] = 1f;
+        FinishWheel(w);
+    }
+
     private void ApplyNut(int idx, float p)
     {
         int w = idx / NutsPerWheel, n = idx % NutsPerWheel;
@@ -727,7 +753,10 @@ public class TireService : NetworkBehaviour
             var h = _hubs[w];
             if (h == null || h.wheel == null) continue;
             int st = w < _state.Count ? _state[w] : (int)WheelState.Tight;
-            bool nearHub = hasCam && (HubCenter(w) - cp).sqrMagnitude < near * near;
+            // (11/13) 차 안(운전석)·차 밑(크리퍼)에서도 2.2m 안이라 너트 링·'분해 0/5' 카드·'타이어 교체' 안내가
+            // 차체를 뚫고(맨 앞 그리기) 보였다 → 바퀴 바깥쪽(차 옆)에 있을 때만 보여 준다
+            bool outside = hasCam && h.frame != null && Vector3.Dot(cp - HubCenter(w), -h.frame.up) > 0.05f;
+            bool nearHub = outside && (HubCenter(w) - cp).sqrMagnitude < near * near;
             bool anyActive = false;
             int done = 0;
 
@@ -747,7 +776,7 @@ public class TireService : NetworkBehaviour
             }
 
             // 타이어 가까이 가면 지금 할 일(분해/장착/조립)을 카드로 늘 보여 준다
-            bool guide = hasCam && (HubCenter(w) - cp).sqrMagnitude < 2.2f * 2.2f;
+            bool guide = outside && (HubCenter(w) - cp).sqrMagnitude < 2.2f * 2.2f;
             if (guide)
             {
                 h.labelUntil = Mathf.Max(h.labelUntil, Time.time + 0.3f);
@@ -1122,7 +1151,12 @@ public class TireService : NetworkBehaviour
         p = Mathf.Clamp01(p);
         if (p <= _nut[idx]) return;
         _nut[idx] = p;
+        FinishWheel(w);
+    }
 
+    [Server]
+    private void FinishWheel(int w)
+    {
         for (int n = 0; n < NutsPerWheel; n++) if (_nut[w * NutsPerWheel + n] < 1f) return;
 
         // 바퀴 하나의 너트 5개가 끝났다

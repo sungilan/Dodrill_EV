@@ -6,6 +6,7 @@ using FishNet.Broadcast;
 using FishNet.Connection;
 using FishNet.Transporting;
 using UnityEngine;
+using XRAirpotrSecurity;
 
 // ============================================================
 //  Openable.cs
@@ -56,12 +57,14 @@ public class Openable : MonoBehaviour
     private void OnEnable()
     {
         OpenableSync.Register(this);
+        if (!s_all.Contains(this)) s_all.Add(this);
         if (_grab != null) _grab.onGrab.AddListener(OnVRGrab);
     }
 
     private void OnDisable()
     {
         OpenableSync.Unregister(this);
+        s_all.Remove(this);
         if (_grab != null) _grab.onGrab.RemoveListener(OnVRGrab);
     }
 
@@ -83,10 +86,51 @@ public class Openable : MonoBehaviour
     private void OnVRGrab(Hand hand, Grabbable g)
     {
         StartCoroutine(ReleaseNextFrame(hand));
-        if (Time.unscaledTime - _lastVrToggle < 0.4f) return;   // 두 손가락이 동시에 잡힘 등
+        VrToggle(hand);
+    }
+
+    private void VrToggle(Hand hand)
+    {
+        if (Time.unscaledTime - _lastVrToggle < 0.4f) return;   // 두 손가락이 동시에 잡힘 / 그립 경로와 잡기 경로가 같이 옴
         _lastVrToggle = Time.unscaledTime;
         OpenableSync.Request(uniqueId, !IsOpen);
         EquipFx.Haptic(hand, 0.05f, 0.5f);
+    }
+
+    // ── VR 그립 직접 감지 ─────────────────────────────
+    // (11/13) 빨간 캐비닛 문을 그립으로 잡아도 안 열리던 문제: 문 손잡이가 몸체 안쪽으로 얇게 붙어 있어 AutoHand 잡기가
+    // 몸체·옆 물건을 먼저 맞히거나 키네마틱 문 대신 다른 것을 골라 onGrab 이 오지 않았다.
+    // 그립을 누르는 순간(OnTriggerGrab — 잡기 성공과 무관하게 매번 옴) 손바닥 가까이의 문·서랍을 직접 찾아 여닫는다.
+    private static readonly HashSet<Hand> s_hooked = new HashSet<Hand>();
+    private static readonly List<Openable> s_all = new List<Openable>();
+    private const float GripReach = 0.12f;
+
+    private static void HookHands()
+    {
+        foreach (var h in LocalHands.All)
+        {
+            if (h == null || s_hooked.Contains(h)) continue;
+            s_hooked.Add(h);
+            h.OnTriggerGrab += OnGripPressed;
+        }
+    }
+
+    private static void OnGripPressed(Hand hand, Grabbable g)
+    {
+        if (hand == null || hand.holdingObj != null) return;
+        Vector3 palm = hand.palmTransform != null ? hand.palmTransform.position : hand.transform.position;
+        Openable best = null; float bd = GripReach * GripReach;
+        foreach (var o in s_all)
+        {
+            if (o == null || !o.isActiveAndEnabled) continue;
+            foreach (var c in o.GetComponents<Collider>())
+            {
+                if (c == null || !c.enabled) continue;
+                float d = (c.ClosestPoint(palm) - palm).sqrMagnitude;
+                if (d < bd) { bd = d; best = o; }
+            }
+        }
+        if (best != null) best.VrToggle(hand);
     }
 
     private IEnumerator ReleaseNextFrame(Hand hand)
@@ -106,6 +150,7 @@ public class Openable : MonoBehaviour
 
     private void Update()
     {
+        if (Time.frameCount % 30 == 0 && Utils.GetPlatformType() == PlatformType.VR) HookHands();
         float target = IsOpen ? 1f : 0f;
         if (Mathf.Approximately(_t, target)) return;
         _movedUntil = Time.time + 0.8f;

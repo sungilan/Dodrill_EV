@@ -402,7 +402,9 @@ public class GdsTablet : MonoBehaviour
         if (want)
         {
             EquipFx.Notice("gds_vci", "VCI 연결됨", "차량과 통신을 시작합니다 — 원클릭 진단으로 전체 시스템을 검사하세요", EquipFx.Info, 3f, 5f);
-            if (dockOnConnectVR && Plat == PlatformType.VR) DockVR();
+            // (11/13) VR 거치 끔: 연결 순간 손에서 떼어 단자 기준 자리에 키네마틱으로 고정했는데, 그 자리가 계기판(흰 화면) 안쪽이라
+            // 손이 닿지 않아 다시 잡을 수 없었다. 연결은 무선으로 유지되므로 계속 들고 쓰거나 원하는 곳에 내려놓으면 된다.
+            // if (dockOnConnectVR && Plat == PlatformType.VR) DockVR();
             // 연결만으로 '진단기 연결' 단계를 끝내지 않는다 — 원클릭 진단을 마치면(PageScan) 단계 신호를 보낸다
         }
     }

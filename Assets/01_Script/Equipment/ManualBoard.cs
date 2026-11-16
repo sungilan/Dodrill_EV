@@ -121,10 +121,66 @@ public class ManualBoard : MonoBehaviour
         if (pageLabel != null) pageLabel.text = $"{p + 1} / {Pages.Length}";
     }
 
+    // VR: UI 레이저(HandCanvasPointer)로도 ◀ ▶ 를 누른다 — 예전엔 검지로 찔러야만 넘어갔다.
+    // 레이저는 캔버스만 맞혀서 3D 버튼에 반응하지 않으므로, 트리거를 누르는 순간 그 손 레이저 방향으로 직접 쏴 본다.
+    private Autohand.HandCanvasPointer[] _ptrs;
+    private float _nextPtrScan;
+    private readonly bool[] _trigPrev = new bool[2];
+
+    private void LaserUpdate()
+    {
+        if (Time.unscaledTime >= _nextPtrScan)
+        {
+            _nextPtrScan = Time.unscaledTime + 2f;
+            _ptrs = FindObjectsByType<Autohand.HandCanvasPointer>(FindObjectsSortMode.None);
+        }
+        if (_ptrs == null) return;
+        for (int side = 0; side < 2; side++)
+        {
+            var dev = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(side == 0 ? UnityEngine.XR.XRNode.LeftHand : UnityEngine.XR.XRNode.RightHand);
+            bool on = dev.isValid && dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out bool v) && v;
+            bool down = on && !_trigPrev[side];
+            _trigPrev[side] = on;
+            if (!down) continue;
+            foreach (var ptr in _ptrs)
+            {
+                if (ptr == null || !ptr.isActiveAndEnabled) continue;
+                var hand = ptr.GetComponentInParent<Autohand.Hand>();
+                if (hand != null && hand.left != (side == 0)) continue;
+                if (OnLaserPress(ptr)) return;
+            }
+        }
+    }
+
+    private bool OnLaserPress(Autohand.HandCanvasPointer ptr)
+    {
+        if (ptr == null || buttons == null || _vrCd > 0f) return false;
+        var nob = ptr.GetComponentInParent<FishNet.Object.NetworkObject>();
+        if (nob != null && nob.IsSpawned && !nob.IsOwner) return false;
+        var ray = new Ray(ptr.transform.position, ptr.transform.forward);
+        foreach (var b in buttons)
+        {
+            if (b == null) continue;
+            var c = b.GetComponent<Collider>();
+            if (c == null || !c.enabled) continue;
+            // 버튼 충돌체를 조금 키워서 맞힌다(손 떨림 여유)
+            var bounds = c.bounds; bounds.Expand(0.04f);
+            if (!bounds.IntersectRay(ray, out float dist) || dist > 8f) continue;
+            // 그 앞을 다른 물체가 가리면 무시
+            if (Physics.Raycast(ray, out var hit, dist - 0.05f, ~0, QueryTriggerInteraction.Ignore)
+                && !hit.collider.transform.IsChildOf(transform) && hit.collider != c && hit.collider.GetComponentInParent<Autohand.Hand>() == null) continue;
+            _vrCd = 0.4f;
+            b.OnPCClick();
+            return true;
+        }
+        return false;
+    }
+
     private void Update()
     {
         // VR: 검지 끝으로 버튼 누르기
         _vrCd -= Time.deltaTime;
+        if (_vrCd <= 0f && buttons != null) LaserUpdate();
         if (_vrCd > 0f || buttons == null) return;
         var hands = LocalHands.All;
         if (hands == null || hands.Count == 0) return;

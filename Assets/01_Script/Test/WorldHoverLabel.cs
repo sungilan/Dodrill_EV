@@ -63,7 +63,9 @@ public class WorldHoverLabel : MonoBehaviour
         if (_cam == null) return;
 
         // 카메라 방향으로 정면 고정 (Billboard)
-        transform.forward = _cam.transform.forward;
+        // (11/13) transform.forward 만 맞추면 위쪽이 세계 위로 고정돼, 크리퍼에 누워 위를 보면(시선 ≒ 위쪽)
+        // 방향 계산이 뒤틀려 카드 글자가 뒤집혀 보였다 → 카메라 회전을 그대로 써서 늘 화면에 바로 선 글자로
+        transform.rotation = _cam.transform.rotation;
 
         // 가까이서 보면 라벨이 화면을 가득 채우던 문제(모바일 'GDS 진단기 / 터치하여 집기'): 가까울수록 작게
         if (!_scaleSaved) { _baseScale = transform.localScale; _scaleSaved = true; }

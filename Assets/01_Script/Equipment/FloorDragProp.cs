@@ -117,6 +117,7 @@ public class FloorDragProp : MonoBehaviour
                 ? (_origConstraints | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ)
                 : _origConstraints;
         }
+        if (!held) _vrHeld = false;
         if (!held || _rb.isKinematic) return;
 
         // 높이·기울기 보정
@@ -126,12 +127,35 @@ public class FloorDragProp : MonoBehaviour
         Quaternion upright = fwd.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(fwd, Vector3.up) : _rb.rotation;
         if (Quaternion.Angle(_rb.rotation, upright) > 0.5f) _rb.MoveRotation(upright);
 
-        // 무게감: 수평 속도 제한
+        // VR: AutoHand 손 조인트에만 맡기면 바닥 고정(높이 잠금)과 손 당김이 서로 싸워 장비가 떨리고 튀었다(사다리 미끄러지며 날아감).
+        // 잡은 손의 잡은 지점이 실제 컨트롤러 위치로 가도록 수평 속도를 직접 준다.
         Vector3 v = _rb.linearVelocity; v.y = 0f;
+        if (VrDriveVelocity(out var drive)) v = drive;
         float cap = Mathf.Max(maxSpeed, 3f);   // VR: 걷는 속도로 끌어도 손보다 늦지 않게(손을 휘두르는 것만 막는다)
         if (v.magnitude > cap) v = v.normalized * cap;
         _rb.linearVelocity = v;
         _rb.angularVelocity = new Vector3(0f, Mathf.Clamp(_rb.angularVelocity.y, -2f, 2f), 0f);
+    }
+
+    private bool _vrHeld;
+
+    /// <summary>VR 로 잡고 있으면 잡은 지점→컨트롤러 수평 차이를 메우는 속도.</summary>
+    private bool VrDriveVelocity(out Vector3 v)
+    {
+        v = Vector3.zero;
+        int n = 0;
+        foreach (var h in LocalHands.All)
+        {
+            if (h == null || h.holdingObj == null || h.moveTo == null) continue;
+            if (h.holdingObj.transform != transform && !h.holdingObj.transform.IsChildOf(transform)) continue;
+            Vector3 grip = h.handGrabPoint != null ? h.handGrabPoint.position : h.transform.position;
+            Vector3 d = h.moveTo.position - grip; d.y = 0f;
+            v += d; n++;
+        }
+        _vrHeld = n > 0;
+        if (n == 0) return false;
+        v = v / n / Mathf.Max(0.005f, Time.fixedDeltaTime) * 0.5f;   // 반 프레임씩 따라잡아 튀지 않게
+        return true;
     }
 
     [Tooltip("VR: 잡은 손과 실제 컨트롤러가 이만큼 벌어지면 놓는다(m) — 손이 장비에 붙은 채 팔만 늘어나 보이지 않게")]
@@ -159,7 +183,7 @@ public class FloorDragProp : MonoBehaviour
     {
         if (!_floorInit) return;
 
-        if (LocalHeld)
+        if (LocalHeld && !_vrHeld)   // VR 은 물리(FixedUpdate)로만 움직인다 — 여기서 transform 을 옮기면 손 조인트와 싸워 떨렸다
         {
             // PC 들기·키네마틱으로 끌려온 경우에도 바닥 높이·수직 자세 유지.
             // 예전엔 여기서 속도를 1.6 m/s 로 묶어 걸어가면 장비가 손(들기 위치)보다 늦게 따라왔다 → 이제 내 이동 속도 그대로 따라온다

@@ -54,11 +54,28 @@ public class VrLyingPose : MonoBehaviour
         s.rightLeg.positionWeight = 0f; s.rightLeg.rotationWeight = 0f; s.rightLeg.bendGoalWeight = 0f;
 
         _topY = creeper != null ? TopOf(creeper) : _root.position.y + 0.12f;
+
+        // 본인 화면: 누우면 눈이 몸 위·안쪽에 놓여 내 옷·머리 메쉬가 시야를 가렸다 → 장갑(손)만 남기고 몸은 그림자만
+        _hidden.Clear(); _hiddenMode.Clear();
+        if (_vrPlayer != null && _vrPlayer.IsOwner)
+        {
+            foreach (var rd in _ik.GetComponentsInChildren<Renderer>(true))
+            {
+                if (rd == null || rd.name.Contains("Glove") || rd.name.ToLower().Contains("hand")) continue;
+                _hidden.Add(rd); _hiddenMode.Add(rd.shadowCastingMode);
+                rd.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+            }
+        }
     }
+
+    private readonly System.Collections.Generic.List<Renderer> _hidden = new System.Collections.Generic.List<Renderer>();
+    private readonly System.Collections.Generic.List<UnityEngine.Rendering.ShadowCastingMode> _hiddenMode = new System.Collections.Generic.List<UnityEngine.Rendering.ShadowCastingMode>();
 
     private void OnDisable()
     {
         if (_vrPlayer != null) _vrPlayer.lyingPose = false;
+        for (int i = 0; i < _hidden.Count; i++) if (_hidden[i] != null) _hidden[i].shadowCastingMode = _hiddenMode[i];
+        _hidden.Clear(); _hiddenMode.Clear();
         if (!_saved || _ik == null) return;
         _saved = false;
         var s = _ik.solver;

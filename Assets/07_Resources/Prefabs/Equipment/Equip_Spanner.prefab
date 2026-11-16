@@ -50,7 +50,7 @@ MonoBehaviour:
     posePositions: []
     poseRotations: []
     handOffset: {x: -0.09057411, y: 0.05314076, z: -0.02976605}
-    localQuaternionOffset: {x: -0.47241445, y: 0.33474924, z: -0.3447357, w: 0.73886726}
+    localQuaternionOffset: {x: -0.47241446, y: 0.33474925, z: -0.3447357, w: 0.7388673}
     globalHandScale: {x: 100.00004, y: 100.00003, z: 99.999985}
     fingerPoses:
     - poseRelativeMatrix:
@@ -540,7 +540,6 @@ GameObject:
   - component: {fileID: 9111964371993389198}
   - component: {fileID: 2987586141038492342}
   - component: {fileID: 8055788904176686652}
-  - component: {fileID: 7996898273209166106}
   m_Layer: 15
   m_Name: Equip_Spanner
   m_TagString: Untagged
@@ -832,52 +831,6 @@ MonoBehaviour:
   kind: 0
   insulated: 0
   degreesToComplete: 720
---- !u!114 &7996898273209166106
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4849204097587860209}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5143e42808965614a9bb64f4880aaf33, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: AutoHandAssembly::Autohand.GrabbablePose
-  ignoreMe: 0
-  rightPose:
-    rotationOffset: {x: 0, y: 0, z: 0}
-    posePositions: []
-    poseRotations: []
-    handOffset: {x: 0, y: 0, z: 0}
-    localQuaternionOffset: {x: 0, y: 0, z: 0, w: 0}
-    globalHandScale: {x: 0, y: 0, z: 0}
-    fingerPoses: []
-    poseID:
-      fingerLengths: []
-  rightPoseSet: 0
-  leftPose:
-    rotationOffset: {x: 0, y: 0, z: 0}
-    posePositions: []
-    poseRotations: []
-    handOffset: {x: 0, y: 0, z: 0}
-    localQuaternionOffset: {x: 0, y: 0, z: 0, w: 0}
-    globalHandScale: {x: 0, y: 0, z: 0}
-    fingerPoses: []
-    poseID:
-      fingerLengths: []
-  leftPoseSet: 0
-  poseName: 
-  poseIndex: 0
-  showEditorTools: 1
-  editorHand: {fileID: 0}
-  poseScriptable: {fileID: 0}
-  poseEnabled: 1
-  singleHanded: 0
-  showAdvanced: 1
-  positionWeight: 1
-  rotationWeight: 1
-  linkedPoses: []
 --- !u!1 &7590337890241923760
 GameObject:
   m_ObjectHideFlags: 0

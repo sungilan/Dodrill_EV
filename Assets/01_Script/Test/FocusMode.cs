@@ -43,6 +43,7 @@ public class FocusMode : MonoBehaviour
 
     private class Faded
     {
+        public List<Collider> blocked;
         public Material[] orig;
         public UnityEngine.Rendering.ShadowCastingMode shadow;
         public float lastHit;
@@ -277,6 +278,48 @@ public class FocusMode : MonoBehaviour
         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         _faded[r] = f;
         ClearBlocks(r);
+        f.blocked = BlockInteraction(r);
+    }
+
+    // ── 반투명이 된 것은 만질 수 없게 ─────────────────
+    // (11/13) 서비스 플러그 단계에서 커버가 반투명해져도 콜라이더·상호작용은 그대로라, 손이 커버를 계속 눌러 플러그를 못 잡았다.
+    // → 반투명인 동안 그 렌더러의 콜라이더와(상호작용 물체의 일부면) 그 물체의 콜라이더를 내 화면에서만 끈다. 작업 대상과 그 아래는 그대로.
+    private readonly Dictionary<Collider, int> _blockCount = new Dictionary<Collider, int>();
+
+    private List<Collider> BlockInteraction(Renderer r)
+    {
+        var list = new List<Collider>();
+        if (r == null || _target == null) return list;
+        Transform owner = r.transform;
+        for (var t = r.transform; t != null; t = t.parent)
+        {
+            if (t.GetComponent<Grabbable>() != null || t.GetComponent<Openable>() != null || t.GetComponent<ClickableAnimator>() != null
+                || t.GetComponent<IWorldClickable>() != null || t.GetComponent<InteractablePart>() != null)
+            { owner = t; break; }
+        }
+        if (_target.IsChildOf(owner) && owner != r.transform) owner = r.transform;   // 대상이 그 물체 안에 있으면 그 렌더러 것만
+        foreach (var c in owner.GetComponentsInChildren<Collider>())
+        {
+            if (c == null || !c.enabled || c.transform.IsChildOf(_target)) continue;
+            if (c.GetComponentInParent<Hand>() != null) continue;
+            _blockCount.TryGetValue(c, out int n);
+            _blockCount[c] = n + 1;
+            if (n == 0) c.enabled = false;
+            list.Add(c);
+        }
+        return list;
+    }
+
+    private void Unblock(Faded f)
+    {
+        if (f == null || f.blocked == null) return;
+        foreach (var c in f.blocked)
+        {
+            if (c == null || !_blockCount.TryGetValue(c, out int n)) continue;
+            if (n <= 1) { _blockCount.Remove(c); c.enabled = true; }
+            else _blockCount[c] = n - 1;
+        }
+        f.blocked = null;
     }
 
     // 도색(PaintSync)은 재질 칸마다 MaterialPropertyBlock 으로 색(알파 1)을 덮어쓴다 → 반투명 재질로 바꿔도 도색 색이 불투명하게 남아
@@ -297,6 +340,7 @@ public class FocusMode : MonoBehaviour
         {
             r.sharedMaterials = f.orig;
             r.shadowCastingMode = f.shadow;
+            Unblock(f);
         }
         _faded.Remove(r);
         PaintSync.Reshow(r);
@@ -305,7 +349,12 @@ public class FocusMode : MonoBehaviour
     private void RestoreAll()
     {
         foreach (var kv in _faded)
+        {
             if (kv.Key != null) { kv.Key.sharedMaterials = kv.Value.orig; kv.Key.shadowCastingMode = kv.Value.shadow; }
+            Unblock(kv.Value);
+        }
+        foreach (var kv in _blockCount) if (kv.Key != null) kv.Key.enabled = true;
+        _blockCount.Clear();
         var toReshow = new List<Renderer>(_faded.Keys);
         _faded.Clear();
         foreach (var r in toReshow) PaintSync.Reshow(r);

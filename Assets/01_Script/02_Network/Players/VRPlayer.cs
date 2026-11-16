@@ -97,6 +97,8 @@ public class VRPlayer : BasePlayer
             foreach (var go in localTrackingInfos) go.SetActive(true);
             // 본인 시점 아바타를 내 키에 맞춘다(까치발 방지) + 팔이 몸을 뚫지 않게 팔꿈치 벌리기
             if (GetComponent<LocalAvatarHeightFit>() == null) gameObject.AddComponent<LocalAvatarHeightFit>();
+            // 왼손에도 거리 잡기 레이저(오른손에만 있어 양손에 하나씩 들기가 어려웠다)
+            VrLeftLaser.Ensure(gameObject);
         }
         else
         {

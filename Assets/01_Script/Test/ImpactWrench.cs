@@ -67,7 +67,8 @@ public class ImpactWrench : MonoBehaviour
             return _sync == null || (_sync.IsOwner && _sync.IsGrabbed && !_sync.IsHolstered);   // 벨트에 꽂힌 렌치는 작업하지 않는다
         }
     }
-    private bool _progressShown;   // 이 렌치가 볼트 진행도 UI를 띄운 상태인지
+    private bool _progressShown;
+    private bool _needRelease;   // 이 렌치가 볼트 진행도 UI를 띄운 상태인지
 
     /// <summary>내가 든 렌치가 지금 겨누고 있는 볼트(다음 단계 안내가 같은 볼트에 링을 겹쳐 그리지 않게 쓴다).</summary>
     public static Bolt LocalTargetBolt { get; private set; }
@@ -124,6 +125,7 @@ public class ImpactWrench : MonoBehaviour
         if (_targetBolt != null && _mobileButtonShown) MobileWorkButton.SetLabel(_targetBolt.isAssembleMode ? "볼트 조이기" : "볼트 풀기");
 
         bool working = _buttonHeld;
+        if (!working) _needRelease = false;
         ApplyEffects(working);
         if (working) s_lastWorkTime = Time.unscaledTime;
 
@@ -147,7 +149,7 @@ public class ImpactWrench : MonoBehaviour
             // 작업이 끝난 볼트는 대기 상태로 두지 않고 대상에서 해제한다.
             if (_targetBolt.isloosened)
             {
-                if (working) TriggerBoltAnimation(_targetBolt.gameObject);
+                if (working) { TriggerBoltAnimation(_targetBolt.gameObject); _needRelease = true; }
                 ClearTarget();
                 return;
             }
@@ -313,6 +315,7 @@ public class ImpactWrench : MonoBehaviour
     {
         if (!other.CompareTag("Bolt")) return;
         if (!IsLocalHeld) return;
+        if (_needRelease) return;   // 하나를 끝냈으면 버튼을 놓았다 다시 눌러야 다음 볼트(휠 너트가 누른 채로 줄줄이 풀리던 문제)
 
         LogChanged("hit:" + other.name, $"<color=white>[ImpactWrench]</color> 볼트 충돌 감지: {other.name}. 검증 시작...");
 
@@ -502,14 +505,19 @@ public class ImpactWrench : MonoBehaviour
         {
             _handRestoreHooked = true;
             Application.onBeforeRender += OnBeforeRenderHands;
+            UnityEngine.Rendering.RenderPipelineManager.endContextRendering += OnEndRenderingHands;
         }
     }
+
+    // 손 뼈는 그리는 동안만 옮기고 그린 직후 되돌린다(잡는 동안 VRIK 가 그 뼈를 다시 쓰지 않아 그대로 두면 오프셋이 쌓였다)
+    private void OnEndRenderingHands(UnityEngine.Rendering.ScriptableRenderContext ctx, System.Collections.Generic.List<Camera> cams) => RestoreHandVisuals();
 
     // 보이는 손은 VRIK 아바타의 손 뼈다(AutoHand Hand 는 물리·추적용이라 옮겨도 장갑이 안 따라왔다).
     // 모든 LateUpdate(VRIK 풀이) 뒤, 스키닝 전에 불리는 onBeforeRender 에서 아바타 손 뼈를 렌치와 같은 만큼 옮긴다 — 다음 프레임 VRIK 가 다시 쓰므로 되돌릴 필요 없다.
     private void OnBeforeRenderHands()
     {
         if (this == null || !isActiveAndEnabled) return;
+        RestoreHandVisuals();
         if (!_handOffsetWanted || _handOffFrame < Time.frameCount - 1 || !_snapApplied) return;
         if (_grabbable == null) _grabbable = GetComponentInParent<Autohand.Grabbable>();
         if (_grabbable == null) return;
@@ -524,6 +532,7 @@ public class ImpactWrench : MonoBehaviour
             if (h == null) continue;
             var bone = AvatarHandBone(h);
             if (bone == null) continue;
+            _handVis.Add(bone); _handVisPos.Add(bone.localPosition); _handVisRot.Add(bone.localRotation);
             bone.SetPositionAndRotation(rotW * (bone.position - pivotW) + pivotW + dW, rotW * bone.rotation);
         }
     }
@@ -533,19 +542,23 @@ public class ImpactWrench : MonoBehaviour
     /// <summary>이 AutoHand 손에 대응하는 보이는 아바타(VRIK)의 손 뼈 — 숨은 IK 복사본은 제외, 가장 가까운 것(25cm 안).</summary>
     private Transform AvatarHandBone(Autohand.Hand h)
     {
+        // (11/13 버그) 예전엔 VRIK references.left/rightHand 를 옮겼는데, AutoHandVRIK 는 잡는 동안 그 참조를
+        // AutoHand 손의 handGrabPoint(잡기 기준점)로 바꿔 끼운다 → 매 프레임 잡기 기준점을 볼트 쪽으로 옮겨 놓고 되돌리지 않아
+        // 잡기 조인트가 렌치를 끌고 다녔다(볼트에 대면 밀려나고 손이 엿가락처럼 늘어나고 렌치가 이리저리 돌아다님).
+        // → 아바타 Animator 의 실제 손 뼈(스킨)만 옮긴다.
         if (_boneCache.TryGetValue(h, out var cached) && cached != null) return cached;
         var hidden = new System.Collections.Generic.HashSet<RootMotion.FinalIK.VRIK>();
         foreach (var ah in FindObjectsByType<Autohand.AutoHandVRIK>(FindObjectsSortMode.None)) if (ah != null && ah.invisibleIK != null) hidden.Add(ah.invisibleIK);
-        Transform best = null; float bestD = 0.25f * 0.25f;
+        Transform best = null; float bestD = 0.3f * 0.3f;
+        var side = h.left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
         foreach (var ik in FindObjectsByType<RootMotion.FinalIK.VRIK>(FindObjectsSortMode.None))
         {
             if (ik == null || hidden.Contains(ik) || !ik.isActiveAndEnabled) continue;
-            foreach (var b in new[] { ik.references.leftHand, ik.references.rightHand })
-            {
-                if (b == null) continue;
-                float d = (b.position - h.transform.position).sqrMagnitude;
-                if (d < bestD) { bestD = d; best = b; }
-            }
+            var anim = ik.GetComponentInChildren<Animator>();
+            var b = anim != null && anim.isHuman ? anim.GetBoneTransform(side) : null;
+            if (b == null || b.IsChildOf(h.transform)) continue;
+            float d = (b.position - h.transform.position).sqrMagnitude;
+            if (d < bestD) { bestD = d; best = b; }
         }
         if (best != null) _boneCache[h] = best;
         return best;
@@ -554,7 +567,7 @@ public class ImpactWrench : MonoBehaviour
     private void RestoreHandVisuals()
     {
         for (int i = 0; i < _handVis.Count; i++)
-            if (_handVis[i] != null) _handVis[i].SetPositionAndRotation(_handVisPos[i], _handVisRot[i]);
+            if (_handVis[i] != null) { _handVis[i].localPosition = _handVisPos[i]; _handVis[i].localRotation = _handVisRot[i]; }
         _handVis.Clear(); _handVisPos.Clear(); _handVisRot.Clear();
     }
 
@@ -663,6 +676,7 @@ public class ImpactWrench : MonoBehaviour
         if (_handRestoreHooked)
         {
             Application.onBeforeRender -= OnBeforeRenderHands;
+            UnityEngine.Rendering.RenderPipelineManager.endContextRendering -= OnEndRenderingHands;
             _handRestoreHooked = false;
         }
         RestoreHandVisuals();

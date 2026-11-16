@@ -1332,6 +1332,9 @@ public class SyncGrab : NetworkBehaviour
     private bool IsHandheldItem()
     {
         if(GetComponent<TaskItem>() == null) return false;
+        // 바닥에 끌고 다니는 장비(오일 받이·사다리·리프트)는 레이저로 당겨 오지 않는다 — 순간 당기기가 네트워크 위치와 엇갈려
+        // 장비가 두 개로 보이고(손 앞 + 원래 자리), 바닥 고정과 싸우며 손이 늘어났다. 가까이 가서 잡는다.
+        if(GetComponent<FloorDragProp>() != null) return false;
         if(GetComponentInParent<VehiclePartsManager>() != null) return false;
         for(var t = transform.parent; t != null; t = t.parent)
             if(t.name.Contains("Ioniq")) return false;

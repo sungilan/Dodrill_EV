@@ -42,6 +42,13 @@ public class AirImpactWrench : EquipmentBase
     private Bolt _lastBroken;
     private float _lastBrokenAt;
 
+    // (11/13) 휠 너트 여러 개가 '두르륵' 한꺼번에 풀리던 문제: 매 프레임 가장 가까운 볼트를 새로 골라
+    // 너트 사이를 오가거나, 하나가 끝나면 트리거를 누른 채로 옆 너트로 바로 넘어갔다.
+    // → 작업 중인 볼트를 붙잡아 두고, 하나를 끝내면 트리거를 놓았다 다시 당겨야 다음 볼트를 시작한다.
+    private Bolt _workBolt;
+    private bool _needRelease;
+    private ToolRenderSnap _snap;
+
     protected override void Awake()
     {
         base.Awake();
@@ -52,6 +59,7 @@ public class AirImpactWrench : EquipmentBase
     {
         base.OnDestroy();
         s_all.Remove(this);
+        _snap?.Dispose();
     }
 
     public static bool AnyHasSocket(int size)
@@ -109,14 +117,44 @@ public class AirImpactWrench : EquipmentBase
         ApplySocketVisual();
         EquipFx.Drive(_rattle, run ? 0.75f : 0f, 1f);
 
-        if (!IsLocalHeld) { HideMobileSocketButton(); _prevHands = HandCount; return; }
+        if (!run) { _needRelease = false; _workBolt = null; }
+        if (!IsLocalHeld) { HideMobileSocketButton(); _prevHands = HandCount; _snap?.Tick(false, default, Quaternion.identity, default); return; }
 
         if (run && IsVR && Time.frameCount % 3 == 0) HapticAll(0.04f, 0.55f);
 
         TrySocketChange();
         TryHoseConnect();
         if (run) Work();
+        UpdateSnap();
         _prevHands = HandCount;
+    }
+
+    // ── 볼트에 착 붙기 (VR, 보이는 모양만) ─────────────
+    // 임팩트 렌치처럼 소켓 끝이 볼트 축에 맞춰 붙는다. 모델·손은 그리는 동안만 옮겨 물리(손잡이 콜라이더·잡기)는 그대로.
+    private void UpdateSnap()
+    {
+        if (!IsVR || _socket.Value == 0) { _snap?.Tick(false, default, Quaternion.identity, default); return; }
+        if (_snap == null)
+        {
+            var vis = transform.Find("Visual");
+            _snap = new ToolRenderSnap(Grab, vis, anvil);
+        }
+        var a = anvil != null ? anvil : transform;
+        Vector3 tip = SocketTip;
+        var bolt = _workBolt != null && !_workBolt.isloosened ? _workBolt : BoltWork.Nearest(tip, 0.08f);
+        bool want = false;
+        Quaternion r = Quaternion.identity; Vector3 d = Vector3.zero;
+        if (bolt != null && !bolt.isloosened && bolt.gameObject.activeInHierarchy)
+        {
+            Vector3 head = ToolRenderSnap.BoltHead(bolt, out var outDir);
+            if (Vector3.Angle(a.forward, -outDir) < 45f && Vector3.Distance(tip, head) < 0.08f)
+            {
+                r = Quaternion.FromToRotation(a.forward, -outDir);
+                d = head - tip;
+                want = true;
+            }
+        }
+        _snap.Tick(want, tip, r, d);
     }
 
     private void LateUpdate()
@@ -250,9 +288,15 @@ public class AirImpactWrench : EquipmentBase
     private void Work()
     {
         Vector3 tip = SocketTip;
-        var bolt = BoltWork.Nearest(tip, 0.06f);
+        if (_needRelease) return;   // 방금 하나를 끝냈다 — 트리거를 놓았다 다시 당겨야 다음 볼트
+        Bolt bolt = null;
+        if (_workBolt != null && _workBolt.gameObject.activeInHierarchy && !_workBolt.isloosened
+            && (!IsVR || (_workBolt.transform.position - tip).sqrMagnitude < 0.12f * 0.12f))
+            bolt = _workBolt;   // 작업 중인 볼트를 계속(옆 너트로 튀지 않게)
+        if (bolt == null) bolt = BoltWork.Nearest(tip, 0.06f);
         if (bolt == null && !IsVR) bolt = AimedBolt();   // PC·모바일: 화면 가운데로 겨눈 볼트
         if (bolt == null || bolt.isloosened) return;
+        _workBolt = bolt;
         if (!IsVR) tip = bolt.transform.position;
         int s = _socket.Value;
 
@@ -289,6 +333,7 @@ public class AirImpactWrench : EquipmentBase
         var free = bolt.GetComponent<FreeWorkBolt>();
         if (free != null) k = ImpactFeel(bolt, free);
         bolt.InteractWithTool(1f / t * speed * k * BoltWork.SpeedFactor(bolt) * Time.deltaTime, (anvil != null ? anvil : transform).forward);
+        if (bolt.isloosened) { _needRelease = true; _workBolt = null; }
         if (free != null)
         {
             string act = bolt.isAssembleMode ? "휠 너트 조이는 중" : "휠 너트 푸는 중";

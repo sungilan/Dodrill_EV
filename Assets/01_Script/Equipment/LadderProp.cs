@@ -48,7 +48,7 @@ public class LadderProp : MonoBehaviour
     }
 
     private void OnEnable() { if (!s_all.Contains(this)) s_all.Add(this); }
-    private void OnDisable() { s_all.Remove(this); }
+    private void OnDisable() { s_all.Remove(this); if (_rungs != null) _rungs.SetActive(false); }
 
     /// <summary>
     /// PC·모바일 아바타가 이 위치(월드)에 서 있을 때 사다리 때문에 더해야 하는 높이(m).
@@ -187,15 +187,26 @@ public class LadderProp : MonoBehaviour
         if (Utils.GetPlatformType() == PlatformType.VR) BuildRungs(b, bottom);
     }
 
-    /// <summary>VR: 각 발판 앞 모서리에 잡고 당겨 오를 수 있는 가로대(AutoHand Climbable)를 만든다.</summary>
+    /// <summary>
+    /// VR: 각 발판 앞 모서리에 잡고 당겨 오를 수 있는 가로대(AutoHand Climbable)를 만든다.
+    /// (11/13) AutoHand 데모(Zone·MonkeyBar)와 같은 구성으로 다시 만듦:
+    ///  · 예전엔 가로대가 사다리(동적 Rigidbody + SyncGrab Grabbable) 의 자식이라, 사다리 Grabbable 의 makeChildrenGrabbable 이
+    ///    가로대 충돌체까지 '사다리 손잡이'로 삼아 가로대를 잡으면 사다리 전체가 손에 끌려 흔들리고 미끄러지듯 날아갔다
+    ///  · 이제 가로대는 사다리 밖의 별도 루트(키네마틱 Rigidbody 하나)에 모으고, 각 가로대는 Grabbable(body=그 루트) + Climbable 만 가진다
+    ///  · 루트는 매 프레임 사다리 자세를 따라간다(사다리를 옮겨도 가로대가 같이 이동)
+    /// </summary>
+    private Rigidbody _rungBody;
     private void BuildRungs(Bounds b, float bottom)
     {
-        // 손이 잡는 레이어 = 이 프로젝트 장비와 같은 Interactable(15). 예전엔 AutoHand 기본값(Grabbable, 7)이라
-        // 손의 잡기 마스크에 안 걸려 가로대를 잡을 수 없었다
         int layer = LayerMask.NameToLayer("Interactable");
         if (layer < 0) layer = gameObject.layer;
-        _rungs = new GameObject("Rungs");
-        _rungs.transform.SetParent(transform, false);
+        _rungs = new GameObject($"{name}_ClimbRungs");
+        _rungs.transform.SetPositionAndRotation(transform.position, transform.rotation);
+        _rungs.transform.localScale = transform.lossyScale;
+        _rungBody = _rungs.AddComponent<Rigidbody>();
+        _rungBody.isKinematic = true;
+        _rungBody.useGravity = false;
+        _rungBody.interpolation = RigidbodyInterpolation.None;
         for (int i = 0; i < _n; i++)
         {
             float h = bottom + _rise * (i + 1) + 0.03f;
@@ -207,18 +218,33 @@ public class LadderProp : MonoBehaviour
                 r.transform.SetParent(_rungs.transform, false);
                 r.transform.localPosition = new Vector3(b.center.x, h, b.center.z) + (_alongX ? new Vector3(sgn * w, 0f, 0f) : new Vector3(0f, 0f, sgn * w));
                 var bc = r.AddComponent<BoxCollider>();
-                bc.size = _alongX ? new Vector3(0.04f, 0.04f, _side * 1.6f) : new Vector3(_side * 1.6f, 0.04f, 0.04f);
-                var rb = r.AddComponent<Rigidbody>();
-                rb.isKinematic = true;
-                rb.useGravity = false;
+                bc.size = _alongX ? new Vector3(0.05f, 0.05f, _side * 1.6f) : new Vector3(_side * 1.6f, 0.05f, 0.05f);
                 var g = r.AddComponent<Grabbable>();
+                g.body = _rungBody;
                 g.parentOnGrab = false;
                 g.singleHandOnly = false;
-                g.allowHeldSwapping = false;
+                g.allowHeldSwapping = true;
+                g.makeChildrenGrabbable = false;
                 var c = r.AddComponent<Climbable>();
                 c.axis = Vector3.one;
             }
         }
+    }
+
+    private void FollowRungs()
+    {
+        if (_rungs == null) return;
+        var t = _rungs.transform;
+        if ((t.position - transform.position).sqrMagnitude > 1e-8f || Quaternion.Angle(t.rotation, transform.rotation) > 0.01f)
+        {
+            t.SetPositionAndRotation(transform.position, transform.rotation);
+            if (_rungBody != null) { _rungBody.position = transform.position; _rungBody.rotation = transform.rotation; }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (_rungs != null) Destroy(_rungs);
     }
 
     private void LateUpdate()
@@ -227,6 +253,7 @@ public class LadderProp : MonoBehaviour
         bool held = _sync != null && _sync.IsGrabbed;
         if (_steps.activeSelf == held) _steps.SetActive(!held);
         if (_rungs != null && _rungs.activeSelf == held) _rungs.SetActive(!held);
+        if (!held) FollowRungs();
 
         // 가까이 가면 오르는 방법 안내
         var cam = Camera.main;
