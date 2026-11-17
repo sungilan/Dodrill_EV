@@ -209,7 +209,8 @@ public class CarPartService : NetworkBehaviour
             id = "Tailgate", name = "테일게이트",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
             hint = "12V (−) 터미널을 분리하고 테일게이트 로어 트림을 뗀 뒤 와이어링 하네스 커넥터와 파워 테일게이트 드라이브 유닛을 분리하고 장착 볼트(2.2~2.7)를 푼다 (2인 이상 작업)",
-            objects = new[] { "SM_Ioniq_Back" },
+            // 11/17: 위쪽 외판·뒷유리·안쪽 패널이 차체 메시(SM_Ioniq_Electric)에 붙어 있어 테일게이트를 떼도 차에 남았음 → CarBodyPanelSplitter 로 떼어 낸 노드를 같이 묶는다
+            objects = new[] { "SM_Ioniq_Back", "SM_Tailgate_Upper", "SM_Tailgate_Glass", "SM_Tailgate_Inner" },
             bolts = new[] {
                 new F(-0.5047f, -0.6045f, 1.3825f, 0f, -1f, 0f), new F(0.4953f, -0.6061f, 1.3825f, 0f, -1f, 0f),
                 new F(-0.5047f, -0.604f, 1.4625f, 0f, -1f, 0f),  new F(0.4953f, -0.5877f, 1.4625f, 0f, -1f, 0f) },
@@ -394,7 +395,8 @@ public class CarPartService : NetworkBehaviour
         //  11/16 추가(2) — 차를 이루는 나머지 부품: 12V 배터리·브레이크(차 모델 메시) + 모델에 없는 하부·구동 내부 부품(생성 파츠).
         //  정비 매뉴얼 구성부품 목록(배터리 제어 시스템: 인버터·ICCU·고전압 정션 블록, 프런트/리어 서스펜션: 스티어링 기어박스·스태빌라이저 바·스트럿·쇽 업소버)을 따름.
         //  생성 파츠는 전부 외판 안쪽(프렁크·후드·언더 커버 밑)에 있어 바깥 부품을 떼기 전에는 보이지 않는다.
-        //  ※ 펜더·루프·유리·미러·도어 패널 등 외판은 차 모델에서 SM_Ioniq_Electric 한 덩어리라 분리할 수 없다(모델러가 메시를 나눠야 한다).
+        //  ※ 펜더·사이드 실·미러·스포일러·와이퍼·테일게이트 위쪽은 11/17 에 CarBodyPanelSplitter 로 SM_Ioniq_Electric 에서 잘라 냈다(맨 아래 부위 참고).
+        //    루프·쿼터 패널·윈드쉴드(접착식)는 차체에 남긴다.
         // ══════════════════════════════════════════════════════════════
         new PartDef {
             id = "Battery12VCover", name = "12V 배터리 커버",
@@ -713,6 +715,75 @@ public class CarPartService : NetworkBehaviour
             bolts = new[] { new F(1.48f, 0.315f, -0.30f, 0f, -1f, 0f), new F(1.48f, 0.315f, 0.30f, 0f, -1f, 0f) },
             parent = "RearSuspension",
             tMin = 5.0f, tMax = 6.5f, specPart = "리어 스태빌라이저 바 볼트", specSource = "서스펜션 시스템 — 체결 토크 — 리어 스태빌라이저 바" },
+
+        // ══════════════════════════════════════════════════════════════
+        //  11/17 추가 — 차체 외판(SM_Ioniq_Electric 한 덩어리)을 정비지침서 구성부품 경계로 잘라 낸 부품 (Editor/CarBodyPanelSplitter)
+        //  노드 변환이 원본 차체/도어와 같으므로 볼트 좌표도 그 로컬 기준. 토크는 바디 — 체결 토크표.
+        // ══════════════════════════════════════════════════════════════
+        new PartDef {
+            id = "FenderFL", name = "프런트 펜더(왼쪽)",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "12V (−) 분리 → 헤드 램프 → 프런트 범퍼(마운팅 브라켓) → 앞 왼쪽 휠을 떼고 휠 가드·펜더 인슐레이터를 분리한 뒤, 후드 쪽 펜더 볼트(0.8~1.2)와 도어 쪽 펜더 너트(0.8~1.1)를 푼다",
+            objects = new[] { "SM_FenderFL" },
+            bolts = new[] {
+                new F(-0.9202f, 1.8613f, -0.5993f, 0f, 0f, -1f), new F(-0.7091f, 1.5002f, -0.8227f, 0f, 0f, -1f),
+                new F(-0.7131f, 1.1924f, -0.9122f, 0f, 0f, -1f), new F(-0.9572f, 1.0695f, -0.3512f, 0f, -1f, 0f) },
+            requires = new[] { "FrontBumper", "Headlamp" }, needsWheel = 0,
+            tMin = 0.8f, tMax = 1.2f, specPart = "펜더 볼트", specSource = "바디 — 체결 토크(펜더 볼트 0.8~1.2, 도어 측 펜더 너트 0.8~1.1) · 펜더 탈거 절차" },
+        new PartDef {
+            id = "FenderFR", name = "프런트 펜더(오른쪽)",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "12V (−) 분리 → 헤드 램프 → 프런트 범퍼(마운팅 브라켓) → 앞 오른쪽 휠을 떼고 휠 가드·펜더 인슐레이터를 분리한 뒤, 후드 쪽 펜더 볼트(0.8~1.2)와 도어 쪽 펜더 너트(0.8~1.1)를 푼다",
+            objects = new[] { "SM_FenderFR" },
+            bolts = new[] {
+                new F(0.9202f, 1.8613f, -0.5993f, 0f, 0f, -1f), new F(0.7091f, 1.5002f, -0.8227f, 0f, 0f, -1f),
+                new F(0.7131f, 1.1924f, -0.9122f, 0f, 0f, -1f), new F(0.9572f, 1.0695f, -0.3512f, 0f, -1f, 0f) },
+            requires = new[] { "FrontBumper", "Headlamp" }, needsWheel = 1,
+            tMin = 0.8f, tMax = 1.2f, specPart = "펜더 볼트", specSource = "바디 — 체결 토크(펜더 볼트 0.8~1.2, 도어 측 펜더 너트 0.8~1.1) · 펜더 탈거 절차" },
+        new PartDef {
+            id = "SideSillL", name = "사이드 실 몰딩(왼쪽)",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "펜더(펜더 가니쉬)를 먼저 떼고 도어를 연 상태에서 아래쪽 스크류를 풀고 클립을 빼 떼어 낸다 (손상된 클립은 교환)",
+            objects = new[] { "SM_SideSillL" },
+            bolts = new[] { new F(-0.9155f, 0.6804f, -0.0786f, -1f, 0f, 0f), new F(-0.9093f, -0.2691f, -0.0799f, -1f, 0f, 0f), new F(-0.8772f, -1.0924f, -0.0487f, -1f, 0f, 0f) },
+            requires = new[] { "FenderFL" },
+            tMin = 1.0f, tMax = 1.4f, specPart = "사이드 실 몰딩 스크류(M6)", specSource = SrcM6 },
+        new PartDef {
+            id = "SideSillR", name = "사이드 실 몰딩(오른쪽)",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "펜더(펜더 가니쉬)를 먼저 떼고 도어를 연 상태에서 아래쪽 스크류를 풀고 클립을 빼 떼어 낸다 (손상된 클립은 교환)",
+            objects = new[] { "SM_SideSillR" },
+            bolts = new[] { new F(0.9155f, 0.6804f, -0.0786f, 1f, 0f, 0f), new F(0.9093f, -0.2691f, -0.0799f, 1f, 0f, 0f), new F(0.8772f, -1.0924f, -0.0487f, 1f, 0f, 0f) },
+            requires = new[] { "FenderFR" },
+            tMin = 1.0f, tMax = 1.4f, specPart = "사이드 실 몰딩 스크류(M6)", specSource = SrcM6 },
+        new PartDef {
+            id = "MirrorL", name = "아웃사이드 미러(왼쪽)", parent = "DoorFL",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "실차는 도어를 단 채 12V (−) → 프런트 도어 트림 → 미러 커넥터 분리 → 장착 너트(0.7~1.1)를 푼다. 실습에선 떼어 낸 도어를 내려놓고 도어 안쪽에서 너트를 푼다",
+            objects = new[] { "SM_MirrorL" },
+            bolts = new[] { new F(-0.0229f, -0.2235f, -0.4441f, 1f, 0f, 0f), new F(-0.0229f, -0.2435f, -0.3841f, 1f, 0f, 0f), new F(-0.0229f, -0.2035f, -0.3841f, 1f, 0f, 0f) },
+            tMin = 0.7f, tMax = 1.1f, specPart = "아웃사이드 미러 장착 너트", specSource = "바디 — 체결 토크(아웃사이드 미러 너트 0.7~1.1)" },
+        new PartDef {
+            id = "MirrorR", name = "아웃사이드 미러(오른쪽)", parent = "DoorFR",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "실차는 도어를 단 채 12V (−) → 프런트 도어 트림 → 미러 커넥터 분리 → 장착 너트(0.7~1.1)를 푼다. 실습에선 떼어 낸 도어를 내려놓고 도어 안쪽에서 너트를 푼다",
+            objects = new[] { "SM_MirrorR" },
+            bolts = new[] { new F(0.7762f, 0.7544f, -0.2133f, -1f, 0f, 0f), new F(0.7762f, 0.6944f, -0.2333f, -1f, 0f, 0f), new F(0.7762f, 0.6944f, -0.1933f, -1f, 0f, 0f) },
+            tMin = 0.7f, tMax = 1.1f, specPart = "아웃사이드 미러 장착 너트", specSource = "바디 — 체결 토크(아웃사이드 미러 너트 0.7~1.1)" },
+        new PartDef {
+            id = "RearSpoiler", name = "리어 스포일러", parent = "Tailgate",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "테일게이트 사이드 트림·플러그 홀을 열고 보조 정지등 커넥터를 분리한 뒤 안쪽 너트(0.5~0.8)를 풀어 스포일러를 떼어 낸다",
+            objects = new[] { "SM_RearSpoiler" },
+            bolts = new[] { new F(-0.3172f, -1.5316f, -1.3087f, 0f, 0f, 1f), new F(0.3172f, -1.5316f, -1.3087f, 0f, 0f, 1f) },
+            tMin = 0.5f, tMax = 0.8f, specPart = "리어 스포일러 너트", specSource = "바디 — 체결 토크(리어 스포일러 너트 0.5~0.8)" },
+        new PartDef {
+            id = "WiperFront", name = "프런트 와이퍼 암",
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "와이퍼 암 너트 캡을 열고 너트(2.3~2.7)를 풀어 암을 뺀다. 카울 탑 커버·와이퍼 모터&링크(0.7~1.1) 작업의 선행 단계",
+            objects = new[] { "SM_WiperFront" },
+            bolts = new[] { new F(-0.30f, 1.307f, -0.94f, 0f, 0f, -1f), new F(0.30f, 1.307f, -0.94f, 0f, 0f, -1f) },
+            tMin = 2.3f, tMax = 2.7f, specPart = "프런트 와이퍼 암 너트", specSource = "바디 — 체결 토크(와이퍼 암 앞 2.3~2.7)" },
     };
 
     /// <summary>이 볼트가 속한 부위의 한글 이름(차체 부품 탈거·장착 볼트가 아니면 null).</summary>
