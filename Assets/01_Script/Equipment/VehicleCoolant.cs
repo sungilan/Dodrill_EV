@@ -411,9 +411,13 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
         _target = Mathf.Clamp01(v);
     }
 
+    /// <summary>모터 냉각수 리저버의 현재 수위(0~1) — GDS 에어빼기·냉각 회로 규칙(CarPartRules)이 읽는다</summary>
+    public static float MotorLevel = 0.35f;
+
     private void OnLevelState(float v)
     {
         _level = Mathf.Clamp01(v);
+        if (_levelId == "veh/coolantlevel") MotorLevel = _level;
         if (FishNet.InstanceFinder.IsServerStarted) _serverSent = _level;
     }
 

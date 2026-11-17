@@ -735,6 +735,17 @@ public class TireService : NetworkBehaviour
 
     private static bool IsVRPlatform => Utils.GetPlatformType() == PlatformType.VR;
 
+    /// <summary>바퀴(차에 달린 SM_Wheel)와 레이어 — 바퀴에 붙는 점검 클릭 대상이 쓴다</summary>
+    public bool TryGetWheel(int w, out Transform wheel, out int layer)
+    {
+        var h = w >= 0 && w < Wheels ? _hubs[w] : null;
+        wheel = h != null ? h.wheel : null;
+        layer = wheel != null ? wheel.gameObject.layer : 0;
+        return wheel != null;
+    }
+
+    public bool IsWheelTight(int w) => w >= 0 && w < _state.Count && _state[w] == (int)WheelState.Tight;
+
     public Vector3 HubCenter(int w)
     {
         var h = _hubs[w];

@@ -178,6 +178,8 @@ public class CarPartListPanel : MonoBehaviour
             if (kids[p] > 0) tag += $" · 어셈블리(세부 {kids[p]}개)";
             if (!string.IsNullOrEmpty(d.parent)) tag += $" · {NameOf(defs, d.parent)} 안";
             if (d.hv) tag += " · 고전압";
+            string su = CarPartRules.SingleUseOf(d.id);
+            if (su != null) tag += $" · 재사용 금지: {su}";
             string tagText = tag.Length > 0 ? $" <size=70%><color=#9FB4C8>{tag.Substring(3)}</color></size>" : "";
 
             if (st == (int)CarPartService.PartState.Tight)
@@ -207,6 +209,13 @@ public class CarPartListPanel : MonoBehaviour
         else sb.Append("<size=76%><color=#9FB4C8>떼어낸 부위를 들어 원래 자리로 가져가면 다시 끼울 수 있습니다.</color></size>\n");
         if (lines[_tab].Count == 0) sb.Append("\n(없음)");
         foreach (var l in lines[_tab]) sb.Append(l).Append('\n');
+        if (CarPartRules.CoolantAirValue == 1) sb.Append("\n<size=76%><color=#FFB000>냉각 회로가 열려 있습니다 — 조립 후 GDS 에어빼기 필요</color></size>");
+        else if (CarPartRules.CoolantAirValue == 2) sb.Append("\n<size=76%><color=#FFB000>냉각 회로 에어빼기 필요 (GDS → 부가 기능)</color></size>");
+        if (ManualInspection.Summary != null) sb.Append($"\n<size=76%><color=#9FD3FF>{ManualInspection.Summary}</color></size>");
+        if (SuspensionInspection.Summary != null) sb.Append($"\n<size=76%><color=#9FD3FF>{SuspensionInspection.Summary}</color></size>");
+        string pend = CarPartRules.PendingLearnNames();
+        if (pend != null) sb.Append($"\n<size=76%><color=#FFB000>GDS 학습·조정 필요: {pend}</color></size>");
+        if (CarPartRules.ReuseCount > 0) sb.Append($"\n<size=76%><color=#FF6B6B>재사용 금지 부품을 그대로 끼운 횟수: {CarPartRules.ReuseCount}</color></size>");
         _body.text = sb.ToString();
     }
 

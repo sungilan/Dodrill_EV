@@ -968,17 +968,25 @@ public class GdsTablet : MonoBehaviour
             ("insul", "절연파괴 부품 검사", "고전압 절연파괴(P0AA6) 발생 부위를 3구역으로 구별"),
             ("weld", "BMS 릴레이 융착 점검", "메인 릴레이·프리차지 릴레이 융착 여부"),
             ("cell", "셀 전압 · 편차 점검", "192셀 최대/최소 전압과 편차(40 mV 이하)"),
-            ("bleed", "냉각수 에어빼기", "전동 워터펌프 구동 · 밸브 전환으로 냉각 회로 공기 배출"),
+            ("bleed", "냉각수 에어빼기", CarPartRules.NeedsBleed && !GdsModel.IsCoolantScenario
+                ? "<color=#FFB000>에어빼기 필요 — 냉각 회로를 열었던 차량입니다</color>"
+                : "전동 워터펌프 구동 · 밸브 전환으로 냉각 회로 공기 배출"),
+            ("soh", "배터리 SOC · SOH · 전압 점검", "SOC 0~100% · SOH 90% 이상 · 팩 전압 480~826 V"),
+            ("epb", "EPB 브레이크 패드 교체모드", CarPartRules.LearnNeeded("epb") ? "<color=#FFB000>필요 — 교환한 부품이 있습니다</color>" : "리어 캘리퍼 탈거 전 C2(해제) · 장착 후 C1(체결)"),
+            ("ieb", "IEB 영점 설정", CarPartRules.LearnNeeded("ieb") ? "<color=#FFB000>필요 — 교환한 부품이 있습니다</color>" : "압력센서 · PTS · 종방향 G센서 영점"),
+            ("tpms", "TPMS 센서 ID 등록(무선)", "휠 4개 센서 ID 읽기 → ECU 쓰기"),
+            ("mdps", "MDPS 튜닝 사양 설정", CarPartRules.LearnNeeded("mdps") ? "<color=#FFB000>필요 — 교환한 부품이 있습니다</color>" : "스티어링 기어박스 교환 후 튜닝 사양 코드 설정"),
             ("airtight", "고전압 배터리 팩 및 냉각수라인 기밀 점검", "기밀 시험기(ULT-M100) 블루투스 연결 · 차량 연결 불필요"),
         };
         var funcs = linked ? all : Array.FindAll(all, f => f.id == "airtight");
         for (int i = 0; i < funcs.Length; i++)
         {
             var f = funcs[i];
-            var b = Btn(_content, "", Card, 40, 10 + i * 112, 1200, 104, () => Go("run", f.id + ":0"));
-            T(b.transform, $"<b>{f.t}</b>", 30, Color.white, TextAlignmentOptions.Left, 30, 6, 900, 54);
-            T(b.transform, f.s, 22, Dim, TextAlignmentOptions.Left, 30, 56, 1000, 42);
-            T(b.transform, "실행 ▶", 24, Accent, TextAlignmentOptions.Right, 1000, 0, 170, 104);
+            int col = i % 2, row = i / 2;   // 2열 — 항목이 10개라 한 줄로는 화면을 넘는다
+            var b = Btn(_content, "", Card, 40 + col * 610, 10 + row * 112, 590, 104, () => Go("run", f.id + ":0"));
+            T(b.transform, $"<b>{f.t}</b>", f.t.Length > 20 ? 22 : 26, Color.white, TextAlignmentOptions.Left, 20, 6, 560, 50);
+            T(b.transform, f.s, 18, Dim, TextAlignmentOptions.Left, 20, 56, 480, 42);
+            T(b.transform, "실행 ▶", 22, Accent, TextAlignmentOptions.Right, 440, 56, 130, 42);
         }
         _footer.text = linked ? "부가 기능은 POWER ON (EV READY 금지) 상태에서 실행합니다"
                               : "차량 통신 없음 — 차량 연결이 필요 없는 기능만 표시합니다";
@@ -991,10 +999,13 @@ public class GdsTablet : MonoBehaviour
         if (c >= 0) { id = Arg.Substring(0, c); phase = Arg.Substring(c + 1); }
         string name = id == "insul" ? "절연파괴 부품 검사" : id == "weld" ? "BMS 릴레이 융착 점검" : id == "bleed" ? "냉각수 에어빼기"
                     : id == "airtight" ? "고전압 배터리 팩 및 냉각수라인 기밀 점검" : "셀 전압 · 편차 점검";
+        var proc = Array.Find(Procs, x => x.id == id);
+        if (proc.id != null) name = proc.name;
         _title.text = name;
         if (id == "airtight") { RunAirtight(phase); return; }   // 시험기와 연결 — 차량 통신 불필요
         if (!NeedVci(name)) return;
         if (id == "bleed") { RunAirBleed(phase); return; }
+        if (proc.id != null) { RunProc(proc, phase); return; }
 
         if (phase == "0")
         {
@@ -1057,6 +1068,134 @@ public class GdsTablet : MonoBehaviour
         });
     }
 
+    // ── 매뉴얼 기반 점검 · 조정 기능 (SOC/SOH/전압 · EPB · IEB · TPMS · MDPS) ──
+    // 모두 같은 흐름: 실행 조건 확인 → (필요 부품이 차에 달려 있어야 함) → 단계별 진행 → 결과.
+    // 부품 조건은 자유 실습의 CarPartService 상태를 본다 — 교환하려고 떼어 둔 채로는 실행할 수 없다.
+    private struct Proc
+    {
+        public string id, name, pre, manual;
+        public string[] stages, req;
+        public float per;
+    }
+
+    private static readonly Proc[] Procs =
+    {
+        new Proc { id = "soh", name = "배터리 SOC · SOH · 전압 점검", per = 1.8f,
+            pre = "• 진단기를 DLC 에 연결\n• 차량 상태: <b>POWER ON</b> (EV READY 금지)\n• 기준: SOC 0~100% · SOH <b>90% 이상</b> 정상 · 팩 전압 480~826 V",
+            stages = new[] { "배터리 충전 상태 (SOC)", "배터리 건강 상태 (SOH)", "고전압 배터리 전압" }, req = null,
+            manual = "매뉴얼: 배터리 제어 시스템 — 배터리 충전 상태·건강 상태·전압 점검" },
+        new Proc { id = "epb", name = "EPB 브레이크 패드 교체모드", per = 2.6f,
+            pre = "• 진단기를 운전석 크래시 패드 하부 16핀에 연결 · 엔진 정지 · <b>점화 스위치 ON</b>\n• 리어 캘리퍼를 떼기 <b>전에</b> 실행 (패드 교체 전)\n• 화면에서 <b>C2(해제)</b> 선택 → 패드 교체 후 <b>C1(체결)</b>\n• 기능 수행 중에는 다른 기능이 동작되지 않도록 주의",
+            stages = new[] { "차종 · 제동제어 선택 — 브레이크 패드 교체모드", "C2(해제) — 액추에이터가 스핀들 너트를 끝까지 당김", "피스톤이 캘리퍼 안쪽으로 후퇴 · 패드 교체 가능" },
+            req = new[] { "EpbActuatorL", "EpbActuatorR", "BrakeRL", "BrakeRR" },
+            manual = "매뉴얼: 전자식 주차 브레이크(EPB) 조정 — 브레이크 패드 교체모드 (C1 체결 / C2 해제)" },
+        new Proc { id = "ieb", name = "IEB 영점 설정", per = 2.4f,
+            pre = "• 진단기를 운전석 크래시 패드 하부 16핀에 연결 · <b>POWER ON</b>\n• 차종 선택 → <b>ESCAHB</b> 시스템 선택 → 확인\n• 통합형 전동 부스터(IEB)를 교환했다면 실행\n• 기능 수행 중에는 다른 기능이 동작되지 않도록 주의",
+            stages = new[] { "압력센서 영점설정", "PTS(페달 트래블 센서) 영점 설정", "종방향 G센서 영점설정" },
+            req = new[] { "Ieb" },
+            manual = "매뉴얼: 통합형 전동 부스터(IEB) 조정 — ESCAHB 압력센서·PTS·종방향 G센서 영점" },
+        new Proc { id = "tpms", name = "TPMS 센서 ID 등록(무선)", per = 3.2f,
+            pre = "• 진단기를 운전석 크래시 패드 하부 16핀에 연결 · <b>POWER ON</b> · IBU-TPMS 선택\n• 센서 ID 등록(무선): TPMS 진단 모듈의 ENTER 를 센서(공기주입구) 일직선에 대고 휠에 밀착\n• 센서 특성에 따라 최대 30~60초 소요\n• 4개 ID 를 모두 읽은 뒤 [쓰기] 로 ECU 에 입력",
+            stages = new[] { "앞 왼쪽 센서 ID 읽기", "앞 오른쪽 센서 ID 읽기", "뒤 왼쪽 센서 ID 읽기", "뒤 오른쪽 센서 ID 읽기", "읽은 ID → TPMS ECU 쓰기" }, req = null,
+            manual = "매뉴얼: TPMS 센서 조정 — 센서 ID 등록(무선)" },
+        new Proc { id = "mdps", name = "MDPS 튜닝 사양 설정", per = 2.4f,
+            pre = "• 진단기 연결 · <b>POWER ON</b> · 사전에 배터리 전압이 정상인지 확인\n• 스티어링 휠을 <b>직진 상태</b>로 정렬 (클록 스프링 중립, ±90° 이상이면 설정 안 됨)\n• 설정 중 어떤 커넥터도 분리하지 않는다\n• 완료 후 <b>POWER OFF 20초 이상</b> 대기 → READY 에서 작동 확인\n• 누락하면 전동 파워 스티어링 성능에 문제가 생길 수 있음",
+            stages = new[] { "차종 · 파워스티어링 선택 — 사양 인식", "MDPS 튜닝 사양 설정 (조향각센서 영점 포함)", "사양 저장 — POWER OFF 20초 후 READY" },
+            req = new[] { "SteeringColumn", "SteeringRack" },
+            manual = "매뉴얼: 스티어링 기어박스 조정 — MDPS 튜닝 사양 설정 절차" },
+    };
+
+    /// <summary>Tight(완전 체결)가 아닌 부위 이름들. 자유 실습 부품 서비스가 없거나 다 달려 있으면 null.</summary>
+    private static string MissingParts(string[] ids)
+    {
+        var svc = CarPartService.Instance;
+        if (ids == null || svc == null || !svc.Ready) return null;
+        var sb = new System.Text.StringBuilder();
+        foreach (var pid in ids)
+        {
+            int p = CarPartService.IndexOf(pid);
+            if (p < 0 || svc.StateOf(p) == (int)CarPartService.PartState.Tight) continue;
+            if (sb.Length > 0) sb.Append(", ");
+            sb.Append(CarPartService.Defs[p].name);
+        }
+        return sb.Length > 0 ? sb.ToString() : null;
+    }
+
+    private string ProcRowResult(string id, int i)
+    {
+        switch (id)
+        {
+            case "soh":
+                if (i == 0) return $"<color=#2ECC71>{GdsModel.Soc:0} %</color>";
+                if (i == 1) return "<color=#2ECC71>97 % · 정상 (90% 이상)</color>";
+                { float v = GdsModel.PackVoltage; bool ok = v >= 480f && v <= 826f; return $"<color={(ok ? "#2ECC71" : "#FF5252")}>{v:0} V</color>"; }
+            case "tpms":
+                return i < 4 ? $"<color=#2ECC71>읽음 · ID {(0x3A7F21 + i * 0x1B3) & 0xFFFFFF:X6}</color>" : "<color=#2ECC71>쓰기 완료</color>";
+            default:
+                return "<color=#2ECC71>완료</color>";
+        }
+    }
+
+    private void RunProc(Proc pr, string phase)
+    {
+        if (phase == "0")
+        {
+            string miss = MissingParts(pr.req);
+            if (miss != null)
+            {
+                Box(_content, 140, 40, 1000, 300, $"<size=30><b>실행 불가 — 부품 미장착</b></size>\n\n다음 부품이 차에 완전히 체결되어 있지 않습니다.\n<color=#FFB000>{miss}</color>\n\n부위 목록에서 모두 장착·체결한 뒤 다시 실행하세요.", WarnC);
+                Btn(_content, "돌아가기", Card, 540, 380, 200, 80, Back);
+                _footer.text = pr.manual;
+                return;
+            }
+            Box(_content, 140, 40, 1000, 320, $"<size=30><b>실행 조건 확인</b></size>\n\n{pr.pre}\n\n조건을 만족하면 [확인]을 누르세요.", Accent);
+            Btn(_content, "확인", Accent, 440, 400, 200, 80, () => Go("run", pr.id + ":1"));
+            Btn(_content, "취소", Card, 660, 400, 200, 80, Back);
+            _footer.text = pr.manual;
+            return;
+        }
+
+        var rows = new List<TextMeshProUGUI>();
+        int ns = pr.stages.Length;
+        float rowH = ns > 4 ? 44f : 54f, rowStep = ns > 4 ? 50f : 62f;
+        for (int i = 0; i < ns; i++)
+        {
+            var bg = Px(_content, "S", 140, 12 + i * rowStep, 1000, rowH); Img(bg, Card);
+            T(bg, $"{i + 1}.  {pr.stages[i]}", ns > 4 ? 20 : 22, Color.white, TextAlignmentOptions.Left, 24, 0, 660, rowH);
+            rows.Add(T(bg, "대기", 20, Dim, TextAlignmentOptions.Right, 680, 0, 300, rowH));
+        }
+        var prog = Px(_content, "Prog", 140, 276, 1000, 14); Img(prog, Card);
+        var fill = Px(prog, "Fill", 0, 0, 0, 14); Img(fill, Accent);
+        var result = T(_content, "", 24, Color.white, TextAlignmentOptions.TopLeft, 140, 306, 1000, 270);
+        bool done = false;
+        _live.Add(() =>
+        {
+            float t = Time.time - _screenTime;
+            int n = Mathf.Min(pr.stages.Length, Mathf.FloorToInt(t / pr.per));
+            fill.sizeDelta = new Vector2(1000f * Mathf.Clamp01(t / (pr.per * pr.stages.Length)), 14);
+            for (int i = 0; i < rows.Count; i++)
+                rows[i].text = i < n ? ProcRowResult(pr.id, i) : i == n ? "<color=#00A0E9>진행 중…</color>" : "대기";
+            _footer.text = n < pr.stages.Length ? "진행 중 — 차량을 조작하지 마세요" : "완료";
+            if (n < pr.stages.Length || done) return;
+            done = true;
+            AudioSource.PlayClipAtPoint(EquipFx.Click, transform.position, 0.6f);
+            if (LocalHeld) CarPartRules.OnLearnDone(pr.id);   // 교환 후 학습 필요 표시 해제
+            switch (pr.id)
+            {
+                case "soh":
+                    float v = GdsModel.PackVoltage;
+                    result.text = (v >= 480f && v <= 826f)
+                        ? $"<color=#2ECC71><b>판정: 정상</b></color>\nSOC {GdsModel.Soc:0}% · SOH 97% (기준 90% 이상) · 팩 전압 {v:0} V (기준 480~826 V)"
+                        : $"<color=#FF5252><b>판정: 팩 전압 이상</b></color>\n{v:0} V — 기준(480~826 V)을 벗어났습니다. 셀 전압·편차 점검을 실행하세요.";
+                    break;
+                case "epb": result.text = "<color=#2ECC71><b>패드 교체모드 — C2(해제) 완료</b></color>\n캘리퍼 피스톤이 후퇴했습니다. 패드를 교체한 뒤 같은 메뉴에서 <b>C1(체결)</b> 을 선택하세요."; break;
+                case "ieb": result.text = "<color=#2ECC71><b>IEB 영점 설정 완료</b></color>\n압력센서 · PTS · 종방향 G센서 영점이 저장되었습니다."; break;
+                case "tpms": result.text = "<color=#2ECC71><b>TPMS 센서 ID 4개 등록 완료</b></color>\n새 ID 가 TPMS ECU 에 입력되었습니다. 각 타이어 공기압이 계기판에 표시되는지 확인하세요."; break;
+                default: result.text = "<color=#2ECC71><b>MDPS 튜닝 사양 설정 완료</b></color>\nPOWER OFF 후 20초 이상 기다린 뒤 READY 상태에서 정상 작동 여부를 확인하세요."; break;
+            }
+        });
+    }
+
     // ── 냉각수 에어빼기 ──
     // 전동 워터펌프(배터리 · 전장)를 돌리고 냉각수 밸브를 통합 순환으로 바꿔 회로 안 공기를 리저버로 밀어낸다.
     // 시나리오 'Coolant_Air_Bleed' 단계에서 끝까지 실행하면 단계 완료 신호를 보낸다.
@@ -1069,6 +1208,21 @@ public class GdsTablet : MonoBehaviour
             if (scen && !GdsModel.Done("Coolant_Fill"))
             {
                 Box(_content, 140, 40, 1000, 300, "<size=30><b>실행 불가 — 냉각수 부족</b></size>\n\n냉각수를 넣지 않은 상태에서 전동 워터펌프를 돌리면\n펌프가 공회전해 손상될 수 있습니다.\n\n리저버 탱크에 냉각수를 먼저 주입하세요.", WarnC);
+                Btn(_content, "돌아가기", Card, 540, 380, 200, 80, Back);
+                _footer.text = "매뉴얼: 냉각수 주입 후 에어빼기를 실행한다";
+                return;
+            }
+            // 자유 실습: 냉각 회로 부품이 빠져 있으면 펌프를 돌릴 수 없고, 수위가 모자라면 공회전한다
+            if (!scen && CarPartRules.CoolantAirValue == 1)
+            {
+                Box(_content, 140, 40, 1000, 300, "<size=30><b>실행 불가 — 냉각 회로 개방</b></size>\n\n냉각수 라인에서 뗀 부품이 아직 조립되지 않았습니다.\n\n부위 목록에서 냉각 회로 부품을 모두 장착하고 규정 토크로 체결한 뒤 다시 실행하세요.", WarnC);
+                Btn(_content, "돌아가기", Card, 540, 380, 200, 80, Back);
+                _footer.text = "매뉴얼: 냉각 회로를 조립한 뒤 에어빼기";
+                return;
+            }
+            if (!scen && CarPartRules.CoolantAirValue == 2 && CoolantReservoir.MotorLevel < 0.5f)
+            {
+                Box(_content, 140, 40, 1000, 300, "<size=30><b>실행 불가 — 냉각수 부족</b></size>\n\n리저버 수위가 낮은 채로 전동 워터펌프를 돌리면 펌프가 공회전해 손상될 수 있습니다.\n\n리저버 탱크에 냉각수를 먼저 채우세요(MAX 선 가까이).", WarnC);
                 Btn(_content, "돌아가기", Card, 540, 380, 200, 80, Back);
                 _footer.text = "매뉴얼: 냉각수 주입 후 에어빼기를 실행한다";
                 return;
@@ -1115,6 +1269,7 @@ public class GdsTablet : MonoBehaviour
                 AudioSource.PlayClipAtPoint(EquipFx.Click, transform.position, 0.6f);
                 info.text = "<color=#2ECC71><b>에어빼기 완료</b></color>\n회로 안 공기가 빠지면서 리저버 수위가 내려갔습니다.\n→ 냉각수를 <b>MAX 선</b>까지 보충한 뒤 캡을 닫고, 고장 코드를 소거하세요.";
                 _footer.text = "에어빼기 완료";
+                if (!scen && LocalHeld) CarPartRules.OnBleedDone();   // 자유 실습: 냉각 회로 공기 해소 + 수위 하락(실행한 사람 한 명만 보낸다)
                 if (GdsModel.CurrentModule == "Coolant_Air_Bleed")
                 {
                     InteractionEvents.FireTaskConfirmed("Coolant_Air_Bleed");

@@ -21,7 +21,7 @@ using UnityEngine.SceneManagement;
 //  다시 돌리면 FBX 원본에서 새로 계산한다(만든 노드는 지우고 다시 만든다).
 //  메뉴: Dodrill > 차량 메시 분리 > 차체 외판(펜더·미러·유리) 미리보기 / 적용
 // ============================================================
-public static class CarBodyPanelSplitter
+public static partial class CarBodyPanelSplitter
 {
     private const string PrefabPath = "Assets/03_3D/Object/O_Prefabs/Dummy/Ioniq5N.prefab";
     private const string MeshDir = "Assets/03_3D/Object/O_Prefabs/Dummy/Ioniq5N_Split";
@@ -140,11 +140,11 @@ public static class CarBodyPanelSplitter
         "SM_Ioniq_Bumper", "Hood_Latch_Point", "SM_Ioniq_Front", "SM_Ioniq_Frunk", "SM_Frunk.001", "SM_Frunk_lid",
         "SM_Ioniq_DoorRearLeft", "SM_Ioniq_DoorRearRight",   // 앞 도어는 미러를 자르면서 이미 양면
         "SM_Ioniq_Back", "SM_Ioniq_Back.001", "SM_Ioniq_Back.002", "SM_Ioniq_Back.004", "SM_Ioniq_Back.005", "SM_Ioniq_Back.006",
-        "SM_Bottom_01", "SM_Bottom_02", "Battery_12V_Cover", "SM_Ioniq_Cockpit", "SM_Seat_FL", "SM_Seat_FR", "SM_Seat_Rear",
+        "SM_Bottom_01", "SM_Bottom_02", "Battery_12V_Cover", "SM_12v", "SM_Ioniq_Cockpit", "SM_Seat_FL", "SM_Seat_FR", "SM_Seat_Rear",
     };
 
     // ═════════════════════════ 계산 ═════════════════════════
-    private struct V
+    internal struct V
     {
         public Vector3 p, w, n; public Vector4 t; public Vector2 uv, uv2; public int orig;
         public static V Lerp(V a, V b, float k) => new V
@@ -154,7 +154,7 @@ public static class CarBodyPanelSplitter
         };
     }
 
-    private class Acc
+    internal class Acc
     {
         public string name; public readonly List<V> v = new List<V>(); public List<int>[] sub; public Dictionary<int, int> map = new Dictionary<int, int>();
         public int tris;
@@ -202,6 +202,7 @@ public static class CarBodyPanelSplitter
         public Mesh source; public Transform srcNode; public Material[] mats;
         public List<(Region r, Mesh m, int tris)> parts = new List<(Region, Mesh, int)>();
         public Mesh body; public int bodyTris;
+        internal Acc bodyAcc;   // 남은 차체의 원시 삼각형(양면화 전) — CarShellSplitter 가 패치 단위로 다시 나눈다
         public string report;
     }
 
@@ -212,10 +213,12 @@ public static class CarBodyPanelSplitter
     {
         string path = AssetDatabase.GetAssetPath(current);
         if (current.name == srcName) return current;
+        // FBX 안의 메시 이름이 노드 이름과 다른 부품(12V 커버의 원본은 SM_12v_top) — 이미 _2S 로 바뀐 메시를 다시 양면화하지 않도록 원본으로 되돌아간다
+        string look = srcName == "Battery_12V_Cover" ? "SM_12v_top" : srcName;
         foreach (var g in AssetDatabase.FindAssets("FBX_ElectricCarV3 t:Model"))
         {
             var p = AssetDatabase.GUIDToAssetPath(g);
-            var m = AssetDatabase.LoadAllAssetsAtPath(p).OfType<Mesh>().FirstOrDefault(x => x.name == srcName);
+            var m = AssetDatabase.LoadAllAssetsAtPath(p).OfType<Mesh>().FirstOrDefault(x => x.name == look);
             if (m != null) return m;
         }
         var a = AssetDatabase.LoadAssetAtPath<Mesh>($"{MeshDir}/{srcName}.asset");
@@ -231,7 +234,8 @@ public static class CarBodyPanelSplitter
         Transform any = null;
         foreach (var t in root.GetComponentsInChildren<Transform>(true))
         {
-            if (t.name != srcName || t.GetComponent<MeshFilter>() == null || !ActiveChain(t) || UnderCables(t)) continue;
+            bool nameOk = t.name == srcName || (srcName == SrcName && (t.name == ShellNode || Array.IndexOf(StructNodes, t.name) >= 0));   // 2단계 적용 뒤에는 SM_Ioniq_Electric 이 SM_BodyShell 로 이름이 바뀐다
+            if (!nameOk || t.GetComponent<MeshFilter>() == null || !ActiveChain(t) || UnderCables(t)) continue;
             if (t.parent != null && t.parent.name == "FBX_ElectricCar") return t;
             if (any == null) any = t;
         }
@@ -356,7 +360,7 @@ public static class CarBodyPanelSplitter
             res.parts.Add((regions[g], m, accs[g].tris));
             sb.AppendLine($"{regions[g].node}({regions[g].name}) = {accs[g].tris}삼각형 [{string.Join(",", Enumerable.Range(0, S).Select(s => accs[g].sub[s].Count / 3))}] 범위 {m.bounds.size}");
         }
-        res.body = Build(body, true, glassSub); res.bodyTris = body.tris;
+        res.body = Build(body, true, glassSub); res.bodyTris = body.tris; res.bodyAcc = body;
         sb.AppendLine($"남은 차체 = {body.tris}삼각형 (원본 {mesh.triangles.Length / 3})");
         res.report = sb.ToString();
         return res;
@@ -560,6 +564,9 @@ public static class CarBodyPanelSplitter
                 var mf = t.GetComponent<MeshFilter>(); var mr = t.GetComponent<MeshRenderer>();
                 var orig = LoadSourceMesh(mf.sharedMesh, name);
                 if (orig == null || !orig.isReadable) { sb.AppendLine($"{name}: 원본 메시를 읽을 수 없음"); continue; }
+                // 원본을 못 찾아 이미 양면화된 메시(…_2S)가 그대로 돌아왔으면 건너뛴다 — 다시 양면화하면 매 실행마다 삼각형이 2배가 된다
+                // (11/17 Hood_Latch_Point_2S 가 실행 11번에 13 만 → 1300 만 삼각형, 386 MB 가 됨)
+                if (orig.name.EndsWith("_2S")) { sb.AppendLine($"{name}: 이미 양면화됨({orig.name}) — 건너뜀"); continue; }
                 var vs = orig.vertices; var ns = orig.normals; var ts = orig.tangents; var uv = orig.uv; var uv2 = orig.uv2;
                 int S = orig.subMeshCount;
                 var a = new Acc(name + "_2S", S);
@@ -579,6 +586,7 @@ public static class CarBodyPanelSplitter
                         a.Poly(poly, s);
                     }
                 }
+                if (CloseNodes.Contains(name)) CloseLoops(a, Matrix4x4.identity);   // 의자·12V 배터리처럼 속이 비어 보이는 한 겹 메시는 열린 가장자리를 막는다
                 int glassSub = -1;
                 var mats = mr != null ? mr.sharedMaterials : new Material[0];
                 for (int s = 0; s < mats.Length; s++) if (mats[s] != null && mats[s].name.IndexOf("Glass", StringComparison.OrdinalIgnoreCase) >= 0) glassSub = s;
@@ -608,7 +616,8 @@ public static class CarBodyPanelSplitter
     public static string ApplyAll()
     {
         var sb = new System.Text.StringBuilder();
-        foreach (var (src, regions) in Plan()) sb.AppendLine(Apply(regions, src));
+        foreach (var (src, regions) in Plan()) if (src != SrcName) sb.AppendLine(Apply(regions, src));   // 앞 도어 미러
+        sb.AppendLine(ApplyShell(ShellRules()));                                                        // SM_Ioniq_Electric → 외장·내장 부품 + SM_BodyShell
         sb.AppendLine(DoubleSide(DoubleSideNodes));
         return sb.ToString();
     }

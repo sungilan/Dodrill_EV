@@ -98,6 +98,7 @@ public class CarPartItem : MonoBehaviour
         if (!svc.IsFreeSlotNear(_part, transform.position, svc.MountDistance)) return;
         if (!svc.CanMount(_part)) return;
         svc.NoteMountPose(_part, transform.position, transform.rotation);
+        CarPartRules.NoteMount(CarPartService.Defs[_part]);   // 재사용 금지 부품이면 경고
         // 놓기(ReleaseServerRpc)가 먼저 도착하도록 한 박자 뒤에 보낸다
         svc.StartCoroutine(MountLater(svc, _part, _nob));
         AudioSource.PlayClipAtPoint(EquipFx.Click, transform.position, 0.9f);
