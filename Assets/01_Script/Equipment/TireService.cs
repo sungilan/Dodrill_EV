@@ -1268,6 +1268,9 @@ public class TireService : NetworkBehaviour
         return best;
     }
 
+    /// <summary>w번 휠(0=앞왼쪽 1=앞오른쪽 2=뒤왼쪽 3=뒤오른쪽 — SM_Wheel_01~04)이 떼어져 있는가.</summary>
+    public bool IsWheelOff(int w) => w >= 0 && w < _state.Count && _state[w] == (int)WheelState.Off;
+
     public bool AnyHubFree
     {
         get { for (int i = 0; i < _state.Count; i++) if (_state[i] == (int)WheelState.Off) return true; return false; }

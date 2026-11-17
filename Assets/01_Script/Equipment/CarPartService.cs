@@ -49,7 +49,8 @@ public class CarPartService : NetworkBehaviour
         public string[] requires = new string[0];
         public float tMin, tMax, boltScale = 1f;
         public int socket = 1;   // 에어 임팩렌치 소켓(1=10mm, 2=17mm) — 소켓 거치대에 있는 크기 중 볼트 머리에 맞는 것
-        public bool needsWheelOff; // 휠(타이어)을 하나 이상 먼저 떼야 접근되는 부위(브레이크) — TireService 상태를 본다
+        public int needsWheel2 = -1; // 두 번째 필수 휠(좌우에 걸친 부위: 스태빌라이저 바). -1 = 없음
+        public int needsWheel = -1; // 이 휠(0=앞왼쪽 1=앞오른쪽 2=뒤왼쪽 3=뒤오른쪽)을 먼저 떼야 접근되는 부위(브레이크) — TireService 상태를 본다. -1 = 없음
         public bool hv;          // 고전압 부품(모터·컴프레서) — 매뉴얼: 고전압 차단 절차(보호구 → 12V(−) → 서비스 플러그 → 3분 방전 → 단자 전압 확인) 뒤에만 작업
         public string specPart, specSource;
         public G[] gen;          // 차 모델에 메시가 없는 부품 — 상자·원통으로 만든다(좌표는 차 루트 기준). objects 대신 쓴다
@@ -82,23 +83,24 @@ public class CarPartService : NetworkBehaviour
     private const string SrcM6 = "일반 조임 토크 — 플랜지 볼트 M6·8T (부위별 값 미기재)";
     private const string SrcM8 = "일반 조임 토크 — 플랜지 볼트 M8·8T (부위별 값 미기재)";
     private const string SrcM10 = "일반 조임 토크 — 플랜지 볼트 M10·8T (부위별 값 미기재)";
+    private const string SrcM12 = "일반 조임 토크 — 플랜지 볼트 M12·8T (부위별 값 미기재)";
 
     public static readonly PartDef[] Defs =
     {
         new PartDef {
             id = "FrontBumper", name = "앞 범퍼",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "후드를 열고 윗면 볼트 → 휠하우스 쪽 볼트 → 아랫면 볼트 순으로 풀고, 범퍼를 앞으로 당겨 뺀다 (안개등·센서 커넥터 분리)",
+            hint = "12V (−) 터미널을 분리하고 펜더 가니쉬를 뗀 뒤 상단 볼트(0.4~0.7) → 하단 클립 → 사이드 스크류·클립 순으로 풀고, 범퍼 메인 커넥터를 분리해 앞으로 당겨 뺀다 (측면 걸림턱 파손 주의, 손상된 클립은 교환)",
             objects = new[] { "SM_Ioniq_Bumper" },
             bolts = new[] {
                 new F(-0.4546f, -0.1471f, -0.2121f, 0f, -1f, 0f), new F(0.4452f, -0.148f, -0.2121f, 0f, -1f, 0f),
                 new F(-0.9447f, 0.0055f, 0.1378f, -1f, 0f, 0f),   new F(0.9447f, 0.0055f, 0.1378f, 1f, 0f, 0f),
                 new F(-0.4046f, 0.21f, -0.2621f, 0f, 1f, 0f),     new F(0.3952f, 0.2147f, -0.2621f, 0f, 1f, 0f) },
-            tMin = 1.0f, tMax = 1.4f, specPart = "앞 범퍼 장착 볼트(M6)", specSource = SrcM6 },
+            tMin = 0.4f, tMax = 0.7f, specPart = "앞 범퍼 상단 볼트", specSource = "바디 — 프런트 범퍼 어셈블리 탈거 및 장착(상단 볼트 0.4~0.7)" },
         new PartDef {
             id = "Headlamp", name = "헤드램프",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "앞 범퍼를 뗀 뒤 램프 위·앞 장착 볼트를 풀고, 커넥터를 분리해 빼낸다",
+            hint = "12V (−) 터미널을 분리하고 앞 범퍼를 뗀 뒤, 헤드 램프 메인 커넥터와 와이어링 클립을 분리하고 볼트·스크류를 풀어 빼낸다 (헤드 램프 제어기 ILCU는 램프를 뗀 뒤 스크류로 분리)",
             objects = new[] { "SM_Ioniq_glass", "SM_Ioniq_Bumper_Lights" },
             bolts = new[] {
                 new F(-0.7845f, -0.2858f, 0.0378f, 0f, -1f, 0f), new F(0.7751f, -0.2837f, 0.0178f, 0f, -1f, 0f),
@@ -108,12 +110,12 @@ public class CarPartService : NetworkBehaviour
         new PartDef {
             id = "Hood", name = "후드",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "후드를 열고 받친 상태에서 힌지 볼트 4개를 푼다 (워셔액 호스 분리, 2인 1조로 받쳐 든다)",
+            hint = "후드를 열고 후드 리프터(양 끝 소켓 클립을 살짝 들어 올려 분리)를 뗀 뒤 힌지 볼트(1.9~2.6)를 풀어 후드를 탈거한다 (2인 1조로 받쳐 든다)",
             objects = new[] { "Hood_Latch_Point" },
             bolts = new[] {
                 new F(-0.6247f, -0.0767f, 0.3317f, 0f, 1f, 0f), new F(-0.6247f, -0.0727f, 0.2717f, 0f, 1f, 0f),
                 new F(0.6153f, -0.0767f, 0.3317f, 0f, 1f, 0f),  new F(0.6153f, -0.0727f, 0.2717f, 0f, 1f, 0f) },
-            tMin = 2.5f, tMax = 3.3f, specPart = "후드 힌지 볼트(M8)", specSource = SrcM8 },
+            tMin = 1.9f, tMax = 2.6f, specPart = "후드 힌지 볼트", specSource = "바디 — 후드 어셈블리 탈거(힌지 볼트 1.9~2.6)" },
         new PartDef {
             id = "Frunk", name = "프렁크(앞 트렁크)",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
@@ -150,7 +152,7 @@ public class CarPartService : NetworkBehaviour
         new PartDef {
             id = "Cooling", name = "냉각 모듈(콘덴서·라디에이터·팬)",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "리저버 캡을 먼저 열고 드레인 플러그로 냉각수를 받아낸다 → 냉매 회수기로 냉매 회수 → A/C 라인·호스·팬 커넥터 분리 → 상단·좌우 볼트를 풀어 한 덩어리로 뺀다",
+            hint = "12V (−) 분리 → N 액티브 사운드 스피커·프런트 언더 커버를 뗀 뒤 리저버 캡을 열고 모터·배터리 냉각수 드레인 플러그를 열어 배출 → 쿨링팬 커넥터·호스를 분리하고 에어컨 파이프 마운팅 볼트(0.5~0.8)로 콘덴서를 라디에이터에서 떼어(냉매 라인은 분리하지 않는다) 상·하부 에어가드와 브래킷 볼트(0.8~1.2)를 풀어 뺀다. 모델에서는 콘덴서·라디에이터·팬을 한 덩어리로 다룬다",
             gen = new[] {
                 G.Box(-2.47f, 0.53f, 0f, 0.02f, 0.38f, 1.0f, Fin, 0.3f),                                   // 콘덴서
                 G.Box(-2.435f, 0.53f, 0f, 0.03f, 0.38f, 1.0f, DarkAlu, 0.5f),                              // 라디에이터 코어
@@ -161,12 +163,12 @@ public class CarPartService : NetworkBehaviour
             bolts = new[] {
                 new F(-2.435f, 0.73f, -0.515f, 0f, 1f, 0f), new F(-2.435f, 0.73f, 0.515f, 0f, 1f, 0f),
                 new F(-2.460f, 0.40f, -0.515f, -1f, 0f, 0f), new F(-2.460f, 0.40f, 0.515f, -1f, 0f, 0f) },
-            requires = new[] { "FrontBeam" },
-            tMin = 1.0f, tMax = 1.4f, specPart = "냉각 모듈 장착 볼트(M6)", specSource = SrcM6 },
+            requires = new[] { "FrontBeam", "FrontUnderCover" },
+            tMin = 0.8f, tMax = 1.2f, specPart = "냉각 모듈 에어가드·브래킷 볼트", specSource = "냉각시스템 — 라디에이터 탈거 및 장착(에어가드·상부 브래킷 0.8~1.2)" },
         new PartDef {
             id = "AcCompressor", name = "전동식 A/C 컴프레서",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)", hv = true,
-            hint = "냉매 회수기로 냉매를 먼저 회수하고 고전압을 차단 → 냉각 모듈을 뗀 자리에서 고전압·저전압 커넥터, 석션·디스차지 라인 분리 → 앞쪽 마운팅 볼트 3개를 푼다",
+            hint = "고전압 차단 → 냉매 회수기로 냉매 회수 → N 액티브 사운드 스피커·배터리 트레이(12V)를 뗀 뒤 석션·디스차지 라인 볼트(1.7~2.6)와 컴프레서·고전압 커넥터를 분리하고 장착 볼트(2.0~2.4)를 푼다 — 매뉴얼은 냉각 모듈 탈거가 필수가 아니지만 이 모델은 컴프레서가 냉각 모듈 뒤에 있어 모듈을 먼저 뗀다. 라인은 분리 즉시 캡을 씌운다",
             gen = new[] {
                 G.Cyl(-2.26f, 0.41f, 0.45f, 0.13f, 0.22f, Alu, 0.7f, 90f),                                 // 본체(축 = 좌우)
                 G.Box(-2.26f, 0.41f, 0.30f, 0.12f, 0.12f, 0.08f, DarkAlu, 0.6f),                           // 인버터
@@ -177,54 +179,54 @@ public class CarPartService : NetworkBehaviour
             bolts = new[] {
                 new F(-2.338f, 0.44f, 0.37f, -1f, 0f, 0f), new F(-2.338f, 0.44f, 0.53f, -1f, 0f, 0f), new F(-2.338f, 0.36f, 0.45f, -1f, 0f, 0f) },
             requires = new[] { "Cooling" },
-            tMin = 2.5f, tMax = 3.3f, specPart = "컴프레서 마운팅 볼트(M8)", specSource = SrcM8 },
+            tMin = 2.0f, tMax = 2.4f, specPart = "컴프레서 장착 볼트", specSource = "히터 및 에어컨 장치 — 전동식 에어컨 컴프레서 탈거(장착 볼트 2.0~2.4)" },
         new PartDef {
             id = "DoorFL", name = "앞 도어(왼쪽)",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "도어를 열고 커넥터·체커를 분리한 뒤 힌지 볼트를 푼다 (2인 1조로 받쳐 든다)",
+            hint = "도어를 열고 와이어링 커넥터와 도어 체커(도어 측 0.7~1.1)를 분리한 뒤 바디 측 힌지 볼트(2.4~3.2)를 푼다 (2인 1조로 받쳐 든다)",
             objects = new[] { "SM_Ioniq_DoorFrontLeft" },
             bolts = new[] { new F(0.0613f, -0.15f, -0.546f, 1f, 0f, 0f), new F(0.0265f, 0.28f, -0.546f, 1f, 0f, 0f), new F(0.1111f, 0.06f, -0.496f, 1f, 0f, 0f) },
-            tMin = 2.5f, tMax = 3.3f, specPart = "도어 힌지 볼트(M8)", specSource = SrcM8 },
+            tMin = 2.4f, tMax = 3.2f, specPart = "도어 힌지 볼트(바디 측)", specSource = "바디 — 체결 토크(프런트/리어 도어, 바디에 도어 힌지 부착)" },
         new PartDef {
             id = "DoorFR", name = "앞 도어(오른쪽)",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "도어를 열고 커넥터·체커를 분리한 뒤 힌지 볼트를 푼다 (2인 1조로 받쳐 든다)",
+            hint = "도어를 열고 와이어링 커넥터와 도어 체커(도어 측 0.7~1.1)를 분리한 뒤 바디 측 힌지 볼트(2.4~3.2)를 푼다 (2인 1조로 받쳐 든다)",
             objects = new[] { "SM_Ioniq_DoorFrontRight" },
             bolts = new[] { new F(0.6662f, 0.8697f, -0.1497f, -1f, 0f, 0f), new F(0.6784f, 0.8697f, 0.2803f, -1f, 0f, 0f), new F(0.6498f, 0.8197f, 0.0603f, -1f, 0f, 0f) },
-            tMin = 2.5f, tMax = 3.3f, specPart = "도어 힌지 볼트(M8)", specSource = SrcM8 },
+            tMin = 2.4f, tMax = 3.2f, specPart = "도어 힌지 볼트(바디 측)", specSource = "바디 — 체결 토크(프런트/리어 도어, 바디에 도어 힌지 부착)" },
         new PartDef {
             id = "DoorRL", name = "뒤 도어(왼쪽)",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "도어를 열고 커넥터·체커를 분리한 뒤 힌지 볼트를 푼다 (2인 1조로 받쳐 든다)",
+            hint = "도어를 열고 와이어링 커넥터와 도어 체커(도어 측 0.7~1.1)를 분리한 뒤 바디 측 힌지 볼트(2.4~3.2)를 푼다 (2인 1조로 받쳐 든다)",
             objects = new[] { "SM_Ioniq_DoorRearLeft" },
             bolts = new[] { new F(-0.0936f, -0.1438f, -0.5831f, 1f, 0f, 0f), new F(-0.1152f, 0.2861f, -0.5831f, 1f, 0f, 0f), new F(-0.0371f, 0.0661f, -0.5331f, 1f, 0f, 0f) },
-            tMin = 2.5f, tMax = 3.3f, specPart = "도어 힌지 볼트(M8)", specSource = SrcM8 },
+            tMin = 2.4f, tMax = 3.2f, specPart = "도어 힌지 볼트(바디 측)", specSource = "바디 — 체결 토크(프런트/리어 도어, 바디에 도어 힌지 부착)" },
         new PartDef {
             id = "DoorRR", name = "뒤 도어(오른쪽)",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "도어를 열고 커넥터·체커를 분리한 뒤 힌지 볼트를 푼다 (2인 1조로 받쳐 든다)",
+            hint = "도어를 열고 와이어링 커넥터와 도어 체커(도어 측 0.7~1.1)를 분리한 뒤 바디 측 힌지 볼트(2.4~3.2)를 푼다 (2인 1조로 받쳐 든다)",
             objects = new[] { "SM_Ioniq_DoorRearRight" },
             bolts = new[] { new F(0.0936f, 0.5677f, -0.1437f, -1f, 0f, 0f), new F(0.1152f, 0.5677f, 0.2863f, -1f, 0f, 0f), new F(-0.0196f, 0.5177f, 0.0663f, -1f, 0f, 0f) },
-            tMin = 2.5f, tMax = 3.3f, specPart = "도어 힌지 볼트(M8)", specSource = SrcM8 },
+            tMin = 2.4f, tMax = 3.2f, specPart = "도어 힌지 볼트(바디 측)", specSource = "바디 — 체결 토크(프런트/리어 도어, 바디에 도어 힌지 부착)" },
         new PartDef {
             id = "Tailgate", name = "테일게이트",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "테일게이트를 열어 받치고 리프터·커넥터를 분리한 뒤 힌지 볼트 4개를 푼다 (2인 1조)",
+            hint = "12V (−) 터미널을 분리하고 테일게이트 로어 트림을 뗀 뒤 와이어링 하네스 커넥터와 파워 테일게이트 드라이브 유닛을 분리하고 장착 볼트(2.2~2.7)를 푼다 (2인 이상 작업)",
             objects = new[] { "SM_Ioniq_Back" },
             bolts = new[] {
                 new F(-0.5047f, -0.6045f, 1.3825f, 0f, -1f, 0f), new F(0.4953f, -0.6061f, 1.3825f, 0f, -1f, 0f),
                 new F(-0.5047f, -0.604f, 1.4625f, 0f, -1f, 0f),  new F(0.4953f, -0.5877f, 1.4625f, 0f, -1f, 0f) },
-            tMin = 2.5f, tMax = 3.3f, specPart = "테일게이트 힌지 볼트(M8)", specSource = SrcM8 },
+            tMin = 2.2f, tMax = 2.7f, specPart = "테일게이트 장착 볼트", specSource = "바디 — 테일게이트 어셈블리 탈거(장착 볼트 2.2~2.7)" },
         new PartDef {
             id = "RearBumper", name = "뒤 범퍼",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "윗면 볼트 → 휠하우스 쪽 볼트 → 아랫면 볼트 순으로 풀고, 범퍼를 뒤로 당겨 뺀다 (센서 커넥터 분리)",
+            hint = "12V (−) 터미널을 분리하고 쿼터 가니쉬·리어 콤비네이션 램프를 뗀 뒤 상단 클립·스크류, 리어 센터 언더 커버(클립), 하단 클립을 풀고 커넥터를 분리한다 — 하단 볼트(1.6~2.4)를 풀고 올리면서 뒤로 뺀다",
             objects = new[] { "SM_Ioniq_Back.001", "SM_Ioniq_Back.002", "SM_Ioniq_Back.003", "SM_Ioniq_Back.004", "SM_Ioniq_Back.005" },
             bolts = new[] {
                 new F(-0.5047f, 0.2669f, 2.2125f, 0f, -1f, 0f), new F(0.4953f, 0.2637f, 2.2125f, 0f, -1f, 0f),
                 new F(-0.9242f, 0.4315f, 2.0125f, -1f, 0f, 0f), new F(0.9242f, 0.4315f, 2.0125f, 1f, 0f, 0f),
                 new F(-0.4547f, 0.5976f, 2.1625f, 0f, 1f, 0f),  new F(0.4453f, 0.5985f, 2.1625f, 0f, 1f, 0f) },
-            tMin = 1.0f, tMax = 1.4f, specPart = "뒤 범퍼 장착 볼트(M6)", specSource = SrcM6 },
+            tMin = 1.6f, tMax = 2.4f, specPart = "뒤 범퍼 하단 볼트", specSource = "바디 — 리어 범퍼 어셈블리 탈거 및 장착(하단 볼트 1.6~2.4)" },
 
         // ══════════════════════════════════════════════════════════════
         //  11/16 추가 — 같은 방식으로 하부(언더 커버·서스펜션)·후륜 모터·실내(시트·대시보드·HVAC)까지 넓힘.
@@ -255,13 +257,13 @@ public class CarPartService : NetworkBehaviour
         new PartDef {
             id = "FrontSuspension", name = "전륜 서브 프레임·서스펜션",
             tool = "에어 임팩렌치(27mm 소켓)", socket = 3,
-            hint = "전륜 모터·감속기를 뗀 뒤 서브 프레임 장착 볼트(4개)를 푼다 — 크레인 잭·리프트 테이블로 받치고, 스티어링 기어박스·스태빌라이저 바·드라이브 샤프트를 분리한 뒤 내린다",
-            objects = new[] { "SM_FrontSuspension" },
+            hint = "전륜 모터·감속기를 뗀 뒤(매뉴얼은 엔진 서포트 공구로 받친 채 마운트 볼트 11~13만 푼다) 유니버셜 조인트 볼트(재사용 금지)·타이로드 엔드를 분리하고 스태빌라이저 바·양쪽 로어 암을 뗀 뒤, 스테이 너트와 서브 프레임 장착 볼트(18~20)를 푼다 — 리프트 테이블로 받쳐 내린다. 스티어링 기어박스는 서브 프레임을 내린 뒤 푼다",
+            objects = new[] { "SM_FrontSubframe" },
             bolts = new[] {
-                new F(0.1086f, -0.1372f, -0.4000f, 0f, -1f, 0f), new F(0.1086f, -0.1372f, 0.4000f, 0f, -1f, 0f),
+                new F(0.1086f, -0.0819f, -0.3500f, 0f, -1f, 0f), new F(0.1086f, -0.0819f, 0.3500f, 0f, -1f, 0f),
                 new F(0.3086f, -0.1672f, -0.4000f, 0f, -1f, 0f), new F(0.3086f, -0.1672f, 0.4000f, 0f, -1f, 0f) },
-            requires = new[] { "FrontMotor", "SteeringRack", "FrontStabilizer" },
-            tMin = 13.8f, tMax = 18.6f, boltScale = 1.6f, specPart = "서브 프레임 장착 볼트(M14)", specSource = "일반 조임 토크 — 플랜지 볼트 M14·8T (부위별 값 미기재)" },
+            requires = new[] { "FrontMotor", "FrontStabilizer", "FrontLowerArmL", "FrontLowerArmR" },
+            tMin = 18.0f, tMax = 20.0f, boltScale = 1.6f, specPart = "서브 프레임 장착 볼트·너트", specSource = "서스펜션 시스템 — 체결 토크 — 프런트 서브 프레임" },
         new PartDef {
             id = "RearMotor", name = "후륜 모터·감속기(IDA)",
             tool = "에어 임팩렌치(17mm 소켓)", socket = 2, hv = true,
@@ -273,39 +275,111 @@ public class CarPartService : NetworkBehaviour
             requires = new[] { "RearUnderCover" },
             tMin = 11f, tMax = 13f, boltScale = 1.4f, specPart = "후륜 모터 마운팅 볼트", specSource = "전륜 모터 마운팅 규정 준용 (후륜 값 미기재)" },
         new PartDef {
-            id = "RearSuspension", name = "리어 크로스 멤버·서스펜션",
-            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
-            hint = "후륜 모터·감속기를 뗀 뒤 크로스 멤버 장착 볼트(4개)를 푼다 — 스태빌라이저 바·쇽 업소버·로어 암 연결을 확인하고 받쳐 내린다",
-            objects = new[] { "SM_RearSuspension" },
-            bolts = new[] {
-                new F(-0.3596f, -0.0903f, -0.6000f, 0f, -1f, 0f), new F(-0.3596f, -0.0903f, 0.6000f, 0f, -1f, 0f),
-                new F(0.2404f, -0.1373f, -0.5000f, 0f, -1f, 0f),  new F(0.2404f, -0.1373f, 0.5000f, 0f, -1f, 0f) },
-            requires = new[] { "RearMotor", "RearStabilizer" },
-            tMin = 8.6f, tMax = 11.6f, boltScale = 1.5f, specPart = "크로스 멤버 장착 볼트(M12)", specSource = "일반 조임 토크 — 플랜지 볼트 M12·8T (부위별 값 미기재)" },
+            id = "RearShockL", name = "리어 쇽 업소버(왼쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheel = 2,
+            hint = "뒤 왼쪽 휠을 떼고 ECS 커넥터·와이어링 브래킷을 푼 뒤, 로어 암 쪽 볼트·너트(18~20)를 풀고 차체 쪽 볼트를 풀어 쇽을 들어낸다 — 변속기 잭으로 무부하 상태에서, 볼트를 고정하고 너트를 푼다 (코일 스프링은 쇽이 아니라 로어 암 쪽에서 따로 뺀다)",
+            objects = new[] { "SM_RearShock_L" },
+            bolts = new[] { new F(0.1704f, 0.2196f, -0.6000f, 0f, 1f, 0f), new F(0.2504f, 0.2225f, -0.5700f, 0f, 1f, 0f) },
+            tMin = 5.0f, tMax = 6.5f, specPart = "쇽 업소버 차체 장착 볼트", specSource = "서스펜션 시스템 — 체결 토크 — 리어 쇽 업소버" },
         new PartDef {
-            id = "Seats", name = "시트(앞·뒤 좌석)",
+            id = "RearAxleL", name = "리어 액슬 어셈블리(왼쪽 너클·허브)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "브레이크 캘리퍼와 쇽을 뗀 뒤 너클·허브 연결 볼트를 푼다 — 로어 암·트레일링 암은 액슬을 뗀 뒤 분리",
+            objects = new[] { "SM_RearAxle_L" },
+            bolts = new[] { new F(0.1404f, -0.0590f, -0.7656f, 0f, 0f, -1f), new F(0.2404f, -0.1590f, -0.8232f, 0f, 0f, -1f) },
+            requires = new[] { "BrakeRL", "RearShockL" },
+            tMin = 8.6f, tMax = 11.6f, boltScale = 1.4f, specPart = "액슬(너클) 연결 볼트(M12)", specSource = SrcM12 },
+        new PartDef {
+            id = "RearLowerArmL", name = "리어 로어 암(왼쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "액슬(캐리어)·쇽 쪽을 분리한 뒤 크로스 멤버 쪽 볼트·너트(11~12)를 풀어 로어 암을 뺀다 — 변속기 잭으로 무부하 상태에서, 볼트를 고정하고 너트를 풀며 장착 시 볼트 위치·방향을 바꾸지 않는다",
+            objects = new[] { "SM_RearLowerArm_L" },
+            bolts = new[] { new F(0.2404f, -0.1369f, -0.4500f, 0f, -1f, 0f), new F(0.2204f, -0.1857f, -0.1700f, 0f, -1f, 0f) },
+            requires = new[] { "RearAxleL" },
+            tMin = 11.0f, tMax = 12.0f, boltScale = 1.4f, specPart = "로어 암 크로스 멤버 측 볼트", specSource = "서스펜션 시스템 — 체결 토크 — 리어 로어 암" },
+        new PartDef {
+            id = "RearTrailingArmL", name = "리어 트레일링 암(왼쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "액슬을 뗀 뒤 크로스 멤버 쪽과 캐리어 쪽 볼트·너트(12~14)를 풀어 트레일링 암을 뺀다 — 변속기 잭으로 무부하 상태에서, 볼트를 고정하고 너트를 푼다",
+            objects = new[] { "SM_RearTrailingArm_L" },
+            bolts = new[] { new F(-0.3096f, -0.1195f, -0.6100f, 0f, -1f, 0f), new F(-0.0196f, -0.1867f, -0.6500f, 0f, -1f, 0f) },
+            requires = new[] { "RearAxleL" },
+            tMin = 12.0f, tMax = 14.0f, boltScale = 1.4f, specPart = "트레일링 암 장착 볼트·너트", specSource = "서스펜션 시스템 — 체결 토크 — 트레일링 암" },
+        new PartDef {
+            id = "RearShockR", name = "리어 쇽 업소버(오른쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheel = 3,
+            hint = "뒤 오른쪽 휠을 떼고 ECS 커넥터·와이어링 브래킷을 푼 뒤, 로어 암 쪽 볼트·너트(18~20)를 풀고 차체 쪽 볼트를 풀어 쇽을 들어낸다 — 변속기 잭으로 무부하 상태에서, 볼트를 고정하고 너트를 푼다 (코일 스프링은 쇽이 아니라 로어 암 쪽에서 따로 뺀다)",
+            objects = new[] { "SM_RearShock_R" },
+            bolts = new[] { new F(0.1704f, 0.2196f, 0.6000f, 0f, 1f, 0f), new F(0.2504f, 0.2225f, 0.5700f, 0f, 1f, 0f) },
+            tMin = 5.0f, tMax = 6.5f, specPart = "쇽 업소버 차체 장착 볼트", specSource = "서스펜션 시스템 — 체결 토크 — 리어 쇽 업소버" },
+        new PartDef {
+            id = "RearAxleR", name = "리어 액슬 어셈블리(오른쪽 너클·허브)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "브레이크 캘리퍼와 쇽을 뗀 뒤 너클·허브 연결 볼트를 푼다 — 로어 암·트레일링 암은 액슬을 뗀 뒤 분리",
+            objects = new[] { "SM_RearAxle_R" },
+            bolts = new[] { new F(0.1404f, -0.0590f, 0.7656f, 0f, 0f, 1f), new F(0.2404f, -0.1590f, 0.8240f, 0f, 0f, 1f) },
+            requires = new[] { "BrakeRR", "RearShockR" },
+            tMin = 8.6f, tMax = 11.6f, boltScale = 1.4f, specPart = "액슬(너클) 연결 볼트(M12)", specSource = SrcM12 },
+        new PartDef {
+            id = "RearLowerArmR", name = "리어 로어 암(오른쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "액슬(캐리어)·쇽 쪽을 분리한 뒤 크로스 멤버 쪽 볼트·너트(11~12)를 풀어 로어 암을 뺀다 — 변속기 잭으로 무부하 상태에서, 볼트를 고정하고 너트를 풀며 장착 시 볼트 위치·방향을 바꾸지 않는다",
+            objects = new[] { "SM_RearLowerArm_R" },
+            bolts = new[] { new F(0.2404f, -0.1369f, 0.4500f, 0f, -1f, 0f), new F(0.2204f, -0.1857f, 0.1700f, 0f, -1f, 0f) },
+            requires = new[] { "RearAxleR" },
+            tMin = 11.0f, tMax = 12.0f, boltScale = 1.4f, specPart = "로어 암 크로스 멤버 측 볼트", specSource = "서스펜션 시스템 — 체결 토크 — 리어 로어 암" },
+        new PartDef {
+            id = "RearTrailingArmR", name = "리어 트레일링 암(오른쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "액슬을 뗀 뒤 크로스 멤버 쪽과 캐리어 쪽 볼트·너트(12~14)를 풀어 트레일링 암을 뺀다 — 변속기 잭으로 무부하 상태에서, 볼트를 고정하고 너트를 푼다",
+            objects = new[] { "SM_RearTrailingArm_R" },
+            bolts = new[] { new F(-0.3096f, -0.1195f, 0.6100f, 0f, -1f, 0f), new F(-0.0196f, -0.1867f, 0.6500f, 0f, -1f, 0f) },
+            requires = new[] { "RearAxleR" },
+            tMin = 12.0f, tMax = 14.0f, boltScale = 1.4f, specPart = "트레일링 암 장착 볼트·너트", specSource = "서스펜션 시스템 — 체결 토크 — 트레일링 암" },
+        new PartDef {
+            id = "RearSuspension", name = "리어 크로스 멤버(서브 프레임)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "후륜 모터·양쪽 로어 암·트레일링 암을 뗀 뒤(매뉴얼은 모터·암을 단 채 내리고 벤치에서 분해한다) 크로스 멤버 스테이와 장착 볼트(18~20)를 풀고 리프트 테이블로 받쳐 내린다 — 스태빌라이저 바는 크로스 멤버를 내린 뒤에 푼다",
+            objects = new[] { "SM_RearCrossmember" },
+            bolts = new[] { new F(-0.0896f, -0.0467f, -0.4900f, 0f, -1f, 0f), new F(0.2304f, -0.0012f, -0.3300f, 0f, -1f, 0f), new F(-0.0896f, -0.0467f, 0.4900f, 0f, -1f, 0f), new F(0.2304f, -0.0012f, 0.3300f, 0f, -1f, 0f) },
+            requires = new[] { "RearMotor", "RearLowerArmL", "RearLowerArmR", "RearTrailingArmL", "RearTrailingArmR" },
+            tMin = 18.0f, tMax = 20.0f, boltScale = 1.5f, specPart = "크로스 멤버 장착 볼트·너트", specSource = "서스펜션 시스템 — 체결 토크 — 리어 크로스 멤버" },
+        new PartDef {
+            id = "SeatFL", name = "앞 좌석(왼쪽·운전석)",
             tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
             hint = "도어를 열고 시트 밑 레일 볼트를 푼다 — 시트 하부 커넥터(에어백·열선·벨트 경고)를 분리하고, 에어백 커넥터는 배터리(−) 분리 뒤에 뺀다",
-            objects = new[] { "SM_Seats" },
-            bolts = new[] {
-                new F(-0.4256f, 0.4779f, -1.1085f, 0f, 1f, 0f), new F(-0.4256f, 0.4996f, -0.8086f, 0f, 1f, 0f), new F(-0.4256f, 0.3358f, 0.1912f, 0f, 1f, 0f),
-                new F(0.3742f, 0.4552f, -1.1085f, 0f, 1f, 0f),  new F(0.3742f, 0.4765f, -0.8086f, 0f, 1f, 0f),  new F(0.3742f, 0.3349f, 0.1912f, 0f, 1f, 0f) },
-            tMin = 4.9f, tMax = 6.7f, specPart = "시트 장착 볼트(M10)", specSource = "일반 조임 토크 — 플랜지 볼트 M10·8T (부위별 값 미기재)" },
+            objects = new[] { "SM_Seat_FL" },
+            bolts = new[] { new F(-0.4256f, 0.4779f, -1.1085f, 0f, 1f, 0f), new F(-0.4256f, 0.4996f, -0.8086f, 0f, 1f, 0f) },
+            tMin = 5.0f, tMax = 6.5f, specPart = "프런트 시트 장착 볼트", specSource = "바디 — 체결 토크(시트, 프런트 시트 장착 볼트)" },
+        new PartDef {
+            id = "SeatFR", name = "앞 좌석(오른쪽·동승석)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "도어를 열고 시트 밑 레일 볼트를 푼다 — 시트 하부 커넥터(에어백·열선·벨트 경고)를 분리하고, 에어백 커넥터는 배터리(−) 분리 뒤에 뺀다",
+            objects = new[] { "SM_Seat_FR" },
+            bolts = new[] { new F(0.3742f, 0.4552f, -1.1085f, 0f, 1f, 0f), new F(0.3742f, 0.4765f, -0.8086f, 0f, 1f, 0f) },
+            tMin = 5.0f, tMax = 6.5f, specPart = "프런트 시트 장착 볼트", specSource = "바디 — 체결 토크(시트, 프런트 시트 장착 볼트)" },
+        new PartDef {
+            id = "SeatRear", name = "뒷좌석(시트 쿠션·등받이)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "쿠션 앞쪽을 들어 올려 고정 클립을 풀고 하부 볼트를 푼다 — 등받이는 쿠션을 뗀 뒤 힌지 볼트",
+            objects = new[] { "SM_Seat_Rear" },
+            bolts = new[] { new F(-0.4256f, 0.3358f, 0.1912f, 0f, 1f, 0f), new F(0.3742f, 0.3349f, 0.1912f, 0f, 1f, 0f) },
+            tMin = 4.5f, tMax = 6.0f, specPart = "2열 시트 장착 볼트", specSource = "바디 — 체결 토크(시트, 2열 시트 장착 볼트)" },
         new PartDef {
             id = "Cockpit", name = "크래시 패드(대시보드)",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "12V (−) 단자를 분리한 뒤 센터 가니쉬·에어 벤트·글로브 박스를 떼고 메인 크래쉬 패드 볼트를 푼다 — 클러스터·모니터·에어백 커넥터를 분리해 들어낸다 (HVAC·블로워는 그 안쪽)",
+            hint = "12V (−) 터미널을 분리하고 프런트 필라 트림·플로어 콘솔·글러브 박스·다기능 스위치·헤드업 디스플레이·포토 센서·센터 스피커를 뗀 뒤, 벤트 덕트 센서와 동승석 에어백 커넥터를 분리하고 볼트·너트(2.5~2.8)를 풀어 들어낸다 (HVAC·블로워는 그 안쪽)",
             objects = new[] { "SM_Ioniq_Cockpit" },
             bolts = new[] {
                 new F(-0.2222f, -0.5406f, -0.1607f, 0f, 0f, -1f), new F(0.0278f, -0.5406f, -0.1389f, 0f, 0f, -1f),
                 new F(-0.1222f, 0.0094f, -0.1519f, 0f, 0f, -1f),
                 new F(-0.2222f, 0.5594f, -0.1604f, 0f, 0f, -1f),  new F(0.0278f, 0.5594f, -0.1363f, 0f, 0f, -1f) },
-            tMin = 1.0f, tMax = 1.4f, specPart = "크래시 패드 장착 볼트(M6)", specSource = SrcM6 },
+            tMin = 2.5f, tMax = 2.8f, specPart = "크래시 패드 장착 볼트·너트", specSource = "바디 — 메인 크래쉬 패드 어셈블리 탈거 및 장착(2.5~2.8)" },
         // 대시 안쪽 HVAC·블로워 — 차 모델에 없어 상자·원통으로 만든다 (영상: 블로워 모터 진동·냉매 라인 점검은 대시를 뜯어야 보인다)
         new PartDef {
             id = "Hvac", name = "HVAC·블로워 유닛",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "크래시 패드를 뗀 뒤 케이스 윗면 볼트를 푼다 — 냉매 회수를 먼저 하고 에어컨 라인(팽창밸브)·블로워 커넥터·드레인 호스를 분리해 들어낸다",
+            hint = "냉매를 회수하고 카울 크로스 바 절차로 뺀다 — 크래시 패드·와이퍼 모터·카울 사이드 트림·플로어 콘솔·앞뒤 시트·센터 필라 로어 트림을 떼고 스티어링 컬럼을 아래로 이격한 뒤, 히터 유닛 커넥터(액추에이터·센서·PTC)를 분리하고 장착 너트·볼트와 카울 크로스 바 볼트(1.8~2.4)를 푼다",
             gen = new[] {
                 G.Box(-1.05f, 0.80f, 0f, 0.34f, 0.20f, 0.72f, Plastic, 0f),                                       // 케이스
                 G.Box(-1.21f, 0.80f, -0.10f, 0.02f, 0.17f, 0.46f, Alu, 0.8f),                                      // 증발기 코어
@@ -314,8 +388,8 @@ public class CarPartService : NetworkBehaviour
                 G.Cyl(-1.17f, 0.80f, 0.40f, 0.03f, 0.08f, Alu, 0.8f, 0f, 0f, 90f), G.Cyl(-1.17f, 0.80f, 0.32f, 0.025f, 0.08f, Alu, 0.8f, 0f, 0f, 90f) },   // 냉매 라인 포트
             bolts = new[] {
                 new F(-1.17f, 0.905f, -0.28f, 0f, 1f, 0f), new F(-0.93f, 0.905f, -0.28f, 0f, 1f, 0f), new F(-1.05f, 0.905f, 0.02f, 0f, 1f, 0f) },
-            requires = new[] { "Cockpit" },
-            tMin = 1.0f, tMax = 1.4f, specPart = "HVAC 케이스 장착 볼트(M6)", specSource = SrcM6 },
+            requires = new[] { "Cockpit", "SeatFL", "SeatFR", "SeatRear" },
+            tMin = 1.8f, tMax = 2.4f, specPart = "카울 크로스 바 장착 볼트", specSource = "바디 — 카울 크로스 바 어셈블리 탈거 및 장착(1.8~2.4)" },
 
         // ══════════════════════════════════════════════════════════════
         //  11/16 추가(2) — 차를 이루는 나머지 부품: 12V 배터리·브레이크(차 모델 메시) + 모델에 없는 하부·구동 내부 부품(생성 파츠).
@@ -340,15 +414,33 @@ public class CarPartService : NetworkBehaviour
             requires = new[] { "Battery12VCover" },
             tMin = 0.9f, tMax = 1.4f, specPart = "12V 배터리 클램프 볼트", specSource = "차량 제어 시스템 — 12V 배터리 탈거 및 장착" },
         new PartDef {
-            id = "BrakeSystem", name = "브레이크 시스템(캘리퍼·디스크)",
-            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheelOff = true,
-            hint = "휠을 먼저 떼고 캘리퍼 장착 볼트를 푼다 — 디스크·패드 점검은 이 상태에서 (브레이크 라인은 건드리지 않는다)",
-            objects = new[] { "SM_Breaksystem" },
-            bolts = new[] {
-                new F(-1.4847f, -0.1256f, -0.8892f, 0f, 0f, -1f), new F(-1.4847f, -0.1256f, 0.8963f, 0f, 0f, 1f),
-                new F(1.5153f, -0.1256f, -0.8899f, 0f, 0f, -1f),  new F(1.5153f, -0.1256f, 0.8944f, 0f, 0f, 1f) },
-            tMin = 8.6f, tMax = 11.6f, boltScale = 1.4f, specPart = "캘리퍼 장착 볼트(M12)", specSource = "일반 조임 토크 — 플랜지 볼트 M12·8T (부위별 값 미기재)" },
-
+            id = "BrakeFL", name = "브레이크(앞 왼쪽 캘리퍼·디스크)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheel = 0,
+            hint = "앞 왼쪽 휠을 먼저 떼고 휠 속도 센서 클립·브레이크 호스 브래킷(0.9~1.4)을 분리한 뒤 캘리퍼 볼트(10~12, 재사용 금지)를 푼다 — 캘리퍼는 호스를 분리하지 말고 케이블 타이로 매달아 둔다. 디스크 볼트는 0.5~0.6",
+            objects = new[] { "SM_Brake_FL" },
+            bolts = new[] { new F(-1.4847f, -0.1256f, -0.8892f, 0f, 0f, -1f), new F(-1.4847f, -0.0556f, -0.8892f, 0f, 0f, -1f) },
+            tMin = 10.0f, tMax = 12.0f, boltScale = 1.4f, specPart = "프런트 캘리퍼 볼트(재사용 금지)", specSource = "브레이크 시스템 — 체결토크(프런트 캘리퍼 볼트)" },
+        new PartDef {
+            id = "BrakeFR", name = "브레이크(앞 오른쪽 캘리퍼·디스크)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheel = 1,
+            hint = "앞 오른쪽 휠을 먼저 떼고 휠 속도 센서 클립·브레이크 호스 브래킷(0.9~1.4)을 분리한 뒤 캘리퍼 볼트(10~12, 재사용 금지)를 푼다 — 캘리퍼는 호스를 분리하지 말고 케이블 타이로 매달아 둔다. 디스크 볼트는 0.5~0.6",
+            objects = new[] { "SM_Brake_FR" },
+            bolts = new[] { new F(-1.4847f, -0.1256f, 0.8963f, 0f, 0f, 1f), new F(-1.4847f, -0.0556f, 0.8963f, 0f, 0f, 1f) },
+            tMin = 10.0f, tMax = 12.0f, boltScale = 1.4f, specPart = "프런트 캘리퍼 볼트(재사용 금지)", specSource = "브레이크 시스템 — 체결토크(프런트 캘리퍼 볼트)" },
+        new PartDef {
+            id = "BrakeRL", name = "브레이크(뒤 왼쪽 캘리퍼·디스크)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheel = 2,
+            hint = "진단기로 주차 브레이크(EPB)를 해제하고 12V (−) 터미널을 분리한 뒤 뒤 왼쪽 휠을 떼고 EPB 액추에이터 커넥터를 분리한다 — 캘리퍼 바디(2.2~3.2)와 패드를 뺀 다음 캐리어 볼트(8~10, 재사용 금지)를 푼다. 디스크 볼트는 0.5~0.6",
+            objects = new[] { "SM_Brake_RL" },
+            bolts = new[] { new F(1.5153f, -0.1256f, -0.8899f, 0f, 0f, -1f), new F(1.5153f, -0.0556f, -0.8899f, 0f, 0f, -1f) },
+            tMin = 8.0f, tMax = 10.0f, boltScale = 1.4f, specPart = "리어 캘리퍼 캐리어 볼트(재사용 금지)", specSource = "브레이크 시스템 — 체결토크(리어 캘리퍼 볼트)" },
+        new PartDef {
+            id = "BrakeRR", name = "브레이크(뒤 오른쪽 캘리퍼·디스크)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheel = 3,
+            hint = "진단기로 주차 브레이크(EPB)를 해제하고 12V (−) 터미널을 분리한 뒤 뒤 오른쪽 휠을 떼고 EPB 액추에이터 커넥터를 분리한다 — 캘리퍼 바디(2.2~3.2)와 패드를 뺀 다음 캐리어 볼트(8~10, 재사용 금지)를 푼다. 디스크 볼트는 0.5~0.6",
+            objects = new[] { "SM_Brake_RR" },
+            bolts = new[] { new F(1.5153f, -0.1256f, 0.8944f, 0f, 0f, 1f), new F(1.5153f, -0.0556f, 0.8944f, 0f, 0f, 1f) },
+            tMin = 8.0f, tMax = 10.0f, boltScale = 1.4f, specPart = "리어 캘리퍼 캐리어 볼트(재사용 금지)", specSource = "브레이크 시스템 — 체결토크(리어 캘리퍼 볼트)" },
         // ── 프렁크 아래 구동·고전압 부품 ──
         new PartDef {
             id = "FrontInverter", name = "전륜 인버터(EPCU)", hv = true,
@@ -366,81 +458,109 @@ public class CarPartService : NetworkBehaviour
         new PartDef {
             id = "Iccu", name = "통합 충전기·컨버터(ICCU)", hv = true,
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "고전압 차단 후 프렁크를 뗀다 — HV 커넥터와 12V 출력 케이블을 분리하고 윗면 볼트 4개를 푼다 (OBC·LDC 통합 유닛)",
+            hint = "고전압 차단 → 모터 냉각수 배출 → 뒷좌석을 뗀 뒤 좌석 밑 ICCU의 접지(1.1~1.4)·AC·DC·신호 커넥터·LDC 플러스 케이블(0.7~1.0)·냉각수 퀵 커넥터를 분리하고 장착 볼트(2.0~2.4)를 푼다 (OBC·LDC 통합 유닛, 매뉴얼상 러기지 사이드 트림도 먼저 뗀다)",
             gen = new[] {
-                G.Box(-1.62f, 0.64f, 0.42f, 0.30f, 0.12f, 0.38f, Alu, 0.7f),
-                G.Box(-1.62f, 0.705f, 0.42f, 0.24f, 0.012f, 0.32f, DarkAlu, 0.6f),
-                G.Box(-1.46f, 0.66f, 0.30f, 0.04f, 0.05f, 0.07f, HvOrange, 0f) },
+                G.Box(0.55f, 0.42f, -0.35f, 0.46f, 0.09f, 0.40f, Alu, 0.7f),
+                G.Box(0.55f, 0.468f, -0.35f, 0.38f, 0.012f, 0.32f, DarkAlu, 0.6f),
+                G.Box(0.30f, 0.43f, -0.46f, 0.04f, 0.05f, 0.07f, HvOrange, 0f), G.Box(0.30f, 0.43f, -0.24f, 0.04f, 0.05f, 0.07f, HvOrange, 0f) },
             bolts = new[] {
-                new F(-1.72f, 0.712f, 0.28f, 0f, 1f, 0f), new F(-1.52f, 0.712f, 0.28f, 0f, 1f, 0f),
-                new F(-1.72f, 0.712f, 0.56f, 0f, 1f, 0f), new F(-1.52f, 0.712f, 0.56f, 0f, 1f, 0f) },
-            requires = new[] { "Frunk" },
-            tMin = 2.5f, tMax = 3.3f, specPart = "ICCU 장착 볼트(M8)", specSource = SrcM8 },
+                new F(0.38f, 0.476f, -0.50f, 0f, 1f, 0f), new F(0.72f, 0.476f, -0.50f, 0f, 1f, 0f),
+                new F(0.38f, 0.476f, -0.20f, 0f, 1f, 0f), new F(0.72f, 0.476f, -0.20f, 0f, 1f, 0f) },
+            requires = new[] { "SeatRear" },
+            tMin = 2.0f, tMax = 2.4f, specPart = "ICCU 장착 볼트", specSource = "배터리 제어 시스템 — 통합 충전기 및 컨버터 유닛(ICCU) 탈거" },
         new PartDef {
-            id = "JunctionBlock", name = "고전압 정션 블록", hv = true,
+            id = "JunctionBlock", name = "고전압 정션 블록(프런트)", hv = true,
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "고전압 차단 후 프렁크를 뗀다 — 배터리·인버터·ICCU로 가는 HV 커넥터를 모두 분리하고 윗면 볼트를 푼다 (절연 저항 점검 때 여기서 부품별 커넥터를 하나씩 뽑는다)",
+            hint = "고전압 차단 → 프런트 언더 커버를 뗀 뒤 HV 커넥터 커버(0.8~1.2)를 열고 배터리 프런트·컴프레서·PTC 커넥터를 분리한 다음 인버터 체결 볼트와 장착 볼트(0.7~1.0)를 푼다 (매뉴얼은 아래에서 접근 — 이 모델에서는 프렁크를 떼고 윗면 볼트를 푼다. 장착 뒤 전륜 모터·감속기 기밀 점검)",
             gen = new[] {
                 G.Box(-1.62f, 0.63f, -0.12f, 0.22f, 0.10f, 0.28f, DarkAlu, 0.5f),
                 G.Box(-1.49f, 0.64f, -0.20f, 0.03f, 0.04f, 0.06f, HvOrange, 0f), G.Box(-1.49f, 0.64f, -0.04f, 0.03f, 0.04f, 0.06f, HvOrange, 0f) },
             bolts = new[] {
                 new F(-1.69f, 0.683f, -0.22f, 0f, 1f, 0f), new F(-1.55f, 0.683f, -0.22f, 0f, 1f, 0f),
                 new F(-1.69f, 0.683f, -0.02f, 0f, 1f, 0f), new F(-1.55f, 0.683f, -0.02f, 0f, 1f, 0f) },
-            requires = new[] { "Frunk" },
-            tMin = 1.0f, tMax = 1.4f, specPart = "정션 블록 장착 볼트(M6)", specSource = SrcM6 },
+            requires = new[] { "Frunk", "FrontUnderCover" },
+            tMin = 0.7f, tMax = 1.0f, specPart = "정션 블록 장착 볼트", specSource = "배터리 제어 시스템 — 고전압 정션 블록 탈거 및 장착(프런트)" },
 
+        new PartDef {
+            id = "RearJunctionBlock", name = "고전압 정션 블록(리어)", hv = true,
+            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
+            hint = "고전압 차단 → 리어 크로스 멤버를 내린 뒤 와이어링 커넥터와 HV 케이블 볼트(2.0~2.4), 서비스 커버(0.4~0.6), 인버터 체결 볼트(0.7~1.0)를 풀고 정션 블록 장착 볼트·너트(2.0~2.4)를 푼다 — 장착 뒤 후륜 모터·감속기 기밀 점검",
+            gen = new[] {
+                G.Box(1.45f, 0.40f, 0f, 0.20f, 0.12f, 0.30f, DarkAlu, 0.5f),
+                G.Box(1.45f, 0.465f, 0f, 0.16f, 0.012f, 0.26f, Alu, 0.7f),
+                G.Box(1.45f, 0.41f, -0.19f, 0.05f, 0.05f, 0.04f, HvOrange, 0f), G.Box(1.45f, 0.41f, 0.19f, 0.05f, 0.05f, 0.04f, HvOrange, 0f) },
+            bolts = new[] {
+                new F(1.38f, 0.333f, -0.11f, 0f, -1f, 0f), new F(1.52f, 0.333f, -0.11f, 0f, -1f, 0f),
+                new F(1.38f, 0.333f, 0.11f, 0f, -1f, 0f),  new F(1.52f, 0.333f, 0.11f, 0f, -1f, 0f) },
+            requires = new[] { "RearSuspension" },
+            tMin = 2.0f, tMax = 2.4f, specPart = "리어 정션 블록 장착 볼트·너트", specSource = "배터리 제어 시스템 — 고전압 정션 블록 탈거 및 장착(리어)" },
         // ── 서스펜션·조향 ──
         new PartDef {
             id = "SteeringRack", name = "스티어링 기어박스",
             tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
-            hint = "프런트 언더 커버를 뗀 뒤 타이로드 엔드·컬럼 조인트를 분리하고 장착 볼트를 푼다 (서브 프레임보다 먼저)",
+            hint = "서브 프레임을 내린 뒤 벤치에서 기어박스 장착 볼트(11~13)를 푼다 — 볼트는 모두 가체결한 다음 규정 토크까지 완체결(유격 최소화). 유니버셜 조인트 볼트(5~6)는 재사용 금지, 장착 후 얼라인먼트 점검",
             gen = new[] {
                 G.Cyl(-1.33f, 0.42f, 0f, 0.07f, 0.85f, Alu, 0.7f, 90f, 0f, 0f),
                 G.Cyl(-1.33f, 0.42f, -0.50f, 0.09f, 0.18f, Plastic, 0f, 90f, 0f, 0f), G.Cyl(-1.33f, 0.42f, 0.50f, 0.09f, 0.18f, Plastic, 0f, 90f, 0f, 0f) },
             bolts = new[] { new F(-1.33f, 0.382f, -0.20f, 0f, -1f, 0f), new F(-1.33f, 0.382f, 0.20f, 0f, -1f, 0f) },
-            requires = new[] { "FrontUnderCover" },
-            tMin = 4.9f, tMax = 6.7f, specPart = "스티어링 기어박스 장착 볼트(M10)", specSource = SrcM10 },
+            requires = new[] { "FrontSuspension" },
+            tMin = 11.0f, tMax = 13.0f, specPart = "스티어링 기어박스 장착 볼트", specSource = "서스펜션 시스템 — 체결 토크 — 프런트 서브 프레임(스티어링 기어 박스와 서브 프레임 볼트)" },
         new PartDef {
             id = "FrontStabilizer", name = "프런트 스태빌라이저 바",
-            tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "프런트 언더 커버를 뗀 뒤 부싱 브래킷 볼트 2개와 엔드 링크를 풀어 뺀다",
-            gen = new[] {
-                G.Cyl(-2.25f, 0.33f, 0f, 0.022f, 1.15f, DarkAlu, 0.7f, 90f, 0f, 0f),
-                G.Box(-2.25f, 0.33f, -0.30f, 0.05f, 0.05f, 0.07f, Plastic, 0f), G.Box(-2.25f, 0.33f, 0.30f, 0.05f, 0.05f, 0.07f, Plastic, 0f),
-                G.Cyl(-2.25f, 0.43f, -0.55f, 0.012f, 0.18f, Alu, 0.7f), G.Cyl(-2.25f, 0.43f, 0.55f, 0.012f, 0.18f, Alu, 0.7f) },
-            bolts = new[] { new F(-2.25f, 0.305f, -0.30f, 0f, -1f, 0f), new F(-2.25f, 0.305f, 0.30f, 0f, -1f, 0f) },
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
+            hint = "앞 양쪽 휠을 떼고 휠 가드·프런트 언더 커버·레터럴 암 에어가드를 뗀 뒤, 스태빌라이저 링크 너트(10~12, 링크 헥사를 잡고)와 바 고정 볼트(4.5~5.5)를 풀어 뺀다",
+            objects = new[] { "SM_FrontStabilizer" },
+            bolts = new[] {
+                new F(0.2086f, -0.0747f, -0.3000f, 0f, -1f, 0f), new F(0.2686f, -0.0766f, -0.3000f, 0f, -1f, 0f),
+                new F(0.2086f, -0.0747f, 0.3000f, 0f, -1f, 0f), new F(0.2686f, -0.0766f, 0.3000f, 0f, -1f, 0f) },
+            requires = new[] { "FrontUnderCover" }, needsWheel = 0, needsWheel2 = 1,
+            tMin = 4.5f, tMax = 5.5f, specPart = "프런트 스태빌라이저 바 볼트", specSource = "서스펜션 시스템 — 체결 토크 — 프런트 스태빌라이저 바" },
+        new PartDef {
+            id = "FrontLowerArmL", name = "프런트 로어 암(왼쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheel = 0,
+            hint = "앞 왼쪽 휠을 떼고 프런트 언더 커버를 뗀 뒤, 분할 핀(재사용 금지)과 캐슬 너트(10~12)를 풀고 볼 조인트 풀러로 너클에서 분리한 다음 서브 프레임 쪽 볼트·너트(16~18)를 푼다 — 모델에서는 텐션 암·레터럴 암이 한 판이라 한 부위로 다룬다",
+            objects = new[] { "SM_FrontLowerArm_L" },
+            bolts = new[] { new F(0.1086f, -0.1397f, -0.4000f, 0f, -1f, 0f), new F(0.2186f, -0.1335f, -0.4000f, 0f, -1f, 0f) },
             requires = new[] { "FrontUnderCover" },
-            tMin = 2.5f, tMax = 3.3f, specPart = "스태빌라이저 부싱 볼트(M8)", specSource = SrcM8 },
+            tMin = 16.0f, tMax = 18.0f, boltScale = 1.4f, specPart = "로어 암 서브 프레임 측 볼트·너트", specSource = "서스펜션 시스템 — 텐션 암·레터럴 암 (서브 프레임 볼트 및 너트 16.0~18.0)" },
+        new PartDef {
+            id = "FrontLowerArmR", name = "프런트 로어 암(오른쪽)",
+            tool = "에어 임팩렌치(17mm 소켓)", socket = 2, needsWheel = 1,
+            hint = "앞 오른쪽 휠을 떼고 프런트 언더 커버를 뗀 뒤, 분할 핀(재사용 금지)과 캐슬 너트(10~12)를 풀고 볼 조인트 풀러로 너클에서 분리한 다음 서브 프레임 쪽 볼트·너트(16~18)를 푼다 — 모델에서는 텐션 암·레터럴 암이 한 판이라 한 부위로 다룬다",
+            objects = new[] { "SM_FrontLowerArm_R" },
+            bolts = new[] { new F(0.1086f, -0.1397f, 0.4000f, 0f, -1f, 0f), new F(0.2186f, -0.1335f, 0.4000f, 0f, -1f, 0f) },
+            requires = new[] { "FrontUnderCover" },
+            tMin = 16.0f, tMax = 18.0f, boltScale = 1.4f, specPart = "로어 암 서브 프레임 측 볼트·너트", specSource = "서스펜션 시스템 — 텐션 암·레터럴 암 (서브 프레임 볼트 및 너트 16.0~18.0)" },
         new PartDef {
             id = "FrontStrutL", name = "프런트 스트럿(왼쪽)",
             tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
-            hint = "후드를 열고 스트럿 타워 위 너트를 풀고 너클 쪽 볼트를 분리해 뺀다 (코일 스프링은 압축 상태 — 전용 공구 없이 분해 금지)",
+            hint = "휠을 떼고 스태빌라이저 링크 너트(10~12)·ECS 커넥터·브레이크 호스 브래킷을 분리한 뒤, 너클 볼트(18~20)를 풀고 후드를 연 상태에서 상단 너트(5.5~7.0)를 풀어 뺀다 (코일 스프링은 압축 상태 — 스프링 압축기·전용 공구 없이 분해 금지, 록 너트는 재사용 금지)",
             gen = new[] {
                 G.Cyl(-1.75f, 0.62f, -0.60f, 0.075f, 0.50f, Alu, 0.7f), G.Cyl(-1.75f, 0.70f, -0.60f, 0.12f, 0.24f, Plastic, 0f),
                 G.Box(-1.75f, 0.875f, -0.60f, 0.12f, 0.02f, 0.12f, DarkAlu, 0.6f) },
             bolts = new[] { new F(-1.80f, 0.886f, -0.60f, 0f, 1f, 0f), new F(-1.70f, 0.886f, -0.60f, 0f, 1f, 0f) },
-            requires = new[] { "Hood" },
-            tMin = 4.9f, tMax = 6.7f, specPart = "스트럿 상단 너트(M10)", specSource = SrcM10 },
+            needsWheel = 0,
+            tMin = 5.5f, tMax = 7.0f, specPart = "스트럿 상단(어퍼 마운트) 너트", specSource = "서스펜션 시스템 — 체결 토크 — 프런트 스트럿 어셈블리" },
         new PartDef {
             id = "FrontStrutR", name = "프런트 스트럿(오른쪽)",
             tool = "에어 임팩렌치(17mm 소켓)", socket = 2,
-            hint = "후드를 열고 스트럿 타워 위 너트를 풀고 너클 쪽 볼트를 분리해 뺀다 (코일 스프링은 압축 상태 — 전용 공구 없이 분해 금지)",
+            hint = "휠을 떼고 스태빌라이저 링크 너트(10~12)·ECS 커넥터·브레이크 호스 브래킷을 분리한 뒤, 너클 볼트(18~20)를 풀고 후드를 연 상태에서 상단 너트(5.5~7.0)를 풀어 뺀다 (코일 스프링은 압축 상태 — 스프링 압축기·전용 공구 없이 분해 금지, 록 너트는 재사용 금지)",
             gen = new[] {
                 G.Cyl(-1.75f, 0.62f, 0.60f, 0.075f, 0.50f, Alu, 0.7f), G.Cyl(-1.75f, 0.70f, 0.60f, 0.12f, 0.24f, Plastic, 0f),
                 G.Box(-1.75f, 0.875f, 0.60f, 0.12f, 0.02f, 0.12f, DarkAlu, 0.6f) },
             bolts = new[] { new F(-1.80f, 0.886f, 0.60f, 0f, 1f, 0f), new F(-1.70f, 0.886f, 0.60f, 0f, 1f, 0f) },
-            requires = new[] { "Hood" },
-            tMin = 4.9f, tMax = 6.7f, specPart = "스트럿 상단 너트(M10)", specSource = SrcM10 },
+            needsWheel = 1,
+            tMin = 5.5f, tMax = 7.0f, specPart = "스트럿 상단(어퍼 마운트) 너트", specSource = "서스펜션 시스템 — 체결 토크 — 프런트 스트럿 어셈블리" },
         new PartDef {
             id = "RearStabilizer", name = "리어 스태빌라이저 바",
             tool = "스패너 · 에어 임팩렌치(10mm 소켓)",
-            hint = "리어 언더 커버를 뗀 뒤 부싱 브래킷 볼트 2개와 엔드 링크를 풀어 뺀다",
+            hint = "크로스 멤버를 내린 뒤 와이어링 브래킷(2.0~2.4)과 스태빌라이저 바 고정 볼트(5.0~6.5)를 풀어 뺀다",
             gen = new[] {
                 G.Cyl(1.48f, 0.34f, 0f, 0.02f, 1.10f, DarkAlu, 0.7f, 90f, 0f, 0f),
                 G.Box(1.48f, 0.34f, -0.30f, 0.05f, 0.05f, 0.07f, Plastic, 0f), G.Box(1.48f, 0.34f, 0.30f, 0.05f, 0.05f, 0.07f, Plastic, 0f) },
             bolts = new[] { new F(1.48f, 0.315f, -0.30f, 0f, -1f, 0f), new F(1.48f, 0.315f, 0.30f, 0f, -1f, 0f) },
-            requires = new[] { "RearUnderCover" },
-            tMin = 2.5f, tMax = 3.3f, specPart = "스태빌라이저 부싱 볼트(M8)", specSource = SrcM8 },
+            requires = new[] { "RearSuspension" },
+            tMin = 5.0f, tMax = 6.5f, specPart = "리어 스태빌라이저 바 볼트", specSource = "서스펜션 시스템 — 체결 토크 — 리어 스태빌라이저 바" },
     };
 
     /// <summary>이 볼트가 속한 부위의 한글 이름(차체 부품 탈거·장착 볼트가 아니면 null).</summary>
@@ -517,6 +637,7 @@ public class CarPartService : NetworkBehaviour
         public float nextEnforce;
         public Bounds wb;                // 부품 메시 전체의 월드 범위(0.3초마다 갱신) — 시선이 어느 부품을 보는지 판정
         public bool wbOk;
+        public bool yieldToScenario;     // 시나리오가 지금 이 부위의 볼트를 다루는 중 — 자유 실습 표시는 양보한다
     }
 
     private Part[] _parts;
@@ -606,12 +727,14 @@ public class CarPartService : NetworkBehaviour
             int q = IndexOf(r);
             if (q >= 0 && StateOf(q) != (int)PartState.Off) return false;
         }
-        if (Defs[p].needsWheelOff && !WheelOff) return false;
+        if (Defs[p].needsWheel >= 0 && !WheelOffAt(Defs[p].needsWheel)) return false;
+        if (Defs[p].needsWheel2 >= 0 && !WheelOffAt(Defs[p].needsWheel2)) return false;
         return true;
     }
 
-    // 휠을 하나 이상 떼어 둔 상태 — 브레이크(캘리퍼·디스크)는 휠 안쪽이라 휠을 떼야 접근된다
-    private static bool WheelOff => TireService.Instance != null && TireService.Instance.AnyHubFree;
+    // 그 바퀴를 떼어 둔 상태 — 브레이크(캘리퍼·디스크)는 휠 안쪽이라 해당 휠을 떼야 접근된다
+    private static bool WheelOffAt(int w) => TireService.Instance != null && TireService.Instance.IsWheelOff(w);
+    private static readonly string[] WheelNames = { "앞 왼쪽 휠", "앞 오른쪽 휠", "뒤 왼쪽 휠", "뒤 오른쪽 휠" };
 
     /// <summary>이 부위를 다시 끼울 수 있는가 — 이 부위를 먼저 떼야 하는(requires 로 가진) 부위가 모두 달려 있어야 한다.</summary>
     public bool CanMount(int p)
@@ -646,7 +769,8 @@ public class CarPartService : NetworkBehaviour
         var list = new List<string>();
         foreach (var r in Defs[p].requires) { int q = IndexOf(r); if (q >= 0 && StateOf(q) != (int)PartState.Off) list.Add(r); }
         string s = NamesOf(list);
-        if (Defs[p].needsWheelOff && !WheelOff) s = s.Length > 0 ? s + ", 휠(바퀴 하나 이상)" : "휠(바퀴 하나 이상)";
+        if (Defs[p].needsWheel >= 0 && !WheelOffAt(Defs[p].needsWheel)) { string wn = WheelNames[Defs[p].needsWheel]; s = s.Length > 0 ? s + ", " + wn : wn; }
+        if (Defs[p].needsWheel2 >= 0 && !WheelOffAt(Defs[p].needsWheel2)) { string wn = WheelNames[Defs[p].needsWheel2]; s = s.Length > 0 ? s + ", " + wn : wn; }
         return s;
     }
 
@@ -676,7 +800,7 @@ public class CarPartService : NetworkBehaviour
         if (Time.unscaledTime >= _wheelPollAt)
         {
             _wheelPollAt = Time.unscaledTime + 0.5f;
-            for (int q = 0; q < _parts.Length; q++) if (_parts[q] != null && Defs[q].needsWheelOff) Rebuild(q);
+            for (int q = 0; q < _parts.Length; q++) if (_parts[q] != null && (Defs[q].needsWheel >= 0 || Defs[q].needsWheel2 >= 0)) Rebuild(q);
         }
 
         for (int p = 0; p < _parts.Length; p++)
@@ -1243,6 +1367,7 @@ public class CarPartService : NetworkBehaviour
             if (pt == null || pt.anchor == null || pt.snap != null || StateOf(p) == (int)PartState.Off) continue;
             // 다른 부품에 가려 아직 못 푸는 부위(예: 범퍼 안쪽 인버터)는 겨눠지지 않게 — 안 그러면 차 속 부품 카드가 한꺼번에 떴다
             if (StateOf(p) == (int)PartState.Tight && !CanRemove(p)) continue;
+            if (pt.yieldToScenario) continue;   // 시나리오 볼트와 같은 부위 — 시나리오 쪽만 보이게
             float a = PartAngle(pt, cp, fwd, near);
             if (p == _focus) curA = a;
             if (a < bestA) { bestA = a; best = p; }
@@ -1276,6 +1401,7 @@ public class CarPartService : NetworkBehaviour
             _boundsAt = Time.unscaledTime + 0.3f;
             foreach (var bp in _parts) RefreshBounds(bp);
         }
+        RefreshYield();
         // 시나리오 중에도 표시는 켜 두되, 한 번에 한 부위(겨눈 부위)만 보여 준다 — 카드는 아래 cardPart 하나만
         int hover = PickHover(cam);
         int focus = PickFocus(cam, near);
@@ -1338,7 +1464,7 @@ public class CarPartService : NetworkBehaviour
                 EquipFx.Notice("carpart_" + pt.def.id, pt.def.name + (st == (int)PartState.Mounted ? " 장착" : " 탈거"),
                     st == (int)PartState.Mounted ? $"{pt.def.tool}로 규정 {pt.def.tMin:0.0#} ~ {pt.def.tMax:0.0#} kgf·m까지 조이세요" : pt.def.hint,
                     EquipFx.Info, 4f, 180f);
-            if ((cardPart >= 0 && p != cardPart) || TireService.LabelShowing) { pt.flashUntil = 0f; pt.cardUntil = 0f; }   // 다른 부위·휠 카드가 떠 있으면 내린다
+            if ((cardPart >= 0 && p != cardPart) || TireService.LabelShowing || pt.yieldToScenario) { pt.flashUntil = 0f; pt.cardUntil = 0f; }   // 다른 부위·휠 카드가 떠 있으면 내린다
             UpdateCard(pt, p, st, done, anyActive && on, p == cardPart && !TireService.LabelShowing, cam);
             UpdateLeads(pt, on && pt.card != null && pt.card.root.activeSelf);
         }
@@ -1363,12 +1489,13 @@ public class CarPartService : NetworkBehaviour
         switch (d.id)
         {
             case "FrontUnderCover": case "RearUnderCover": case "FrontMotor": case "RearMotor":
-            case "FrontSuspension": case "RearSuspension": case "SteeringRack": case "FrontStabilizer": case "RearStabilizer":
+            case "FrontSuspension": case "RearSuspension": case "RearAxleL": case "RearAxleR": case "RearLowerArmL": case "RearLowerArmR": case "RearTrailingArmL": case "RearTrailingArmR": case "RearShockL": case "RearShockR": case "SteeringRack": case "FrontStabilizer": case "RearStabilizer": case "FrontLowerArmL": case "FrontLowerArmR": case "RearJunctionBlock":
                 return "차 밑 — 리프트로 올리고 작업";
-            case "BrakeSystem": return "휠 안쪽 — 휠을 떼고 작업";
-            case "Seats": case "Cockpit": case "Hvac": return "실내 — 도어를 열고 작업";
+            case "BrakeFL": case "BrakeFR": case "BrakeRL": case "BrakeRR": return "휠 안쪽 — 해당 휠을 떼고 작업";
+            case "SeatFL": case "SeatFR": case "SeatRear": case "Cockpit": case "Hvac": return "실내 — 도어를 열고 작업";
+            case "Iccu": return "실내 — 뒷좌석을 떼고 좌석 밑에서 작업";
             case "Hood": case "Frunk": case "Headlamp": case "FrontBeam": case "Cooling": case "AcCompressor":
-            case "FrontInverter": case "Iccu": case "JunctionBlock": case "Battery12VCover": case "Battery12V":
+            case "FrontInverter": case "JunctionBlock": case "Battery12VCover": case "Battery12V":
             case "FrontStrutL": case "FrontStrutR":
                 return "엔진룸 — 후드를 열고 작업";
             default: return "차 바깥에서 작업";
@@ -1397,7 +1524,7 @@ public class CarPartService : NetworkBehaviour
         for (int p = 0; p < _parts.Length; p++)
         {
             var pt = _parts[p];
-            if (pt == null || !pt.wbOk || pt.snap != null) continue;
+            if (pt == null || !pt.wbOk || pt.snap != null || pt.yieldToScenario) continue;
             int st = StateOf(p);
             if (st == (int)PartState.Off) continue;
             if (st == (int)PartState.Tight && !CanRemove(p)) continue;
@@ -1467,6 +1594,37 @@ public class CarPartService : NetworkBehaviour
             }
             if (!g.activeSelf) g.SetActive(true);
             g.transform.SetPositionAndRotation(PartCenter(p), PartRotation(p));
+        }
+    }
+
+    // 시나리오가 다루는 볼트(드릴이 문 볼트·안내 중인 볼트 묶음)가 자유 실습 부위 가까이(범위 + 0.4m)에 있으면 그 부위는 표시를 양보한다.
+    // 같은 하부 커버를 시나리오 볼트와 자유 실습 볼트가 각자 따로 다뤄서, 시나리오 중에 두 카드·두 볼트 세트가 한 화면에 겹쳤다.
+    private NextActionGuide _nag;
+    private float _yieldAt;
+    private readonly List<Vector3> _scnBolts = new List<Vector3>();
+
+    private void RefreshYield()
+    {
+        if (Time.unscaledTime < _yieldAt) return;
+        _yieldAt = Time.unscaledTime + 0.25f;
+        foreach (var pt in _parts) if (pt != null) pt.yieldToScenario = false;
+        if (!ScenarioRunning) return;
+
+        _scnBolts.Clear();
+        var tb = ImpactWrench.LocalTargetBolt;
+        if (tb != null && tb.gameObject.activeInHierarchy && !tb.transform.IsChildOf(transform)) _scnBolts.Add(tb.transform.position);
+        if (_nag == null) _nag = FindFirstObjectByType<NextActionGuide>();
+        var g = _nag != null ? _nag.FocusGroup : null;
+        if (g != null)
+            foreach (var b in g.GetComponentsInChildren<Bolt>(false))
+                if (b != null && !b.isloosened) _scnBolts.Add(b.transform.position);
+        if (_scnBolts.Count == 0) return;
+
+        foreach (var pt in _parts)
+        {
+            if (pt == null || !pt.wbOk) continue;
+            var bb = pt.wb; bb.Expand(0.8f);   // 사방 0.4m
+            foreach (var bp in _scnBolts) if (bb.Contains(bp)) { pt.yieldToScenario = true; break; }
         }
     }
 

@@ -16,10 +16,27 @@ public static class BoltPartName
         var g = b.GetComponentInParent<BoltGroupCounter>();
         if (g != null)
         {
-            string raw = g.targetPart != null ? g.targetPart.name : g.name;
-            if (!string.IsNullOrEmpty(raw)) return HoverNameFormatter.Format(raw);
+            // 볼트 묶음 이름이 한글 사전에 있으면 그것('앞 커버 볼트' → '앞 커버'), 없으면 묶음이 가리키는 부품 이름
+            string gn = HoverNameFormatter.Format(g.name);
+            if (HasKorean(gn)) return StripBolt(gn);
+            if (g.targetPart != null) return HoverNameFormatter.Format(g.targetPart.name);
+            return gn;
         }
         return null;
+    }
+
+    private static bool HasKorean(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return false;
+        foreach (char c in s) if (c >= 0xAC00 && c <= 0xD7A3) return true;
+        return false;
+    }
+
+    private static string StripBolt(string s)
+    {
+        if (s.EndsWith(" 조립 볼트")) return s.Substring(0, s.Length - 5) + " 조립";
+        if (s.EndsWith(" 볼트")) return s.Substring(0, s.Length - 3);
+        return s;
     }
 
     /// <summary>제목 뒤에 부품 이름을 붙인다(예: '볼트 분해 — 프런트 언더 커버'). 이름을 못 찾으면 제목 그대로.</summary>
