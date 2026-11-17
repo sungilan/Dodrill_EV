@@ -447,6 +447,15 @@ public class SyncGrab : NetworkBehaviour
         _settleCo = StartCoroutine(ServerSettleRoutine());
     }
 
+    /// <summary>[서버] 방금 스폰한 물체(차에서 떼어낸 부품)를 바닥까지 떨어뜨린다 — 잡기 전까지 떼어낸 자리에 떠 있지 않게. 멈추면 기존 낙하 루틴이 다시 고정한다.</summary>
+    [Server]
+    public void ServerDropToFloor()
+    {
+        if(_rb == null) _rb = GetComponent<Rigidbody>();
+        if(_rb == null || _isGrabbed.Value) return;
+        BeginServerSettle();   // 서버만 물리를 돌린다(클라이언트는 Kinematic 그대로, 위치는 LocalNetworkTransform 이 전파)
+    }
+
     private void StopServerSettle()
     {
         if(_settleCo != null) { StopCoroutine(_settleCo); _settleCo = null; }

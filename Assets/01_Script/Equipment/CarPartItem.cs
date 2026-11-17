@@ -28,6 +28,7 @@ public class CarPartItem : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (_part >= 0 && _visual != null && CarPartService.Instance != null) CarPartService.Instance.UnregisterItemVisual(_part, _visual);
         if (_sync != null) _sync.OnReleased -= OnReleased;
     }
 
@@ -74,6 +75,7 @@ public class CarPartItem : MonoBehaviour
         if (!svc.BuildCopy(p, vis.transform, null, out var b)) { Destroy(vis); return; }
         _visual = vis.transform;
         _part = p;
+        svc.RegisterItemVisual(p, _visual);   // 어셈블리라면 그 안의 세부 부위가 이 겉모습을 따라다닌다
 
         var box = GetComponent<BoxCollider>();
         if (box != null)

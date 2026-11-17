@@ -290,6 +290,7 @@ public class ImpactWrench : MonoBehaviour
     }
 
     private static string s_lastLogKey;
+    private static string s_lastHitLog;
     private static void LogChanged(string key, string message)
     {
         if(s_lastLogKey == key) return;
@@ -340,7 +341,9 @@ public class ImpactWrench : MonoBehaviour
         if (!IsLocalHeld) return;
         if (_needRelease) return;   // 하나를 끝냈으면 버튼을 놓았다 다시 눌러야 다음 볼트(휠 너트가 누른 채로 줄줄이 풀리던 문제)
 
-        LogChanged("hit:" + other.name, $"<color=white>[ImpactWrench]</color> 볼트 충돌 감지: {other.name}. 검증 시작...");
+        // 감지 로그는 검증 로그(LogChanged)와 키를 따로 둔다 — 한 키를 같이 쓰면 다른 단계 볼트에 대고 있는 동안
+        // OnTriggerStay 마다 '감지'↔'단계 불일치'가 번갈아 키를 바꿔 초당 수백 줄이 찍혔다(11/16)
+        if (s_lastHitLog != other.name) { s_lastHitLog = other.name; Debug.Log($"<color=white>[ImpactWrench]</color> 볼트 충돌 감지: {other.name}. 검증 시작..."); }
 
         Bolt detectedBolt = other.GetComponent<Bolt>();
         if (detectedBolt == null)
@@ -519,7 +522,9 @@ public class ImpactWrench : MonoBehaviour
             Vector3 tipWorld = transform.TransformPoint(_tipLocal);
             Vector3 axisWorld = transform.TransformDirection(Vector3.right).normalized;
             float ang = Vector3.Angle(axisWorld, -outDir);
-            if (ang < maxAng && Vector3.Distance(tipWorld, head) < maxDist)
+            // 이미 붙어 있으면 8cm 더 멀어질 때까지 유지 — 경계(30cm)에서 Q/E 로 높이를 바꾸면 렌치·손이 붙었다 떨어졌다 하며 앞뒤로 튀어 보였다
+            float distLim = _snapW > 0f ? maxDist + 0.08f : maxDist;
+            if (ang < maxAng && Vector3.Distance(tipWorld, head) < distLim)
             {
                 _snapPivot = _tipLocal;
                 Vector3 targetL = transform.InverseTransformDirection(-outDir).normalized;

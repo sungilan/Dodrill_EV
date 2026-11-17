@@ -442,6 +442,9 @@ public class MSD_ReinstallModule : ConfirmTaskModule
             // 냉각수 교환 · 에어빼기 시나리오(ev_p0c73_coolant_replace)
             EVCoolantModules.RegisterAll(registry);
 
+            // 자유 탈거 모드(ev_free_disassembly) — 시나리오 단계 없이 부품을 마음대로 분해·조립
+            EVFreeModules.RegisterAll(registry);
+
             // 고전압 배터리 팩 · 냉각수 라인 기밀 점검 시나리오(ev_p0aa6_battery_airtight)
             EVAirtightModules.RegisterAll(registry);
 

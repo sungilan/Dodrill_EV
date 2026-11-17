@@ -11,7 +11,10 @@ using UnityEngine;
 //  · 다 풀리면(진행 1.0) 열린 것으로 보고 뚜껑이 들려 옆에 놓인다. 반대로 돌리면 다시 잠근다
 //  · 열린 탱크에 냉각수 통(PourContainer)의 줄기가 떨어지면 수위가 오른다(ILiquidSink). 닫혀 있으면 받지 않아 뚜껑 위로 흘러 웅덩이가 된다
 //  · 뚜껑 돌림 정도와 수위는 서버를 거쳐 모든 플레이어에게 같게, 늦게 들어온 사람도 현재 값으로 맞춘다(VehicleStateSync)
-//  모델에 탱크 메시가 없어 둥근 통·뚜껑·수위를 코드로 만든다(위치는 tankLocalPos 로 조정).
+//  리저버 탱크는 모델(SM_Frunk.001 에서 분리한 SM_CoolantTank_Motor/Battery, 뚜껑 SM_CoolantCap_*)을 그대로 쓴다 —
+//  매뉴얼대로 모터용·고전압 배터리용 두 개. 뚜껑을 돌려 열고, 수위는 탱크 옆면 게이지(프리팹의 CoolantGauge)로 보여 준다.
+//  분리된 모델 노드를 못 찾으면(예전 프리팹) 둥근 통·뚜껑·수위를 코드로 만드는 옛 방식으로 돌아간다(위치는 tankLocalPos).
+//  냉각수 교환 시나리오 중에는 시나리오(CoolantServiceVisual)가 모터 탱크의 뚜껑·수위를 다루므로 이 컴포넌트는 손을 뗀다.
 // ============================================================
 public class CoolantReservoir : MonoBehaviour, ILiquidSink
 {
@@ -24,8 +27,15 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
     [Tooltip("뚜껑을 다 여는 데 걸리는 시간(초, 누르고 있을 때)")] public float turnSeconds = 1.6f;
     [Tooltip("다 열 때까지 돌아가는 바퀴 수")] public float turns = 3f;
 
-    private const string CapId = "veh/coolantcap";
-    private const string LevelId = "veh/coolantlevel";
+    private string _capId = "veh/coolantcap";
+    private string _levelId = "veh/coolantlevel";
+    private string _displayName = "냉각수 보조탱크";
+    private bool _real;                          // 모델의 실제 탱크를 쓰는 중
+    private Transform _dummyRoot;                // 옛 방식으로 만든 통(정리용)
+    private Vector3 _capBasePos; private Quaternion _capBaseRot;
+    private float _gaugeH = 0.17f;
+    private Collider[] _clickCols = new Collider[0];
+    private bool _scnHands;
 
     // 뚜껑
     private Transform _tank, _capPivot, _liquid;
@@ -46,22 +56,114 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
     // 서브 상태 객체(이 컴포넌트가 두 개의 id 를 동기화하므로)
     private class CapState : IVehicleState
     {
-        public CoolantReservoir o; public string StateId => CapId;
+        public CoolantReservoir o; public string StateId => o._capId;
         public void ApplyState(float v) { o.OnCapState(v); }
     }
     private class LevelState : IVehicleState
     {
-        public CoolantReservoir o; public string StateId => LevelId;
+        public CoolantReservoir o; public string StateId => o._levelId;
         public void ApplyState(float v) { o.OnLevelState(v); }
     }
     private CapState _capState; private LevelState _levelState;
 
-    public void Build(Transform vehicle, int layer)
+    /// <param name="tankNode">모델의 리저버 탱크 노드 이름(없으면 옛 방식)</param>
+    /// <param name="capNode">모델의 뚜껑 노드 이름</param>
+    /// <param name="index">0 = 모터, 1 = 고전압 배터리(상태 id 가 따로)</param>
+    public void Build(Transform vehicle, int layer, string tankNode = null, string capNode = null, int index = 0)
     {
         _root = vehicle;
         _level = _levelShown = startLevel;
         _mpb = new MaterialPropertyBlock();
+        _capId = index == 0 ? "veh/coolantcap" : "veh/coolantcap" + (index + 1);
+        _levelId = index == 0 ? "veh/coolantlevel" : "veh/coolantlevel" + (index + 1);
+        _displayName = index == 0 ? "모터 냉각수 리저버 탱크" : "고전압 배터리 냉각수 리저버 탱크";
 
+        if (!string.IsNullOrEmpty(tankNode) && BuildReal(vehicle, layer, tankNode, capNode)) { RegisterStates(); return; }
+        if (index > 0) { Destroy(this); return; }   // 옛 방식은 탱크가 하나뿐
+        _displayName = "냉각수 보조탱크";
+        BuildDummy(vehicle, layer);
+        RegisterStates();
+    }
+
+    private void RegisterStates()
+    {
+        _capState = new CapState { o = this };
+        _levelState = new LevelState { o = this };
+        VehicleStateSync.Register(_capState);
+        VehicleStateSync.Register(_levelState);
+
+        // 서버: 처음 수위를 모두에게 알린다(클라이언트는 접속 후 요청으로 받는다)
+        if (FishNet.InstanceFinder.IsServerStarted) { VehicleStateSync.Request(_levelId, _level); _serverSent = _level; }
+    }
+
+    private static Transform FindActive(Transform root, string name)
+    {
+        foreach (var t in root.GetComponentsInChildren<Transform>(false))
+            if (t.name == name && t.gameObject.activeInHierarchy && t.GetComponentInChildren<Renderer>(true) != null) return t;
+        return null;
+    }
+
+    /// <summary>모델의 실제 탱크·뚜껑에 상호작용을 붙인다. 못 찾으면 false.</summary>
+    private bool BuildReal(Transform vehicle, int layer, string tankNode, string capNode)
+    {
+        var tank = FindActive(vehicle, tankNode); var cap = FindActive(vehicle, capNode);
+        if (tank == null || cap == null) return false;
+        var tr = tank.GetComponentInChildren<Renderer>(); var cr = cap.GetComponentInChildren<Renderer>();
+        if (tr == null || cr == null) return false;
+        _real = true; _tank = tank;
+
+        // 수위 게이지(프리팹에 만들어 둔 탱크 옆면 창): 탱크 노드 아래 CoolantGauge/Liquid, 높이는 Window 의 크기
+        var gauge = tank.Find("CoolantGauge");
+        if (gauge != null)
+        {
+            var liq = gauge.Find("Liquid"); var win = gauge.Find("Window");
+            if (liq != null) { _liquid = liq; _liquidRend = liq.GetComponent<MeshRenderer>(); }
+            if (win != null) _gaugeH = Mathf.Max(0.05f, win.localScale.y);
+        }
+        UpdateLiquidVisual(true);
+
+        // 붓는 줄기가 맞는 면: 탱크 몸체에 차량 축에 맞춘 충돌 상자(메시 레이어는 그대로 둔다)
+        Bounds tb = VehicleRig.LocalBounds(vehicle, tr.bounds);
+        var bodyGo = new GameObject("ClickBody_" + tank.name);
+        bodyGo.layer = layer; bodyGo.transform.SetParent(tank, false);
+        bodyGo.transform.SetPositionAndRotation(vehicle.TransformPoint(tb.center), vehicle.rotation);
+        var bc0 = bodyGo.AddComponent<BoxCollider>(); bc0.size = tb.size;
+        bodyGo.AddComponent<CoolantTankHit>().owner = this;
+        var bodyProxy = bodyGo.AddComponent<ClickProxy>();
+        bodyProxy.displayName = _displayName;
+        bodyProxy.vrPokeable = false;
+        bodyProxy.hover = touch => IsOpen ? "냉각수 통을 기울여 부으세요 (수위 " + Mathf.RoundToInt(_level * 100f) + "%)"
+                                          : "먼저 뚜껑을 돌려 여세요 (수위 " + Mathf.RoundToInt(_level * 100f) + "%)";
+        bodyProxy.onClick = () => EquipFx.Notice("coolant_info_" + _capId, _displayName,
+            "수위 " + Mathf.RoundToInt(_level * 100f) + "% — 뚜껑을 열고 냉각수 통으로 보충하세요", EquipFx.Info, 2.5f, 4f);
+
+        // 뚜껑: 뚜껑 중심에 피벗을 만들고 뚜껑 노드를 그 아래로(세계 자세 유지). 피벗이 돌고 올라온다.
+        Bounds cb = VehicleRig.LocalBounds(vehicle, cr.bounds);
+        var pivot = new GameObject("CapPivot_" + cap.name).transform;
+        pivot.SetParent(cap.parent, false);
+        pivot.SetPositionAndRotation(vehicle.TransformPoint(cb.center), cap.parent.rotation);
+        cap.SetParent(pivot, true);
+        _capPivot = pivot; _capBasePos = pivot.localPosition; _capBaseRot = pivot.localRotation;
+
+        var capGo = new GameObject("ClickCap_" + cap.name);
+        capGo.layer = layer; capGo.transform.SetParent(pivot, false);
+        capGo.transform.SetPositionAndRotation(pivot.position + vehicle.up * 0.01f, vehicle.rotation);
+        var bc = capGo.AddComponent<BoxCollider>();
+        bc.size = new Vector3(Mathf.Max(cb.size.x, 0.05f) + 0.03f, 0.05f, Mathf.Max(cb.size.z, 0.05f) + 0.03f);
+        var proxy = capGo.AddComponent<ClickProxy>();
+        proxy.displayName = _displayName + " 뚜껑";
+        proxy.vrPokeable = false;
+        proxy.hover = touch => IsOpen
+            ? (touch ? "터치하여 뚜껑 닫기(돌리기)" : "누르고 있으면 뚜껑이 닫힙니다")
+            : (Platform == XRAirpotrSecurity.PlatformType.VR ? "뚜껑을 쥐고 손목을 돌려 여세요"
+               : (touch ? "터치하여 뚜껑 돌리기" : "누르고 있으면 뚜껑이 돌아가 열립니다 (좌우로 움직이면 더 빨리)"));
+        proxy.onClick = OnCapPressed;
+        _clickCols = new Collider[] { bc0, bc };
+        return true;
+    }
+
+    private void BuildDummy(Transform vehicle, int layer)
+    {
         Material glass = null, opaque = null;
         foreach (var r in vehicle.GetComponentsInChildren<Renderer>(false))
         {
@@ -137,21 +239,14 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
             : (Platform == XRAirpotrSecurity.PlatformType.VR ? "뚜껑을 쥐고 손목을 돌려 여세요"
                : (touch ? "터치하여 뚜껑 돌리기" : "누르고 있으면 뚜껑이 돌아가 열립니다 (좌우로 움직이면 더 빨리)"));
         proxy.onClick = OnCapPressed;
-
-        _capState = new CapState { o = this };
-        _levelState = new LevelState { o = this };
-        VehicleStateSync.Register(_capState);
-        VehicleStateSync.Register(_levelState);
-
-        // 서버: 처음 수위를 모두에게 알린다(클라이언트는 접속 후 요청으로 받는다)
-        if (FishNet.InstanceFinder.IsServerStarted) { VehicleStateSync.Request(LevelId, _level); _serverSent = _level; }
+        _dummyRoot = _tank;
     }
 
     private void OnDestroy()
     {
         VehicleStateSync.Unregister(_capState);
         VehicleStateSync.Unregister(_levelState);
-        if (_tank != null) Destroy(_tank.gameObject);
+        if (_dummyRoot != null) Destroy(_dummyRoot.gameObject);   // 모델의 실제 탱크는 지우지 않는다
     }
 
     private static GameObject Prim(PrimitiveType type, string name, Transform parent, Vector3 scale, Vector3 localPos, int layer)
@@ -195,6 +290,19 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
         float dt = Time.deltaTime;
         float before = _p;
 
+        // 냉각수 교환 시나리오 중 모터 탱크는 시나리오가 다룬다(뚜껑 열림·수위) — 클릭 면도 꺼서 시나리오 클릭과 겹치지 않게 한다
+        if (_real && _levelId == "veh/coolantlevel")
+        {
+            bool scn = GdsModel.IsCoolantScenario;
+            if (scn != _scnHands)
+            {
+                _scnHands = scn;
+                foreach (var c in _clickCols) if (c != null) c.enabled = !scn;
+                if (!scn) { _p = _target = 0f; _dragging = _auto = false; }   // 시나리오가 끝나면 닫힌 상태에서 다시 시작
+            }
+            if (scn) return;
+        }
+
         if (_dragging)
         {
             bool down = Input.GetMouseButton(0) || Input.touchCount > 0;
@@ -228,9 +336,18 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
 
         // 뚜껑 모양: 풀릴수록 위로 올라오고(0~2.5cm), 다 풀리면 비스듬히 얹힌다
         float aside = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.9f, 1f, _p));
-        _capPivot.localRotation = Quaternion.Euler(0, -_p * 360f * turns, 0) * Quaternion.Euler(aside * 18f, 0, aside * 12f);
-        float baseY = tankHeight * 0.5f + 0.012f;
-        _capPivot.localPosition = new Vector3(aside * 0.045f, baseY + _p * 0.025f + aside * 0.02f, 0);
+        if (_real)
+        {
+            // 모델 뚜껑: 제자리에서 돌며 올라오고, 다 풀리면 탱크 바깥쪽(+Z)에 비스듬히 얹힌다
+            _capPivot.localRotation = _capBaseRot * Quaternion.Euler(0, -_p * 360f * turns, 0) * Quaternion.Euler(aside * 18f, 0, aside * 12f);
+            _capPivot.localPosition = _capBasePos + new Vector3(0f, _p * 0.025f + aside * 0.02f, aside * 0.075f);
+        }
+        else
+        {
+            _capPivot.localRotation = Quaternion.Euler(0, -_p * 360f * turns, 0) * Quaternion.Euler(aside * 18f, 0, aside * 12f);
+            float baseY = tankHeight * 0.5f + 0.012f;
+            _capPivot.localPosition = new Vector3(aside * 0.045f, baseY + _p * 0.025f + aside * 0.02f, 0);
+        }
 
         // 수위 표시를 부드럽게
         if (!Mathf.Approximately(_levelShown, _level))
@@ -243,7 +360,7 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
         if (FishNet.InstanceFinder.IsServerStarted && Time.time >= _nextLevelSend && Mathf.Abs(_level - _serverSent) > 0.005f)
         {
             _nextLevelSend = Time.time + 1f; _serverSent = _level;
-            VehicleStateSync.Request(LevelId, _level);
+            VehicleStateSync.Request(_levelId, _level);
         }
     }
 
@@ -283,7 +400,7 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
         if (!final && Time.unscaledTime < _nextSend) return;
         _nextSend = Time.unscaledTime + 0.1f;
         _target = _p;
-        VehicleStateSync.Request(CapId, _p);
+        VehicleStateSync.Request(_capId, _p);
     }
 
     // ── 동기화 수신 ─────────────────────────────
@@ -307,18 +424,18 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
         bool coolant = !string.IsNullOrEmpty(liquidName) && liquidName.Contains("냉각수");
         if (!IsOpen)
         {
-            EquipFx.Notice("coolant_closed", "냉각수 탱크", "뚜껑이 닫혀 있습니다. 먼저 뚜껑을 돌려 여세요", EquipFx.Warn, 2.5f, 6f);
+            EquipFx.Notice("coolant_closed", _displayName, "뚜껑이 닫혀 있습니다. 먼저 뚜껑을 돌려 여세요", EquipFx.Warn, 2.5f, 6f);
             return false;
         }
         if (!coolant)
         {
-            EquipFx.Notice("coolant_wrong", "잘못된 액체", "냉각수 탱크에는 냉각수만 넣습니다 (" + liquidName + " 아님)", EquipFx.Danger, 3f, 8f);
+            EquipFx.Notice("coolant_wrong", "잘못된 액체", _displayName + "에는 냉각수만 넣습니다 (" + liquidName + " 아님)", EquipFx.Danger, 3f, 8f);
             return false;
         }
         float before = _level;
         _level = Mathf.Clamp01(_level + liters / Mathf.Max(0.1f, capacityLiters));
         if (before < 0.999f && _level >= 0.999f)
-            EquipFx.Notice("coolant_full", "냉각수 탱크", "가득 찼습니다 — 그만 넣으세요", EquipFx.Info, 3f, 6f);
+            EquipFx.Notice("coolant_full", _displayName, "가득 찼습니다 — MAX 선까지만 채우고 그만 넣으세요", EquipFx.Info, 3f, 6f);
         return true;
     }
 
@@ -326,6 +443,16 @@ public class CoolantReservoir : MonoBehaviour, ILiquidSink
     {
         if (_liquid == null) return;
         if (instant) _levelShown = _level;
+        if (_real)
+        {
+            // 게이지 창: 컨테이너(차량 축에 맞춤)의 바닥이 원점, 높이 _gaugeH. 큐브라 localScale.y = 높이
+            float gh = Mathf.Max(0.002f, _gaugeH * _levelShown);
+            var ls = _liquid.localScale; var lp = _liquid.localPosition;
+            _liquid.localScale = new Vector3(ls.x, gh, ls.z);
+            _liquid.localPosition = new Vector3(lp.x, gh * 0.5f, lp.z);
+            if (_liquidRend != null) _liquidRend.enabled = _levelShown > 0.005f;
+            return;
+        }
         float h = Mathf.Max(0.002f, tankHeight * 0.92f * _levelShown);
         // 실린더 프리미티브는 높이 2 → localScale.y = h/2
         _liquid.localScale = new Vector3(tankDiameter * 0.9f, h * 0.5f, tankDiameter * 0.9f);

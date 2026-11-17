@@ -21,8 +21,10 @@ public class CoolantServiceVisual : MonoBehaviour
     public GameObject drainFxPrefab;    // DrainCoolant 파티클
 
     [Header("수위 (탱크 높이 대비 0~1)")]
+    [Tooltip("true = liquid 가 높이 1 짜리 큐브(모델 탱크 옆면 게이지). false = 높이 2 짜리 원통(예전 더미)")]
+    public bool liquidIsCube = false;
     public float tankBottomY = 0f;      // liquid 의 로컬 기준 바닥 높이
-    public float tankHeight = 0.12f;    // 탱크 안쪽 높이(m)
+    public float tankHeight = 0.12f;    // 탱크 안쪽 높이(m) — 게이지면 게이지 창의 높이
     [Range(0, 1)] public float levelNormal = 0.75f;
     [Range(0, 1)] public float levelLow = 0.22f;     // MIN 선 아래
     [Range(0, 1)] public float levelFull = 0.85f;    // MAX 선
@@ -48,23 +50,30 @@ public class CoolantServiceVisual : MonoBehaviour
 
     private void OnDisable() { SetFx(false); ShowGuide(false); }
 
+    private float _settle;   // 시나리오가 끝난 뒤 뚜껑·플러그를 원래 자리로 돌려놓는 동안(초)
+
     private void Update()
     {
         bool coolant = GdsModel.IsCoolantScenario;
         bool capOpen = coolant && GdsModel.Done("Coolant_Cap_Open") && !GdsModel.Done("Coolant_Cap_Close");
         bool plugOpen = coolant && GdsModel.Done("Coolant_Drain_Plug_Open") && !GdsModel.Done("Coolant_Drain_Plug_Close");
 
+        // 모델의 리저버 탱크는 자유 실습(VehicleCoolant)도 뚜껑·수위를 만진다 → 냉각수 시나리오 중(과 끝난 직후 원위치 동안)에만 여기서 움직인다
+        if (coolant) _settle = 2f; else if (_settle > 0f) _settle -= Time.deltaTime;
+        bool drive = coolant || _settle > 0f;
+
         float k = 1f - Mathf.Exp(-8f * Time.deltaTime);
-        if (cap != null)
+        if (drive && cap != null)
         {
             cap.localPosition = Vector3.Lerp(cap.localPosition, capOpen ? _capPos + capOpenOffset : _capPos, k);
             cap.localRotation = Quaternion.Slerp(cap.localRotation, capOpen ? _capRot * Quaternion.Euler(capOpenEuler) : _capRot, k);
         }
-        if (drainPlug != null)
+        if (drive && drainPlug != null)
             drainPlug.localPosition = Vector3.Lerp(drainPlug.localPosition, plugOpen ? _plugPos + plugOpenOffset : _plugPos, k);
         SetFx(plugOpen);
         UpdateDrainGuide();
 
+        if (!drive) return;
         if (Time.time < _next) return;
         _next = Time.time + 0.1f;
         float target = TargetLevel(coolant, plugOpen);
@@ -102,7 +111,7 @@ public class CoolantServiceVisual : MonoBehaviour
         if (liquid == null) return;
         float h = Mathf.Max(0.002f, tankHeight * f);
         var s = liquid.localScale;
-        liquid.localScale = new Vector3(s.x, h * 0.5f, s.z);     // 기본 원통 높이 2 → 절반
+        liquid.localScale = new Vector3(s.x, liquidIsCube ? h : h * 0.5f, s.z);     // 큐브는 높이 1, 기본 원통은 높이 2 → 절반
         var p = liquid.localPosition;
         liquid.localPosition = new Vector3(p.x, tankBottomY + h * 0.5f, p.z);
     }

@@ -132,7 +132,7 @@ public class Coolant_Drain_Plug_CloseModule : TimedGuardedModule
 
 // ── 주입 · 에어빼기 ──────────────────────────────────────────
 
-/// <summary>전기차 전용(저전도) 냉각수 통을 리저버 주입구에 가져가면 완료</summary>
+/// <summary>냉각수 통을 모터 리저버 탱크 주입구(캡 위)에 가져가면 완료 — 매뉴얼: 모터는 부동액+물 55~60% 혼합액(약 16.6L), 저전도 냉각수는 고전압 배터리 쪽 전용</summary>
 public class Coolant_FillModule : GrabZoneTaskModule
 {
     public override string ModuleId => "Coolant_Fill";

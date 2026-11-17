@@ -34,6 +34,12 @@ public static class CarMeshSplitter
         foreach (var t in root.GetComponentsInChildren<Transform>(true))
             if (t.name == sourceName && t.gameObject.activeInHierarchy && t.parent != null && t.parent.name == "FBX_ElectricCar") { src = t; break; }
         if (src == null) return $"{sourceName}: 켜진 원본을 못 찾음(이미 분리했거나 구조가 다름)";
+        return SplitFrom(root, src, sourceName, newNames, group, alsoRemainder, remainderName);
+    }
+
+    /// <summary>원본 노드를 직접 넘겨 분리한다(FBX_ElectricCar 바로 아래가 아닌 노드 — 예: 배터리 팩 안쪽).</summary>
+    public static string SplitFrom(GameObject root, Transform src, string sourceName, string[] newNames, GroupFunc group, bool alsoRemainder, string remainderName)
+    {
         var mf = src.GetComponent<MeshFilter>(); var mr = src.GetComponent<MeshRenderer>();
         if (mf == null || mr == null || mf.sharedMesh == null) return $"{sourceName}: MeshFilter/Renderer 없음";
         var mesh = mf.sharedMesh;
@@ -69,8 +75,12 @@ public static class CarMeshSplitter
             for (int i = 0; i < tr.Length; i += 3)
             {
                 int r = Find(par, idx[tr[i]]);
-                Vector3 w = root.transform.InverseTransformPoint(src.TransformPoint(vs[tr[i]]));
-                if (!bounds.ContainsKey(r)) { bounds[r] = new Bounds(w, Vector3.zero); counts[r] = 0; } else { var bb = bounds[r]; bb.Encapsulate(w); bounds[r] = bb; }
+                // 세 꼭짓점 모두 — 첫 꼭짓점만 보면 팬 모양 삼각형으로 만든 긴 케이블의 범위가 짧게 나온다
+                for (int k = 0; k < 3; k++)
+                {
+                    Vector3 w = root.transform.InverseTransformPoint(src.TransformPoint(vs[tr[i + k]]));
+                    if (!bounds.ContainsKey(r)) { bounds[r] = new Bounds(w, Vector3.zero); counts[r] = 0; } else { var bb = bounds[r]; bb.Encapsulate(w); bounds[r] = bb; }
+                }
                 counts[r]++;
             }
         }
@@ -232,6 +242,78 @@ public static class CarMeshSplitter
     public static string SplitFrontSuspension()
     {
         return Run(root => SplitMesh(root, "SM_FrontSuspension", FrontNames, FrontGroup, true, "SM_FrontSubframe"));
+    }
+
+    // ── 배터리 팩 안쪽: SM_BatteryParts1(고전압 케이블·커넥터·릴레이 박스) 조각 중 BMU·메인 퓨즈·PRA 자리의 것을 떼어 낸다 ──
+    // 차 루트 기준(앞 −X, 왼쪽 −Z). 모델에 이름표가 없어서 위쪽에서 렌더해 눈으로 확인한 자리다:
+    //  BMU = 팩 앞 오른쪽 핀 커넥터 박스(x −1.30~−1.05, z 0.05~0.40), 메인 퓨즈 = 팩 뒤 오른쪽 막대 박스(x 0.86~1.06, z 0.05~0.40),
+    //  PRA = 팩 뒤 왼쪽 릴레이 블록과 스터드(x 0.84~1.08, z −0.62~0.05)
+    public static readonly string[] BatteryNames = { "SM_Bmu", "SM_MainFuse", "SM_Pra" };
+
+    public static int BatteryGroup(Vector3 c, Vector3 s, int tris)
+    {
+        if (c.y > 0.42f || c.y < 0.22f) return -1;
+        if (Mathf.Max(s.x, s.z) > 0.35f) return -1;   // 길게 뻗은 버스바·케이블은 제외 (PRA 블록에 이어져 있어도 따로 둔다)
+        if (c.x > -1.30f && c.x < -1.05f && c.z > 0.05f && c.z < 0.40f) return 0;
+        if (c.x > 0.86f && c.x < 1.06f && c.z > 0.05f && c.z < 0.40f) return 1;
+        if (c.x > 0.84f && c.x < 1.08f && c.z > -0.62f && c.z <= 0.05f) return 2;
+        return -1;
+    }
+
+    [MenuItem("Dodrill/차량 메시 분리/배터리 팩(BMU·메인 퓨즈·PRA)")]
+    public static string SplitBatteryPack()
+    {
+        return Run(root =>
+        {
+            Transform pos = null;
+            foreach (var t in root.GetComponentsInChildren<Transform>(true)) if (t.name == "BatteryPackPos") { pos = t; break; }
+            if (pos == null) return "BatteryPackPos 를 못 찾음";
+            Transform src = null;
+            foreach (var t in pos.GetComponentsInChildren<Transform>(true)) if (t.name == "SM_BatteryParts1" && t.gameObject.activeSelf) { src = t; break; }
+            if (src == null) return "SM_BatteryParts1: 켜진 원본을 못 찾음(이미 분리했거나 구조가 다름)";
+            string r = SplitFrom(root, src, "SM_BatteryParts1", BatteryNames, BatteryGroup, true, "SM_BatteryParts1_Rest");
+            // 쓰지 않던 하부 커버·상부 케이스 노드를 켠다 — 자유 실습의 부위로 쓴다(둘 다 팩 노드 아래)
+            foreach (var t in pos.GetComponentsInChildren<Transform>(true))
+                if (t.name == "SM_BatteryCover" || t.name == "SM_Cover") { t.gameObject.SetActive(true); r += $" | {t.name} 켬"; }
+            return r;
+        });
+    }
+
+    // ── 프렁크 메시(SM_Frunk.001)에 한 덩어리로 들어 있는 냉각수 리저버 탱크 2개와 뚜껑 ──
+    // 매뉴얼: 리저버 탱크가 모터용·고전압 배터리용 두 개다. 모델에는 회색 둥근 상자 두 개(각 0.238×0.245×0.137m)와 검은 뚜껑 두 개가 오른쪽 위(+Z)에 나란히 있다.
+    // (렌더로 확인: 앞쪽 탱크 x −1.976, 뒤쪽 탱크 x −1.732, 뚜껑은 두 탱크가 맞닿는 쪽 위. 같은 자리의 검은 큰 통(파란 캡)은 워셔액 탱크다.)
+    // 앞쪽 = 모터 냉각수(냉각수 교환 시나리오 P0C73 대상), 뒤쪽 = 고전압 배터리 냉각수(저전도) — 어느 쪽이 무엇인지는 매뉴얼 그림 없이 정한 것.
+    public static readonly string[] CoolantNames = { "SM_CoolantTank_Motor", "SM_CoolantCap_Motor", "SM_CoolantTank_Battery", "SM_CoolantCap_Battery" };
+
+    public static int CoolantGroup(Vector3 c, Vector3 s, int tris)
+    {
+        if (c.z < 0.35f || c.z > 0.51f) return -1;
+        if (s.y > 0.20f && s.y < 0.30f && c.y > 0.65f && c.y < 0.76f)                       // 탱크 몸체(높이 0.245)
+        {
+            if (c.x > -2.10f && c.x < -1.86f) return 0;
+            if (c.x > -1.86f && c.x < -1.62f) return 2;
+        }
+        if (s.y < 0.03f && s.x < 0.06f && c.y > 0.82f && c.y < 0.85f)                        // 뚜껑(지름 0.048, 두께 0.017)
+        {
+            if (c.x > -1.96f && c.x < -1.88f) return 1;
+            if (c.x > -1.82f && c.x < -1.74f) return 3;
+        }
+        return -1;
+    }
+
+    [MenuItem("Dodrill/차량 메시 분리/냉각수 리저버 탱크(모터·배터리)")]
+    public static string SplitCoolantTanks()
+    {
+        return Run(root =>
+        {
+            Transform src = null;
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == "SM_Frunk.001" && t.gameObject.activeSelf && t.parent != null && t.parent.name == "FBX_ElectricCar") { src = t; break; }
+            if (src == null) return "SM_Frunk.001: 켜진 원본을 못 찾음(이미 분리했거나 구조가 다름)";
+            string r = SplitFrom(root, src, "SM_Frunk.001", CoolantNames, CoolantGroup, true, "SM_Frunk.001");
+            src.name = "SM_Frunk.001_FBX";   // 원본(꺼짐)과 나머지 조각이 같은 이름이면 헷갈린다 — 부위 정의(CarPartService)는 이름이 SM_Frunk.001 인 켜진 쪽을 쓴다
+            return r;
+        });
     }
 
     [MenuItem("Dodrill/차량 메시 분리/시트(앞 좌·우, 뒤)")]

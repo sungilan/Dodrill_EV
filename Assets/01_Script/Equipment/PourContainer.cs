@@ -19,6 +19,14 @@ public class PourContainer : MonoBehaviour
     [Tooltip("흐르기 시작하는 기울기(도)")] public float pourAngle = 70f;
     [Tooltip("표시 이름(웅덩이 안내용)")] public string liquidName = "오일";
 
+    [Header("붓는 위치 (뚜껑·주둥이)")]
+    [Tooltip("액체가 나오는 위치. 비워 두면 자동(모델 위쪽 끝면 중앙). 뚜껑 자리에 빈 오브젝트를 자식으로 만들어 여기에 넣으면 그 위치에서 정확히 쏟아진다. 그 오브젝트의 위쪽(Y, 초록 화살표)이 병 입구가 향하는 방향이다.")]
+    public Transform spoutPoint;
+    [Tooltip("spoutPoint 가 없을 때 자동 위치에 더할 이동값(이 오브젝트 로컬 좌표, m)")]
+    public Vector3 spoutOffset;
+    [Tooltip("주둥이 반지름(m) — 액체가 나오는 원의 크기. 0 = 자동")]
+    public float spoutRadiusOverride = 0f;
+
     private float _amount;
     private Vector3 _upLocal;
     private Vector3 _spoutCenterLocal;
@@ -83,16 +91,7 @@ public class PourContainer : MonoBehaviour
     {
         _amount = capacity;
         LiquidGauge.Attach(gameObject, liquidName, capacity, () => _amount, () => LocalHeld);   // 현재 용량 패널(비었음/꽉 참)
-        _upLocal = EquipFx.UpAxisLocal(transform);
-        if (EquipFx.LocalBounds(transform, out var b))
-        {
-            // 주둥이: 위쪽 축 방향 끝면 중앙. 반지름은 몸통 폭의 1/4 정도(주둥이는 몸통보다 좁다)
-            Vector3 ext = b.extents;
-            float along = Mathf.Abs(Vector3.Dot(ext, new Vector3(Mathf.Abs(_upLocal.x), Mathf.Abs(_upLocal.y), Mathf.Abs(_upLocal.z))));
-            _spoutCenterLocal = b.center + _upLocal * along;
-            Vector3 side = ext - new Vector3(Mathf.Abs(_upLocal.x) * ext.x, Mathf.Abs(_upLocal.y) * ext.y, Mathf.Abs(_upLocal.z) * ext.z);
-            _spoutRadius = Mathf.Clamp(side.magnitude * 0.3f, 0.01f, 0.05f);
-        }
+        ComputeSpout(out _spoutCenterLocal, out _upLocal, out _spoutRadius);
         _myColliders = GetComponentsInChildren<Collider>();
 
         var lib = EquipFx.Lib;
@@ -107,6 +106,42 @@ public class PourContainer : MonoBehaviour
         }
         _audio = EquipFx.LoopSource(gameObject, EquipFx.Pour, 8f);
     }
+
+    /// <summary>주둥이 위치(로컬)·입구 방향(로컬)·반지름 — spoutPoint 가 있으면 그 자리, 없으면 모델 위쪽 끝면 중앙(+ spoutOffset).</summary>
+    private void ComputeSpout(out Vector3 centerLocal, out Vector3 upLocal, out float radius)
+    {
+        upLocal = EquipFx.UpAxisLocal(transform);
+        centerLocal = Vector3.zero; radius = 0.02f;
+        if (EquipFx.LocalBounds(transform, out var b))
+        {
+            // 주둥이: 위쪽 축 방향 끝면 중앙. 반지름은 몸통 폭의 1/4 정도(주둥이는 몸통보다 좁다)
+            Vector3 ext = b.extents;
+            float along = Mathf.Abs(Vector3.Dot(ext, new Vector3(Mathf.Abs(upLocal.x), Mathf.Abs(upLocal.y), Mathf.Abs(upLocal.z))));
+            centerLocal = b.center + upLocal * along;
+            Vector3 side = ext - new Vector3(Mathf.Abs(upLocal.x) * ext.x, Mathf.Abs(upLocal.y) * ext.y, Mathf.Abs(upLocal.z) * ext.z);
+            radius = Mathf.Clamp(side.magnitude * 0.3f, 0.01f, 0.05f);
+        }
+        if (spoutPoint != null)
+        {
+            centerLocal = transform.InverseTransformPoint(spoutPoint.position);
+            upLocal = transform.InverseTransformDirection(spoutPoint.up).normalized;
+        }
+        else centerLocal += spoutOffset;
+        if (spoutRadiusOverride > 0f) radius = spoutRadiusOverride;
+    }
+
+#if UNITY_EDITOR
+    // 씬 뷰에서 이 오브젝트를 선택하면 액체가 나오는 자리(노랑 구)와 입구 방향(선)을 보여 준다
+    private void OnDrawGizmosSelected()
+    {
+        ComputeSpout(out var c, out var u, out var r);
+        Vector3 p = transform.TransformPoint(c);
+        Vector3 up = transform.TransformDirection(u);
+        Gizmos.color = new Color(1f, 0.85f, 0.1f, 1f);
+        Gizmos.DrawWireSphere(p, Mathf.Max(r, 0.004f));
+        Gizmos.DrawLine(p, p + up * 0.08f);
+    }
+#endif
 
     private void Update()
     {

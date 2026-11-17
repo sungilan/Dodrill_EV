@@ -205,8 +205,11 @@ public class VehicleRig : MonoBehaviour
         }
 
         // 3) 냉각수 탱크·뚜껑
+        // 모델의 리저버 탱크 두 개(모터 / 고전압 배터리) — 분리된 노드가 없는 예전 프리팹이면 첫 번째가 옛 방식(코드로 만든 통)으로 돌아간다
         var res = root.gameObject.AddComponent<CoolantReservoir>();
-        res.Build(root, clickLayer);
+        res.Build(root, clickLayer, "SM_CoolantTank_Motor", "SM_CoolantCap_Motor", 0);
+        var res2 = root.gameObject.AddComponent<CoolantReservoir>();
+        res2.Build(root, clickLayer, "SM_CoolantTank_Battery", "SM_CoolantCap_Battery", 1);
 
         // 4) 시동·계기판·라이트·경적
         var eng = root.gameObject.AddComponent<VehicleEngine>();

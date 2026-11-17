@@ -1,0 +1,117 @@
+{
+  "scenarioId": "ev_free_disassembly",
+  "scenarioName": {
+    "ko": "[자유 실습] 자유 탈거 모드 — 부품 분해·조립",
+    "en": "[Free Practice] Free Disassembly",
+    "vi": ""
+  },
+  "version": "1.0",
+  "dtc": {
+    "code": "FREE",
+    "faultName": {
+      "ko": "자유 탈거 모드(고장코드 없음)",
+      "en": "Free disassembly (no fault code)"
+    },
+    "symptom": {
+      "ko": "정해진 순서 없이 부품을 분해·조립해 보는 연습 모드",
+      "en": "Practice mode without a fixed procedure"
+    },
+    "requiresLOTO": false,
+    "dischargeWaitSeconds": 10
+  },
+  "map": {
+    "objects": [
+      {
+        "prefabId": "Ioniq5N",
+        "position": {
+          "x": 0.781,
+          "y": 0,
+          "z": 0.08
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "properties": [
+          {
+            "key": "vin",
+            "ko": "KMHC251XXXXXXXX",
+            "en": "",
+            "vi": ""
+          },
+          {
+            "key": "batteryStatus",
+            "ko": "SOC 68%",
+            "en": "",
+            "vi": ""
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": {
+    "tasks": [
+      {
+        "moduleId": "Free_Disassembly",
+        "timeout": 0,
+        "completionMode": "AnyPlayer",
+        "spawnObjects": [
+          {
+            "prefabId": "ImpactWrench",
+            "spawnPointId": "SP_Cart_Tool",
+            "guideId": "",
+            "persist": true
+          }
+        ]
+      }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "Free_Disassembly",
+      "config": {
+        "actionType": "ConfirmTask",
+        "requiredItems": [
+          "ImpactWrench"
+        ],
+        "targetObjName": "",
+        "targetZoneId": "",
+        "targetValue": 0,
+        "toleranceRatio": 0,
+        "requiresSafetyCheck": false,
+        "extra": [
+          {
+            "key": "title",
+            "ko": "자유 탈거",
+            "en": "Free Disassembly",
+            "vi": ""
+          },
+          {
+            "key": "description",
+            "ko": "임팩트 렌치로 차의 부품을 마음대로 분해·조립해 보세요. 끝내려면 완료를 누르세요.",
+            "en": "Disassemble and reassemble any car part with the impact wrench. Press Complete to finish.",
+            "vi": ""
+          },
+          {
+            "key": "guideText",
+            "ko": "큰 부품(서브 프레임·크로스 멤버·스트럿 등)은 차에서 통째로 떼어 바닥에 내려놓은 뒤, 그 위에서 안쪽 세부 부품을 분해합니다. 떼어낸 부품은 바닥에 떨어지며, 들고 원래 자리에 가져가면 다시 장착할 수 있습니다.",
+            "en": "Remove large assemblies from the car, set them on the floor, then take the inner parts apart. Removed parts fall to the floor; carry one back to its slot to reinstall it.",
+            "vi": ""
+          },
+          {
+            "key": "subguideText",
+            "ko": "휠·범퍼·후드·언더 커버처럼 바깥 부품을 먼저 떼면 안쪽 부품이 보입니다.",
+            "en": "Remove outer parts (wheels, bumpers, hood, under covers) first to reach inner parts.",
+            "vi": ""
+          }
+        ]
+      }
+    }
+  ]
+}
