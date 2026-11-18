@@ -316,6 +316,93 @@ public static class CarMeshSplitter
         });
     }
 
+    // ── 분리한 리저버 탱크에 수위 게이지를 달고, 시나리오용 CoolantService 의 더미 리저버·뚜껑·액체를 실제 탱크로 바꿔 연결한다 ──
+    //  · 탱크 옆면(+Z)에 CoolantGauge(Frame·Liquid·Window·MIN/MAX 표시) — 높이 0.17m, 바닥 y 0.612
+    //  · Coolant_Reservoir / Coolant_Reservoir_Cap(클릭 오브젝트)을 모터 탱크·뚜껑 위치로, 뚜껑 메시는 Coolant_Reservoir_Cap 아래로
+    //  · 더미 Coolant_Liquid·Mark_MIN·Mark_MAX 삭제, CoolantServiceVisual 의 liquid 를 게이지 액체로
+    // 분리(냉각수 리저버 탱크 메뉴)를 먼저 실행한 뒤 한 번만 실행한다(이미 정리돼 있으면 건너뜀).
+    private static Transform GaugeCube(Transform parent, Mesh cube, string name, Vector3 lp, Vector3 scale, Material mat)
+    {
+        var go = new GameObject(name); go.layer = parent.gameObject.layer;
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = lp; go.transform.localRotation = Quaternion.identity; go.transform.localScale = scale;
+        go.AddComponent<MeshFilter>().sharedMesh = cube;
+        var r = go.AddComponent<MeshRenderer>(); r.sharedMaterial = mat;
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        return go.transform;
+    }
+
+    private static Transform MakeCoolantGauge(Transform tank, Transform car, Mesh cube, Material mLiquid, Material mWin, Material mDark, float levelInit)
+    {
+        var old = tank.Find("CoolantGauge"); if (old != null) UnityEngine.Object.DestroyImmediate(old.gameObject);
+        var b = tank.GetComponent<MeshRenderer>().bounds;
+        float H = 0.17f, bottom = 0.612f;
+        var g = new GameObject("CoolantGauge"); g.layer = tank.gameObject.layer;
+        g.transform.SetParent(tank, true);
+        g.transform.position = new Vector3(b.center.x, bottom, b.max.z + 0.0015f);
+        g.transform.rotation = car.rotation;   // 차량 축에 맞춘다(탱크 노드는 (0,90,180) 으로 돌아 있다)
+        GaugeCube(g.transform, cube, "Frame", new Vector3(0, H * 0.5f, 0), new Vector3(0.060f, H + 0.014f, 0.003f), mDark);
+        var liq = GaugeCube(g.transform, cube, "Liquid", new Vector3(0, H * levelInit * 0.5f, 0.0018f), new Vector3(0.046f, H * levelInit, 0.002f), mLiquid);
+        GaugeCube(g.transform, cube, "Window", new Vector3(0, H * 0.5f, 0.0032f), new Vector3(0.050f, H, 0.0008f), mWin);
+        GaugeCube(g.transform, cube, "Mark_MIN", new Vector3(0, H * 0.22f, 0.0038f), new Vector3(0.050f, 0.0025f, 0.0008f), mDark);
+        GaugeCube(g.transform, cube, "Mark_MAX", new Vector3(0, H * 0.85f, 0.0038f), new Vector3(0.050f, 0.0025f, 0.0008f), mDark);
+        return liq;
+    }
+
+    [MenuItem("Dodrill/차량 메시 분리/냉각수 탱크 게이지·시나리오 연결")]
+    public static string WireCoolantTanks()
+    {
+        return Run(root =>
+        {
+            var car = root.transform;
+            Transform svc = null, tankM = null, tankB = null, capM = null;
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name == "CoolantService") svc = t;
+                else if (t.name == "SM_CoolantTank_Motor") tankM = t;
+                else if (t.name == "SM_CoolantTank_Battery") tankB = t;
+                else if (t.name == "SM_CoolantCap_Motor") capM = t;
+            }
+            if (svc == null || tankM == null || tankB == null || capM == null) return "노드를 못 찾음 — '냉각수 리저버 탱크(모터·배터리)' 분리를 먼저 실행하세요";
+            var reservoir = svc.Find("Coolant_Reservoir"); var capObj = svc.Find("Coolant_Reservoir_Cap");
+            var mrR = reservoir.GetComponent<MeshRenderer>(); var mrC = capObj.GetComponent<MeshRenderer>();
+            var liqOld = svc.Find("Coolant_Liquid");
+            if (mrR == null || mrC == null || liqOld == null) return "이미 연결돼 있음(더미 리저버·액체가 없음)";
+            Material mTank = mrR.sharedMaterial, mCap = mrC.sharedMaterial, mLiq = liqOld.GetComponent<MeshRenderer>().sharedMaterial;
+            var tmp = GameObject.CreatePrimitive(PrimitiveType.Cube); var cube = tmp.GetComponent<MeshFilter>().sharedMesh; UnityEngine.Object.DestroyImmediate(tmp);
+
+            // 배터리 쪽(저전도 냉각수) 액체 재질: 같은 폴더에 연한 청색 복사본
+            string battPath = Path.GetDirectoryName(AssetDatabase.GetAssetPath(mLiq)).Replace('\\', '/') + "/M_Coolant_Liquid_Battery.mat";
+            var mLiqB = AssetDatabase.LoadAssetAtPath<Material>(battPath);
+            if (mLiqB == null)
+            {
+                mLiqB = new Material(mLiq);
+                if (mLiqB.HasProperty("_BaseColor")) mLiqB.SetColor("_BaseColor", new Color(0.30f, 0.72f, 0.95f, 0.85f));
+                AssetDatabase.CreateAsset(mLiqB, battPath);
+            }
+            var liquidM = MakeCoolantGauge(tankM, car, cube, mLiq, mTank, mCap, 0.75f);
+            MakeCoolantGauge(tankB, car, cube, mLiqB, mTank, mCap, 0.75f);
+
+            foreach (var n in new[] { "Coolant_Liquid", "Coolant_Mark_MIN", "Coolant_Mark_MAX" }) { var t = svc.Find(n); if (t != null) UnityEngine.Object.DestroyImmediate(t.gameObject); }
+            var mfR = reservoir.GetComponent<MeshFilter>(); if (mfR != null) UnityEngine.Object.DestroyImmediate(mfR); UnityEngine.Object.DestroyImmediate(mrR);
+            var mfC = capObj.GetComponent<MeshFilter>(); if (mfC != null) UnityEngine.Object.DestroyImmediate(mfC); UnityEngine.Object.DestroyImmediate(mrC);
+
+            var tb = tankM.GetComponent<MeshRenderer>().bounds; var cb = capM.GetComponent<MeshRenderer>().bounds;
+            reservoir.position = tb.center; reservoir.rotation = car.rotation; reservoir.localScale = Vector3.one;
+            var rbox = reservoir.GetComponent<BoxCollider>(); rbox.center = Vector3.zero; rbox.size = tb.size;
+            capObj.position = cb.center; capObj.rotation = car.rotation; capObj.localScale = Vector3.one;
+            var cbox = capObj.GetComponent<BoxCollider>(); cbox.center = new Vector3(0, 0.01f, 0); cbox.size = new Vector3(0.07f, 0.045f, 0.07f);
+            capM.SetParent(capObj, true);   // 뚜껑 메시가 클릭 오브젝트(열림 연출)를 따라 움직이게
+            var fill = svc.Find("Guide_Coolant_Fill_Zone"); fill.position = new Vector3(cb.center.x, 0.95f, cb.center.z);
+
+            var vis = svc.GetComponent<CoolantServiceVisual>();
+            vis.liquid = liquidM; vis.liquidIsCube = true; vis.tankBottomY = 0f; vis.tankHeight = 0.17f;
+            vis.capOpenOffset = new Vector3(0f, 0.05f, 0.085f); vis.capOpenEuler = new Vector3(20f, 0f, 0f);
+            vis.scenarioOnlyColliders = new Collider[] { rbox, cbox };
+            return $"연결 완료: 리저버 {tb.center}, 뚜껑 {cb.center}";
+        });
+    }
+
     [MenuItem("Dodrill/차량 메시 분리/시트(앞 좌·우, 뒤)")]
     public static string SplitSeats()
     {

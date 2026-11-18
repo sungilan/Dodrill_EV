@@ -224,6 +224,7 @@ public class ClickableAnimator : MonoBehaviour
     /// <summary>현재 시나리오 단계의 Module ID가 허용 리스트에 있는지 확인</summary>
     public bool CanInteract()
     {
+        if((uniqueId == "Battery_12V_Cover" || uniqueId == "MSD_Lever") && FreeLoto.IsFreeScenario) return true;   // 자유 탈거: 단계와 무관
         if(targetTaskIds == null || targetTaskIds.Count == 0) return true;
 
         var sr = ScenarioStateReceiver.Instance;
@@ -339,6 +340,7 @@ public class ClickableAnimator : MonoBehaviour
 
     public void RequestSetState(bool open)
     {
+        if(FreeLoto.InterceptMsdLever(this)) return;   // 자유 탈거: 서비스 플러그 레버는 LOTO 절차(장갑→12V→플러그)를 거친다
         var broadcast = new AnimatorStateBroadcast { id = uniqueId, isOpen = open };
 
         if(InstanceFinder.IsServerStarted)

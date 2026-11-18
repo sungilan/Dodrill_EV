@@ -26,6 +26,7 @@ public abstract class GrabUseTaskModule : ITaskModule
 
     private void HandleItemUsed(string prefabId)
     {
+        if (InteractionEvents.SkipForServerModule) return;   // 혼자 하기: 클라이언트가 직접 낸 알림 — 서버 중계로 한 번 더 오므로 그때 처리
         if (_completed) return;
 
         bool valid = _requiredItems.Count == 0 || _requiredItems.Contains(prefabId);

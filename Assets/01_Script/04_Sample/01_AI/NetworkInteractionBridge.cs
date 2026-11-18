@@ -156,6 +156,7 @@ namespace DoDrill.Training
         private void HandleZoneActivated(string zoneId, string itemId)
         {
             if (!InstanceFinder.IsClientStarted) return;
+            if (InteractionEvents.IsServerRelay) return;   // 서버가 다시 알린 것(혼자 하기 호스트) — 되보내면 무한 반복
 
             // 진단기(GDS)의 OBD 존 신호는 진단기 화면(원인 확인·고장 코드 소거)에서 낸 것만 서버로 보낸다.
             // OBD 단자 접촉, PC E키/클릭 등으로 연결만 해도 진단 단계가 넘어가던 문제 방지.
@@ -252,6 +253,7 @@ namespace DoDrill.Training
         private void HandleItemUsed(string itemId)
         {
             if (!InstanceFinder.IsClientStarted || _currentTaskIndex < 0) return;
+            if (InteractionEvents.IsServerRelay) return;   // 서버가 다시 알린 것(혼자 하기 호스트) — 되보내면 무한 반복
             InstanceFinder.ClientManager.Broadcast(new ItemUsedSignal
             {
                 taskIndex = _currentTaskIndex,
@@ -263,6 +265,7 @@ namespace DoDrill.Training
         private void HandleItemGrabbed(string itemId)
         {
             if (!InstanceFinder.IsClientStarted || _currentTaskIndex < 0) return;
+            if (InteractionEvents.IsServerRelay) return;   // 서버가 다시 알린 것(혼자 하기 호스트) — 되보내면 무한 반복
             InstanceFinder.ClientManager.Broadcast(new ItemGrabbedSignal
             {
                 taskIndex = _currentTaskIndex,
@@ -274,6 +277,7 @@ namespace DoDrill.Training
         private void HandleTaskConfirmed(string moduleId)
         {
             if (!InstanceFinder.IsClientStarted || _currentTaskIndex < 0) return;
+            if (InteractionEvents.IsServerRelay) return;   // 서버가 다시 알린 것(혼자 하기 호스트) — 되보내면 무한 반복
             InstanceFinder.ClientManager.Broadcast(new TaskConfirmSignal
             {
                 taskIndex = _currentTaskIndex,
@@ -284,6 +288,7 @@ namespace DoDrill.Training
 
         private void HandleValueMeasured(string terminalId, float value)
         {
+            if (InteractionEvents.IsServerRelay) return;   // 서버가 다시 알린 것(혼자 하기 호스트) — 되보내면 무한 반복
             if(!InstanceFinder.IsClientStarted || _currentTaskIndex < 0)
             {
                 Debug.LogWarning($"<color=red>[Bridge]</color> 측정 신호 무시됨: ClientStarted={InstanceFinder.IsClientStarted}, TaskIndex={_currentTaskIndex}");

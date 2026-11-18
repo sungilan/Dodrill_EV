@@ -643,7 +643,7 @@ public class ScenarioRunner : MonoBehaviour
         {
             // 정답 아이템을 사용했을 때만 진행자 등록 및 UI 불 켜기
             RegisterActivePlayer(conn, signal.clientId);
-            InteractionEvents.FireItemUsed(signal.itemId);
+            InteractionEvents.RelayFromServer(() => InteractionEvents.FireItemUsed(signal.itemId));   // 호스트(혼자 하기)에서 클라이언트 전송기가 되받아 보내지 않게
         }
     }
 
@@ -662,7 +662,7 @@ public class ScenarioRunner : MonoBehaviour
         }
 
         RegisterActivePlayer(conn, signal.clientId);
-        InteractionEvents.FireItemGrabbed(signal.itemId);
+        InteractionEvents.RelayFromServer(() => InteractionEvents.FireItemGrabbed(signal.itemId));   // 호스트(혼자 하기)에서 클라이언트 전송기가 되받아 보내지 않게
     }
 
     private void HandlePerPlayerGrab(NetworkConnection conn, ItemGrabbedSignal signal, GrabAllItemsModule module)
@@ -743,7 +743,7 @@ public class ScenarioRunner : MonoBehaviour
 
         // 올바른 확인(Confirm) 신호일 때만 진행자 등록 및 UI 불 켜기
         RegisterActivePlayer(conn, signal.clientId);
-        InteractionEvents.FireTaskConfirmed(signal.moduleId);
+        InteractionEvents.RelayFromServer(() => InteractionEvents.FireTaskConfirmed(signal.moduleId));   // 호스트(혼자 하기)에서 클라이언트 전송기가 되받아 보내지 않게
     }
 
     // ── 스텝 진행 알림 (SequentialStepModule → ScenarioRunner) ─

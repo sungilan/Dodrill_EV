@@ -150,8 +150,12 @@ public class ImpactWrench : MonoBehaviour
         {
             // 볼트가 이미 제거(비활성화/파괴)됐다면 더 이상 대상이 아니다.
             // 비활성화된 콜라이더는 OnTriggerExit가 호출되지 않아 진행도 UI가 남던 원인.
+            // 11/18: 누른 채로 대상을 잃으면(볼트 사라짐·단계 바뀜) 손을 뗄 때까지 다음 볼트를 잡지 않는다.
+            //  휠 너트 마지막 하나를 조이는 순간 서버가 '체결 완료'로 바꾸며 조인 너트를 치우고 같은 자리에 풀기용 너트를 새로 만든다.
+            //  여기서 _needRelease 를 안 세우면 F 를 누르고 있는 그대로 새 너트를 잡아 바로 풀어 '휠 탈거 1/5'가 되던 문제.
             if (!_targetBolt.gameObject.activeInHierarchy)
             {
+                if (working) _needRelease = true;
                 ClearTarget();
                 return;
             }
@@ -159,6 +163,7 @@ public class ImpactWrench : MonoBehaviour
             // 실시간 검증: 작업 중 태스크가 바뀌는 상황 대비
             if (!IsCorrectBoltTask(_targetBolt))
             {
+                if (working) _needRelease = true;
                 ClearTarget();
                 return;
             }
@@ -392,7 +397,11 @@ public class ImpactWrench : MonoBehaviour
         if (_blockedCandidate != null && _blockedCandidate.gameObject == other.gameObject) _blockedCandidate = null;
 
         if (_currentBoltGameObject != null && _currentBoltGameObject == other.gameObject)
+        {
+            // 손이 볼트에서 벗어난 게 아니라 볼트가 치워져서(콜라이더 꺼짐·비활성) 빠진 거면 위 Update 와 같이 손을 떼야 다음 볼트
+            if (_buttonHeld && (!other.enabled || !other.gameObject.activeInHierarchy)) _needRelease = true;
             ClearTarget();
+        }
     }
 
     private void ChangeBoltOutlineColor()

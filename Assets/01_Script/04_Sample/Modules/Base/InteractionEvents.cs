@@ -8,6 +8,32 @@ using UnityEngine;
 /// </summary>
 public static class InteractionEvents
 {
+    // ── 서버 중계 표시 (11/18) ─────────────────────────────────
+    // 같은 이벤트를 두 뜻으로 쓴다: 클라이언트에선 '내가 집었다/썼다'(→ NetworkInteractionBridge·PlayerEquipmentSync 가 서버로 전송),
+    // 서버에선 ScenarioRunner 가 받은 신호를 모듈에 알리려고 다시 발생시킨다.
+    // 전용 서버는 프로세스가 달라 문제없지만, 혼자 하기(호스트 = 서버+클라이언트 한 프로세스)에서는 서버가 다시 발생시킨 이벤트를
+    // 클라이언트 전송기가 또 서버로 보내 무한 반복했다(그랩 한 번에 초당 수천 줄 로그 → 심한 렉).
+    // 서버가 다시 발생시키는 동안 이 값이 true — 클라이언트 → 서버 전송기는 이때 보내지 않는다.
+    private static int s_serverRelay;
+    public static bool IsServerRelay => s_serverRelay > 0;
+
+    /// <summary>서버(ScenarioRunner)가 받은 신호를 모듈에 알릴 때 쓴다 — 클라이언트 전송기가 다시 보내지 않는다.</summary>
+    public static void RelayFromServer(Action fire)
+    {
+        s_serverRelay++;
+        try { fire(); }
+        finally { s_serverRelay--; }
+    }
+
+    /// <summary>
+    /// 서버 쪽 훈련 모듈(ConfirmTask·GrabUse·GrabAll·SequentialStep …)이 집기/사용/완료 알림을 건너뛸지.
+    /// 혼자 하기(호스트)에서는 클라이언트가 낸 알림이 같은 프로세스의 모듈에 바로 한 번, 브리지 → 서버 → RelayFromServer 로 또 한 번 도착해
+    /// 다단계 모듈이 한 번 조작에 두 단계씩 넘어갔다. 전용 서버와 똑같이 서버가 검증해서 다시 알린 것(중계)만 받는다.
+    /// (전용 서버·클라이언트 전용에서는 항상 false)
+    /// </summary>
+    public static bool SkipForServerModule =>
+        s_serverRelay == 0 && FishNet.InstanceFinder.IsServerStarted && FishNet.InstanceFinder.IsClientStarted;
+
     // ── Confirm (UI 완료 버튼) ─────────────────────────────────
     /// <summary>플레이어가 UI 완료 버튼을 누를 때 발생. moduleId 전달</summary>
     public static event Action<string> OnTaskConfirmed;

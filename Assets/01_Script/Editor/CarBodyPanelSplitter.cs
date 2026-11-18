@@ -140,7 +140,9 @@ public static partial class CarBodyPanelSplitter
         "SM_Ioniq_Bumper", "Hood_Latch_Point", "SM_Ioniq_Front", "SM_Ioniq_Frunk", "SM_Frunk.001", "SM_Frunk_lid",
         "SM_Ioniq_DoorRearLeft", "SM_Ioniq_DoorRearRight",   // 앞 도어는 미러를 자르면서 이미 양면
         "SM_Ioniq_Back", "SM_Ioniq_Back.001", "SM_Ioniq_Back.002", "SM_Ioniq_Back.004", "SM_Ioniq_Back.005", "SM_Ioniq_Back.006",
-        "SM_Bottom_01", "SM_Bottom_02", "Battery_12V_Cover", "SM_12v", "SM_Ioniq_Cockpit", "SM_Seat_FL", "SM_Seat_FR", "SM_Seat_Rear",
+        "SM_Bottom_01", "SM_Bottom_02", "SM_Ioniq_Cockpit",
+        // 12V 배터리(SM_12v·Battery_12V_Cover)도 빼 둔다(11/18): 시트처럼 뒤집은 면이 겉으로 나와 검은 줄무늬가 생겼다 → 원본 메시로 되돌림
+        // 시트는 빼 둔다(11/18): 시트 메시는 면 방향이 섞여 있어 뒤집은 면이 겉면 앞으로 나와 등받이에 물결무늬가 생겼다 → 원본 메시로 되돌림
     };
 
     // ═════════════════════════ 계산 ═════════════════════════

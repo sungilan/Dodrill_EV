@@ -17,6 +17,9 @@ public class HvVoltageCheck : MonoBehaviour
     /// <summary>이번 차단에서 단자 전압(30 V 이하)을 확인했는가</summary>
     public static bool Verified { get; private set; }
 
+    /// <summary>자유 탈거 연습 보드(FreeLoto)가 단자 전압 확인 결과를 넣는다</summary>
+    public static void MarkVerified(bool v) { Verified = v; }
+
     /// <summary>자유 실습이고 보호구·MSD 는 갖췄는데 단자 전압 확인만 안 했다</summary>
     public static bool NeedsCheck
     {
@@ -55,7 +58,8 @@ public class HvVoltageCheck : MonoBehaviour
             int q = CarPartService.IndexOf(id);
             if (q >= 0 && svc.StateOf(q) == (int)CarPartService.PartState.Tight && svc.TryGetPartAnchor(q, out _, out _, out _)) { p = q; break; }
         }
-        bool on = p >= 0 && !CarPartService.LocalHoldsBoltTool;
+        // 자유 탈거(시나리오 ev_free_disassembly)는 시나리오처럼 멀티미터로 잰다(FreeLoto.OnMeasured) — 빈손 클릭 측정은 끈다
+        bool on = p >= 0 && !CarPartService.LocalHoldsBoltTool && !FreeLoto.IsFreeScenario;
         if (!on) { if (_go != null && _go.activeSelf) _go.SetActive(false); return; }
 
         svc.TryGetPartAnchor(p, out var anchor, out var local, out int layer);

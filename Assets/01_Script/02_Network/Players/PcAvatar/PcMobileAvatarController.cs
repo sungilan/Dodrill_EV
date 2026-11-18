@@ -257,7 +257,7 @@ public class PcMobileAvatarController : NetworkBehaviour
 
     private bool OwnInputRecently => Time.unscaledTime - _lastOwnInputTime < OwnInputWindow;
 
-    private void OnAnyInteraction(string _) { if (OwnInputRecently) ReachForward(); }
+    private void OnAnyInteraction(string _) { if (InteractionEvents.IsServerRelay) return; if (OwnInputRecently) ReachForward(); }   // 서버 중계(혼자 하기)는 내 손짓이 아니다
     // 도구를 든 채 보내는 구역 신호(드릴로 볼트 풀기 등)이거나 무언가를 들고 있는 중이면 뻗지 않는다
     private void OnAnyZone(string _, string itemId)
     {

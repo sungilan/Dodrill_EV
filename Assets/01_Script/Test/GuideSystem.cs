@@ -1070,6 +1070,15 @@ public class GuideSystem : MonoBehaviour
     {
         if(centerGuideGroup == null) return;
         if(!force && !CenterPopupEnabled) { HideCenterNow(); return; }
+
+        // 큰 안내창 대신 선임 정비사가 자막으로 알려 준다(평가 모드·대화 시스템이 없을 때만 예전 창)
+        {
+            var tasks = _scenarioData?.scenario?.tasks;
+            string mid = tasks != null && _currentTask.taskIndex >= 0 && _currentTask.taskIndex < tasks.Count ? tasks[_currentTask.taskIndex].moduleId : "";
+            string body = mainGuideText != null ? mainGuideText.text : "";
+            string sub = subGuideText != null && subGuideText.gameObject.activeSelf ? subGuideText.text : "";
+            if(MentorDialogue.TrySayStep(mid, body, sub, force)) { HideCenterNow(); return; }
+        }
         if(_currentGuideSequence != null) { _currentGuideSequence.Kill(true); _currentGuideSequence = null; }
 
         centerGuideGroup.gameObject.SetActive(true);

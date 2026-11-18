@@ -596,6 +596,23 @@ public class CarPartService : NetworkBehaviour
             requires = new[] { "MainFuse" },
             bolts = new[] { new F(-1.0164f, 0.0182f, 0.3193f, 0f, 1f, 0f), new F(-1.0664f, 0.0489f, 0.1893f, 0f, 1f, 0f), new F(-1.0264f, 0.0376f, 0.0993f, 0f, 1f, 0f) },
             tMin = 0.8f, tMax = 1.2f, boltScale = 0.7f, specPart = "PRA 너트·버스바", specSource = "배터리 제어 시스템 — 파워 릴레이 어셈블리(PRA) 탈거 및 장착(0.8~1.2)" },
+        // ── 냉각수 리저버 탱크(모터용·고전압 배터리용) — 프렁크 메시(SM_Frunk.001)에서 분리한 모델 탱크·뚜껑 ──
+        //    매뉴얼(냉각 시스템 > 리저버 탱크): 12V (−) → N 액티브 사운드 스피커 → 모터·배터리 냉각수 배출 → EWP·3웨이 밸브 → 호스·커넥터 → 리저버 볼트·너트 0.8~1.2
+        //    볼트 자리는 탱크 윗면 위에 정한 것(탱크 노드 로컬 좌표: 노드가 (0,90,180) 으로 돌아 있어 월드 (x,y,z) → 로컬 (z,−y,x)). 에디터에서 표면 검증은 못 했다.
+        new PartDef {
+            id = "CoolantTankMotor", name = "모터 냉각수 리저버 탱크",
+            tool = "에어 임팩렌치(10mm 소켓)",
+            hint = "12V (−) 분리 → 모터 냉각수 배출 → EWP·3웨이 밸브·저온 라디에이터 상부 호스(퀵 커넥터 클램프를 위로 당겨 분리)·EWP 인렛 호스·커넥터를 떼고 볼트·너트(0.8~1.2)를 푼다 — 장착 뒤 냉각수 주입과 EWP 구동 에어빼기 필요. 약 16.6L 계통, 부동액+물 55~60% 혼합액",
+            objects = new[] { "SM_CoolantTank_Motor", "SM_CoolantCap_Motor" },
+            bolts = new[] { new F(0.390f, -0.0875f, -0.032f, 0f, -1f, 0f), new F(0.460f, -0.0875f, -0.032f, 0f, -1f, 0f) },
+            tMin = 0.8f, tMax = 1.2f, boltScale = 0.8f, specPart = "리저버 탱크 볼트·너트", specSource = "냉각 시스템 — 리저버 탱크 탈거 및 장착(0.8~1.2)" },
+        new PartDef {
+            id = "CoolantTankBattery", name = "고전압 배터리 냉각수 리저버 탱크", hv = true,
+            tool = "에어 임팩렌치(10mm 소켓)",
+            hint = "고전압 차단 → 12V (−) 분리 → 배터리 냉각수(저전도, 물에 희석 금지) 배출 → 배터리 EWP·3웨이 밸브·호스를 떼고 볼트·너트(0.8~1.2)를 푼다 — 저전도 냉각수 압력 캡은 정비사만 탈거, 장착 뒤 VCU 강제구동 '배터리 EWP구동'으로 공기를 뺀다",
+            objects = new[] { "SM_CoolantTank_Battery", "SM_CoolantCap_Battery" },
+            bolts = new[] { new F(0.390f, -0.0875f, 0.358f, 0f, -1f, 0f), new F(0.460f, -0.0875f, 0.358f, 0f, -1f, 0f) },
+            tMin = 0.8f, tMax = 1.2f, boltScale = 0.8f, specPart = "리저버 탱크 볼트·너트", specSource = "냉각 시스템 — 리저버 탱크 탈거 및 장착(0.8~1.2)" },
         new PartDef {
             id = "ShockInsulatorL", name = "쇽 인슐레이터·록 너트(왼쪽)", parent = "RearShockL",
             tool = "쇽 록 너트 리무버(09546-3X100) · 에어 임팩렌치(17mm 소켓)", socket = 2,
@@ -1279,7 +1296,13 @@ public class CarPartService : NetworkBehaviour
         int k = 0;
         for (int i = 0; i < Defs.Length; i++) { s_off[i] = k; k += Defs[i].bolts.Length; }
         s_total = k;
+        s_lubeOff = new int[Defs.Length];
+        int lk = 0;
+        for (int i = 0; i < Defs.Length; i++) { s_lubeOff[i] = lk; lk += CarPartLube.SpotCount(Defs[i]); }
+        s_lubeTotal = lk;
     }
+    private static int[] s_lubeOff;   // 부위별 도포 지점 시작 번호(CarPartLube)
+    private static int s_lubeTotal;
 
     [Tooltip("떼어낸 부품으로 Spawn 할 장비(CarPartItem)")] public NetworkObject itemPrefab;
     [Tooltip("부품을 놓았을 때 제자리에 장착되는 거리(m) — VR")] public float mountDistVR = 0.35f;
@@ -1291,6 +1314,7 @@ public class CarPartService : NetworkBehaviour
     [Tooltip("볼트를 메시 바깥쪽으로 내미는 거리(m)")] public float boltProtrude = 0.004f;
 
     private readonly SyncList<float> _prog = new SyncList<float>();
+    private readonly SyncList<float> _lube = new SyncList<float>();   // 도포량(지점별, 0~1.8) — 부품을 떼거나 끼울 때 0
     private readonly SyncList<int> _state = new SyncList<int>();
     private readonly SyncList<int> _item = new SyncList<int>();   // 떼어낸 부품의 NetworkObject.ObjectId (-1 = 없음)
 
@@ -1332,6 +1356,8 @@ public class CarPartService : NetworkBehaviour
         public Bounds wb;                // 부품 메시 전체의 월드 범위(0.3초마다 갱신) — 시선이 어느 부품을 보는지 판정
         public bool wbOk;
         public bool yieldToScenario;     // 시나리오가 지금 이 부위의 볼트를 다루는 중 — 자유 실습 표시는 양보한다
+        public GameObject[] lubeGo;      // 도포 점(CarPartLube) — 제자리에 끼운 상태에서만 보인다
+        public Material[] lubeMat;
         // 어셈블리 계층: 큰 부품을 떼어내면 그 안의 세부 부위(실제 메시)가 떼어낸 부품(아이템)을 따라다닌다
         public Transform carrier;        // 따라다니는 대상(떼어낸 어셈블리 아이템의 겉모습). null = 차 위 제자리
         public Vector3[] relPos; public Quaternion[] relRot;
@@ -1342,6 +1368,15 @@ public class CarPartService : NetworkBehaviour
     [System.NonSerialized] private bool _found;
     private float _nextFind, _wheelPollAt;
     private float[] _sendAt, _pending, _activeAt, _allDoneSince, _resendAt;
+
+    // 11/18: 체결 완료 직후 볼트 하나가 바로 풀려 '볼트 풀림 1/3' 이 되던 문제 (TireService 휠 너트와 같은 원인·같은 처리)
+    //  · 마지막 볼트를 조이는 동안 보낸 진행도가 체결(Mounted→Tight) 뒤에 도착하면, 서버는 그것을 '풀기' 진행도로 받아 새 볼트 하나를 풀어 버렸다
+    //    → 진행도에 조이기/풀기 구분을 실어 보내고, 지금 상태와 다르면 버린다
+    //  · 공구 버튼을 누른 채로 있으면 새로 생긴 볼트를 곧바로 풀기 시작했다 → 체결 직후 잠깐(TightenLock) 볼트를 잡을 수 없게 한다
+    private const float TightenLock = 1.5f;
+    private bool[] _pendingAsm;        // 보낼 진행도가 조이기(true)·풀기(false) 중 무엇이었나
+    private float[] _lockUntil;        // 서버: 이 시각까지 그 부위 볼트 진행도 무시
+    private float[] _clientLockUntil;  // 클라이언트: 이 시각까지 새 볼트를 못 잡고 원격 진행도도 안 받는다
 
     private static readonly Color IdleOutline = new Color(0.92f, 0.96f, 1f, 1f);
     private static readonly Color WorkOutline = new Color(0.25f, 1f, 0.35f, 1f);
@@ -1358,6 +1393,7 @@ public class CarPartService : NetworkBehaviour
         _sendAt = new float[s_total]; _pending = new float[s_total]; _activeAt = new float[s_total];
         for (int i = 0; i < s_total; i++) { _pending[i] = -1f; _activeAt[i] = -100f; }
         _allDoneSince = new float[Defs.Length]; _resendAt = new float[Defs.Length];
+        _pendingAsm = new bool[s_total]; _lockUntil = new float[Defs.Length]; _clientLockUntil = new float[Defs.Length];
         CarPartRules.EnsureRegistered();   // 냉각 회로 공기 상태(자유 실습)
         if (GetComponent<BrakeInspection>() == null) gameObject.AddComponent<BrakeInspection>();   // 휠을 뗀 브레이크 마모 점검
         if (GetComponent<TireInspection>() == null) gameObject.AddComponent<TireInspection>();     // 타이어 트레드·공기압 점검
@@ -1377,6 +1413,7 @@ public class CarPartService : NetworkBehaviour
     {
         base.OnStartServer();
         if (_prog.Count == 0) for (int i = 0; i < s_total; i++) _prog.Add(0f);
+        if (_lube.Count == 0) for (int i = 0; i < s_lubeTotal; i++) _lube.Add(0f);
         if (_state.Count == 0) for (int i = 0; i < Defs.Length; i++) _state.Add((int)PartState.Tight);
         if (_item.Count == 0) for (int i = 0; i < Defs.Length; i++) _item.Add(-1);
     }
@@ -1426,6 +1463,36 @@ public class CarPartService : NetworkBehaviour
 
     /// <summary>이 부위를 풀기 전에 먼저 떼어야 하는 것(부위·휠·어셈블리) 이름들.</summary>
     public string RemoveBlockersOf(int p) => RemoveBlockers(p);
+
+    /// <summary>이 부위를 풀기 위한 선행 항목 전부(어셈블리·먼저 뗄 부위·휠)와 지금 충족됐는지(떼어 놓았는지) — 부위 목록 패널이 '먼저:' 를 초록·주황으로 칠한다.</summary>
+    public List<KeyValuePair<string, bool>> RemovePrereqs(int p)
+    {
+        var l = new List<KeyValuePair<string, bool>>();
+        if (p < 0 || p >= Defs.Length) return l;
+        int par = ParentIndex(Defs[p]);
+        if (par >= 0) l.Add(new KeyValuePair<string, bool>(Defs[par].name, StateOf(par) == (int)PartState.Off));
+        foreach (var r in Defs[p].requires) { int q = IndexOf(r); if (q >= 0) l.Add(new KeyValuePair<string, bool>(Defs[q].name, StateOf(q) == (int)PartState.Off)); }
+        if (Defs[p].needsWheel >= 0) l.Add(new KeyValuePair<string, bool>(WheelNames[Defs[p].needsWheel], WheelOffAt(Defs[p].needsWheel)));
+        if (Defs[p].needsWheel2 >= 0) l.Add(new KeyValuePair<string, bool>(WheelNames[Defs[p].needsWheel2], WheelOffAt(Defs[p].needsWheel2)));
+        return l;
+    }
+
+    /// <summary>지금 조여 있는 볼트 수 — 체결 상태에서는 아직 다 풀리지 않은 볼트, 장착(조이는 중) 상태에서는 규정 토크까지 조인 볼트, 뗀 상태는 0.</summary>
+    public int BoltsTightened(int p)
+    {
+        if (p < 0 || p >= Defs.Length) return 0;
+        int st = StateOf(p);
+        if (st == (int)PartState.Off) return 0;
+        int k = Defs[p].bolts.Length, c = 0;
+        for (int n = 0; n < k; n++)
+        {
+            int idx = s_off[p] + n;
+            float v = idx < _prog.Count ? _prog[idx] : 0f;
+            if (st == (int)PartState.Tight) { if (v < 1f) c++; }
+            else if (v >= 1f) c++;
+        }
+        return c;
+    }
 
     public int StateOf(int p) => p >= 0 && p < _state.Count ? _state[p] : (int)PartState.Tight;
 
@@ -1531,7 +1598,7 @@ public class CarPartService : NetworkBehaviour
                 int idx = s_off[p] + n;
                 if (_pending[idx] >= 0f && (Time.unscaledTime >= _sendAt[idx] || _pending[idx] >= 1f))
                 {
-                    ProgressServerRpc(idx, _pending[idx]);
+                    ProgressServerRpc(idx, _pending[idx], _pendingAsm[idx]);
                     _pending[idx] = -1f;
                     _sendAt[idx] = Time.unscaledTime + 0.1f;
                 }
@@ -1550,6 +1617,7 @@ public class CarPartService : NetworkBehaviour
         if (!IsClientStarted) return;
         UpdateVisuals();
         UpdateGhost();
+        UpdateLubeSpots();
     }
 
     private void PlaceFrames()
@@ -1910,7 +1978,7 @@ public class CarPartService : NetworkBehaviour
         free.specPart = d.specPart; free.specSource = d.specSource;
         free.socket = d.socket;
         int idx = s_off[pt.index] + n;
-        b.OnProgressChanged += _ => { _pending[idx] = b.Progress; _activeAt[idx] = Time.time; };
+        b.OnProgressChanged += _ => { _pending[idx] = b.Progress; _pendingAsm[idx] = b.isAssembleMode; _activeAt[idx] = Time.time; };
         return b;
     }
 
@@ -1994,6 +2062,12 @@ public class CarPartService : NetworkBehaviour
         if (st == (int)PartState.Off) { SetVisible(pt, false); return; }
 
         bool snapping = prev == (int)PartState.Off && st == (int)PartState.Mounted;
+        if (snapping) CarPartLube.NoteMounted(pt.def);                       // 제자리에 얹었다 → 도포하라고 알린다
+        if (justTightened)                                                     // 다 조였다 → 도포 결과
+        {
+            LubeStatus(p, out int lubeOk, out int lubeTotal, out int lubeExcess);
+            CarPartLube.NoteTightened(pt.def, lubeOk, lubeTotal, lubeExcess);
+        }
         if (!locked)
         {
             for (int n = 0; n < pt.bolts.Length; n++)
@@ -2004,6 +2078,11 @@ public class CarPartService : NetworkBehaviour
                 int idx = s_off[p] + n;
                 if (!justTightened && idx < _prog.Count && _prog[idx] > 0f) ApplyProgress(idx, _prog[idx]);
                 if (justTightened) StartCoroutine(TireService.ScaleIn(b.transform, 0.25f, 0.35f));
+            }
+            if (justTightened)
+            {
+                _clientLockUntil[p] = Time.unscaledTime + TightenLock;
+                StartCoroutine(LockBoltsBriefly(pt.bolts, TightenLock));
             }
         }
 
@@ -2016,11 +2095,21 @@ public class CarPartService : NetworkBehaviour
         else SetVisible(pt, true);
     }
 
+    /// <summary>체결 직후 새 볼트를 잠깐 못 잡게 한다(공구 버튼을 누른 채라 바로 풀리지 않게).</summary>
+    private static IEnumerator LockBoltsBriefly(Bolt[] bolts, float sec)
+    {
+        var cols = new List<Collider>();
+        foreach (var b in bolts) if (b != null) foreach (var c in b.GetComponentsInChildren<Collider>()) if (c.enabled) { c.enabled = false; cols.Add(c); }
+        yield return new WaitForSecondsRealtime(sec);
+        foreach (var c in cols) if (c != null) c.enabled = true;   // 그 사이 다시 만들어졌으면(파괴) 건너뛴다
+    }
+
     private void ApplyProgress(int idx, float v)
     {
         if (_parts == null) return;
         int p = PartOfBolt(idx);
         if (p < 0 || _parts[p] == null || _parts[p].bolts == null) return;
+        if (Time.unscaledTime < _clientLockUntil[p]) return;   // 체결 직후 늦게 온 이전 진행도는 받지 않는다
         var b = _parts[p].bolts[idx - s_off[p]];
         if (b == null || v <= b.Progress) return;
         b.ApplyRemoteProgress(v);
@@ -2132,14 +2221,40 @@ public class CarPartService : NetworkBehaviour
         return best;
     }
 
+    // 시선 앞 가림 — 지금 바라보는 면(첫 충돌)보다 한참 뒤에 있는 볼트(차 반대편 좌석 볼트 등)는 겨눈 것으로 치지 않는다.
+    // 공구를 볼트 옆에 댄 경우(ToolNear)는 예외. 들고 있는 도구·부품·내 아바타 충돌체는 건너뛴다.
+    private static float s_gazeDist = 999f;
+    private static int s_gazeFrame = -1;
+    private static readonly RaycastHit[] s_gazeHits = new RaycastHit[16];
+
+    private static void UpdateGaze(Vector3 cp, Vector3 fwd)
+    {
+        if (s_gazeFrame == Time.frameCount) return;
+        s_gazeFrame = Time.frameCount;
+        float best = 999f;
+        int n = Physics.RaycastNonAlloc(new Ray(cp, fwd), s_gazeHits, 8f, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < n; i++)
+        {
+            var c = s_gazeHits[i].collider;
+            if (c == null || s_gazeHits[i].distance < 0.15f) continue;
+            if (c.GetComponentInParent<CharacterController>() != null) continue;
+            var sg = c.GetComponentInParent<SyncGrab>();
+            if (sg != null && sg.IsGrabbed) continue;
+            best = Mathf.Min(best, s_gazeHits[i].distance);
+        }
+        s_gazeDist = best;
+    }
+
     private float PartAngle(Part pt, Vector3 cp, Vector3 fwd, float near)
     {
+        UpdateGaze(cp, fwd);
         float best = 999f;
         for (int n = 0; n < pt.def.bolts.Length; n++)
         {
             Vector3 bw = BoltWorld(pt, n);
             Vector3 d = bw - cp;
             if (d.sqrMagnitude > near * near) continue;
+            if (d.magnitude > s_gazeDist + 0.35f && ToolDist(bw) >= ToolNear) continue;   // 바라보는 면 뒤쪽(반대편) 볼트
             float a = EffAngle(d, fwd);
             if (ToolDist(bw) < ToolNear) a = Mathf.Min(a, 1f);   // 공구를 볼트 옆에 댔으면 시선과 상관없이 이 부위
             best = Mathf.Min(best, a);
@@ -2240,9 +2355,14 @@ public class CarPartService : NetworkBehaviour
                 // 이름·공구·규정·접근 위치는 부품 카드에 이미 있다 — 겨눌 때마다 큰 안내 배너(후드 탈거·장착 …)까지 띄우면 시나리오 안내와 겹친다.
                 // 작업 절차 설명(hint)은 그 부위 볼트를 처음 돌릴 때 한 번만 보여 준다(아래 UpdateVisuals).
                 _ = body;
-                if (HvUnsafe(fd)) NoticeHv(fd, 4f, 20f);
+                // 볼트가 실제로 시선 가까이 있을 때만 경고 — 큰 부품(배터리 팩·하부 커버)의 범위 상자가 휠 쪽까지 걸쳐 있어서,
+                // 타이어를 조립하려고 휠을 겨누기만 해도 '고전압 차단 전' 경고가 떴다(범위 상자 시선 = hover 후보)
+                if (HvUnsafe(fd) && PartAngle(_parts[focus], cam.transform.position, cam.transform.forward, near) < (IsVRPlatform ? 28f : 16f))
+                    NoticeHv(fd, 4f, 20f);
             }
         }
+
+        bool hvTouching = false;
 
         for (int p = 0; p < _parts.Length; p++)
         {
@@ -2276,7 +2396,21 @@ public class CarPartService : NetworkBehaviour
                     SetOutline(pt, n, b, open && on ? (active ? 2 : 1) : 0);
                 }
             }
-            if (anyActive && on && HvUnsafe(pt.def)) NoticeHv(pt.def, 3f, 8f);   // 차단 안 된 채 고전압 부품 볼트를 돌리는 중
+            if (anyActive && on && st == (int)PartState.Tight && CarPartAccident.IsHeavy(pt.def.id)) DropRiskNotice(pt, p, done);   // 낙하 사고 직전 안내(보라)
+            if (anyActive && on && HvUnsafe(pt.def))   // 차단 안 된 채 고전압 부품 볼트를 돌리는 중 — 경고, 계속하면 감전 사고
+            {
+                NoticeHv(pt.def, 3f, 8f);
+                hvTouching = true;
+                if (_hvTouchT <= 0.01f && Time.time >= _hvSparkAt && FreeLoto.IsFreePractice)   // 비절연 공구(임팩트 렌치)를 고전압 부위에 댔다 — 스파크와 경고음
+                {
+                    _hvSparkAt = Time.time + 6f;
+                    AccidentFx.SmallSpark(HvAccidentPoint(pt));
+                    EquipFx.Notice("hv_noninsulated", "비절연 공구 — 고전압 근처", "임팩트 렌치는 절연 공구가 아닙니다 (감점 -15). 절연 공구를 쓰고 먼저 고전압을 차단하세요", EquipFx.Danger, 4.5f, 6f);
+                }
+                var smg = ElectricSafetyManager.Instance;
+                _hvTouchT += Time.deltaTime * (smg != null && !smg.isGlovesEquipped ? 1.6f : 1f);   // 절연 장갑이 없으면 더 빨리 감전
+                if (_hvTouchT >= HvShockDelay) { _hvTouchT = 0f; if (FreeLoto.IsFreePractice) FreeLoto.TriggerShock(pt.def, HvShockReason(), HvAccidentPoint(pt)); }   // 교육·평가 시나리오 중의 사고 판정은 시나리오 쪽이 한다
+            }
             else if (anyActive && on && CarPartRules.NeedsToolWarning(pt.def, pt.anchor != null ? pt.anchor.position : Vector3.zero)) { }   // 특수공구·크레인 없이 작업 중(경고만)
             else if (anyActive && on)   // 작업 절차 설명은 볼트를 처음 돌릴 때 한 번(부위별 3분에 한 번까지)
                 EquipFx.Notice("carpart_" + pt.def.id, pt.def.name + (st == (int)PartState.Mounted ? " 장착" : " 탈거"),
@@ -2286,6 +2420,62 @@ public class CarPartService : NetworkBehaviour
             UpdateCard(pt, p, st, done, anyActive && on, p == cardPart && !TireService.LabelShowing, cam);
             UpdateLeads(pt, on && pt.card != null && pt.card.root.activeSelf);
         }
+        if (hvTouching) _hvLastTouch = Time.time;
+        else if (HvSafeNow()) _hvTouchT = Mathf.Max(0f, _hvTouchT - Time.deltaTime * 3f);   // 차단 절차를 마쳤을 때만 내려간다 — 쉬었다 다시 해도 감전 위험은 그대로 쌓인다(전에는 손을 떼면 줄어 간격을 두고 계속 풀 수 있었다)
+    }
+
+    /// <summary>감전 위험 게이지(0~1) — 안전 절차 없이 고전압 부위 볼트를 돌린 시간 / 사고까지 시간. HUD(HvShockGauge)가 읽는다.</summary>
+    public float HvTouchRatio => Time.time - _hvLastTouch < 8f ? Mathf.Clamp01(_hvTouchT / HvShockDelay) : 0f;   // 화면에는 만지는 중·직후 8초만 보인다(값은 계속 쌓여 있다)
+    public bool HvTouchHolding => Time.time - _hvLastTouch > 0.5f;
+    public string HvTouchWhy => HvShockReason();
+
+    private float _hvLastTouch = -999f;
+
+    private static bool HvSafeNow()
+    {
+        var sm = ElectricSafetyManager.Instance;
+        return sm == null || (sm.IsSafeToWork() && !HvVoltageCheck.NeedsCheck);
+    }
+
+    // ── 대형 부품 낙하 위험 — 받침 없이 마지막 볼트 몇 개만 남았을 때(사고 직전) 미리 알린다 ──
+    private float _supportCheckAt;
+    private bool _supportCached;
+
+    private void DropRiskNotice(Part pt, int p, int loosened)
+    {
+        if (!FreeLoto.IsFreeScenario) return;
+        int bn = pt.bolts != null ? pt.bolts.Length : 0;
+        if (bn < 2) return;
+        int remain = bn - loosened;
+        if (remain > Mathf.Max(1, bn / 2)) return;   // 절반 넘게 풀었을 때부터
+        if (Time.time >= _supportCheckAt) { _supportCheckAt = Time.time + 1f; _supportCached = CarPartAccident.Supported(PartCenter(p)); }
+        if (_supportCached) return;
+        string what = CarPartAccident.IsBatteryPart(pt.def.id) ? "부품이 떨어져 부서지고 배터리 화재(열폭주)가 납니다" : "부품이 떨어져 부서집니다";
+        EquipFx.Notice("drop_risk_" + pt.def.id, "낙하 위험 — " + pt.def.name,
+            $"받침(크레인·배터리 리프트)이 없습니다 — 볼트 {remain}개만 더 풀면 {what}. 멈추고 먼저 차 밑에 받치세요", EquipFx.Hazard, 4.5f, 6f);
+        MentorDialogue.Say("support_need", 90f);
+    }
+
+    // 고전압 부품 볼트를 안전 절차 없이 이 시간(초) 넘게 돌리면 감전 사고 — 경고(NoticeHv)를 본 뒤 멈출 시간은 준다
+    private const float HvShockDelay = 3f;
+    private float _hvTouchT;
+    private float _hvSparkAt;
+
+    // 사고 지점 — 드릴이 물고 있는 볼트(없으면 이 부위의 볼트 가운데)
+    private Vector3 HvAccidentPoint(Part pt)
+    {
+        var tb = ImpactWrench.LocalTargetBolt;
+        if (tb != null && tb.gameObject.activeInHierarchy) return tb.transform.position;
+        return WorkPoint(pt, out _);
+    }
+
+    private static string HvShockReason()
+    {
+        var sm = ElectricSafetyManager.Instance;
+        if (sm == null) return "고전압 차단 절차를 하지 않았습니다.";
+        if (!sm.isGlovesEquipped) return "절연 장갑을 착용하지 않고 고전압 부품을 만졌습니다.";
+        if (!sm.isMSDRemoved) return "고전압 서비스 플러그(MSD)를 차단하지 않고 고전압 부품을 만졌습니다.";
+        return "단자 잔류 전압(30V 이하)을 확인하지 않고 고전압 부품을 만졌습니다.";
     }
 
     // ══════════════════════════════════════════
@@ -2313,7 +2503,7 @@ public class CarPartService : NetworkBehaviour
             case "BrakeFL": case "BrakeFR": case "BrakeRL": case "BrakeRR": return "휠 안쪽 — 해당 휠을 떼고 작업";
             case "SeatFL": case "SeatFR": case "SeatRear": case "Cockpit": case "Hvac": return "실내 — 도어를 열고 작업";
             case "Iccu": return "실내 — 뒷좌석을 떼고 좌석 밑에서 작업";
-            case "Hood": case "Frunk": case "Headlamp": case "FrontBeam": case "Cooling": case "AcCompressor":
+            case "Hood": case "Frunk": case "Headlamp": case "FrontBeam": case "Cooling": case "AcCompressor": case "CoolantTankMotor": case "CoolantTankBattery":
             case "FrontInverter": case "JunctionBlock": case "Battery12VCover": case "Battery12V":
             case "FrontStrutL": case "FrontStrutR": case "Vcu":
                 return "엔진룸 — 후드를 열고 작업";
@@ -2489,10 +2679,11 @@ public class CarPartService : NetworkBehaviour
 
     private static void NoticeHv(PartDef d, float show, float cooldown)
     {
+        MentorDialogue.Say("hv_warn", 120f);   // 선임 정비사 코칭(시나리오에 trigger 대사가 있을 때만)
         var sm = ElectricSafetyManager.Instance;
         if (sm != null && sm.IsSafeToWork())
             EquipFx.Notice("carpart_hv", "단자 전압 확인 전입니다 — " + d.name,
-                "방전 후 인버터 DC 단자를 눌러 잔류 전압이 30V 이하인지 확인한 뒤에 작업하세요", EquipFx.Danger, show, cooldown);
+                "방전 뒤 멀티미터(카트 위)로 인버터 HV 단자(청록 점)를 재서 잔류 전압이 30V 이하인지 확인한 뒤에 작업하세요 (책상 옆 보드 [단자 전압 측정]은 간편 확인)", EquipFx.Danger, show, cooldown);
         else
             EquipFx.Notice("carpart_hv", "고전압 차단 전입니다 — " + d.name,
                 "절연장갑 → 12V(−) 분리 → 서비스 플러그(MSD) 분리 → 3분 방전 → 인버터 단자 전압 30V 이하 확인 뒤에 작업하세요", EquipFx.Danger, show, cooldown);
@@ -2860,13 +3051,15 @@ public class CarPartService : NetworkBehaviour
     // ══════════════════════════════════════════
 
     [ServerRpc(RequireOwnership = false)]
-    private void ProgressServerRpc(int idx, float v)
+    private void ProgressServerRpc(int idx, float v, bool assemble)
     {
         if (idx < 0 || idx >= _prog.Count) return;
         int p = PartOfBolt(idx);
         if (p < 0 || p >= _state.Count) return;
         int st = _state[p];
         if (st == (int)PartState.Off) return;
+        if (assemble != (st == (int)PartState.Mounted)) return;   // 조이던 진행도가 체결 뒤에 왔다(또는 그 반대) — 이전 상태의 것이라 버린다
+        if (Time.time < _lockUntil[p]) return;                    // 체결 직후 잠깐은 풀기 진행도를 받지 않는다
         if (st == (int)PartState.Tight && !CanRemove(p)) return;
         v = Mathf.Clamp01(v);
         if (v <= _prog[idx]) return;
@@ -2893,12 +3086,177 @@ public class CarPartService : NetworkBehaviour
         if (_state[p] == (int)PartState.Mounted)
         {
             _state[p] = (int)PartState.Tight;
+            _lockUntil[p] = Time.time + TightenLock;
             CarPartRules.ServerPartTightened(Defs[p].id, id => { int q = IndexOf(id); return q >= 0 && _state[q] == (int)PartState.Off; });
             return;
         }
         _state[p] = (int)PartState.Off;
-        CarPartRules.ServerPartRemoved(Defs[p].id);
+        ClearLube(p);
+        string pid = Defs[p].id;
+        bool circuitWasClosed = CarPartRules.CoolantAirValue == 0;
+        CarPartRules.ServerPartRemoved(pid);
+        if (_freeMode && circuitWasClosed && (CarPartRules.IsCoolantCircuit(pid) || pid.StartsWith("CoolantTank"))) ServerSpill(p);   // 냉각수 누출
+        // 크레인·리프트로 받치지 않고 대형 부품의 마지막 볼트를 풀었다 → 그대로 떨어져 부서진다
+        if (_freeMode && CarPartAccident.IsHeavy(pid) && !CarPartAccident.Supported(PartCenter(p)))
+        {
+            ServerShatter(p, "크레인·배터리 리프트로 받치지 않고 볼트를 풀어 부품이 그대로 아래로 떨어졌습니다", null, null);
+            return;
+        }
         SpawnItem(p);
+    }
+
+    // ══════════════════════════════════════════
+    //  사고 — 대형 부품 낙하·충격, 냉각수 누출 (자유 탈거 모드)
+    // ══════════════════════════════════════════
+    private bool _freeMode;            // 서버: 접속자 중 누군가 '지금은 자유 탈거 모드'라고 알려줌 (서버는 시나리오를 모른다)
+    private int _freeSent = -1;        // 클라: 마지막으로 보낸 값
+    private float _freeSentAt;
+    private readonly HashSet<int> _damaged = new HashSet<int>();   // 서버: 부서진 부위(새 부품 받기 전까지 아이템을 만들지 않는다)
+
+    /// <summary>[클라] 착용한 절연 장갑 아이템을 없앤다(시나리오처럼 착용하면 손에서 사라짐)</summary>
+    public void ConsumeItem(NetworkObject nob) { if (IsSpawned && nob != null) ConsumeItemServerRpc(nob); }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ConsumeItemServerRpc(NetworkObject nob)
+    {
+        if (nob == null) return;
+        var ti = nob.GetComponent<TaskItem>();
+        if (ti == null || ti.prefabId != "InsulatedGloves") return;
+        var sg = nob.GetComponent<SyncGrab>();
+        if (sg == null) return;
+        sg.ForceDetach();
+        sg.TriggerDisappear();
+    }
+
+    /// <summary>[클라] 지금 자유 탈거 모드인지 서버에 알린다(바뀔 때, 그리고 가끔 다시)</summary>
+    public void ReportFreeMode(bool on)
+    {
+        int v = on ? 1 : 0;
+        if (!IsSpawned || (v == _freeSent && Time.unscaledTime - _freeSentAt < 15f)) return;
+        _freeSent = v; _freeSentAt = Time.unscaledTime;
+        FreeModeServerRpc(on);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void FreeModeServerRpc(bool on) { _freeMode = on; }
+
+    [Server]
+    private void DespawnItemOf(int p)
+    {
+        if (p < 0 || p >= _item.Count || _item[p] < 0) return;
+        if (ServerManager.Objects.Spawned.TryGetValue(_item[p], out var nob) && nob != null) ServerManager.Despawn(nob);
+        _item[p] = -1;
+    }
+
+    /// <summary>[서버] 부품이 부서졌다 — 아이템을 치우고 파손 처리, 모든 기기에 조각 연출(배터리면 화재 사고)</summary>
+    [Server]
+    private void ServerShatter(int p, string why, Vector3? at, Quaternion? rot)
+    {
+        string id = Defs[p].id;
+        Vector3 pos = at ?? PartCenter(p);
+        Quaternion q = rot ?? PartRotation(p);
+        DespawnItemOf(p);
+        _damaged.Add(p);
+        CarPartRules.ServerDamage(id, true);
+        ShatterObserversRpc(p, pos, q, CarPartAccident.IsBatteryPart(id), why);
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    private void ShatterObserversRpc(int p, Vector3 pos, Quaternion rot, bool fire, string why)
+    {
+        CarPartAccident.PlayShatter(this, p, pos, rot, fire, why);
+    }
+
+    /// <summary>[클라] 떼어낸 대형·배터리 부품이 세게 부딪쳤다(던짐·높은 데서 낙하)</summary>
+    public void ReportImpact(int p, float speed)
+    {
+        if (IsSpawned) ImpactServerRpc(p, speed);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ImpactServerRpc(int p, float speed)
+    {
+        if (!_freeMode || p < 0 || p >= Defs.Length || _state[p] != (int)PartState.Off || _damaged.Contains(p)) return;
+        if (!CarPartAccident.IsDamageable(Defs[p].id) || speed < CarPartAccident.BreakSpeed) return;
+        Vector3? at = null; Quaternion? rot = null;
+        if (_item[p] >= 0 && ServerManager.Objects.Spawned.TryGetValue(_item[p], out var nob) && nob != null) { at = nob.transform.position; rot = nob.transform.rotation; }
+        ServerShatter(p, $"떼어낸 부품을 떨어뜨리거나 던져 강한 충격을 받았습니다 ({speed:0.0} m/s)", at, rot);
+    }
+
+    /// <summary>[클라] 부서진 부품 대신 새 부품을 받는다(신품 보관함)</summary>
+    public void ReplaceDamaged(int p) { if (IsSpawned) ReplaceDamagedServerRpc(p); }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ReplaceDamagedServerRpc(int p)
+    {
+        if (p < 0 || p >= Defs.Length || _state[p] != (int)PartState.Off || !_damaged.Remove(p)) return;
+        CarPartRules.ServerDamage(Defs[p].id, false);
+        SpawnItem(p);
+    }
+
+    // ── 냉각수 누출 ──
+    private class SpillInfo { public Vector3 pos; public float t; public bool warned, battery; }
+    private readonly Dictionary<int, SpillInfo> _spills = new Dictionary<int, SpillInfo>();
+    private int _spillSeq;
+
+    [Server]
+    private void ServerSpill(int p)
+    {
+        int id = ++_spillSeq;
+        Vector3 pos = PartCenter(p);
+        bool bat = Defs[p].id.Contains("Battery");
+        _spills[id] = new SpillInfo { pos = pos, t = Time.time, battery = bat };
+        SpillObserversRpc(id, pos, bat);
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    private void SpillObserversRpc(int id, Vector3 pos, bool battery)
+    {
+        CarPartAccident.PlaySpill(this, id, pos, battery, () => CleanSpillServerRpc(id));
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void CleanSpillServerRpc(int id)
+    {
+        if (_spills.Remove(id)) CleanedObserversRpc(id);
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    private void CleanedObserversRpc(int id) { CarPartAccident.RemoveSpill(id); }
+
+    [ObserversRpc(BufferLast = false)]
+    private void SpillWarnObserversRpc(string title, string msg) { EquipFx.Notice("spill_warn", title, msg, EquipFx.Danger, 6f, 4f); }
+
+    [ObserversRpc(BufferLast = false)]
+    private void ThermalObserversRpc(Vector3 pos, string why)
+    {
+        var em = EmergencyEventManager.Instance;
+        if (em != null) em.TriggerAccident(EmergencyEventManager.AccidentType.ThermalRunaway, why, pos);
+        else AccidentFx.Fire(pos);
+    }
+
+    [Server]
+    private void ServerSpillWatch()
+    {
+        if (_spills.Count == 0) return;
+        List<int> done = null;
+        foreach (var kv in _spills)
+        {
+            float age = Time.time - kv.Value.t;
+            var s = kv.Value;
+            if (age > 60f && !s.warned)
+            {
+                s.warned = true;
+                SpillWarnObserversRpc("냉각수 누출 방치", "바닥의 냉각수를 닦지 않았습니다 (-5) — 계속 두면 배터리가 과열될 수 있습니다");
+            }
+            int bp = IndexOf("BatteryPack");
+            if (age > 150f && s.battery && bp >= 0 && _state[bp] != (int)PartState.Off)
+            {
+                (done ?? (done = new List<int>())).Add(kv.Key);
+                ThermalObserversRpc(PartCenter(bp), "냉각수 누출을 오래 방치해 배터리가 과열되었습니다.");
+            }
+        }
+        if (done != null) foreach (int k in done) { _spills.Remove(k); CleanedObserversRpc(k); }
     }
 
     [Server]
@@ -2925,10 +3283,12 @@ public class CarPartService : NetworkBehaviour
     {
         if (Time.unscaledTime < _watchAt || _state.Count < Defs.Length || _item.Count < Defs.Length) return;
         _watchAt = Time.unscaledTime + 2f;
+        ServerSpillWatch();
         var spawned = ServerManager.Objects.Spawned;
         for (int p = 0; p < Defs.Length; p++)
         {
             if (_state[p] != (int)PartState.Off) continue;
+            if (_damaged.Contains(p)) continue;   // 부서진 부품 — 새 부품을 받기 전까지는 아이템이 없다
             NetworkObject nob = null;
             bool have = _item[p] >= 0 && spawned.TryGetValue(_item[p], out nob) && nob != null;
             if (!have) { SpawnItem(p); continue; }
@@ -2957,6 +3317,7 @@ public class CarPartService : NetworkBehaviour
             _item[p] = -1;
         }
         for (int i = 0; i < _prog.Count; i++) _prog[i] = 0f;
+        for (int i = 0; i < _lube.Count; i++) _lube[i] = 0f;
         for (int p = 0; p < Defs.Length; p++) _state[p] = (int)PartState.Tight;
         CarPartRules.ServerClear();
         ResetObserversRpc();
@@ -2971,6 +3332,165 @@ public class CarPartService : NetworkBehaviour
         RebuildAll();
     }
 
+    // ══════════════════════════════════════════
+    //  도포(구리스) — 제자리에 끼운 부위의 도포 점 (규칙·표는 CarPartLube)
+    // ══════════════════════════════════════════
+    private float[] _lubeLocal, _lubeSent;
+    private float _lubeFlushAt, _lubeUiAt;
+
+    public int LubeSpotCount(int p) => p >= 0 && p < Defs.Length ? CarPartLube.SpotCount(Defs[p]) : 0;
+    public string LubeNameOf(int p) => p >= 0 && p < Defs.Length ? CarPartLube.InfoOf(Defs[p].id)?.what : null;
+
+    private void EnsureLubeLocal()
+    {
+        EnsureOffsets();
+        if (_lubeLocal == null || _lubeLocal.Length != s_lubeTotal) { _lubeLocal = new float[s_lubeTotal]; _lubeSent = new float[s_lubeTotal]; }
+    }
+
+    private float LubeValue(int idx) { EnsureLubeLocal(); return idx < 0 || idx >= s_lubeTotal ? 0f : Mathf.Max(idx < _lube.Count ? _lube[idx] : 0f, _lubeLocal[idx]); }
+
+    /// <summary>도포 상태 — ok = 적정(1.0~1.35)인 지점, excess = 과다인 지점, total = 전체 지점</summary>
+    public void LubeStatus(int p, out int ok, out int total, out int excess)
+    {
+        ok = 0; excess = 0; total = LubeSpotCount(p);
+        for (int k = 0; k < total; k++)
+        {
+            float v = LubeValue(s_lubeOff[p] + k);
+            if (v >= CarPartLube.Ok && v <= CarPartLube.Max) ok++; else if (v > CarPartLube.Max) excess++;
+        }
+    }
+
+    /// <summary>구리스 스프레이가 부른다 — 노즐(origin)에서 dir 쪽 원뿔 안의 도포 점마다 amount 만큼 올린다. 하나라도 맞았으면 true.</summary>
+    public bool LubeSpray(Vector3 origin, Vector3 dir, float range, float coneDeg, float amount)
+    {
+        if (!_found || _parts == null || !IsClientStarted) return false;
+        EnsureLubeLocal();
+        float cos = Mathf.Cos(coneDeg * Mathf.Deg2Rad);
+        bool any = false;
+        for (int p = 0; p < _parts.Length; p++)
+        {
+            var pt = _parts[p];
+            if (pt == null || pt.lubeGo == null || StateOf(p) != (int)PartState.Mounted) continue;
+            for (int k = 0; k < pt.lubeGo.Length; k++)
+            {
+                var g = pt.lubeGo[k];
+                if (g == null || !g.activeInHierarchy) continue;
+                Vector3 v = g.transform.position - origin;
+                float d = v.magnitude;
+                if (d > range || d < 1e-3f || Vector3.Dot(v / d, dir) < cos) continue;
+                int idx = s_lubeOff[p] + k;
+                float cur = LubeValue(idx);
+                if (cur >= CarPartLube.Cap) continue;
+                _lubeLocal[idx] = Mathf.Min(CarPartLube.Cap, cur + amount);
+                any = true;
+            }
+        }
+        if (any && Time.unscaledTime >= _lubeFlushAt) { _lubeFlushAt = Time.unscaledTime + 0.25f; SendLube(false); }
+        return any;
+    }
+
+    private void SendLube(bool flush)
+    {
+        EnsureLubeLocal();
+        for (int idx = 0; idx < s_lubeTotal; idx++)
+            if (_lubeLocal[idx] - _lubeSent[idx] >= (flush ? 0.01f : 0.05f)) { LubeServerRpc(idx, _lubeLocal[idx]); _lubeSent[idx] = _lubeLocal[idx]; }
+    }
+
+    private static Color LubeColor(float v)
+    {
+        var yellow = new Color(1f, 0.85f, 0.1f, 0.9f);
+        if (v < 0.05f) return yellow;
+        if (v < CarPartLube.Ok) return Color.Lerp(yellow, new Color(1f, 0.97f, 0.7f, 0.95f), v);
+        if (v <= CarPartLube.Max) return new Color(0.35f, 1f, 0.5f, 0.95f);
+        return new Color(1f, 0.3f, 0.2f, 0.95f);
+    }
+
+    private void CreateLubeSpots(Part pt, int n)
+    {
+        pt.lubeGo = new GameObject[n]; pt.lubeMat = new Material[n];
+        // 빌드에서 빠지지 않는 셰이더 — 생성 파츠(EnsureGen)가 이미 쓰는 URP Lit 을 우선
+        Shader sh = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
+        if (sh == null) return;
+        Vector3 lossy = pt.anchor.lossyScale;
+        for (int k = 0; k < n; k++)
+        {
+            int bi = CarPartLube.BoltOf(pt.def, k);
+            if (bi < 0 || bi >= pt.def.bolts.Length) continue;
+            var f = pt.def.bolts[bi];
+            Vector3 nrm = f.n.normalized;
+            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var col = go.GetComponent<Collider>(); if (col != null) Destroy(col);
+            go.name = $"[LubeSpot {pt.def.id}-{k + 1}]";
+            go.layer = pt.frame.gameObject.layer;
+            go.transform.SetParent(pt.frame, false);
+            go.transform.localPosition = Vector3.Scale(f.p, lossy) + nrm * 0.014f;
+            go.transform.localRotation = Quaternion.FromToRotation(Vector3.up, nrm);
+            go.transform.localScale = new Vector3(0.045f, 0.012f, 0.045f);
+            var mr = go.GetComponent<MeshRenderer>();
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; mr.receiveShadows = false;
+            var m = new Material(sh);
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.1f);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", LubeColor(0f)); else m.color = LubeColor(0f);
+            mr.sharedMaterial = m;
+            pt.lubeGo[k] = go; pt.lubeMat[k] = m;
+        }
+    }
+
+    // 제자리에 끼운(조이기 전) 부위에만 도포 점을 보인다. 색은 도포량에 따라.
+    private void UpdateLubeSpots()
+    {
+        if (_parts == null || Time.unscaledTime < _lubeUiAt) return;
+        _lubeUiAt = Time.unscaledTime + 0.1f;
+        EnsureLubeLocal();
+        for (int p = 0; p < _parts.Length; p++)
+        {
+            var pt = _parts[p];
+            if (pt == null) continue;
+            int n = LubeSpotCount(p);
+            if (n == 0) continue;
+            bool want = StateOf(p) == (int)PartState.Mounted && pt.visible && pt.anchor != null && pt.frame != null && !pt.yieldToScenario;
+            if (want && pt.lubeGo == null) CreateLubeSpots(pt, n);
+            for (int k = 0; k < n; k++)
+            {
+                int idx = s_lubeOff[p] + k;
+                if (StateOf(p) != (int)PartState.Mounted) { _lubeLocal[idx] = 0f; _lubeSent[idx] = 0f; }
+                if (pt.lubeGo == null || pt.lubeGo[k] == null) continue;
+                var g = pt.lubeGo[k];
+                if (g.activeSelf != want) g.SetActive(want);
+                if (want && pt.lubeMat[k] != null) { if (pt.lubeMat[k].HasProperty("_BaseColor")) pt.lubeMat[k].SetColor("_BaseColor", LubeColor(LubeValue(idx))); else pt.lubeMat[k].color = LubeColor(LubeValue(idx)); }
+            }
+        }
+        if (Time.unscaledTime >= _lubeFlushAt) { _lubeFlushAt = Time.unscaledTime + 0.4f; SendLube(true); }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void LubeServerRpc(int idx, float v)
+    {
+        if (idx < 0 || idx >= _lube.Count || float.IsNaN(v) || float.IsInfinity(v)) return;
+        int p = PartOfLube(idx);
+        if (p < 0 || p >= _state.Count || _state[p] != (int)PartState.Mounted) return;
+        v = Mathf.Clamp(v, 0f, CarPartLube.Cap);
+        if (v > _lube[idx]) _lube[idx] = v;
+    }
+
+    private static int PartOfLube(int idx)
+    {
+        EnsureOffsets();
+        for (int p = Defs.Length - 1; p >= 0; p--)
+        {
+            int n = CarPartLube.SpotCount(Defs[p]);
+            if (n > 0 && idx >= s_lubeOff[p] && idx < s_lubeOff[p] + n) return p;
+        }
+        return -1;
+    }
+
+    [Server]
+    private void ClearLube(int p)
+    {
+        int n = LubeSpotCount(p);
+        for (int k = 0; k < n; k++) { int idx = s_lubeOff[p] + k; if (idx < _lube.Count) _lube[idx] = 0f; }
+    }
+
     /// <summary>부품을 놓은 클라이언트가 부른다. 자리가 비어 있고 순서가 맞으면 부품을 없애고 장착(체결 전) 상태로.</summary>
     [ServerRpc(RequireOwnership = false)]
     public void MountServerRpc(int p, NetworkObject itemObj, NetworkConnection sender = null)
@@ -2983,6 +3503,7 @@ public class CarPartService : NetworkBehaviour
         ServerManager.Despawn(itemObj);
         _item[p] = -1;
         for (int n = 0; n < Defs[p].bolts.Length; n++) _prog[s_off[p] + n] = 0f;
+        ClearLube(p);
         _state[p] = (int)PartState.Mounted;
     }
 }

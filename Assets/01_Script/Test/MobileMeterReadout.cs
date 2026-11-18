@@ -7,8 +7,9 @@ using XRAirpotrSecurity;
 // ============================================================
 //  MobileMeterReadout.cs
 //
-//  모바일 전용 — 멀티미터·절연저항계 측정값 확대 표시.
+//  모바일·PC — 멀티미터·절연저항계 측정값 확대 표시. (VR 은 손에 든 기기를 직접 보므로 띄우지 않는다)
 //  폰 화면에서는 기기 LCD 글씨가 너무 작아 값을 읽을 수 없었다.
+//  PC(11/18): 단자를 화면 가운데로 겨누려고 다가가면 들고 있는 기기가 배터리 팩 메시에 묻혀 계기판이 안 보였다 → PC 에도 띄운다.
 //  (공군 프로젝트 모바일 오실로스코프 확대 패널과 같은 방식)
 //
 //  · 내가 계측기나 그 프로브를 들고 있거나, 두 프로브가 단자에 닿아 있으면 화면 위쪽에 패널을 띄운다.
@@ -26,7 +27,7 @@ public class MobileMeterReadout : MonoBehaviour
     {
         if (m == null || s_meters.Contains(m)) return;
         s_meters.Add(m);
-        if (s_inst == null && IsMobile)
+        if (s_inst == null && !Application.isBatchMode)   // 플랫폼은 Game 씬에서 늦게 정해질 수 있어 만들어 두고 LateUpdate 에서 VR 이면 숨긴다
         {
             var go = new GameObject("[MobileMeterReadout]");
             s_inst = go.AddComponent<MobileMeterReadout>();
@@ -37,6 +38,8 @@ public class MobileMeterReadout : MonoBehaviour
 
     private static bool IsMobile =>
         Application.isMobilePlatform || GameScenePlatformManager.CurrentPlatform == PlatformType.Mobile;
+
+    private static bool IsVR => !Application.isMobilePlatform && GameScenePlatformManager.CurrentPlatform == PlatformType.VR;
 
     // ── UI ──
     private Canvas _canvas;
@@ -91,7 +94,11 @@ public class MobileMeterReadout : MonoBehaviour
         _title = MakeText("Title", labelFont, 34f, new Color(1f, 1f, 1f, 0.85f), FontStyles.Bold);
         _value = MakeText("Value", valueFont != null ? valueFont : labelFont, 150f, LcdColor, FontStyles.Bold);
         _hint = MakeText("Hint", labelFont, 24f, new Color(1f, 1f, 1f, 0.5f), FontStyles.Normal);
-        _hint.text = "눌러서 접기";
+        _value.enableAutoSizing = true;   // '493.6 MΩ' 처럼 길어도 한 줄 안에서 글자만 줄인다
+        _value.fontSizeMin = 36f;
+        _hint.text = IsMobile ? "눌러서 접기" : "클릭해서 접기";
+        // PC 는 화면이 넓고 가까이 보므로 모바일보다 작게, 기본은 접힌(값만) 상태 — 작업 화면을 덜 가린다
+        if (!IsMobile) { _panel.localScale = Vector3.one * 0.8f; _collapsed = true; }
         Layout();
     }
 
@@ -127,7 +134,7 @@ public class MobileMeterReadout : MonoBehaviour
             _panel.sizeDelta = new Vector2(420f, 120f);
             _title.gameObject.SetActive(false);
             _hint.gameObject.SetActive(false);
-            _value.fontSize = 72f;
+            _value.fontSizeMax = 72f;
             Place(_value, 14f, 92f);
         }
         else
@@ -135,7 +142,7 @@ public class MobileMeterReadout : MonoBehaviour
             _panel.sizeDelta = new Vector2(720f, 330f);
             _title.gameObject.SetActive(true);
             _hint.gameObject.SetActive(true);
-            _value.fontSize = 150f;
+            _value.fontSizeMax = 150f;
             Place(_title, 18f, 48f);
             Place(_value, 70f, 190f);
             Place(_hint, 278f, 36f);
@@ -144,7 +151,7 @@ public class MobileMeterReadout : MonoBehaviour
 
     private void LateUpdate()
     {
-        var meter = PickMeter(out bool connected);
+        var meter = IsVR ? null : PickMeter(out bool connected);
         bool show = meter != null && meter.lcdDisplay != null;
 
         if (!show)

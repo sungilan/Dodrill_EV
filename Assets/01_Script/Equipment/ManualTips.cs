@@ -51,6 +51,7 @@ public class ManualTips : MonoBehaviour
 
     private void OnGrabbed(string id)
     {
+        if (InteractionEvents.IsServerRelay) return;   // 혼자 하기: 서버가 다시 알린 것 — 내가 집을 때 이미 띄웠다
         if (string.IsNullOrEmpty(id)) return;
         if (Tips.TryGetValue(id, out var t))
             EquipFx.Notice("manual_" + id, t.title, t.body, t.warn ? EquipFx.Warn : EquipFx.Info, 4.5f, 120f);

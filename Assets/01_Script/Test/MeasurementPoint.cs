@@ -5,6 +5,9 @@ public class MeasurementPoint : MonoBehaviour
     [Tooltip("NetworkObjectFinder 키 — JSON targetObjName 과 일치")]
     public string terminalId;
 
+    [Tooltip("측정 기록지·알림에 보일 이름. 비우면 기록지 표의 이름, 표에도 없으면 terminalId 그대로")]
+    public string displayName;
+
     [Header("값 설정")]
     [Tooltip("이 단자의 '정상' 전압값 (V)")]
     public float voltageValue = 0f;

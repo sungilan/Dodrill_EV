@@ -47,6 +47,7 @@ public class PlayerEquipmentSync : NetworkBehaviour
     private void HandleItemGrabbed(string prefabId)
     {
         if(!IsOwner) return;
+        if(InteractionEvents.IsServerRelay) return;   // 서버가 다시 알린 것(혼자 하기 호스트) — 되보내면 무한 반복
 
         Debug.Log($"<color=yellow>[Equipment-Step 1]</color> 로컬 그랩 감지됨: {prefabId}");
 

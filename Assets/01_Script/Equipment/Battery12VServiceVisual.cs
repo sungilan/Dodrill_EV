@@ -43,6 +43,7 @@ public class Battery12VServiceVisual : MonoBehaviour
     {
         bool s = GdsModel.Is12VScenario;
         bool negOff = s && GdsModel.Done("Battery_12V_Neg_Disconnect") && !GdsModel.Done("Battery_12V_Neg_Connect");
+        if (FreeLoto.IsFreeScenario) negOff = FreeLoto.Battery12VOff;   // 자유 탈거: LOTO 연습 상태(차 안 단자 또는 연습 보드)를 그대로 보여 준다
         bool posOff = s && GdsModel.Done("Battery_12V_Pos_Disconnect") && !GdsModel.Done("Battery_12V_Pos_Connect");
         bool senOff = s && GdsModel.Done("Battery_12V_Sensor_Disconnect") && !GdsModel.Done("Battery_12V_Sensor_Connect");
         bool clampOff = s && GdsModel.Done("Battery_12V_Clamp_Removal") && !GdsModel.Done("Battery_12V_Clamp_Install");

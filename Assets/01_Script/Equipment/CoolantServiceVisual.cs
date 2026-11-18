@@ -30,6 +30,10 @@ public class CoolantServiceVisual : MonoBehaviour
     [Range(0, 1)] public float levelFull = 0.85f;    // MAX 선
     [Range(0, 1)] public float levelAfterBleed = 0.45f;
 
+    [Header("시나리오 전용 클릭 면")]
+    [Tooltip("모델 탱크·뚜껑 위의 시나리오 클릭용 콜라이더 — 냉각수 시나리오가 아닐 때는 꺼서 자유 실습(VehicleCoolant)의 클릭과 겹치지 않게 한다")]
+    public Collider[] scenarioOnlyColliders;
+
     [Header("열림 자세")]
     public Vector3 capOpenOffset = new Vector3(0.09f, -0.04f, 0f);
     public Vector3 capOpenEuler = new Vector3(0f, 0f, 80f);
@@ -51,10 +55,16 @@ public class CoolantServiceVisual : MonoBehaviour
     private void OnDisable() { SetFx(false); ShowGuide(false); }
 
     private float _settle;   // 시나리오가 끝난 뒤 뚜껑·플러그를 원래 자리로 돌려놓는 동안(초)
+    private bool _colsOn = true;
 
     private void Update()
     {
         bool coolant = GdsModel.IsCoolantScenario;
+        if (scenarioOnlyColliders != null && coolant != _colsOn)
+        {
+            _colsOn = coolant;
+            foreach (var c in scenarioOnlyColliders) if (c != null) c.enabled = coolant;
+        }
         bool capOpen = coolant && GdsModel.Done("Coolant_Cap_Open") && !GdsModel.Done("Coolant_Cap_Close");
         bool plugOpen = coolant && GdsModel.Done("Coolant_Drain_Plug_Open") && !GdsModel.Done("Coolant_Drain_Plug_Close");
 

@@ -93,6 +93,7 @@ public abstract class ZoneAndUseModule : ITaskModule
     // 존 안에서 아이템 사용 → 완료
     private void HandleItemUsed(string itemId)
     {
+        if (InteractionEvents.SkipForServerModule) return;   // 혼자 하기: 클라이언트가 직접 낸 알림 — 서버 중계로 한 번 더 오므로 그때 처리
         if(_completed || !_inZone) return;
 
         // 존에 들어온 아이템과 동일한 아이템이어야 함
@@ -390,6 +391,7 @@ public class Car_Lift_UpModule : ITaskModule
 
     private void HandleManualConfirm(string moduleId)
     {
+        if (InteractionEvents.SkipForServerModule) return;   // 혼자 하기: 클라이언트가 직접 낸 알림 — 서버 중계로 한 번 더 오므로 그때 처리
         if(moduleId == ModuleId && !_isCompleted)
         {
             Debug.Log($"<color=yellow>[{ModuleId}]</color> 수동 완료 요청. 높이를 강제 보정하고 단계를 넘깁니다.");

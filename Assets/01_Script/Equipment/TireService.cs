@@ -90,6 +90,12 @@ public class TireService : NetworkBehaviour
     private readonly float[] _sendAt = new float[Wheels * NutsPerWheel];
     private readonly float[] _pending = new float[Wheels * NutsPerWheel];
     private readonly float[] _activeAt = new float[Wheels * NutsPerWheel];
+    // 11/18: 체결을 막 끝낸 바퀴는 잠깐 너트를 잠근다 — 조이던 마지막 진행도(1)가 '체결 완료' 뒤에 도착하면
+    //  서버가 그걸 새로 생긴 풀기 너트의 진행도로 받아 '휠 탈거 1/5'가 되던 문제
+    private const float TightenLock = 1.5f;
+    private readonly bool[] _pendingAsm = new bool[Wheels * NutsPerWheel];   // 보낼 진행도가 조이기(true)·풀기(false) 중 무엇이었나
+    private readonly float[] _lockUntil = new float[Wheels];                 // 서버: 이 시각까지 그 바퀴 너트 진행도 무시
+    private readonly float[] _clientLockUntil = new float[Wheels];           // 클라이언트: 이 시각까지 새 너트를 못 잡고 원격 진행도도 안 받는다
     private static Material s_nutMat, s_hubMat;
 
     // 시나리오 볼트에서 가져온 모양
@@ -193,7 +199,7 @@ public class TireService : NetworkBehaviour
                 int idx = w * NutsPerWheel + n;
                 if (_pending[idx] >= 0f && (Time.unscaledTime >= _sendAt[idx] || _pending[idx] >= 1f))
                 {
-                    NutProgressServerRpc(idx, _pending[idx]);
+                    NutProgressServerRpc(idx, _pending[idx], _pendingAsm[idx]);
                     _pending[idx] = -1f;
                     _sendAt[idx] = Time.unscaledTime + 0.1f;
                 }
@@ -548,7 +554,7 @@ public class TireService : NetworkBehaviour
         b.ejectLocalY = 0.03f;
         g.AddComponent<FreeWorkBolt>();
         int idx = w * NutsPerWheel + n;
-        b.OnProgressChanged += _ => { _pending[idx] = b.Progress; _activeAt[idx] = Time.time; };
+        b.OnProgressChanged += _ => { _pending[idx] = b.Progress; _pendingAsm[idx] = b.isAssembleMode; _activeAt[idx] = Time.time; };
         return b;
     }
 
@@ -605,6 +611,11 @@ public class TireService : NetworkBehaviour
             if (!justTightened && idx < _nut.Count && _nut[idx] > 0f) ApplyNut(idx, _nut[idx]);
             if (justTightened) StartCoroutine(ScaleIn(b.transform, 0.25f, 0.35f));
         }
+        if (justTightened)
+        {
+            _clientLockUntil[w] = Time.unscaledTime + TightenLock;
+            StartCoroutine(LockNutsBriefly(h, TightenLock));
+        }
 
         if (snapping)
         {
@@ -640,10 +651,20 @@ public class TireService : NetworkBehaviour
         FinishWheel(w);
     }
 
+    /// <summary>체결 직후 새로 만든 풀기 너트의 콜라이더를 잠깐 꺼 둔다 — F 를 누른 채여도 렌치가 바로 잡아 풀지 못하게.</summary>
+    private IEnumerator LockNutsBriefly(Hub h, float sec)
+    {
+        var cols = new List<Collider>();
+        foreach (var b in h.nuts) if (b != null) foreach (var c in b.GetComponentsInChildren<Collider>()) if (c.enabled) { c.enabled = false; cols.Add(c); }
+        yield return new WaitForSecondsRealtime(sec);
+        foreach (var c in cols) if (c != null) c.enabled = true;   // 그 사이 다시 만들어졌으면(파괴) 건너뛴다
+    }
+
     private void ApplyNut(int idx, float p)
     {
         int w = idx / NutsPerWheel, n = idx % NutsPerWheel;
         if (w < 0 || w >= Wheels || _hubs[w] == null) return;
+        if (Time.unscaledTime < _clientLockUntil[w]) return;   // 체결 직후 늦게 온 이전 진행도는 받지 않는다
         var b = _hubs[w].nuts[n];
         if (b == null || p <= b.Progress) return;
         b.ApplyRemoteProgress(p);
@@ -1177,11 +1198,14 @@ public class TireService : NetworkBehaviour
     // ══════════════════════════════════════════
 
     [ServerRpc(RequireOwnership = false)]
-    private void NutProgressServerRpc(int idx, float p)
+    private void NutProgressServerRpc(int idx, float p, bool assemble)
     {
         if (idx < 0 || idx >= _nut.Count) return;
         int w = idx / NutsPerWheel;
         if (_state[w] == (int)WheelState.Off) return;
+        // 조이던 진행도는 '장착(Mounted)' 상태에만, 풀던 진행도는 '체결(Tight)' 상태에만 쓴다 — 상태가 바뀐 뒤 늦게 온 값은 버린다
+        if (assemble != (_state[w] == (int)WheelState.Mounted)) return;
+        if (Time.time < _lockUntil[w]) return;
         p = Mathf.Clamp01(p);
         if (p <= _nut[idx]) return;
         _nut[idx] = p;
@@ -1195,7 +1219,7 @@ public class TireService : NetworkBehaviour
 
         // 바퀴 하나의 너트 5개가 끝났다
         for (int n = 0; n < NutsPerWheel; n++) _nut[w * NutsPerWheel + n] = 0f;
-        if (_state[w] == (int)WheelState.Mounted) { _state[w] = (int)WheelState.Tight; return; }
+        if (_state[w] == (int)WheelState.Mounted) { _state[w] = (int)WheelState.Tight; _lockUntil[w] = Time.time + TightenLock; return; }
         _state[w] = (int)WheelState.Off;
         SpawnWheel(w);
     }
@@ -1280,6 +1304,23 @@ public class TireService : NetworkBehaviour
     }
 
     /// <summary>w번 휠(0=앞왼쪽 1=앞오른쪽 2=뒤왼쪽 3=뒤오른쪽 — SM_Wheel_01~04)이 떼어져 있는가.</summary>
+    /// <summary>그 휠에서 지금 조여 있는 너트 수(체결 상태: 아직 다 풀리지 않은 너트 / 장착 상태: 규정 토크까지 조인 너트 / 뗀 휠 0).</summary>
+    public int NutsTightened(int w)
+    {
+        if (w < 0 || w >= Wheels || w >= _state.Count) return 0;
+        int st = _state[w];
+        if (st == (int)WheelState.Off) return 0;
+        int c = 0;
+        for (int n = 0; n < NutsPerWheel; n++)
+        {
+            int idx = w * NutsPerWheel + n;
+            float v = idx < _nut.Count ? _nut[idx] : 0f;
+            if (st == (int)WheelState.Tight) { if (v < 1f) c++; }
+            else if (v >= 1f) c++;
+        }
+        return c;
+    }
+
     public bool IsWheelOff(int w) => w >= 0 && w < _state.Count && _state[w] == (int)WheelState.Off;
 
     public bool AnyHubFree

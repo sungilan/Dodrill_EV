@@ -161,10 +161,18 @@ public class MeasurementLog : MonoBehaviour
         if (_entries.TryGetValue(terminal, out var e)) return e;
         e = new Entry { terminal = terminal };
         if (s_specs.TryGetValue(terminal, out var sp)) { e.label = sp.label; e.kind = sp.kind; e.order = sp.order; }
-        else { e.label = terminal; e.kind = Kind.Voltage; e.order = 100 + _entries.Count; }
+        else { e.label = DisplayNameOf(terminal); e.kind = Kind.Voltage; e.order = 100 + _entries.Count; }
         _entries[terminal] = e;
         _dirty = true;
         return e;
+    }
+
+    /// <summary>표에 없는 단자의 이름: 단자에 적힌 displayName(연습 보드 등), 없으면 terminalId.</summary>
+    private static string DisplayNameOf(string terminal)
+    {
+        var go = GameObject.Find(terminal);
+        var mp = go != null ? go.GetComponent<MeasurementPoint>() : null;
+        return mp != null && !string.IsNullOrEmpty(mp.displayName) ? mp.displayName : terminal;
     }
 
     /// <summary>표에 없는 단자: 그 단자를 잰 측정기의 다이얼 모드로 전압/저항을 정한다.</summary>

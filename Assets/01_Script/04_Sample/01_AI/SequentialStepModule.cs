@@ -226,6 +226,7 @@ public abstract class SequentialStepModule : IStepAwareModule
 
     private void HandleItemGrabbed(string prefabId)
     {
+        if (InteractionEvents.SkipForServerModule) return;   // 혼자 하기: 클라이언트가 직접 낸 알림 — 서버 중계로 한 번 더 오므로 그때 처리
         if (_taskCompleted) return;
         if (_stepIndex >= TotalSteps || Steps[_stepIndex].type != StepType.GrabAll) return;
         if (!_remainingGrabItems.Remove(prefabId)) return;
@@ -240,6 +241,7 @@ public abstract class SequentialStepModule : IStepAwareModule
 
     private void HandleItemUsed(string prefabId)
     {
+        if (InteractionEvents.SkipForServerModule) return;   // 혼자 하기: 클라이언트가 직접 낸 알림 — 서버 중계로 한 번 더 오므로 그때 처리
         if (_taskCompleted) return;
         if (_stepIndex >= TotalSteps || Steps[_stepIndex].type != StepType.GrabUse) return;
 
@@ -255,6 +257,7 @@ public abstract class SequentialStepModule : IStepAwareModule
 
     private void HandleTaskConfirmed(string moduleId)
     {
+        if (InteractionEvents.SkipForServerModule) return;   // 혼자 하기: 클라이언트가 직접 낸 알림 — 서버 중계로 한 번 더 오므로 그때 처리
         if (_taskCompleted) return;
         if (_stepIndex >= TotalSteps || Steps[_stepIndex].type != StepType.Confirm) return;
 

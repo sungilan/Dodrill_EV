@@ -73,6 +73,10 @@ public class ElectricSafetyManager : MonoBehaviour
         var tasks = data?.scenario?.tasks;
         if(tasks == null || tasks.Count == 0) return;
 
+        // 자유 탈거 모드(ev_free_disassembly)는 단계가 없는 연습이다. 교육·평가로 보지 않는다 — 보호구·서비스 플러그는 연습 보드(FreeLoto)에서
+        // 직접 하고, 단계 진행으로 안전 상태를 되돌리지도 않는다(한 단계뿐이라 매번 '처음'으로 읽혀 지워졌다).
+        if(data != null && data.scenarioId == FreeLoto.FreeScenarioId) return;
+
         // 시나리오(교육·평가)가 돌고 있다 → 부품이 프리모드여도 사고 체크를 한다 (InteractablePart.CheckSafetyAndTriggerAccident)
         IsScenarioActive = true;
 

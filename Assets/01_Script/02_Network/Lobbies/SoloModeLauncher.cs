@@ -53,10 +53,14 @@ internal class SoloModeRunner : MonoBehaviour
 {
     private const string LocalAddress = "127.0.0.1";
     private const float StartTimeout = 10f;
+    // 대기 시간은 프레임마다 최대 이만큼만 센다. 서버가 시작되면 Game 씬을 불러오는데, 이때 한 프레임이 15초 넘게 멈춰
+    // (로그 [Hitch] dt=15.90s) 클라이언트가 붙기도 전에 10초 제한을 넘겨 '클라이언트 접속 실패'로 끝났다.
+    private const float MaxCountedDelta = 0.1f;
 
     private NetworkManager _nm;
     private Action<string> _onFailed;
     private bool _watching;
+    private bool _serverStopped;
 
     public void Begin(Action<string> onFailed)
     {
@@ -79,23 +83,43 @@ internal class SoloModeRunner : MonoBehaviour
         Debug.Log("[Solo] 2/5 로컬 주소 설정");
         var transport = _nm.TransportManager.Transport;
         if (transport == null) { Fail("전송 계층(Transport)이 없습니다."); yield break; }
+        SoloModeWatcher.SaveTransport(transport);
         transport.SetClientAddress(LocalAddress);
         transport.SetMaximumClients(8);
+        // 11/18 오프라인: 서버를 이 기기 안(127.0.0.1)에만 연다. 랜선·와이파이가 없어도 루프백은 항상 있고,
+        //  외부에 포트를 열지 않으니 방화벽 허용 창도 뜨지 않는다. IPv6 는 꺼져 있는 PC 가 있어 끈다.
+        transport.SetServerBindAddress(LocalAddress, IPAddressType.IPv4);
+        SoloModeWatcher.SetIpv6(transport, false);
 
         Debug.Log("[Solo] 3/5 호스트 서버 시작");
         SoloModeLauncher.IsSolo = true;
         _nm.ClientManager.OnClientConnectionState += OnClientConnectionState;
+        _nm.ServerManager.OnServerConnectionState += OnServerConnectionState;
         _watching = true;
 
-        _nm.ServerManager.StartConnection();
-        float t = 0f;
-        while (!_nm.IsServerStarted && t < StartTimeout) { t += Time.unscaledDeltaTime; yield return null; }
-        if (!_nm.IsServerStarted) { Fail("서버를 시작하지 못했습니다(포트가 이미 사용 중일 수 있습니다)."); yield break; }
+        // 기본 포트가 다른 프로그램(또는 남아 있던 서버)에 잡혀 있으면 다음 포트로 다시 시도한다
+        ushort basePort = transport.GetPort();
+        ushort[] ports = { basePort, 7790, 7791, 7792, 7793 };
+        float t;
+        foreach (var port in ports)
+        {
+            transport.SetPort(port);
+            _serverStopped = false;
+            _nm.ServerManager.StartConnection();
+            t = 0f;
+            while (!_nm.IsServerStarted && !_serverStopped && t < StartTimeout) { t += Mathf.Min(Time.unscaledDeltaTime, MaxCountedDelta); yield return null; }
+            if (_nm.IsServerStarted) { Debug.Log($"[Solo]  - 127.0.0.1:{port} 에서 시작"); break; }
+            Debug.LogWarning($"[Solo]  - 포트 {port} 사용 불가 → 다음 포트");
+            _nm.ServerManager.StopConnection(true);
+            yield return null;
+        }
+        _nm.ServerManager.OnServerConnectionState -= OnServerConnectionState;
+        if (!_nm.IsServerStarted) { Fail("서버를 시작하지 못했습니다(포트가 모두 사용 중입니다)."); yield break; }
 
         Debug.Log("[Solo] 4/5 호스트 클라이언트 접속");
         _nm.ClientManager.StartConnection();
         t = 0f;
-        while (!_nm.IsClientStarted && t < StartTimeout) { t += Time.unscaledDeltaTime; yield return null; }
+        while (!_nm.IsClientStarted && t < StartTimeout) { t += Mathf.Min(Time.unscaledDeltaTime, MaxCountedDelta); yield return null; }
         if (!_nm.IsClientStarted) { Fail("클라이언트 접속에 실패했습니다."); yield break; }
 
         // Game 씬은 서버가 시작될 때 DefaultScene 이 자동으로 불러온다 — 시나리오는 ScenarioAutoLoader 가 시작한다.
@@ -150,6 +174,11 @@ internal class SoloModeRunner : MonoBehaviour
         }
     }
 
+    private void OnServerConnectionState(ServerConnectionStateArgs args)
+    {
+        if (args.ConnectionState == LocalConnectionState.Stopped) _serverStopped = true;
+    }
+
     private void OnClientConnectionState(ClientConnectionStateArgs args)
     {
         // 시작 도중 클라이언트가 끊기면 실패로 처리
@@ -164,11 +193,13 @@ internal class SoloModeRunner : MonoBehaviour
         if (_nm != null)
         {
             if (_watching) _nm.ClientManager.OnClientConnectionState -= OnClientConnectionState;
+            _nm.ServerManager.OnServerConnectionState -= OnServerConnectionState;
             if (_nm.IsClientStarted) _nm.ClientManager.StopConnection();
             if (_nm.IsServerStarted) _nm.ServerManager.StopConnection(true);
         }
 
         SoloModeLauncher.IsSolo = false;
+        SoloModeWatcher.RestoreTransport();
         _watching = false;
         var cb = _onFailed;
         SoloModeLauncher.RunnerFinished();
@@ -177,7 +208,11 @@ internal class SoloModeRunner : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (_watching && _nm != null) _nm.ClientManager.OnClientConnectionState -= OnClientConnectionState;
+        if (_watching && _nm != null)
+        {
+            _nm.ClientManager.OnClientConnectionState -= OnClientConnectionState;
+            _nm.ServerManager.OnServerConnectionState -= OnServerConnectionState;
+        }
     }
 }
 
@@ -188,6 +223,40 @@ internal class SoloModeRunner : MonoBehaviour
 internal static class SoloModeWatcher
 {
     private static NetworkManager s_nm;
+
+    // 혼자 하기 전에 쓰던 전송 설정 — 끝나면 되돌려 방 접속(멀티)이 평소 설정 그대로 동작하게 한다
+    private static Transport s_tr;
+    private static string s_bind4;
+    private static ushort s_port;
+    private static bool? s_ipv6;
+
+    private const System.Reflection.BindingFlags F =
+        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+
+    public static void SaveTransport(Transport tr)
+    {
+        s_tr = tr;
+        s_bind4 = tr.GetServerBindAddress(IPAddressType.IPv4);
+        s_port = tr.GetPort();
+        var f = tr.GetType().GetField("_enableIpv6", F);   // Tugboat 전용(공개 설정 함수가 없다). 다른 전송이면 건너뛴다
+        s_ipv6 = f != null ? (bool?)(bool)f.GetValue(tr) : null;
+    }
+
+    public static void SetIpv6(Transport tr, bool on)
+    {
+        var f = tr.GetType().GetField("_enableIpv6", F);
+        if (f != null && f.FieldType == typeof(bool)) f.SetValue(tr, on);
+    }
+
+    public static void RestoreTransport()
+    {
+        var tr = s_tr;
+        s_tr = null;
+        if (tr == null) return;
+        tr.SetServerBindAddress(s_bind4, IPAddressType.IPv4);
+        tr.SetPort(s_port);
+        if (s_ipv6.HasValue) SetIpv6(tr, s_ipv6.Value);
+    }
 
     public static void Attach(NetworkManager nm)
     {
@@ -209,6 +278,7 @@ internal static class SoloModeWatcher
         var nm = s_nm;
         Detach();
         SoloModeLauncher.IsSolo = false;
+        RestoreTransport();
 
         // 호스트 클라이언트가 나가면 서버도 끈다 → 서버가 꺼지면 DefaultScene 이 로비(Client) 씬으로 되돌린다
         if (nm != null && nm.IsServerStarted)

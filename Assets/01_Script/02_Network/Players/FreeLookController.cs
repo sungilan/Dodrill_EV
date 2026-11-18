@@ -1086,7 +1086,10 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         Log($"E키 Use: {itemId}");
         InteractionEvents.FireItemUsed(itemId);
 
-        // 메거·멀티미터: 화면 가운데로 본 단자에 빨간 프로브를 댄 것으로 처리 (본체를 들고 작은 단자에 프로브 끝을 맞추기 어려움)
+        // 메거·멀티미터(PC): 조준점으로 검정 → 빨간 프로브를 꽂는다 (PcProbeAim). 처리했으면 아래 예전 경로(존·단자 신호)는 타지 않는다
+        if(PcProbeAim.Current != null && PcProbeAim.Current.TryUse()) return;
+
+        // (예전 보조 조작 — PcProbeAim 이 없을 때) 화면 가운데로 본 단자에 빨간 프로브를 댄 것으로 처리
         var meter = _heldObject.GetComponent<MultimeterMaster>();
         if(meter != null && _mainCamera != null && CurrentTaskIsMeasure())
         {

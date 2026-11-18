@@ -34,6 +34,7 @@ public static class HoverNameFormatter
         ["Equip_OilBottle"] = "엔진 오일",
         ["Equip_Canister"] = "냉각수 통",
         ["Equip_Spray_Lube"] = "윤활 방청제 스프레이",
+        ["Equip_Grease"] = "구리스(도포용)",
         ["Equip_Spray_Cleaner"] = "접점 세정제",
         ["Equip_Extinguisher"] = "소화기",
         ["Equip_WorkLight"] = "작업등",

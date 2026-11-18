@@ -169,10 +169,78 @@ public class ModuleConfigEntry
     public ModuleConfig config = new();
 }
 
+/// <summary>
+/// 선임 정비사 대사 한 줄 — 시나리오 JSON 의 modules[].config.dialogueLines.
+/// 간호술기 프로젝트의 대사 시스템과 같은 모양(id·speaker·ko/en/vi)이라 두드릴 서버(/dialogues)·에디터와 그대로 주고받는다.
+/// trigger 가 비어 있으면 그 단계(moduleId)에 들어갈 때 순서대로 재생하고, 값이 있으면 같은 이름의 사건(MentorDialogue.Say)이 날 때 재생한다.
+/// </summary>
+[Serializable]
+public class DialogueLineJson
+{
+    /// <summary>시나리오 안에서 고유한 순번 문자열("1","2",…) — 서버 dialogue_id 와 이 값으로 짝을 맞춘다</summary>
+    [Newtonsoft.Json.JsonProperty("id", NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+    public string id = "";
+
+    /// <summary>Mentor(선임 정비사) 또는 Trainee(나). 대소문자 무시</summary>
+    public string speaker = "Mentor";
+
+    /// <summary>비어 있지 않으면 해당 사건이 날 때만 재생(예: intro, hv_warn, accident_shock)</summary>
+    public string trigger = "";
+
+    /// <summary>선임 정비사 표정: neutral / praise / serious / warn / alarm / grave / sigh. 비면 trigger 에 맞는 기본 표정(MentorDialogue.DefaultEmotionFor)</summary>
+    public string emotion = "";
+
+    public string ko = "";
+    public string en = "";
+    public string vi = "";
+
+    /// <summary>화면에 머무는 시간(초). 0 이면 글자 수로 자동</summary>
+    public float displayDuration;
+
+    /// <summary>
+    /// 음성 파일 경로(간호술기와 같은 규칙): <c>res:폴더/이름</c> 또는 접두사 없음 = Resources(확장자 제외), <c>sa:상대경로.wav</c> = StreamingAssets.
+    /// voiceResourcesPath 는 한국어 기본값이고, 언어별 경로(Ko/En/Vi)가 있으면 그것을 먼저 쓴다. 비면 음성 없음.
+    /// </summary>
+    public string voiceResourcesPath = "";
+    public string voiceResourcesPathKo = "";
+    public string voiceResourcesPathEn = "";
+    public string voiceResourcesPathVi = "";
+    public float volume = 1f;
+
+    /// <summary>true 면 음성이 끝날 때까지 대사를 유지한다(기본)</summary>
+    public bool waitForVoiceEnd = true;
+
+    public string GetLocalizedVoicePath()
+    {
+        string lang = (LocalizationManager.CurrentLanguage ?? "ko").ToLowerInvariant();
+        string ko = First(voiceResourcesPathKo, voiceResourcesPath), en = First(voiceResourcesPathEn), vi = First(voiceResourcesPathVi);
+        if (lang.StartsWith("en")) return First(en, ko, vi);
+        if (lang.StartsWith("vi")) return First(vi, ko, en);
+        return First(ko, en, vi);
+    }
+
+    private static string First(params string[] v)
+    {
+        foreach (var s in v) if (!string.IsNullOrWhiteSpace(s)) return s.Trim();
+        return string.Empty;
+    }
+
+    public string GetLocalizedText()
+    {
+        string lang = (LocalizationManager.CurrentLanguage ?? "ko").ToLowerInvariant();
+        if (lang.StartsWith("en")) return string.IsNullOrEmpty(en) ? ko : en;
+        if (lang.StartsWith("vi")) return string.IsNullOrEmpty(vi) ? ko : vi;
+        return ko;
+    }
+}
+
 [Serializable]
 public class ModuleConfig
 {
     public List<string> requiredItems = new();
+
+    /// <summary>선임 정비사 대사(MentorDialogue). FishNet 으로는 전달되지 않아 클라이언트가 로컬 JSON 에서 다시 읽는다.</summary>
+    public List<DialogueLineJson> dialogueLines = new();
     public string targetZoneId;
     public List<StringKVPair> extra = new();
     public string actionType;

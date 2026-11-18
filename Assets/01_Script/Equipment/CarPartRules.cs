@@ -40,13 +40,75 @@ public static class CarPartRules
     /// <summary>이번 접속에서 재사용 금지 부품을 그대로 다시 끼운 횟수(내가 끼운 것만)</summary>
     public static int ReuseCount { get; private set; }
 
-    /// <summary>부품을 끼우려는 사람(로컬)이 부른다. 재사용 금지 부위면 경고하고 센다.</summary>
+    /// <summary>신품으로 교체해 끼운 횟수(내가 끼운 것만)</summary>
+    public static int NewCount { get; private set; }
+
+    // 신품 보관함(FreeLoto)에서 받아 둔 신품 — 부위별로 모두에게 같게(VehicleStateSync, 끼우는 순간 소모)
+    private static readonly HashSet<string> s_newReady = new HashSet<string>();
+    private static readonly List<IVehicleState> s_newStates = new List<IVehicleState>();
+
+    private class NewPartState : IVehicleState
+    {
+        public string id;
+        public string StateId => "veh/newpart/" + id;
+        public void ApplyState(float v) { if (v > 0.5f) s_newReady.Add(id); else s_newReady.Remove(id); }
+    }
+
+    public static bool NewPartReady(string partId) => partId != null && s_newReady.Contains(partId);
+
+    // ── 파손 부품(사고: 받침 없이 떼어 낙하·충격으로 부서짐) — 새 부품을 받아야 다시 끼울 수 있다 ──
+    private static readonly HashSet<string> s_damaged = new HashSet<string>();
+    private static readonly List<IVehicleState> s_damageStates = new List<IVehicleState>();
+
+    /// <summary>사고(낙하·충격)로 부품이 부서진 횟수(이 기기에서 본 것)</summary>
+    public static int DropCount { get; private set; }
+    public static void NoteDropDamage() { DropCount++; }
+
+    private class DamageState : IVehicleState
+    {
+        public string id;
+        public string StateId => "veh/damaged/" + id;
+        public void ApplyState(float v)
+        {
+            bool on = v > 0.5f;
+            if (on) s_damaged.Add(id); else s_damaged.Remove(id);
+        }
+    }
+
+    public static bool IsDamaged(string partId) => partId != null && s_damaged.Contains(partId);
+
+    /// <summary>[서버] 부품이 부서졌다/새것으로 바꿨다</summary>
+    public static void ServerDamage(string partId, bool on)
+    {
+        if (!CarPartAccident.IsDamageable(partId)) return;
+        EnsureRegistered();
+        VehicleStateSync.Request("veh/damaged/" + partId, on ? 1f : 0f);
+    }
+
+    /// <summary>신품을 받아 둔다(true) / 소모·취소(false)</summary>
+    public static void SetNewPart(string partId, bool ready)
+    {
+        if (SingleUseOf(partId) == null) return;
+        EnsureRegistered();
+        VehicleStateSync.Request("veh/newpart/" + partId, ready ? 1f : 0f);
+    }
+
+    /// <summary>부품을 끼우려는 사람(로컬)이 부른다. 재사용 금지 부위면 — 신품을 받아 뒀으면 소모하고 통과, 아니면 경고하고 센다.</summary>
     public static void NoteMount(CarPartService.PartDef d)
     {
         string what = SingleUseOf(d?.id);
         if (what == null) return;
+        EnsureRegistered();
+        if (NewPartReady(d.id))
+        {
+            NewCount++;
+            VehicleStateSync.Request("veh/newpart/" + d.id, 0f);
+            EquipFx.Notice("newpart_use_" + d.id, "신품 부품 장착", $"{d.name}: {what} 신품으로 교체했습니다", EquipFx.Info, 3f, 3f);
+            return;
+        }
         ReuseCount++;
-        EquipFx.Notice("reuse_" + d.id, "재사용 금지 부품", $"{d.name}: {what} 은(는) 재사용 금지입니다 — 매뉴얼대로라면 새 것으로 교환해야 합니다", EquipFx.Warn, 4f, 6f);
+        MentorDialogue.Say("reuse", 120f);
+        EquipFx.Notice("reuse_" + d.id, "재사용 금지 부품", $"{d.name}: {what} 은(는) 재사용 금지입니다 — 신품 부품 보관함(책상 옆)에서 신품을 받아 끼우세요", EquipFx.Warn, 4f, 6f);
     }
 
     // ── 특수공구 · 크레인 필요 ──
@@ -78,6 +140,7 @@ public static class CarPartRules
             if (have) return false;
             miss.Add(SpecialTool.NameOf(id));
         }
+        MentorDialogue.Say(CarPartAccident.IsHeavy(d.id) ? "support_need" : "tool_need", 90f);
         EquipFx.Notice("tool_need_" + d.id, "특수공구 필요 — " + d.name, string.Join(" 또는 ", miss) + " 이(가) 작업 위치 가까이에 있어야 합니다", EquipFx.Warn, 4f, 12f);
         return true;
     }
@@ -112,6 +175,8 @@ public static class CarPartRules
             int old = CoolantAirValue;
             CoolantAirValue = nv;
             if (nv == old) return;
+            if (nv == 1)
+                MentorDialogue.Say("coolant_open", 180f);
             if (nv == 1)
                 EquipFx.Notice("coolant_air_open", "냉각 회로 개방", "냉각수 라인을 열었습니다 — 다시 조립한 뒤 GDS [부가 기능 → 냉각수 에어빼기]를 해야 합니다", EquipFx.Warn, 4f, 3f);
             else if (nv == 2)
@@ -175,8 +240,9 @@ public static class CarPartRules
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        s_air = null; s_registered = false; CoolantAirValue = 0; ReuseCount = 0;
-        s_learn.Clear(); s_learnStates.Clear();
+        s_air = null; s_registered = false; CoolantAirValue = 0; ReuseCount = 0; NewCount = 0;
+        s_learn.Clear(); s_learnStates.Clear(); s_newReady.Clear(); s_newStates.Clear();
+        s_damaged.Clear(); s_damageStates.Clear(); DropCount = 0;
     }
 
     public static void EnsureRegistered()
@@ -191,6 +257,20 @@ public static class CarPartRules
             var st = new LearnState { proc = proc };
             s_learnStates.Add(st);
             VehicleStateSync.Register(st);
+        }
+        s_newStates.Clear();
+        foreach (var id in SingleUse.Keys)
+        {
+            var ns = new NewPartState { id = id };
+            s_newStates.Add(ns);
+            VehicleStateSync.Register(ns);
+        }
+        s_damageStates.Clear();
+        foreach (var id in CarPartAccident.DamageableIds)
+        {
+            var ds = new DamageState { id = id };
+            s_damageStates.Add(ds);
+            VehicleStateSync.Register(ds);
         }
     }
 
@@ -224,6 +304,8 @@ public static class CarPartRules
     {
         if (CoolantAirValue != 0) VehicleStateSync.Request(CoolantAirId, 0f);
         foreach (var proc in LearnName.Keys) if (LearnNeeded(proc)) VehicleStateSync.Request("veh/learn/" + proc, 0f);
+        foreach (var id in new List<string>(s_newReady)) VehicleStateSync.Request("veh/newpart/" + id, 0f);
+        foreach (var id in new List<string>(s_damaged)) VehicleStateSync.Request("veh/damaged/" + id, 0f);
     }
 
     /// <summary>GDS 에어빼기가 끝났다(자유 실습). 공기가 있었다면 해소하고, 빠진 공기만큼 리저버 수위가 내려간다.</summary>

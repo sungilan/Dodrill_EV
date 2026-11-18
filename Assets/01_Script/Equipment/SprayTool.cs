@@ -13,9 +13,10 @@ using UnityEngine;
 // ============================================================
 public class SprayTool : EquipmentBase
 {
-    protected override string MobileActionName => "분사";
+    protected override string MobileActionName => kind == Kind.Grease ? "도포" : "분사";
 
-    public enum Kind { Lubricant, Cleaner, Extinguisher }
+    // Grease 는 맨 끝에 둔다 — 프리팹에 저장된 기존 값(0,1,2)이 바뀌지 않게
+    public enum Kind { Lubricant, Cleaner, Extinguisher, Grease }
 
     public Kind kind = Kind.Lubricant;
     [Tooltip("최대 분사 시간(초)")] public float contentSeconds = 40f;
@@ -55,7 +56,8 @@ public class SprayTool : EquipmentBase
         var lib = EquipFx.Lib;
         if (lib != null && lib.mist != null)
         {
-            Color c = kind == Kind.Lubricant ? new Color(0.85f, 0.8f, 0.55f, 0.85f)    // 분사가 잘 안 보여 진하게
+            Color c = kind == Kind.Grease ? new Color(0.95f, 0.88f, 0.45f, 0.95f)      // 구리스: 진한 노랑(덩어리 느낌)
+                    : kind == Kind.Lubricant ? new Color(0.85f, 0.8f, 0.55f, 0.85f)    // 분사가 잘 안 보여 진하게
                     : kind == Kind.Cleaner ? new Color(0.8f, 0.9f, 1f, 0.8f)
                     : new Color(0.97f, 0.97f, 0.95f, 0.9f);
             _mist = EquipFx.MakeParticles(transform, "[Spray]", new EquipFx.PsSettings
@@ -104,7 +106,17 @@ public class SprayTool : EquipmentBase
         _nextHit = Time.time + 0.1f;
 
         if (kind == Kind.Lubricant) HitBolts(origin, dirW);
+        else if (kind == Kind.Grease) HitLube(origin, dirW);
         else if (IsExt) Extinguish(origin, dirW);
+    }
+
+    // 구리스: 제자리에 끼운 부위의 도포 점(CarPartService)에 도포량을 쌓는다 — 0.1초마다 0.05 → 노즐을 향해 2초 뿌리면 적정
+    private void HitLube(Vector3 origin, Vector3 dir)
+    {
+        var svc = CarPartService.Instance;
+        if (svc == null) return;
+        if (svc.LubeSpray(origin, dir, 0.45f, 16f, 0.05f))
+            EquipFx.Notice("grease_on", "구리스 도포 중", "점이 초록이 될 때까지 — 빨강이면 너무 많이 바른 것입니다", EquipFx.Info, 1.5f, 10f);
     }
 
     private void HitBolts(Vector3 origin, Vector3 dir)

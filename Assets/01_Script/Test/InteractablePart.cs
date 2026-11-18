@@ -415,7 +415,11 @@ public class InteractablePart : MonoBehaviour
         }
 
         // 사고 발생!
-        EmergencyEventManager.Instance.TriggerAccident(accidentType, reason);
+        // 사고가 난 자리 = 만진 부품(렌더러 범위의 가운데)
+        Vector3 accidentPos = transform.position;
+        var rend = GetComponentInChildren<Renderer>();
+        if(rend != null) accidentPos = rend.bounds.center;
+        EmergencyEventManager.Instance.TriggerAccident(accidentType, reason, accidentPos);
 
         // 평가: 서버에 알린다 (서버가 자기 진행 상태로 다시 판정해 치명/중결점으로 기록)
         if (FishNet.InstanceFinder.IsClientStarted)

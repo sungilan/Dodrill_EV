@@ -75,9 +75,23 @@ public class MultimeterMaster : MonoBehaviour
     {
         // 싱글톤 선택적 — 여러 대 있을 수 있으므로 약한 참조
         if (Instance == null) Instance = this;
-        MobileMeterReadout.Register(this);   // 모바일: 화면에 측정값을 크게 띄우는 패널
+        MobileMeterReadout.Register(this);   // 모바일·PC: 화면에 측정값을 크게 띄우는 패널
         // VR: 프로브를 손으로 꺼내 단자에 대는 측정 (VR 기기가 아니면 스스로 꺼진다)
         if (GetComponent<VrProbeHandling>() == null) gameObject.AddComponent<VrProbeHandling>();
+        // PC: 조준점으로 검정 → 빨간 프로브를 꽂는 측정 (PC 가 아니면 스스로 꺼진다)
+        if (GetComponent<PcProbeAim>() == null) gameObject.AddComponent<PcProbeAim>();
+        // LCD 값이 길어지면('493.6 MΩ') 두 줄로 넘어갔다 → 한 줄로 두고 칸보다 길면 글자를 줄인다
+        if (lcdDisplay != null)
+        {
+            lcdDisplay.enableWordWrapping = false;
+            if (!lcdDisplay.enableAutoSizing)
+            {
+                float size = lcdDisplay.fontSize;
+                lcdDisplay.fontSizeMax = size;
+                lcdDisplay.fontSizeMin = size * 0.4f;
+                lcdDisplay.enableAutoSizing = true;
+            }
+        }
     }
 
     /// <summary>결함 화면(빨간 배경)이 떠 있는지 — 모바일 확대 패널이 같은 색을 따라 쓴다.</summary>
@@ -136,6 +150,7 @@ public class MultimeterMaster : MonoBehaviour
 
         // 2. 데이터 가져오기 (실제 수치 계산)
         float baseValue = MeasurementPoint.GetValue(red, black, currentMode);
+        if(FreeLoto.TryTerminalVoltage(red, currentMode, out float freeV)) baseValue = freeV;   // 자유 탈거: 서비스 플러그·방전 시간에 따른 실제 전압
         _lastMeasuredValue = baseValue;
 
         // 3. 결함 여부 판단

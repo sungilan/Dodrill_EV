@@ -152,6 +152,12 @@ public static class EquipmentBuilder
     [MenuItem("Dodrill/장비/배터리 팩 장비 프리팹 만들기")]
     public static void BuildBatteryEquipment()
     {
+        BuildBatteryEquipmentQuiet();
+        EditorUtility.DisplayDialog("배터리 팩 장비", "배터리 팩 작업 장비 프리팹 15종을 만들었습니다.\n(07_Resources/Prefabs/Equipment)\n\n[Dodrill/장비/장비 자리 배치]를 다시 실행하면 씬에 자리가 만들어집니다.", "확인");
+    }
+
+    private static void BuildBatteryEquipmentQuiet()
+    {
         // 이송 행어 고정 핸들 09375-K4104: 금색 손잡이 4
         BuildTool("Equip_Tool_HangerKnob", "hangerknob", "09375-K4104", "이송 행어 고정 핸들", t =>
         {
@@ -288,12 +294,48 @@ public static class EquipmentBuilder
         });
 
         AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-        EditorUtility.DisplayDialog("배터리 팩 장비", "배터리 팩 작업 장비 프리팹 15종을 만들었습니다.\n(07_Resources/Prefabs/Equipment)\n\n[Dodrill/장비/장비 자리 배치]를 다시 실행하면 씬에 자리가 만들어집니다.", "확인");
+    }
+
+    // 고전압 배터리 이송 행어 09375-K4400: 파란 H 프레임 + 모서리 갈고리 4
+    private static void BuildHanger()
+    {
+        BuildTool("Equip_Tool_Hanger", "hanger", "09375-K4400", "고전압 배터리 이송 행어", t =>
+        {
+            Prim(PrimitiveType.Cube, "BarA", t, new Vector3(0f, 0f, -0.30f), new Vector3(0.90f, 0.035f, 0.05f), "Equip_Blue");
+            Prim(PrimitiveType.Cube, "BarB", t, new Vector3(0f, 0f, 0.30f), new Vector3(0.90f, 0.035f, 0.05f), "Equip_Blue");
+            Prim(PrimitiveType.Cube, "Cross", t, new Vector3(0f, 0f, 0f), new Vector3(0.05f, 0.035f, 0.65f), "Equip_Blue");
+            foreach (var (x, z) in new[] { (-0.42f, -0.30f), (0.42f, -0.30f), (-0.42f, 0.30f), (0.42f, 0.30f) })
+                Prim(PrimitiveType.Cylinder, "Hook", t, new Vector3(x, -0.07f, z), new Vector3(0.015f, 0.07f, 0.015f), "Equip_Chrome");
+        });
+    }
+
+    /// <summary>대형 부품 받침용 크레인 자키 + 이송 행어만 다시 만든다(대화창 없음 — 자동화 도구에서 호출).</summary>
+    [MenuItem("Dodrill/장비/크레인·이송 행어만 만들기")]
+    public static void BuildCraneAndHanger()
+    {
+        BuildCrane();
+        BuildHanger();
+        AssetDatabase.SaveAssets();
+        Debug.Log("[EquipmentBuilder] 크레인 자키·이송 행어 프리팹 저장 완료");
     }
 
     [MenuItem("Dodrill/장비/크레인·특수공구 프리팹 만들기")]
     public static void BuildAll()
+    {
+        BuildAllQuiet();
+        EditorUtility.DisplayDialog("장비 프리팹", "크레인 자키와 특수공구 프리팹을 만들었습니다.\n(07_Resources/Prefabs/Equipment)\n배터리 팩 장비는 [Dodrill/장비/배터리 팩 장비 프리팹 만들기]로 따로 만듭니다.\n\n이어서 [Dodrill/장비/장비 자리 배치]로 씬에 놓을 수 있습니다.", "확인");
+    }
+
+    /// <summary>크레인·특수공구·배터리 팩 장비를 대화창 없이 모두 만든다(자동화 도구·일괄 갱신용).</summary>
+    [MenuItem("Dodrill/장비/모든 장비 프리팹 만들기 (대화창 없음)")]
+    public static void BuildEverything()
+    {
+        BuildAllQuiet();
+        BuildBatteryEquipmentQuiet();
+        Debug.Log("[EquipmentBuilder] 크레인·특수공구·배터리 팩 장비 프리팹 저장 완료");
+    }
+
+    private static void BuildAllQuiet()
     {
         BuildCrane();
 
@@ -331,15 +373,7 @@ public static class EquipmentBuilder
             Prim(PrimitiveType.Cylinder, "HookR", t, new Vector3(0.20f, -0.10f, 0f), new Vector3(0.012f, 0.08f, 0.012f), "Equip_Chrome");
         });
 
-        // 고전압 배터리 이송 행어 09375-K4400: 파란 H 프레임 + 모서리 갈고리 4
-        BuildTool("Equip_Tool_Hanger", "hanger", "09375-K4400", "고전압 배터리 이송 행어", t =>
-        {
-            Prim(PrimitiveType.Cube, "BarA", t, new Vector3(0f, 0f, -0.30f), new Vector3(0.90f, 0.035f, 0.05f), "Equip_Blue");
-            Prim(PrimitiveType.Cube, "BarB", t, new Vector3(0f, 0f, 0.30f), new Vector3(0.90f, 0.035f, 0.05f), "Equip_Blue");
-            Prim(PrimitiveType.Cube, "Cross", t, new Vector3(0f, 0f, 0f), new Vector3(0.05f, 0.035f, 0.65f), "Equip_Blue");
-            foreach (var (x, z) in new[] { (-0.42f, -0.30f), (0.42f, -0.30f), (-0.42f, 0.30f), (0.42f, 0.30f) })
-                Prim(PrimitiveType.Cylinder, "Hook", t, new Vector3(x, -0.07f, z), new Vector3(0.015f, 0.07f, 0.015f), "Equip_Chrome");
-        });
+        BuildHanger();
 
         // 타이어 휠 탈장착 소켓 09529-N1000: 주황 긴 소켓
         BuildTool("Equip_Tool_WheelSocket", "wheelsock", "09529-N1000", "타이어 휠 탈장착 소켓", t =>
@@ -349,8 +383,6 @@ public static class EquipmentBuilder
         });
 
         AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-        EditorUtility.DisplayDialog("장비 프리팹", "크레인 자키와 특수공구 프리팹을 만들었습니다.\n(07_Resources/Prefabs/Equipment)\n배터리 팩 장비는 [Dodrill/장비/배터리 팩 장비 프리팹 만들기]로 따로 만듭니다.\n\n이어서 [Dodrill/장비/장비 자리 배치]로 씬에 놓을 수 있습니다.", "확인");
     }
 
     [MenuItem("Dodrill/장비/장비 자리 배치 (열린 씬)")]

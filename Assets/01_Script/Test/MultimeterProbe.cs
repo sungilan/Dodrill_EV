@@ -12,6 +12,9 @@ public class MultimeterProbe : MonoBehaviour
     [Tooltip("현재 접촉 중인 단자 ID (비어있으면 미접촉)")]
     public string currentTerminalId = "";
 
+    /// <summary>PC 조준 측정(PcProbeAim)이 켜면 트리거 접촉을 무시한다 — 본체를 단자 근처로 가져가기만 해도 측정되지 않게(F 로만 측정).</summary>
+    [System.NonSerialized] public bool ignoreTriggers;
+
     private void OnTriggerEnter(Collider other)
     {
         // MeasurementPoint 컴포넌트가 있는 단자만 인식
@@ -23,6 +26,7 @@ public class MultimeterProbe : MonoBehaviour
         // 예전에는 다른 플레이어가 든 계측기가(위치 동기화로) 단자 근처를 지나가기만 해도 내 화면의 프로브 트리거가 닿아
         // 측정 신호를 서버로 보냈다. 그래서 VR 에서 프로브를 꺼내 대기 전에 같은 PC 에 켜 둔 PC 클라이언트가 먼저 단계를 끝내 버렸다.
         if (!HeldByLocalPlayer()) return;
+        if (ignoreTriggers) return;
 
         currentTerminalId = point.terminalId;
 
@@ -51,6 +55,7 @@ public class MultimeterProbe : MonoBehaviour
         var point = other.GetComponent<MeasurementPoint>();
         if (point == null) point = other.GetComponentInParent<MeasurementPoint>();
         if (point == null) return;
+        if (ignoreTriggers) return;   // PC: 접촉 상태는 PcProbeAim 이 정한다
 
         if (currentTerminalId == point.terminalId)
         {

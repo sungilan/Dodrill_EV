@@ -241,6 +241,8 @@ public static class EquipFx
     public static readonly Color Info = new Color(0.08f, 0.22f, 0.36f, 0.92f);
     public static readonly Color Warn = new Color(0.55f, 0.3f, 0.02f, 0.92f);
     public static readonly Color Danger = new Color(0.6f, 0.03f, 0.03f, 0.95f);
+    /// <summary>낙하·파손 위험(보라) — 감전(빨강 Danger)·일반 경고(주황 Warn)와 구분</summary>
+    public static readonly Color Hazard = new Color(0.34f, 0.12f, 0.52f, 0.95f);
 
     /// <summary>PC: 이번 프레임 마우스 휠을 굴렸는가(UI 위에서 굴린 것 제외). 든 도구의 '다음 소켓/다음 색' 입력.
     /// 예전엔 Q 였는데 Q 가 높이 올리기와 겹쳐, 이 도구를 든 동안엔 높이를 올릴 수 없었다.</summary>
