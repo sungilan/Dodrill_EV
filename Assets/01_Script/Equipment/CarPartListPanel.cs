@@ -55,6 +55,18 @@ public class CarPartListPanel : MonoBehaviour
 
     private void OnDestroy() { if (_canvas != null) Destroy(_canvas); }
 
+    /// <summary>오른쪽 위 메뉴의 '부위 목록' 버튼(PcHudLayout)이 부른다. L 키와 같다.</summary>
+    public static void Toggle()
+    {
+        var p = FindAnyObjectByType<CarPartListPanel>();
+        if (p != null && p._canvas != null) p.SetOpen(!p._open);
+    }
+
+    public static bool IsOpen
+    {
+        get { var p = FindAnyObjectByType<CarPartListPanel>(); return p != null && p._open; }
+    }
+
     private void SetOpen(bool open)
     {
         _open = open;
@@ -107,15 +119,13 @@ public class CarPartListPanel : MonoBehaviour
         _canvas.AddComponent<GraphicRaycaster>();
         if (EventSystem.current == null) _canvas.AddComponent<EventSystem>();
 
-        // 열기 버튼 (단계 팝업 버튼 바로 아래)
-        var open = NewButton(_canvas.transform, "OpenButton", new Vector2(14f, -296f), new Vector2(250f, 40f), out var openLabel);
-        openLabel.text = "부위 목록 (L)";
-        open.onClick.AddListener(() => SetOpen(!_open));
+        // 여는 버튼은 오른쪽 위 메뉴 줄에 있다(PcHudLayout, 11/19). 단축키 L.
 
-        // 패널
+        // 패널 — 오른쪽 위 버튼 묶음 아래에 연다. 왼쪽 열(단계 안내·미니맵)에 열면 미니맵을 가렸다.
+        // 오른쪽 끝 접힘 탭(▶)을 가리지 않게 80 띄운다
         var prt = NewRect("Panel", _canvas.transform);
-        prt.anchorMin = prt.anchorMax = new Vector2(0f, 1f); prt.pivot = new Vector2(0f, 1f);
-        prt.anchoredPosition = new Vector2(14f, -342f); prt.sizeDelta = new Vector2(600f, 640f);
+        prt.anchorMin = prt.anchorMax = new Vector2(1f, 1f); prt.pivot = new Vector2(1f, 1f);
+        prt.anchoredPosition = new Vector2(-80f, -150f); prt.sizeDelta = new Vector2(600f, 620f);
         var bg = prt.gameObject.AddComponent<Image>();
         bg.color = new Color(0.05f, 0.08f, 0.12f, 0.92f);
         _panel = prt.gameObject;

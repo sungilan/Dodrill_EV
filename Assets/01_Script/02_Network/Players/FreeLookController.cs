@@ -207,6 +207,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             return;
         }
 
+        Local = this;
         _isVR = IsVRDevice();
         Debug.Log($"[PC입력진단] OnStartClient isVR={_isVR} xrActive={UnityEngine.XR.XRSettings.isDeviceActive} xrName='{UnityEngine.XR.XRSettings.loadedDeviceName}'");
         EnableMyCamera();
@@ -232,6 +233,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     public override void OnStopClient()
     {
         base.OnStopClient();
+        if(Local == this) Local = null;
         if(!IsOwner) return;
         StopAllCoroutines();
         _cameraReady = false;
@@ -582,6 +584,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         {
             if(_worldLabel != null && hit)
             {
+                GuideMarker.SuppressFor(hoveredCol);   // 같은 대상의 가이드 이름표·아웃라인이 라벨을 가리지 않게
                 // 잡을 수 있는 물건이면 물건 머리 위에 고정, 그 밖에는 맞은 지점 위
                 Vector3 targetPos = ItemNameTag.LabelAnchor(hoveredCol, hitInfo.point, labelHeightOffset);
                 _worldLabel.transform.position = Vector3.Lerp(_worldLabel.transform.position, targetPos, Time.deltaTime * 15f);
@@ -633,6 +636,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         // 새 라벨 생성
         // 물건 머리 위 조금 아래에서 시작해 위로 스르륵 올라오게(따라가기 Lerp 가 올려 준다)
         SpawnWorldLabel(ItemNameTag.LabelAnchor(hoveredCol, hitInfo.point, labelHeightOffset) - Vector3.up * (labelHeightOffset + ItemNameTag.RiseFrom), objName, msg);
+        GuideMarker.SuppressFor(hoveredCol);
     }
 
     private void SpawnWorldLabel(Vector3 worldPos, string objName, string actionMsg)
@@ -1481,6 +1485,66 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             GrabFromBelt(take);
             EquipFx.Notice("pcbelt", $"꺼냄: {ItemName(take)}", _belt.Count > 0 ? $"벨트에 {_belt.Count}개 남음" : "B: 다시 넣기", EquipFx.Info, 1.6f, 0.3f);
         }
+    }
+
+    // ── 화면 공구 벨트 UI(PcToolBeltBar)용 ──
+    /// <summary>내(로컬) 플레이어의 컨트롤러. 없으면 null.</summary>
+    public static FreeLookController Local { get; private set; }
+    public static int BeltSlotCount => BeltSlots;
+    /// <summary>그 슬롯에 꽂힌 물체(없으면 null).</summary>
+    public SyncGrab BeltItemAt(int slot)
+    {
+        foreach(var b in _belt) if(b != null && BeltSlotOf(b) == slot) return b;
+        return null;
+    }
+    public SyncGrab HeldItem => _heldObject;
+
+    /// <summary>
+    /// 화면의 벨트 슬롯을 눌렀다. 들고 있으면 그 슬롯에 넣는다(차 있으면 바꿔 든다), 빈손이면 그 슬롯 것을 꺼낸다.
+    /// B 키는 그대로(마지막 슬롯 기준) 동작한다.
+    /// </summary>
+    public void PressBeltSlot(int slot)
+    {
+        if(!IsOwner || slot < 0 || slot >= BeltSlots) return;
+        UpdateBeltAnchors();
+        PruneBelt();
+        var occupant = BeltItemAt(slot);
+        if(_heldObject != null)
+        {
+            if(!_heldObject.IsGrabbed || !_heldObject.IsOwner || !_heldObject.LocalPcHoldActive) return;
+            if(!CanBelt(_heldObject, out string why))
+            {
+                EquipFx.Notice("pcbelt", "허리 벨트에 넣을 수 없습니다", why, EquipFx.Warn, 2.2f, 1f);
+                return;
+            }
+            var stowing = _heldObject;
+            if(occupant != null) _belt.Remove(occupant);
+            if(!StowToBelt(stowing, slot))
+            {
+                if(occupant != null) _belt.Add(occupant);
+                return;
+            }
+            if(occupant != null)
+            {
+                GrabFromBelt(occupant);
+                EquipFx.Notice("pcbelt", $"바꿔 들기: {BeltItemName(occupant)}", $"{BeltItemName(stowing)} 은(는) 벨트 {slot + 1}번 칸에", EquipFx.Info, 2.2f, 0.3f);
+            }
+            else EquipFx.Notice("pcbelt", $"벨트 {slot + 1}번 칸에 넣음: {BeltItemName(stowing)}", "칸을 다시 누르면 꺼냅니다", EquipFx.Info, 2f, 0.3f);
+        }
+        else if(occupant != null)
+        {
+            _belt.Remove(occupant);
+            GrabFromBelt(occupant);
+        }
+        else EquipFx.Notice("pcbelt", "빈 칸입니다", "도구를 든 채 칸을 누르면 벨트에 넣습니다", EquipFx.Info, 1.6f, 1f);
+    }
+
+    /// <summary>벨트 UI 에 보일 이름(한국어).</summary>
+    public static string BeltItemName(SyncGrab sg)
+    {
+        string raw = ItemName(sg);
+        try { string f = HoverNameFormatter.Format(raw); if(!string.IsNullOrEmpty(f)) return f; } catch { }
+        return raw;
     }
 
     private static string ItemName(SyncGrab sg)

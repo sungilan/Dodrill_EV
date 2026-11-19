@@ -617,6 +617,10 @@ public class GuideSystem : MonoBehaviour
                     }
                 }
 
+                // 자유 탈거처럼 작업장에 깔아 두기만 하는 특수공구(showGuide=false)는 아웃라인을 켜지 않는다 — 공구 20여 개가 계속 번쩍여 시야를 어지럽혔다(11/19)
+                if(outlineTarget != null && !bundle.showGuide && existingItem != null && existingItem.GetComponentInChildren<SpecialTool>(true) != null)
+                    outlineTarget = null;
+
                 // ★ 아웃라인 적용 (중복 방지)
                 if(outlineTarget != null && !_requiredItemObjects.Contains(outlineTarget))
                 {

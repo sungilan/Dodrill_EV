@@ -143,10 +143,14 @@ public class CarPartItem : MonoBehaviour
         return made > 0;
     }
 
+    /// <summary>보관함에 넣으려고 놓는 중 — 이번 놓기는 장착 판정을 하지 않는다(PartTray.Store 가 켠다).</summary>
+    [System.NonSerialized] public bool StoringToTray;
+
     private void OnReleased()
     {
         if (!_wasLocalHeld) return;   // 남이 놓은 것·강제 해제
         _wasLocalHeld = false;
+        if (StoringToTray) { StoringToTray = false; return; }
         var svc = CarPartService.Instance;
         if (svc == null || _part < 0) return;
         if (!svc.IsFreeSlotNear(_part, transform.position, svc.MountDistance)) return;

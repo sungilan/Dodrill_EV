@@ -96,6 +96,8 @@ public class EVInventoryUI : MonoBehaviour
     /// <summary>플랫폼에 따라 연출 여부를 결정하여 패널 토글</summary>
     public void TogglePanel()
     {
+        // (11/19) 차 부품 작업 중(PC·모바일)에는 '분해 부품 보관함'(PartTrayPanel)을 연다 — 이 창의 슬롯은 예전 부품 방식(InteractablePart)용이라 지금 부품과 맞지 않는다
+        if(PartTrayPanel.TryToggle()) return;
         if(panel == null) return;
 
         bool isOpening = !panel.activeSelf;

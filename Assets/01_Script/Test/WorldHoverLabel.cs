@@ -81,7 +81,7 @@ public class WorldHoverLabel : MonoBehaviour
     private static Sprite s_roundedSprite;
 
     /// <summary>둥근 모서리 + 얇은 테두리의 9-슬라이스 스프라이트를 코드로 만든다(프로젝트 스프라이트에 의존하지 않음).</summary>
-    private static Sprite RoundedSprite()
+    public static Sprite RoundedSprite()
     {
         if (s_roundedSprite != null) return s_roundedSprite;
         const int S = 64; const float R = 18f;

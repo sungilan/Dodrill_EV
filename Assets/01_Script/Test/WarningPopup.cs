@@ -9,9 +9,11 @@ using UnityEngine;
 // ============================================================
 public class WarningPopup : MonoBehaviour
 {
-    private const float Distance = 0.9f;
-    // 카드를 시선 아래(0.12)에 두면 화면 가운데의 'F 키를 눌러 …' 작업 안내·조준점과 겹쳤다 → 시선보다 조금 위로(음수 = 위)
-    private const float DropBelowEye = -0.05f;
+    private const float Distance = 1.0f;
+    // (11/19) 이제 VR 전용(PC·모바일은 ScreenToast). VR 에는 화면 가운데 조준점·'F 키' 안내가 없으므로
+    // 시선 정면을 비우고 시선 아래쪽(약 12°)에 둔다 — 작업 대상(손 앞)을 가리지 않게. 이전 값 -0.05(시선 조금 위)
+    private const float DropBelowEye = 0.21f;
+    private const float CardScale = 0.8f;   // 정면 카드가 너무 크다는 의견 → 전체 20% 줄임
 
     private static GameObject s_prefab;
     private static readonly System.Collections.Generic.Dictionary<string, WarningPopup> s_active = new System.Collections.Generic.Dictionary<string, WarningPopup>();
@@ -40,6 +42,8 @@ public class WarningPopup : MonoBehaviour
     /// <summary>시선 앞에 경고 카드를 띄운다. tint = 카드 배경색, slot = 같은 시간에 둘 이상 뜰 때 위아래 칸(0=기본, 1=한 칸 위).</summary>
     public static void Show(string key, string title, string message, Color tint, float seconds, int slot = -1)
     {
+        // (11/19) PC·모바일은 화면 위쪽 작은 알림으로 — 시선 앞 큰 카드가 작업 대상·미니맵을 가리던 문제. VR 만 월드 카드.
+        if (!GameScenePlatformManager.IsVR) { ScreenToast.Show(key, title, message, tint, seconds); return; }
         var cam = Camera.main;
         if (cam == null) return;
 
@@ -56,7 +60,9 @@ public class WarningPopup : MonoBehaviour
             var go = Instantiate(s_prefab);
             go.name = "[WarningPopup] " + key;
             // 장비·보호구 사용법 카드(보안경·안면 보호대 등)가 화면을 너무 차지한다는 의견(26.11.16) → 글씨·카드를 조금 줄인다(고전압·남은 시간 경고는 그대로)
-            if (key == "equip") go.transform.localScale *= 0.8f;
+            go.transform.localScale *= CardScale * (key == "equip" ? 0.8f : 1f);
+            // 고전압·남은 시간 경고는 양손 진동을 함께 — 시야 아래쪽 카드를 놓치지 않게
+            if (key == "hv" || key == "time") Buzz(key == "hv" ? 0.25f : 0.12f, key == "hv" ? 0.7f : 0.4f);
             foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 1;   // TransparentFX — VR 카메라가 그리는 레이어
             p = go.AddComponent<WarningPopup>();
             p._key = key;
@@ -140,8 +146,20 @@ public class WarningPopup : MonoBehaviour
         return Mathf.Clamp(rt.rect.height * rt.lossyScale.y, 0.03f, 0.25f);
     }
 
+    private static void Buzz(float duration, float amp)
+    {
+        foreach (var h in FindObjectsByType<Autohand.Hand>(FindObjectsSortMode.None))
+        {
+            if (h == null || h.name.StartsWith("HighlightHand")) continue;
+            var nob = h.GetComponentInParent<FishNet.Object.NetworkObject>();
+            if (nob != null && nob.IsSpawned && !nob.IsOwner) continue;
+            try { h.PlayHapticVibration(duration, amp); } catch { }
+        }
+    }
+
     public static void Hide(string key)
     {
+        ScreenToast.Hide(key);
         if (s_active.TryGetValue(key, out var p) && p != null) Destroy(p.gameObject);
         s_active.Remove(key);
     }

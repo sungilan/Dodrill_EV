@@ -656,6 +656,9 @@ public class HvShockGauge : MonoBehaviour
     private TMP_Text _label, _sub;
     private float _nextCheck;
 
+    /// <summary>감전 위험 게이지가 지금 화면에 떠 있는가 — 볼트 분해 게이지가 같은 자리에 겹치지 않게 아래로 비켜 선다.</summary>
+    public static bool Visible { get; private set; }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
     {
@@ -679,6 +682,7 @@ public class HvShockGauge : MonoBehaviour
             Build();
         }
         bool show = r > 0.01f;
+        Visible = show;
         if (_canvas.activeSelf != show) _canvas.SetActive(show);
         if (!show) return;
 
@@ -859,7 +863,7 @@ public class FreeSpotPulse : MonoBehaviour
 /// <summary>
 /// 고전압 차단 상태 막대 — 자유 탈거에서 화면 위 가운데에 항상 떠 있다. 절연 장갑 → 12V (−) → 서비스 플러그 → 방전 대기 → 전압 측정
 /// 다섯 단계를 아이콘 원으로 잇고(완료 초록 · 지금 할 일 주황 테두리 깜빡임 · 남은 단계 흐리게), 맨 끝 방패가 모두 끝나면 켜진다.
-/// 글자는 지금 할 단계의 이름(방전 대기는 남은 초) 하나와 아래 한 줄 안내만 둔다. PC·모바일 화면용(VR 제외).
+/// 글자는 지금 할 단계의 이름(방전 대기는 남은 초) 하나와 아래 한 줄 안내만 둔다. PC·모바일은 화면 위쪽 가운데, VR 은 왼손 손목(손등을 얼굴 쪽으로).
 /// 아이콘: Resources/HvSteps (Flaticon — 출처 표기 필요, 같은 폴더 CREDITS.txt)
 /// </summary>
 public class HvStatusHud : MonoBehaviour
@@ -868,7 +872,9 @@ public class HvStatusHud : MonoBehaviour
     private static readonly string[] Names = { "절연 장갑", "12V (−) 분리", "서비스 플러그 분리", "방전 대기", "단자 전압 측정" };
     private static readonly string[] Icons = { "hand-glove", "car-battery", "plug", "hourglass", "multimeter" };
 
-    private const float Circle = 58f, IconSize = 40f, Gap = 30f, BackW = 600f;
+    private const float Circle = 54f, IconSize = 38f, Gap = 26f, BackW = 640f;
+    // (11/19) 오른쪽 위 메뉴 버튼을 20% 줄여 화면 정가운데에 둔다. 알림(ScreenToast)이 바로 아래에 같은 가운데로 쌓인다
+    private const float CenterX = 0.5f;
     private static readonly Color Done = new Color(0.20f, 0.62f, 0.30f, 1f);
     private static readonly Color Now = new Color(1f, 0.6f, 0.1f, 1f);
     private static readonly Color Idle = new Color(0.30f, 0.33f, 0.38f, 1f);
@@ -899,10 +905,9 @@ public class HvStatusHud : MonoBehaviour
     {
         var sm = ElectricSafetyManager.Instance;
         bool active = sm != null && FreeLoto.IsFreeScenario
-                      && !(EmergencyEventManager.Instance != null && EmergencyEventManager.Instance.PopupUp)
-                      && XRAirpotrSecurity.Utils.GetPlatformType() != XRAirpotrSecurity.PlatformType.VR;
+                      && !(EmergencyEventManager.Instance != null && EmergencyEventManager.Instance.PopupUp);
         if (!active) { if (_canvas != null && _canvas.activeSelf) _canvas.SetActive(false); return; }
-        if (_canvas == null) Build();
+        if (_canvas == null) { _vr = XRAirpotrSecurity.Utils.GetPlatformType() == XRAirpotrSecurity.PlatformType.VR; Build(); }
         if (!_canvas.activeSelf) _canvas.SetActive(true);
 
         float v = FreeLoto.VoltageNow();
@@ -950,9 +955,59 @@ public class HvStatusHud : MonoBehaviour
         }
         _next.text = next;
         _next.color = all ? new Color(0.6f, 1f, 0.65f) : new Color(1f, 0.85f, 0.5f);
+
+        if (_vr) PlaceOnWrist();
     }
 
-    private const float Top = 10f;                       // 막대 위 여백
+    // ── VR: 왼손 손목 시계 ──
+    // (11/19) VR 은 시야에 붙는 화면 UI 대신 손목에 단다(Half-Life: Alyx 의 장갑 체력 표시처럼).
+    // 왼손 손등을 얼굴 쪽으로 돌리면(시계 보듯) 손목 위에 고전압 상태가 뜬다. 손바닥을 펴는 손바닥 메뉴(VrPalmMenu)와 동작이 겹치지 않는다.
+    private bool _vr;
+    private CanvasGroup _vrGroup;
+    private readonly System.Collections.Generic.List<Autohand.Hand> _hands = new System.Collections.Generic.List<Autohand.Hand>();
+    private float _nextHandScan, _vrAlpha;
+    private const float VrScale = 0.0003f;   // 640px → 약 19cm
+
+    private void PlaceOnWrist()
+    {
+        var cam = Camera.main;
+        if (Time.unscaledTime >= _nextHandScan)
+        {
+            _nextHandScan = Time.unscaledTime + 2f;
+            _hands.RemoveAll(h => h == null);
+            foreach (var h in FindObjectsByType<Autohand.Hand>(FindObjectsSortMode.None))
+            {
+                if (h == null || _hands.Contains(h) || h.name.StartsWith("HighlightHand")) continue;
+                var nob = h.GetComponentInParent<FishNet.Object.NetworkObject>();
+                if (nob != null && nob.IsSpawned && !nob.IsOwner) continue;   // 다른 사람 손 제외
+                _hands.Add(h);
+            }
+        }
+        Autohand.Hand left = null;
+        foreach (var h in _hands) if (h != null && h.left && h.isActiveAndEnabled && h.palmTransform != null) { left = h; break; }
+
+        bool show = false;
+        if (cam != null && left != null)
+        {
+            var palm = left.palmTransform;
+            Vector3 toCam = cam.transform.position - palm.position;
+            float dist = toCam.magnitude;
+            show = dist > 0.15f && dist < 0.75f
+                   && Vector3.Dot(cam.transform.forward, -toCam / dist) > 0.5f      // 시야 안
+                   && Vector3.Dot(-palm.forward, toCam / dist) > 0.55f;             // 손등이 얼굴 쪽
+            if (show || _vrAlpha > 0f)
+            {
+                Vector3 up = Vector3.ProjectOnPlane(Vector3.up, toCam.normalized).normalized;
+                Vector3 pos = palm.position - palm.forward * 0.04f + up * 0.07f;
+                Vector3 look = pos - cam.transform.position;
+                _canvas.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(look, Vector3.up));
+            }
+        }
+        _vrAlpha = Mathf.MoveTowards(_vrAlpha, show ? 1f : 0f, Time.unscaledDeltaTime * 6f);
+        _vrGroup.alpha = _vrAlpha;
+    }
+
+    private const float Top = 36f;                       // 위 여백 — 맨 위에 '고전압 상태' 제목
     private const float CircleY = -Top - Circle * 0.5f;   // 원 중심 높이(Back 위쪽 가운데 기준)
     private const float LabelY = -Top - Circle - 4f;      // 단계 이름
     private const float NextY = LabelY - 26f;             // 안내 한 줄
@@ -972,14 +1027,34 @@ public class HvStatusHud : MonoBehaviour
 
         _canvas = new GameObject("[HvStatusHud_Canvas]");
         var cv = _canvas.AddComponent<Canvas>();
-        cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 66;
-        var sc = _canvas.AddComponent<UnityEngine.UI.CanvasScaler>();
-        sc.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize; sc.referenceResolution = new Vector2(1920f, 1080f); sc.matchWidthOrHeight = 0.5f;
+        if (_vr)
+        {
+            // 손목에 다는 월드 UI — 반투명 어두운 판을 깔아 정비소 배경 위에서도 읽히게
+            cv.renderMode = RenderMode.WorldSpace;
+            var crt = (RectTransform)_canvas.transform;
+            crt.sizeDelta = new Vector2(BackW + 30f, -NextY + 62f);
+            _canvas.transform.localScale = Vector3.one * VrScale;
+            _vrGroup = _canvas.AddComponent<CanvasGroup>();
+            _vrGroup.alpha = 0f; _vrGroup.interactable = false; _vrGroup.blocksRaycasts = false;
+            var bgr = NewRect("Bg", _canvas.transform);
+            bgr.anchorMin = Vector2.zero; bgr.anchorMax = Vector2.one; bgr.offsetMin = bgr.offsetMax = Vector2.zero;
+            var bg = bgr.gameObject.AddComponent<UnityEngine.UI.Image>();
+            bg.sprite = WorldHoverLabel.RoundedSprite(); bg.type = UnityEngine.UI.Image.Type.Sliced;
+            bg.color = new Color(0.05f, 0.07f, 0.10f, 0.85f); bg.raycastTarget = false;
+        }
+        else
+        {
+            cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 66;
+            var sc = _canvas.AddComponent<UnityEngine.UI.CanvasScaler>();
+            sc.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize; sc.referenceResolution = new Vector2(1920f, 1080f); sc.matchWidthOrHeight = 0.5f;
+        }
 
         var back = NewRect("Back", _canvas.transform);
-        back.anchorMin = back.anchorMax = new Vector2(0.5f, 1f); back.pivot = new Vector2(0.5f, 1f);
-        back.anchoredPosition = new Vector2(0f, -10f); back.sizeDelta = new Vector2(BackW + 160f, -NextY + 36f);
-        var bi = back.gameObject.AddComponent<UnityEngine.UI.Image>(); bi.color = new Color(0.06f, 0.08f, 0.11f, 0.82f); bi.raycastTarget = false;
+        back.anchorMin = back.anchorMax = new Vector2(CenterX, 1f); back.pivot = new Vector2(0.5f, 1f);
+        back.anchoredPosition = new Vector2(0f, -12f); back.sizeDelta = new Vector2(BackW, -NextY + 40f);
+        // 검은 배경 상자는 두지 않는다(화면을 덜 가리게) — 아이콘 원·글자 외곽선만으로 읽히게 한다
+        var title = NewText(back, "Title", 17f, new Vector2(0f, -12f), 240f, TextAlignmentOptions.Center);
+        title.text = "<b>고전압 상태</b>"; title.color = new Color(0.85f, 0.88f, 0.92f, 0.95f);
 
         // 원 6개(5단계 + 완료 방패)를 가운데 정렬하고 사이를 선으로 잇는다. 선을 먼저 만들어 원 뒤에 깔리게 한다
         float step = Circle + Gap;
@@ -1006,9 +1081,10 @@ public class HvStatusHud : MonoBehaviour
             if (_icon[i].sprite == null) Debug.LogWarning("[HvStatusHud] 아이콘 없음: Resources/HvSteps/" + icon);
         }
         _label = NewText(back, "Label", 17f, new Vector2(0f, LabelY), 220f, TextAlignmentOptions.Center);
-        _next = NewText(back, "Next", 17f, new Vector2(0f, NextY), BackW + 140f, TextAlignmentOptions.Center);
-        _next.textWrappingMode = TextWrappingModes.Normal; _next.rectTransform.sizeDelta = new Vector2(BackW + 140f, 34f);
-        _next.enableAutoSizing = true; _next.fontSizeMin = 13f; _next.fontSizeMax = 17f;
+        _next = NewText(back, "Next", 16f, new Vector2(0f, NextY), BackW - 24f, TextAlignmentOptions.Center);
+        _next.textWrappingMode = TextWrappingModes.Normal; _next.rectTransform.sizeDelta = new Vector2(BackW - 24f, 40f);
+        _next.enableAutoSizing = true; _next.fontSizeMin = 12f; _next.fontSizeMax = 16f;
+        if (_vr) foreach (var t in _canvas.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 1;   // TransparentFX — VR 카메라가 그리는 레이어
     }
 
     private static UnityEngine.UI.Image Img(RectTransform parent, string name, Sprite sp, float size)
@@ -1022,7 +1098,7 @@ public class HvStatusHud : MonoBehaviour
     }
 
     /// <summary>원판·고리 스프라이트를 코드로 만든다(빌트인 Knob 은 빌드에 안 들어갈 수 있어서). 가장자리는 1px 부드럽게.</summary>
-    private static Sprite MakeCircle(bool ring)
+    internal static Sprite MakeCircle(bool ring)
     {
         const int S = 128;
         var tex = new Texture2D(S, S, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
@@ -1057,6 +1133,8 @@ public class HvStatusHud : MonoBehaviour
         if (kf != null) t.font = kf;
         t.fontSize = size; t.alignment = align; t.color = Color.white; t.raycastTarget = false;
         t.richText = true; t.textWrappingMode = TextWrappingModes.NoWrap;
+        // 배경 상자가 없어 밝은 벽·차체 위에서도 읽히게 검은 외곽선
+        t.outlineWidth = 0.22f; t.outlineColor = new Color32(0, 0, 0, 220);
         return t;
     }
 }

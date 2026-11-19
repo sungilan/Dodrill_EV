@@ -18,6 +18,7 @@ using UnityEngine.UI;
 //  · 측정 기록   — 측정 기록지 보이기/숨기기 (MeasurementLog)
 //  · 버튼 안내   — 컨트롤러 버튼 설명을 항상 보이기/처음만 (VrControllerHints)
 //  · 연습장     — 기본 동작 연습 튜토리얼 다시 하기/끝내기 (VrPracticeTutorial, 평가 모드에서는 회색)
+//  · 부품 보관함 — 떼어낸 부품 보관함 창 열기/닫기 (VrPartTray, 맨 아래 넓은 버튼. 차 부품 작업이 없으면 회색)
 //  누르면 손끝 진동 + 클릭음. 손바닥을 내리거나 물건을 잡으면 사라진다.
 //  씬 배치 불필요 — 게임 시작 시 자동 생성되고, VR 기기가 아니면 아무것도 하지 않는다.
 // ============================================================
@@ -195,7 +196,7 @@ public class VrPalmMenu : MonoBehaviour
     {
         var palm = _menuHand.palmTransform;
         Vector3 up = Vector3.ProjectOnPlane(Vector3.up, (palm.position - cam.position).normalized).normalized;
-        Vector3 pos = palm.position + palm.forward * 0.03f + up * 0.185f;   // 아래 넓은 버튼까지 손바닥 위에 오게(5줄 + 넓은 1줄)
+        Vector3 pos = palm.position + palm.forward * 0.03f + up * 0.229f;   // 맨 아래 넓은 버튼(부품 보관함)까지 손바닥 위에 오게(6줄 + 넓은 1줄)
         Vector3 look = pos - cam.position;
         if (look.sqrMagnitude < 1e-6f) look = cam.forward;
         _root.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(look, Vector3.up));
@@ -230,6 +231,7 @@ public class VrPalmMenu : MonoBehaviour
         AddBtn("infocards", "설명창", new Vector2(cx, -ry * 2.5f), font);
         AddBtn("steppopup", "단계 팝업", new Vector2(-cx, -ry * 3.5f), font);
         AddBtn("practice", "연습장", new Vector2(cx, -ry * 3.5f), font);
+        AddBtn("tray", "부품 보관함", new Vector2(0f, -ry * 4.5f), font, BtnW * 2f + Gap);
         _root.SetActive(false);
     }
 
@@ -316,6 +318,10 @@ public class VrPalmMenu : MonoBehaviour
                     break;
                 case "hints":
                     SetText(b, VrControllerHints.AlwaysShow ? "버튼 안내 끄기" : "버튼 안내 켜기");
+                    break;
+                case "tray":
+                    b.enabled = VrPartTray.Available;
+                    SetText(b, VrPartTray.IsOpen ? "부품 보관함 닫기" : "부품 보관함");
                     break;
                 case "practice":
                     b.enabled = !EvaluationMode.ClientIsEvaluation;
@@ -432,6 +438,11 @@ public class VrPalmMenu : MonoBehaviour
                 VrControllerHints.AlwaysShow = !VrControllerHints.AlwaysShow;
                 WarningPopup.Show("vrhints", VrControllerHints.AlwaysShow ? "버튼 안내 항상 표시" : "버튼 안내 끔",
                     VrControllerHints.AlwaysShow ? "도구를 잡으면 손 옆에 버튼 설명이 나옵니다" : "", new Color(0.2f, 0.24f, 0.3f, 0.92f), 1.6f);
+                break;
+            case "tray":
+                bool opening = !VrPartTray.IsOpen;
+                VrPartTray.Toggle();
+                if (opening) Close();   // 창이 눈앞에 뜨므로 메뉴는 닫는다
                 break;
             case "practice":
                 if (VrPracticeTutorial.Running) VrPracticeTutorial.Stop();

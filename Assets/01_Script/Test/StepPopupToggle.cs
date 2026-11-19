@@ -21,11 +21,16 @@ public class StepPopupToggle : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
     {
+        // (11/19) PC 화면에서 버튼을 뺐다 — 단계 설명 팝업 켜고 끄기는 기기에 저장된 값(GuideSystem.CenterPopupEnabled)을 그대로 쓴다.
+        // 다시 쓰려면 아래 줄을 지운다. VR 은 손바닥 메뉴에 그대로 있다.
+        if (true) return;
+#pragma warning disable CS0162
         if (FindAnyObjectByType<StepPopupToggle>() != null) return;
         var go = new GameObject("[StepPopupToggle]");
         go.hideFlags = HideFlags.HideInHierarchy;
         DontDestroyOnLoad(go);
         go.AddComponent<StepPopupToggle>();
+#pragma warning restore CS0162
     }
 
     private void Update()

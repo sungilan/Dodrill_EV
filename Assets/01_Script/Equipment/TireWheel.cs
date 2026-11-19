@@ -47,10 +47,14 @@ public class TireWheel : MonoBehaviour
         }
     }
 
+    /// <summary>보관함에 넣으려고 놓는 중 — 이번 놓기는 장착 판정을 하지 않는다(PartTray.Store 가 켠다).</summary>
+    [System.NonSerialized] public bool StoringToTray;
+
     private void OnReleased()
     {
         if (!_wasLocalHeld) return;   // 남이 놓은 것·강제 해제
         _wasLocalHeld = false;
+        if (StoringToTray) { StoringToTray = false; return; }
         var ts = TireService.Instance;
         if (ts == null) return;
         int hub = ts.FreeHubNear(transform.position, ts.MountDistance);

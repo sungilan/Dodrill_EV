@@ -55,11 +55,50 @@ public class GuideMarker : MonoBehaviour
         _baseScaleSaved = true;
     }
 
+    // ── (11/19) 호버 라벨 양보 ──
+    // 마우스로 대상 위에 올리면 '클릭하여 집기' 라벨이 뜨는데, 같은 자리의 가이드 이름표·분홍 아웃라인이 맨 앞에 그려져 라벨을 가렸다.
+    // → 호버 중인 대상의 마커는 잠깐(호출이 끊기면 0.15초 뒤 복구) 이름표·아웃라인을 숨긴다. 화살표는 그대로 둔다.
+    private static Collider s_hoverCol;
+    private static float s_hoverUntil;
+    private bool _yielding;
+
+    /// <summary>이 콜라이더를 호버 중 — 해당 대상의 가이드 마커가 이름표·아웃라인을 잠시 숨긴다. 호버 동안 매 프레임 부른다.</summary>
+    public static void SuppressFor(Collider col)
+    {
+        s_hoverCol = col;
+        s_hoverUntil = Time.unscaledTime + 0.15f;
+    }
+
+    private bool IsHoveredTarget()
+    {
+        if (s_hoverCol == null || Time.unscaledTime > s_hoverUntil) return false;
+        var h = s_hoverCol.transform;
+        if (_followTarget != null && (h == _followTarget || h.IsChildOf(_followTarget) || _followTarget.IsChildOf(h))) return true;
+        // 따라갈 대상이 없는 마커(스폰 지점 등) — 호버한 물체 바로 위·아래에 서 있으면 같은 대상으로 본다
+        var b = s_hoverCol.bounds;
+        b.Expand(new Vector3(0.2f, 2f, 0.2f));
+        return b.Contains(transform.position);
+    }
+
+    private void UpdateYield()
+    {
+        bool y = IsHoveredTarget();
+        if (y == _yielding) return;
+        _yielding = y;
+        if (nameCanvas != null) nameCanvas.SetActive(!y);
+        if (highlightCircle != null)
+        {
+            var o = highlightCircle.GetComponent<Outlinable>();
+            if (o != null) o.enabled = !y;
+        }
+    }
+
     // 가까이서 보면 화살표·라벨이 화면을 가득 채워 시야를 가리던 문제 방지
     private void LateUpdate()
     {
         if (_followTarget != null)
             transform.position = _followTarget.position + _followOffset;
+        UpdateYield();
 
         var cam = Camera.main;
         if (cam == null || referenceDistance <= 0f) return;

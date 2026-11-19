@@ -199,6 +199,9 @@ public class FocusMode : MonoBehaviour
         _targetRenderers.Clear();
         _target.GetComponentsInChildren(false, _targetRenderers);
         var targetSet = new HashSet<Renderer>(_targetRenderers);
+        // 휠 너트 작업 중이면 그 바퀴(타이어·림)는 가리는 것이 아니라 작업 대상의 일부 — 반투명으로 바꾸지 않는다
+        var wheelR = TireService.Instance != null ? TireService.Instance.WheelRenderersFor(_target) : null;
+        if (wheelR != null) foreach (var r in wheelR) if (r != null) targetSet.Add(r);
         Vector3 c = Center(_target);
 
         // 엑스레이: 거리·크기와 상관없이 차체 전체(바퀴·전면부 포함)를 후보로 — 예전엔 반경 2.2m·크기 9m 제한과 스킨드 메시 제외로 바퀴·전면부가 빠졌다

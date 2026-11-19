@@ -26,7 +26,7 @@ using XRAirpotrSecurity;
 //  씬에 하나 — EquipmentSlot 이 Equip_CarPartService 프리팹을 Spawn 한다. 차는 런타임에 생기므로 1초마다 찾는다.
 // ============================================================
 
-public class CarPartService : NetworkBehaviour
+public partial class CarPartService : NetworkBehaviour
 {
     public static CarPartService Instance { get; private set; }
 
@@ -1416,6 +1416,7 @@ public class CarPartService : NetworkBehaviour
         if (_lube.Count == 0) for (int i = 0; i < s_lubeTotal; i++) _lube.Add(0f);
         if (_state.Count == 0) for (int i = 0; i < Defs.Length; i++) _state.Add((int)PartState.Tight);
         if (_item.Count == 0) for (int i = 0; i < Defs.Length; i++) _item.Add(-1);
+        TrayServerInit();   // 분해 부품 보관함(CarPartService.Tray.cs)
     }
 
     public override void OnStartClient()
@@ -3091,6 +3092,7 @@ public class CarPartService : NetworkBehaviour
             return;
         }
         _state[p] = (int)PartState.Off;
+        TrayNoteRemoved(p);   // 떼어낸 순서 기록(보관함 카드에 #번호로 보인다)
         ClearLube(p);
         string pid = Defs[p].id;
         bool circuitWasClosed = CarPartRules.CoolantAirValue == 0;
@@ -3264,7 +3266,8 @@ public class CarPartService : NetworkBehaviour
     {
         if (itemPrefab == null) return;
         Vector3 pos; Quaternion rot;
-        if (_found && _parts != null && _parts[p] != null && _parts[p].anchor != null) { pos = PartCenter(p); rot = PartRotation(p); }
+        if (_spawnAt.HasValue) { pos = _spawnAt.Value; rot = PartRotation(p); }   // 보관함에서 꺼낼 때 — 꺼낸 사람 앞
+        else if (_found && _parts != null && _parts[p] != null && _parts[p].anchor != null) { pos = PartCenter(p); rot = PartRotation(p); }
         else { pos = transform.position + Vector3.up; rot = transform.rotation; }
         var nob = Instantiate(itemPrefab, pos, rot);
         if (gameObject.scene.IsValid() && nob.gameObject.scene != gameObject.scene)
@@ -3291,7 +3294,7 @@ public class CarPartService : NetworkBehaviour
             if (_damaged.Contains(p)) continue;   // 부서진 부품 — 새 부품을 받기 전까지는 아이템이 없다
             NetworkObject nob = null;
             bool have = _item[p] >= 0 && spawned.TryGetValue(_item[p], out nob) && nob != null;
-            if (!have) { SpawnItem(p); continue; }
+            if (!have) { if (TrayHas(p)) continue; SpawnItem(p); continue; }   // 보관함에 넣어 둔 부품은 다시 만들지 않는다
             var sg = nob.GetComponent<SyncGrab>();
             if (sg != null && sg.IsGrabbed) continue;
             Vector3 c = PartCenter(p);
@@ -3319,6 +3322,8 @@ public class CarPartService : NetworkBehaviour
         for (int i = 0; i < _prog.Count; i++) _prog[i] = 0f;
         for (int i = 0; i < _lube.Count; i++) _lube[i] = 0f;
         for (int p = 0; p < Defs.Length; p++) _state[p] = (int)PartState.Tight;
+        TrayServerClear();
+        TireService.Instance?.TrayServerClear();   // 보관함의 휠도 비운다
         CarPartRules.ServerClear();
         ResetObserversRpc();
     }

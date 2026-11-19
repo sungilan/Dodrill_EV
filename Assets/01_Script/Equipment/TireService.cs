@@ -27,7 +27,7 @@ using XRAirpotrSecurity;
 //  씬에 하나 — EquipmentSlot 이 Equip_TireService 프리팹을 Spawn 한다. 차는 런타임에 생기므로 바퀴는 1초마다 찾는다.
 // ============================================================
 
-public class TireService : NetworkBehaviour
+public partial class TireService : NetworkBehaviour
 {
     public static TireService Instance { get; private set; }
 
@@ -135,6 +135,7 @@ public class TireService : NetworkBehaviour
         base.OnStartServer();
         if (_nut.Count == 0) for (int i = 0; i < Wheels * NutsPerWheel; i++) _nut.Add(0f);
         if (_state.Count == 0) for (int i = 0; i < Wheels; i++) _state.Add((int)WheelState.Tight);
+        TrayServerInit();   // 분해 부품 보관함(TireService.Tray.cs)
     }
 
     public override void OnStartClient()
@@ -1221,6 +1222,7 @@ public class TireService : NetworkBehaviour
         for (int n = 0; n < NutsPerWheel; n++) _nut[w * NutsPerWheel + n] = 0f;
         if (_state[w] == (int)WheelState.Mounted) { _state[w] = (int)WheelState.Tight; _lockUntil[w] = Time.time + TightenLock; return; }
         _state[w] = (int)WheelState.Off;
+        TrayNoteRemoved(w);   // 떼어낸 순서 기록(보관함 #번호 — 차 부품과 같은 번호 줄)
         SpawnWheel(w);
     }
 
@@ -1229,6 +1231,7 @@ public class TireService : NetworkBehaviour
     {
         if (wheelPrefab == null) return;
         if (!ServerHubPose(w, out var pos, out var rot)) return;
+        if (_spawnAt.HasValue) pos = _spawnAt.Value;   // 보관함에서 꺼낼 때는 꺼낸 사람 앞
         var nob = Instantiate(wheelPrefab, pos, rot);
         if (gameObject.scene.IsValid() && nob.gameObject.scene != gameObject.scene)
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(nob.gameObject, gameObject.scene);
@@ -1279,6 +1282,7 @@ public class TireService : NetworkBehaviour
         var sg = wheelObj.GetComponent<SyncGrab>();
         if (sg != null && sg.IsGrabbed && wheelObj.Owner != sender) return;   // 남이 들고 있는 휠은 안 된다
         ServerManager.Despawn(wheelObj);
+        TrayOnMounted(w);   // 이 허브 몫으로 보관함에 든 휠이 있으면 다른 빈 허브 몫으로 옮긴다
         for (int n = 0; n < NutsPerWheel; n++) _nut[w * NutsPerWheel + n] = 0f;
         _state[w] = (int)WheelState.Mounted;
     }
