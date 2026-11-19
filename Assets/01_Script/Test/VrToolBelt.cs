@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Autohand;
+using TMPro;
 using UnityEngine;
 
 // ============================================================
@@ -13,6 +14,8 @@ using UnityEngine;
 //  · 꽂아도 서버에는 '놓기'를 보내지 않는다(내 소유·잡힘 상태 유지) → 다른 사람이 가져가지 못하고, 다른 화면에도 내 허리에 붙어 보인다.
 //    (놓을 때 서버가 소유권을 가져가 중력으로 떨어뜨리는 SyncGrab 흐름을 SyncGrab.VrReleaseInterceptors 로 가로챈다)
 //  · 몸 방향은 머리 방향을 천천히 따라간다(고개만 돌릴 때 벨트가 같이 휙 돌지 않게).
+//  (11/19) 찾기 쉽게: 도구를 든 동안 슬롯에 ① 반투명 원판 ② 위로 솟는 빛기둥 ③ '공구 걸이 · 여기에 놓기' 글자가 뜨고,
+//  꽂은 적이 없으면 도구를 2초 이상 들고 있을 때 안내 카드 + 선임 대사(tool_belt)를 60초마다 최대 3번 알려 준다(고개를 숙이면 허리 양옆).
 //  씬 배치 불필요 — 게임 시작 시 자동 생성되고, VR 기기가 아니면 아무것도 하지 않는다.
 // ============================================================
 [DefaultExecutionOrder(300)]
@@ -35,6 +38,10 @@ public class VrToolBelt : MonoBehaviour
         public Vector3 centerLocal;     // 도구 중심(도구 로컬)
         public Quaternion relRot;       // 몸 방향 기준 도구 회전
         public LineRenderer ring;
+        public GameObject disc;
+        public Material discMat;
+        public LineRenderer pillar;
+        public TextMeshPro label;
         public Vector3 pos;
     }
 
@@ -47,6 +54,10 @@ public class VrToolBelt : MonoBehaviour
     private static VrToolBelt s_inst;
     private Quaternion _lastYaw = Quaternion.identity;
     private bool _framed;
+    private bool _everHolstered;
+    private float _toolHeldSince = -1f, _nextHint;
+    private int _hintCount;
+    private static TMP_FontAsset s_font;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
@@ -138,6 +149,8 @@ public class VrToolBelt : MonoBehaviour
             if (IsTool(held.GetComponentInParent<SyncGrab>()) || (pti != null && pti.holsterable)) { holdingTool = true; break; }
         }
 
+        TrackHint(holdingTool);
+
         foreach (var s in _slots)
         {
             s.pos = SlotPos(s, hip, yawRot);
@@ -194,6 +207,8 @@ public class VrToolBelt : MonoBehaviour
         }
         if (best == null) return false;
 
+        _everHolstered = true;
+        WarningPopup.Hide("vrbelt");
         best.item = sg;
         best.grab = sg.GetComponentInChildren<Grabbable>();
         best.rb = sg.GetComponent<Rigidbody>();
@@ -267,6 +282,108 @@ public class VrToolBelt : MonoBehaviour
         }
     }
 
+    // ── 처음 쓰는 사람 안내 ─────────────────────────────
+
+    private void TrackHint(bool holdingTool)
+    {
+        float now = Time.unscaledTime;
+        if (!holdingTool) { _toolHeldSince = -1f; return; }
+        if (_toolHeldSince < 0f) _toolHeldSince = now;
+        if (_everHolstered || _hintCount >= 3 || now < _nextHint || now - _toolHeldSince < 2f) return;
+        _hintCount++; _nextHint = now + 60f;
+        WarningPopup.Show("vrbelt", "허리 공구 걸이", "도구를 든 채 허리 양옆(고개를 숙이면 보이는 초록 원)에 놓으면 꽂혀요. 꺼낼 땐 손을 대고 그립", new Color(0.08f, 0.26f, 0.2f, 0.92f), 8f);
+        MentorDialogue.Say("tool_belt", 120f);
+    }
+
+    private static TMP_FontAsset BeltFont()
+    {
+        if (s_font != null) return s_font;
+        var tagPrefab = Resources.Load<GameObject>("ItemNameTagLabel");
+        if (tagPrefab != null)
+        {
+            var t = tagPrefab.GetComponentInChildren<TMP_Text>(true);
+            if (t != null) s_font = t.font;
+        }
+        return s_font;
+    }
+
+    /// <summary>슬롯 위의 원판·빛기둥·글자 — 허리를 보지 않아도 가슴 높이까지 솟은 빛기둥이 시야 아래쪽에 걸리게 한다.</summary>
+    private void DrawGuide(Slot s, bool show, bool near, Quaternion yawRot)
+    {
+        if (!show)
+        {
+            if (s.disc != null && s.disc.activeSelf) s.disc.SetActive(false);
+            if (s.pillar != null && s.pillar.gameObject.activeSelf) s.pillar.gameObject.SetActive(false);
+            if (s.label != null && s.label.gameObject.activeSelf) s.label.gameObject.SetActive(false);
+            return;
+        }
+        if (s.disc == null) MakeGuide(s);
+        if (!s.disc.activeSelf) { s.disc.SetActive(true); s.pillar.gameObject.SetActive(true); s.label.gameObject.SetActive(true); }
+
+        Color c = near ? ReadyColor : new Color(0.3f, 1f, 0.45f, 0.8f);
+        float pulse = near ? 1f : 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
+        s.disc.transform.SetPositionAndRotation(s.pos, Quaternion.Euler(90f, yawRot.eulerAngles.y, 0f));
+        s.discMat.color = new Color(c.r, c.g, c.b, near ? 0.45f : Mathf.Lerp(0.15f, 0.32f, pulse));
+
+        Vector3 top = s.pos + Vector3.up * 0.34f;
+        s.pillar.SetPosition(0, s.pos);
+        s.pillar.SetPosition(1, top);
+        s.pillar.startColor = new Color(c.r, c.g, c.b, 0.55f);
+        s.pillar.endColor = new Color(c.r, c.g, c.b, 0f);
+
+        s.label.transform.position = top + Vector3.up * 0.035f;
+        var cam = Camera.main;
+        if (cam != null)
+        {
+            Vector3 look = s.label.transform.position - cam.transform.position;
+            if (look.sqrMagnitude > 1e-6f) s.label.transform.rotation = Quaternion.LookRotation(look, Vector3.up);
+        }
+        string t = near ? "<b>놓으세요!</b>" : "<b>공구 걸이</b>\n<size=70%>여기에 도구 놓기</size>";
+        if (s.label.text != t) s.label.text = t;
+        s.label.color = near ? ReadyColor : new Color(0.75f, 1f, 0.8f);
+    }
+
+    private void MakeGuide(Slot s)
+    {
+        var sh = Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default");
+        s.discMat = new Material(sh) { mainTexture = VrPalmMenu.DiscTex() };
+        s.discMat.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+        s.discMat.renderQueue = 3990;
+
+        var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        var col = q.GetComponent<Collider>(); if (col != null) Destroy(col);
+        q.name = "[VrToolBeltDisc]"; q.layer = 1;
+        q.transform.SetParent(transform, false);
+        q.transform.localScale = new Vector3(0.15f, 0.15f, 1f);
+        var mr = q.GetComponent<MeshRenderer>();
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; mr.receiveShadows = false;
+        mr.sharedMaterial = s.discMat;
+        s.disc = q;
+
+        var pg = new GameObject("[VrToolBeltPillar]"); pg.layer = 1;
+        pg.transform.SetParent(transform, false);
+        var lr = pg.AddComponent<LineRenderer>();
+        lr.useWorldSpace = true; lr.positionCount = 2;
+        lr.widthMultiplier = 0.012f;
+        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; lr.receiveShadows = false;
+        if (_mat == null) _mat = MakeRingMat();
+        lr.sharedMaterial = _mat;
+        s.pillar = lr;
+
+        var tg = new GameObject("[VrToolBeltLabel]"); tg.layer = 1;
+        tg.transform.SetParent(transform, false);
+        var tmp = tg.AddComponent<TextMeshPro>();
+        var f = BeltFont(); if (f != null) tmp.font = f;
+        tmp.rectTransform.sizeDelta = new Vector2(0.3f, 0.09f);
+        tmp.enableAutoSizing = true; tmp.fontSizeMin = 0.02f; tmp.fontSizeMax = 0.06f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.richText = true;
+        if (tmp.fontMaterial != null) tmp.fontMaterial.renderQueue = 4000;
+        var tr = tg.GetComponent<MeshRenderer>(); if (tr != null) tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        s.label = tmp;
+    }
+
     // ── 슬롯 표시 ─────────────────────────────
 
     private void DrawRing(Slot s, bool show, Quaternion yawRot)
@@ -274,6 +391,7 @@ public class VrToolBelt : MonoBehaviour
         if (!show)
         {
             if (s.ring != null && s.ring.gameObject.activeSelf) s.ring.gameObject.SetActive(false);
+            DrawGuide(s, false, false, yawRot);
             return;
         }
         if (s.ring == null) s.ring = MakeRing();
@@ -290,7 +408,8 @@ public class VrToolBelt : MonoBehaviour
         var col = near ? ReadyColor : IdleColor;
         col.a *= near ? 1f : Mathf.Lerp(0.6f, 1f, pulse);
         s.ring.startColor = s.ring.endColor = col;
-        s.ring.widthMultiplier = near ? 0.006f : 0.004f;
+        s.ring.widthMultiplier = near ? 0.01f : 0.007f;
+        DrawGuide(s, true, near, yawRot);
 
         // 허리 높이의 수평 원
         const float r = 0.07f;
@@ -302,15 +421,18 @@ public class VrToolBelt : MonoBehaviour
         }
     }
 
+    private static Material MakeRingMat()
+    {
+        var sh = Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default");
+        var m = new Material(sh);
+        m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+        m.renderQueue = 4000;
+        return m;
+    }
+
     private LineRenderer MakeRing()
     {
-        if (_mat == null)
-        {
-            var sh = Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default");
-            _mat = new Material(sh);
-            _mat.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
-            _mat.renderQueue = 4000;
-        }
+        if (_mat == null) _mat = MakeRingMat();
         var go = new GameObject("[VrToolBeltSlot]");
         go.layer = 1;   // TransparentFX — VR 카메라가 그리는 레이어
         go.transform.SetParent(transform, false);

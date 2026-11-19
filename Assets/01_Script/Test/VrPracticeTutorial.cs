@@ -11,7 +11,7 @@ using UnityEngine;
 //  하나씩 성공해야 다음으로 넘어간다. 책상 앞 오른쪽 모서리의 '건너뛰기'를 검지로 누르면 언제든 끝낼 수 있다.
 //
 //  · 첫 실행(이 기기에서 완료·건너뛰기 기록이 없을 때) 훈련 모드에서 자동 시작. 평가 모드에서는 시작하지 않는다.
-//    손바닥 메뉴 '연습장'으로 언제든 다시 할 수 있다.
+//    메뉴 '연습장'으로 언제든 다시 할 수 있다.
 //  · 작업대와 연습 물건(블록·스패너·볼트·멀티미터)은 내 화면에만 만든다(네트워크·서버·시나리오 무관).
 //    시나리오 진행·다른 사람에게 영향이 없다. 끝나면 모두 지운다.
 //  · 작업대는 내 앞쪽 빈 바닥을 찾아 놓는다(차·벽과 겹치지 않는 방향).
@@ -27,7 +27,7 @@ public class VrPracticeTutorial : MonoBehaviour
 
     private static readonly string[] Titles =
     {
-        "물건 잡기", "레이저로 당기기", "벨트에 꽂기", "손바닥 메뉴", "볼트 풀기", "볼트 조이기", "프로브로 단자 재기", "완료"
+        "물건 잡기", "레이저로 당기기", "벨트에 꽂기", "메뉴 열기", "볼트 풀기", "볼트 조이기", "프로브로 단자 재기", "완료"
     };
 
     private static readonly string[] Bodies =
@@ -35,11 +35,11 @@ public class VrPracticeTutorial : MonoBehaviour
         "책상 위 <color=#6fc3ff>파란 블록</color>에 손을 대고 <b>그립</b>(가운데 손가락 버튼)을 누르고 있으세요.\n버튼을 떼면 놓습니다.",
         "블록을 멀리 옮겨 두었습니다.\n<b>오른손 그립</b>을 누른 채 블록을 겨누면 레이저가 나옵니다. 그 상태로 <b>트리거</b>(검지)를 당겨 끌어오세요.",
         "책상 위 <color=#ffd27a>스패너</color>를 잡고 허리 옆 <color=#5be37d>초록 원</color> 가까이에서 놓으세요.\n작업 중 도구를 잃어버리지 않게 꽂아 두는 곳입니다.",
-        "양손을 비우고, 한 손 <b>손바닥을 얼굴 쪽으로 펴서</b> 1초쯤 가만히 들고 있으세요.\n메뉴가 뜨면 반대 손 검지로 버튼을 누릅니다(지금은 보기만 하면 됩니다).",
+        "스패너를 허리에 꽂았다면 이제 <b>왼손 컨트롤러의 메뉴(≡) 버튼</b>을 눌러 보세요.\n메뉴가 눈앞에 뜨고, 손가락으로 버튼을 눌러 씁니다(지금은 열어 보기만 하면 됩니다).",
         "허리의 스패너를 꺼내 <color=#ffd27a>연습 볼트</color> 머리에 끝을 대고, 손목을 돌려 푸세요.\n라쳇 '딱' 소리가 나면 돌아가는 중입니다.",
         "잘했습니다. 이제 같은 방법으로 볼트를 <b>다시 조이세요</b>.",
         "책상 위 멀티미터의 <color=#ff6a5a>빨간 프로브</color>를 잡아, <color=#ffd27a>노란 연습 단자</color>에 끝을 대고 잠깐 유지하세요.\n값이 측정되면 성공입니다.",
-        "연습 완료! 실제 작업도 같은 방법으로 하면 됩니다.\n손바닥 메뉴 '연습장'에서 언제든 다시 할 수 있습니다.",
+        "연습 완료! 실제 작업도 같은 방법으로 하면 됩니다.\n메뉴 '연습장'에서 언제든 다시 할 수 있습니다.",
     };
 
     public static bool Running => s_inst != null && s_inst._running;
@@ -108,7 +108,7 @@ public class VrPracticeTutorial : MonoBehaviour
         if (s_inst == this) s_inst = null;
     }
 
-    /// <summary>손바닥 메뉴 '연습장' — 처음부터 다시.</summary>
+    /// <summary>메뉴 '연습장' — 처음부터 다시.</summary>
     public static void Restart()
     {
         if (s_inst == null) return;
@@ -161,7 +161,7 @@ public class VrPracticeTutorial : MonoBehaviour
         PlayerPrefs.Save();
         Debug.Log($"[Practice] 연습장 {(skipped ? "건너뜀" : "완료")} ({Time.unscaledTime - _stepStarted:F0}s)");
         Cleanup();
-        if (skipped) WarningPopup.Show("practice", "연습장 종료", "손바닥 메뉴 '연습장'에서 다시 할 수 있습니다", new Color(0.2f, 0.24f, 0.3f, 0.92f), 2f);
+        if (skipped) WarningPopup.Show("practice", "연습장 종료", "메뉴 '연습장'에서 다시 할 수 있습니다", new Color(0.2f, 0.24f, 0.3f, 0.92f), 2f);
     }
 
     private void Cleanup()

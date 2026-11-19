@@ -867,13 +867,21 @@ public partial class TireService : NetworkBehaviour
         lr.numCapVertices = 2;
         lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         lr.receiveShadows = false;
-        var sh = Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default");
-        var m = new Material(sh);
-        m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // 림·차체에 가려도 보이게
-        m.renderQueue = 4000;
-        lr.material = m;
+        lr.sharedMaterial = RingMaterial();   // 색은 정점 색(startColor/endColor)이라 머티리얼은 하나를 같이 쓴다
         go.SetActive(false);
         return lr;
+    }
+
+    // 링·리드선 공용 머티리얼. 예전엔 링마다 new Material 이라 너트·볼트 수만큼(최대 수백 개) 쌓였다.
+    private static Material s_ringMat;
+    private static Material RingMaterial()
+    {
+        if (s_ringMat != null) return s_ringMat;
+        var sh = Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default");
+        s_ringMat = new Material(sh) { name = "[RingShared]", hideFlags = HideFlags.DontSave };
+        s_ringMat.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // 림·차체에 가려도 보이게
+        s_ringMat.renderQueue = 4000;
+        return s_ringMat;
     }
 
     internal static void SetArc(LineRenderer lr, Vector3 c, Vector3 u, Vector3 v, float r, float frac, Color col)
@@ -1201,7 +1209,7 @@ public partial class TireService : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void NutProgressServerRpc(int idx, float p, bool assemble)
     {
-        if (idx < 0 || idx >= _nut.Count) return;
+        if (idx < 0 || idx >= _nut.Count || float.IsNaN(p) || float.IsInfinity(p)) return;   // NaN 은 Clamp01·비교를 그대로 통과한다
         int w = idx / NutsPerWheel;
         if (_state[w] == (int)WheelState.Off) return;
         // 조이던 진행도는 '장착(Mounted)' 상태에만, 풀던 진행도는 '체결(Tight)' 상태에만 쓴다 — 상태가 바뀐 뒤 늦게 온 값은 버린다

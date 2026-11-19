@@ -261,7 +261,13 @@ namespace EPOOutline
                 parameters.Buffer.ClearRenderTarget(false, true, Color.clear);
                 parameters.Buffer.SetViewport(parameters.Viewport);
 
-                DrawOutlineables(parameters, CompareFunction.Always, x => x.OutlineParameters.Enabled,   x => new Color(x.OutlineParameters.DilateShift, x.OutlineParameters.BlurShift, 0, 1),
+                // Single 스타일: 비쳐 보이게 지정한 것(SeeThrough)만 깊이 검사 없이, 나머지는 가려지면 가려지게(LessEqual)
+                DrawOutlineables(parameters, CompareFunction.Always, x => x.OutlineParameters.Enabled && x.SeeThrough,   x => new Color(x.OutlineParameters.DilateShift, x.OutlineParameters.BlurShift, 0, 1),
+                    x => OutlineMaterial,
+                    RenderStyle.Single, 
+                    OutlinableDrawingMode.Normal);
+
+                DrawOutlineables(parameters, CompareFunction.LessEqual, x => x.OutlineParameters.Enabled && !x.SeeThrough,   x => new Color(x.OutlineParameters.DilateShift, x.OutlineParameters.BlurShift, 0, 1),
                     x => OutlineMaterial,
                     RenderStyle.Single, 
                     OutlinableDrawingMode.Normal);

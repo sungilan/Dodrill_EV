@@ -51,6 +51,12 @@ namespace EPOOutline
         }
 
         /// <summary>
+        /// (11/19) Single 스타일을 차체·벽 너머로도 보이게 그릴지. 기본 false = 가려지면 윤곽선도 가려진다(VR 테스트: 강조 윤곽선이 차체를 뚫고 보임).
+        /// 일부러 비쳐 보여야 하는 것만 true.
+        /// </summary>
+        public bool SeeThrough { get; set; } = false;
+
+        /// <summary>
         /// <see cref="EPOOutline.ComplexMaskingMode"/> to render the outlinable.
         /// </summary>
         public ComplexMaskingMode ComplexMaskingMode

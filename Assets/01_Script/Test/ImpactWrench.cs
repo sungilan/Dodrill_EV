@@ -618,32 +618,10 @@ public class ImpactWrench : MonoBehaviour
         }
     }
 
-    private readonly System.Collections.Generic.Dictionary<Autohand.Hand, Transform> _boneCache = new System.Collections.Generic.Dictionary<Autohand.Hand, Transform>();
-
-    /// <summary>이 AutoHand 손에 대응하는 보이는 아바타(VRIK)의 손 뼈 — 숨은 IK 복사본은 제외, 가장 가까운 것(25cm 안).</summary>
-    private Transform AvatarHandBone(Autohand.Hand h)
-    {
-        // (11/13 버그) 예전엔 VRIK references.left/rightHand 를 옮겼는데, AutoHandVRIK 는 잡는 동안 그 참조를
-        // AutoHand 손의 handGrabPoint(잡기 기준점)로 바꿔 끼운다 → 매 프레임 잡기 기준점을 볼트 쪽으로 옮겨 놓고 되돌리지 않아
-        // 잡기 조인트가 렌치를 끌고 다녔다(볼트에 대면 밀려나고 손이 엿가락처럼 늘어나고 렌치가 이리저리 돌아다님).
-        // → 아바타 Animator 의 실제 손 뼈(스킨)만 옮긴다.
-        if (_boneCache.TryGetValue(h, out var cached) && cached != null) return cached;
-        var hidden = new System.Collections.Generic.HashSet<RootMotion.FinalIK.VRIK>();
-        foreach (var ah in FindObjectsByType<Autohand.AutoHandVRIK>(FindObjectsSortMode.None)) if (ah != null && ah.invisibleIK != null) hidden.Add(ah.invisibleIK);
-        Transform best = null; float bestD = 0.3f * 0.3f;
-        var side = h.left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
-        foreach (var ik in FindObjectsByType<RootMotion.FinalIK.VRIK>(FindObjectsSortMode.None))
-        {
-            if (ik == null || hidden.Contains(ik) || !ik.isActiveAndEnabled) continue;
-            var anim = ik.GetComponentInChildren<Animator>();
-            var b = anim != null && anim.isHuman ? anim.GetBoneTransform(side) : null;
-            if (b == null || b.IsChildOf(h.transform)) continue;
-            float d = (b.position - h.transform.position).sqrMagnitude;
-            if (d < bestD) { bestD = d; best = b; }
-        }
-        if (best != null) _boneCache[h] = best;
-        return best;
-    }
+    // 아바타 손 뼈 찾기는 ToolRenderSnap 공용 캐시를 쓴다(못 찾았을 때 매 렌더 프레임 재검색 방지).
+    // (11/13 버그) 예전엔 VRIK references.left/rightHand 를 옮겼는데, AutoHandVRIK 는 잡는 동안 그 참조를
+    // AutoHand 손의 handGrabPoint 로 바꿔 끼워 잡기 조인트가 렌치를 끌고 다녔다 → Animator 의 실제 손 뼈만 옮긴다.
+    private Transform AvatarHandBone(Autohand.Hand h) => ToolRenderSnap.FindAvatarHandBone(h);
 
     private void RestoreHandVisuals()
     {

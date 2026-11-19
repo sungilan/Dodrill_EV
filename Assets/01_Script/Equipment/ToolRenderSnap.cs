@@ -13,7 +13,6 @@ public class ToolRenderSnap
     private readonly List<Transform> _moved = new List<Transform>();
     private readonly List<Vector3> _pos = new List<Vector3>();
     private readonly List<Quaternion> _rot = new List<Quaternion>();
-    private readonly Dictionary<Hand, Transform> _boneCache = new Dictionary<Hand, Transform>();
 
     private Transform[] _parts;
     private Grabbable _grab;
@@ -82,24 +81,42 @@ public class ToolRenderSnap
         t.SetPositionAndRotation(r * (t.position - _pivot) + _pivot + d, r * t.rotation);
     }
 
-    /// <summary>AutoHand 손에 대응하는 보이는 아바타의 실제 손 뼈(Animator). VRIK 참조는 잡는 동안 잡기 기준점이라 쓰지 않는다.</summary>
-    private Transform HandBone(Hand h)
+    private Transform HandBone(Hand h) => FindAvatarHandBone(h);
+
+    // 손 → 아바타 손 뼈 캐시(공용). 못 찾은 손은 0.5초 동안 다시 찾지 않는다 — 예전엔 못 찾으면 공구를 쥐고 있는 동안
+    // 렌더 프레임마다 FindObjectsByType ×2 + HashSet 할당을 반복했다(VR 프레임 저하).
+    private static readonly Dictionary<Hand, Transform> s_boneCache = new Dictionary<Hand, Transform>();
+    private static readonly Dictionary<Hand, float> s_boneRetry = new Dictionary<Hand, float>();
+    private static readonly HashSet<RootMotion.FinalIK.VRIK> s_hidden = new HashSet<RootMotion.FinalIK.VRIK>();
+
+    /// <summary>AutoHand 손에 대응하는 보이는 아바타의 실제 손 뼈(Animator). 숨은 IK 복사본 제외, 30cm 안 가장 가까운 것.
+    /// VRIK 참조는 잡는 동안 잡기 기준점이라 쓰지 않는다.</summary>
+    internal static Transform FindAvatarHandBone(Hand h)
     {
-        if (_boneCache.TryGetValue(h, out var c) && c != null) return c;
-        var hidden = new HashSet<RootMotion.FinalIK.VRIK>();
-        foreach (var ah in Object.FindObjectsByType<AutoHandVRIK>(FindObjectsSortMode.None)) if (ah != null && ah.invisibleIK != null) hidden.Add(ah.invisibleIK);
+        if (h == null) return null;
+        if (s_boneCache.TryGetValue(h, out var c))
+        {
+            if (c != null) return c;
+            s_boneCache.Remove(h);
+        }
+        if (s_boneRetry.TryGetValue(h, out float until) && Time.unscaledTime < until) return null;
+
+        s_hidden.Clear();
+        foreach (var ah in Object.FindObjectsByType<AutoHandVRIK>(FindObjectsSortMode.None)) if (ah != null && ah.invisibleIK != null) s_hidden.Add(ah.invisibleIK);
         Transform best = null; float bd = 0.3f * 0.3f;
         var side = h.left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
         foreach (var ik in Object.FindObjectsByType<RootMotion.FinalIK.VRIK>(FindObjectsSortMode.None))
         {
-            if (ik == null || hidden.Contains(ik) || !ik.isActiveAndEnabled) continue;
+            if (ik == null || s_hidden.Contains(ik) || !ik.isActiveAndEnabled) continue;
             var anim = ik.GetComponentInChildren<Animator>();
             var b = anim != null && anim.isHuman ? anim.GetBoneTransform(side) : null;
             if (b == null || b.IsChildOf(h.transform)) continue;
             float d = (b.position - h.transform.position).sqrMagnitude;
             if (d < bd) { bd = d; best = b; }
         }
-        if (best != null) _boneCache[h] = best;
+        s_hidden.Clear();
+        if (best != null) { s_boneCache[h] = best; s_boneRetry.Remove(h); }
+        else s_boneRetry[h] = Time.unscaledTime + 0.5f;
         return best;
     }
 

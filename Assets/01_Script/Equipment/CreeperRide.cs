@@ -349,7 +349,7 @@ public class CreeperRide : NetworkBehaviour
     private void PoseServerRpc(Vector3 pos, float yaw, NetworkConnection sender = null)
     {
         if (_rider.Value == null || _rider.Value.Owner != sender) return;
-        if ((pos - transform.position).sqrMagnitude > 4f) return;   // 순간이동 방지
+        if (!((pos - transform.position).sqrMagnitude <= 4f) || float.IsNaN(yaw) || float.IsInfinity(yaw)) return;   // 순간이동 방지(NaN 포함)
         transform.SetPositionAndRotation(pos, Quaternion.Euler(0f, yaw, 0f));
     }
 

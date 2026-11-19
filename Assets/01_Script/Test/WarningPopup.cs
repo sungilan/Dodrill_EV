@@ -12,8 +12,8 @@ public class WarningPopup : MonoBehaviour
     private const float Distance = 1.0f;
     // (11/19) 이제 VR 전용(PC·모바일은 ScreenToast). VR 에는 화면 가운데 조준점·'F 키' 안내가 없으므로
     // 시선 정면을 비우고 시선 아래쪽(약 12°)에 둔다 — 작업 대상(손 앞)을 가리지 않게. 이전 값 -0.05(시선 조금 위)
-    private const float DropBelowEye = 0.21f;
-    private const float CardScale = 0.8f;   // 정면 카드가 너무 크다는 의견 → 전체 20% 줄임
+    private const float DropBelowEye = -0.17f;   // (11/19 VR 테스트) 시선 '위'로 — 고전압 차단 전 안내 등이 작업 대상 앞을 가렸다
+    private const float CardScale = 0.6f;        // 정면 카드가 너무 크다는 의견 → 20% 줄임(11/16) → 더 줄임(11/19)
 
     private static GameObject s_prefab;
     private static readonly System.Collections.Generic.Dictionary<string, WarningPopup> s_active = new System.Collections.Generic.Dictionary<string, WarningPopup>();

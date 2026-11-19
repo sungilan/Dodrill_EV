@@ -437,7 +437,8 @@ public class FreeLotoBoard : MonoBehaviour
         Cube(t, "Foot", new Vector3(0f, 0.015f, 0.06f), new Vector3(0.5f, 0.03f, 0.4f), new Color(0.25f, 0.25f, 0.27f), mat, true);
         Cube(t, "Panel", new Vector3(0f, 1.15f, 0.03f), new Vector3(1.1f, 0.62f, 0.03f), new Color(0.10f, 0.11f, 0.14f), mat, true);
         Label(t, "고전압 차단(LOTO) 연습", new Vector3(0f, 1.40f, -0.01f), 0.05f, new Color(1f, 0.55f, 0.5f), font);
-        var st = Label(t, "", new Vector3(0f, 1.2f, -0.01f), 0.03f, Color.white, font);
+        // 제목(y 1.40) 아래에서 시작해 버튼(y 0.93) 위에서 끝나게 — 글 위쪽이 제목과 겹치던 것을 고쳤다(11/19)
+        var st = Label(t, "", new Vector3(0f, 1.115f, -0.01f), 0.03f, Color.white, font);
         st.rectTransform.sizeDelta = new Vector2(1.0f, 0.4f);
         st.alignment = TextAlignmentOptions.Top;
         _status = st;
@@ -678,7 +679,6 @@ public class HvShockGauge : MonoBehaviour
         {
             if (r <= 0.01f || Time.unscaledTime < _nextCheck) return;
             _nextCheck = Time.unscaledTime + 1f;
-            if (XRAirpotrSecurity.Utils.GetPlatformType() == XRAirpotrSecurity.PlatformType.VR) return;
             Build();
         }
         bool show = r > 0.01f;
@@ -698,12 +698,7 @@ public class HvShockGauge : MonoBehaviour
 
     private void Build()
     {
-        _canvas = new GameObject("[HvShockGauge_Canvas]");
-        var cv = _canvas.AddComponent<Canvas>();
-        cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 70;
-        var sc = _canvas.AddComponent<UnityEngine.UI.CanvasScaler>();
-        sc.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        sc.referenceResolution = new Vector2(1920f, 1080f); sc.matchWidthOrHeight = 0.5f;
+        _canvas = VrUi.NewHudCanvas("[HvShockGauge_Canvas]", 70).gameObject;   // PC·모바일 = 화면 오버레이, VR = 시선 앞 월드 캔버스(같은 자리·모양)
 
         var back = NewRect("Back", _canvas.transform);
         back.anchorMin = back.anchorMax = new Vector2(0.5f, 0.5f); back.pivot = new Vector2(0.5f, 0.5f);
@@ -720,6 +715,7 @@ public class HvShockGauge : MonoBehaviour
         _label = NewText(back, "Label", 26f, new Vector2(0f, 38f));
         _sub = NewText(back, "Sub", 19f, new Vector2(0f, -34f));
         _sub.color = new Color(1f, 0.75f, 0.7f);
+        VrUi.Finish(_canvas);   // VR: 맨 앞에 그리기
     }
 
     private static RectTransform NewRect(string name, Transform parent)
@@ -901,14 +897,24 @@ public class HvStatusHud : MonoBehaviour
         go.AddComponent<HvStatusHud>();
     }
 
+    // 다른 UI(VR 손바닥 메뉴)가 읽는 현재 상태. VR 은 별도 손목 패널 없이 손바닥 메뉴 윗부분에 같은 아이콘을 그린다(11/19 — 패널 하나로 통합).
+    public static bool SnapActive;
+    public static readonly bool[] SnapDone = new bool[N];
+    public static int SnapCur;
+    public static bool SnapAll;
+    public static string SnapLabel = "", SnapNext = "", SnapNextShort = "";
+    public static string StepIcon(int i) => i < N ? Icons[i] : "insurance";   // N 번째는 완료 방패
+
+    private bool _vrKnown;
+
     private void Update()
     {
         var sm = ElectricSafetyManager.Instance;
         bool active = sm != null && FreeLoto.IsFreeScenario
                       && !(EmergencyEventManager.Instance != null && EmergencyEventManager.Instance.PopupUp);
+        SnapActive = active;
         if (!active) { if (_canvas != null && _canvas.activeSelf) _canvas.SetActive(false); return; }
-        if (_canvas == null) { _vr = XRAirpotrSecurity.Utils.GetPlatformType() == XRAirpotrSecurity.PlatformType.VR; Build(); }
-        if (!_canvas.activeSelf) _canvas.SetActive(true);
+        if (!_vrKnown) { _vr = XRAirpotrSecurity.Utils.GetPlatformType() == XRAirpotrSecurity.PlatformType.VR; _vrKnown = true; }
 
         float v = FreeLoto.VoltageNow();
         bool msd = sm.isMSDRemoved;
@@ -917,6 +923,44 @@ public class HvStatusHud : MonoBehaviour
         int cur = -1;
         for (int i = 0; i < N; i++) if (!done[i]) { cur = i; break; }
         bool all = cur < 0;
+        for (int i = 0; i < N; i++) SnapDone[i] = done[i];
+        SnapCur = cur; SnapAll = all;
+
+        // 지금 할 단계 이름(방전 대기는 남은 초)과 안내 한 줄
+        string labelStr;
+        if (all) labelStr = "<b>차단 완료</b>";
+        else
+        {
+            string name = cur == 3 && msd
+                ? $"방전 대기 {Mathf.CeilToInt(FreeLoto.Tau * Mathf.Log(Mathf.Max(v, 31f) / FreeLoto.SafeV))}초"
+                : Names[cur];
+            labelStr = $"<b>{cur + 1}. {name}</b>";
+        }
+        string next;
+        switch (cur)
+        {
+            case 0: next = "절연 장갑을 서랍에서 집으세요 — 집으면 바로 착용됩니다"; break;
+            case 1: next = "엔진룸 12V 배터리 (−) 단자의 노란 점을 누르세요 (책상 옆 보드 버튼도 됩니다)"; break;
+            case 2: next = "후드를 열고 12V 배터리 커버 뚜껑을 눌러 연 뒤, 서비스 플러그(MSD) 레버(주황 점)를 누르세요"; break;
+            case 3: next = "방전 대기 중 — 전압이 30V 이하로 내려갈 때까지 고전압 부위를 만지지 마세요"; break;
+            case 4: next = "멀티미터(카트 위)를 들고 DC 전압(V)에 맞춘 뒤, 검정 프로브(접지 GND 또는 옆 단자)를 먼저, 빨간 프로브는 인버터 HV 단자(청록 점)에 꽂아 30V 이하를 확인하세요 (F)"; break;
+            default: next = "고전압 차단 완료 — 고전압 부위(빨강) 작업을 할 수 있습니다"; break;
+        }
+        SnapLabel = labelStr; SnapNext = next;
+        // VR 메뉴용 짧은 안내(글자를 크게 쓰려고 줄였다)
+        switch (cur)
+        {
+            case 0: SnapNextShort = "서랍에서 절연 장갑을 집으세요"; break;
+            case 1: SnapNextShort = "12V 배터리 (−) 단자의 노란 점을 누르세요"; break;
+            case 2: SnapNextShort = "12V 커버 뚜껑을 열고 서비스 플러그(주황 점)를 누르세요"; break;
+            case 3: SnapNextShort = "30V 이하가 될 때까지 고전압 부위를 만지지 마세요"; break;
+            case 4: SnapNextShort = "멀티미터로 인버터 단자(청록 점) 30V 이하를 확인하세요"; break;
+            default: SnapNextShort = "고전압 부위(빨강) 작업을 할 수 있습니다"; break;
+        }
+        if (_vr) return;   // VR: 화면에 따로 그리지 않고 손바닥 메뉴 패널 윗부분에 그린다
+
+        if (_canvas == null) Build();
+        if (!_canvas.activeSelf) _canvas.SetActive(true);
 
         float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f);
         for (int i = 0; i < N; i++)
@@ -930,82 +974,17 @@ public class HvStatusHud : MonoBehaviour
         if (all) Paint(N, Done, DoneDisc, Color.white, 1f + 0.04f * pulse);
         else Paint(N, Idle, IdleDisc, new Color(1f, 1f, 1f, 0.25f), 1f);
 
-        // 지금 할 단계 이름을 그 원 아래에(방전 대기는 남은 초)
+        // 지금 할 단계 이름을 그 원 아래에
         int at = all ? N : cur;
-        if (all) _label.text = "<b>차단 완료</b>";
-        else
-        {
-            string name = cur == 3 && msd
-                ? $"방전 대기 {Mathf.CeilToInt(FreeLoto.Tau * Mathf.Log(Mathf.Max(v, 31f) / FreeLoto.SafeV))}초"
-                : Names[cur];
-            _label.text = $"<b>{cur + 1}. {name}</b>";
-        }
+        _label.text = labelStr;
         _label.color = all ? new Color(0.6f, 1f, 0.65f) : new Color(1f, 0.82f, 0.45f);
         _label.rectTransform.anchoredPosition = new Vector2(_slot[at].anchoredPosition.x, LabelY);
 
-        string next;
-        switch (cur)
-        {
-            case 0: next = "절연 장갑을 서랍에서 집으세요 — 집으면 바로 착용됩니다"; break;
-            case 1: next = "엔진룸 12V 배터리 (−) 단자의 노란 점을 누르세요 (책상 옆 보드 버튼도 됩니다)"; break;
-            case 2: next = "후드를 열고 12V 배터리 커버 뚜껑을 눌러 연 뒤, 서비스 플러그(MSD) 레버(주황 점)를 누르세요"; break;
-            case 3: next = "방전 대기 중 — 전압이 30V 이하로 내려갈 때까지 고전압 부위를 만지지 마세요"; break;
-            case 4: next = "멀티미터(카트 위)를 들고 DC 전압(V)에 맞춘 뒤, 검정 프로브(접지 GND 또는 옆 단자)를 먼저, 빨간 프로브는 인버터 HV 단자(청록 점)에 꽂아 30V 이하를 확인하세요 (F)"; break;
-            default: next = "고전압 차단 완료 — 고전압 부위(빨강) 작업을 할 수 있습니다"; break;
-        }
         _next.text = next;
         _next.color = all ? new Color(0.6f, 1f, 0.65f) : new Color(1f, 0.85f, 0.5f);
-
-        if (_vr) PlaceOnWrist();
     }
 
-    // ── VR: 왼손 손목 시계 ──
-    // (11/19) VR 은 시야에 붙는 화면 UI 대신 손목에 단다(Half-Life: Alyx 의 장갑 체력 표시처럼).
-    // 왼손 손등을 얼굴 쪽으로 돌리면(시계 보듯) 손목 위에 고전압 상태가 뜬다. 손바닥을 펴는 손바닥 메뉴(VrPalmMenu)와 동작이 겹치지 않는다.
     private bool _vr;
-    private CanvasGroup _vrGroup;
-    private readonly System.Collections.Generic.List<Autohand.Hand> _hands = new System.Collections.Generic.List<Autohand.Hand>();
-    private float _nextHandScan, _vrAlpha;
-    private const float VrScale = 0.0003f;   // 640px → 약 19cm
-
-    private void PlaceOnWrist()
-    {
-        var cam = Camera.main;
-        if (Time.unscaledTime >= _nextHandScan)
-        {
-            _nextHandScan = Time.unscaledTime + 2f;
-            _hands.RemoveAll(h => h == null);
-            foreach (var h in FindObjectsByType<Autohand.Hand>(FindObjectsSortMode.None))
-            {
-                if (h == null || _hands.Contains(h) || h.name.StartsWith("HighlightHand")) continue;
-                var nob = h.GetComponentInParent<FishNet.Object.NetworkObject>();
-                if (nob != null && nob.IsSpawned && !nob.IsOwner) continue;   // 다른 사람 손 제외
-                _hands.Add(h);
-            }
-        }
-        Autohand.Hand left = null;
-        foreach (var h in _hands) if (h != null && h.left && h.isActiveAndEnabled && h.palmTransform != null) { left = h; break; }
-
-        bool show = false;
-        if (cam != null && left != null)
-        {
-            var palm = left.palmTransform;
-            Vector3 toCam = cam.transform.position - palm.position;
-            float dist = toCam.magnitude;
-            show = dist > 0.15f && dist < 0.75f
-                   && Vector3.Dot(cam.transform.forward, -toCam / dist) > 0.5f      // 시야 안
-                   && Vector3.Dot(-palm.forward, toCam / dist) > 0.55f;             // 손등이 얼굴 쪽
-            if (show || _vrAlpha > 0f)
-            {
-                Vector3 up = Vector3.ProjectOnPlane(Vector3.up, toCam.normalized).normalized;
-                Vector3 pos = palm.position - palm.forward * 0.04f + up * 0.07f;
-                Vector3 look = pos - cam.transform.position;
-                _canvas.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(look, Vector3.up));
-            }
-        }
-        _vrAlpha = Mathf.MoveTowards(_vrAlpha, show ? 1f : 0f, Time.unscaledDeltaTime * 6f);
-        _vrGroup.alpha = _vrAlpha;
-    }
 
     private const float Top = 36f;                       // 위 여백 — 맨 위에 '고전압 상태' 제목
     private const float CircleY = -Top - Circle * 0.5f;   // 원 중심 높이(Back 위쪽 가운데 기준)
@@ -1027,27 +1006,9 @@ public class HvStatusHud : MonoBehaviour
 
         _canvas = new GameObject("[HvStatusHud_Canvas]");
         var cv = _canvas.AddComponent<Canvas>();
-        if (_vr)
-        {
-            // 손목에 다는 월드 UI — 반투명 어두운 판을 깔아 정비소 배경 위에서도 읽히게
-            cv.renderMode = RenderMode.WorldSpace;
-            var crt = (RectTransform)_canvas.transform;
-            crt.sizeDelta = new Vector2(BackW + 30f, -NextY + 62f);
-            _canvas.transform.localScale = Vector3.one * VrScale;
-            _vrGroup = _canvas.AddComponent<CanvasGroup>();
-            _vrGroup.alpha = 0f; _vrGroup.interactable = false; _vrGroup.blocksRaycasts = false;
-            var bgr = NewRect("Bg", _canvas.transform);
-            bgr.anchorMin = Vector2.zero; bgr.anchorMax = Vector2.one; bgr.offsetMin = bgr.offsetMax = Vector2.zero;
-            var bg = bgr.gameObject.AddComponent<UnityEngine.UI.Image>();
-            bg.sprite = WorldHoverLabel.RoundedSprite(); bg.type = UnityEngine.UI.Image.Type.Sliced;
-            bg.color = new Color(0.05f, 0.07f, 0.10f, 0.85f); bg.raycastTarget = false;
-        }
-        else
-        {
-            cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 66;
-            var sc = _canvas.AddComponent<UnityEngine.UI.CanvasScaler>();
-            sc.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize; sc.referenceResolution = new Vector2(1920f, 1080f); sc.matchWidthOrHeight = 0.5f;
-        }
+        cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 66;
+        var sc = _canvas.AddComponent<UnityEngine.UI.CanvasScaler>();
+        sc.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize; sc.referenceResolution = new Vector2(1920f, 1080f); sc.matchWidthOrHeight = 0.5f;
 
         var back = NewRect("Back", _canvas.transform);
         back.anchorMin = back.anchorMax = new Vector2(CenterX, 1f); back.pivot = new Vector2(0.5f, 1f);

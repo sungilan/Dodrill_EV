@@ -695,7 +695,7 @@ public class VRPlayer : BasePlayer
     [ServerRpc(RequireOwnership = true)]
     private void CalibHeightToServer(float h)
     {
-        if (h < 1.3f || h > 1.95f) return;
+        if (!(h >= 1.3f && h <= 1.95f)) return;   // NaN 도 거른다
         CalibHeightToClients(h);
     }
 

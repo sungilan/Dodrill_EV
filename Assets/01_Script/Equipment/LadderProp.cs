@@ -41,9 +41,14 @@ public class LadderProp : MonoBehaviour
     /// <summary>발판 맨 위 높이(로컬).</summary>
     public float StandHeight => _standY;
 
+    // (11/19 VR 테스트) 사다리 가까이에서 플레이어가 위아래로 떨리는 문제 — 발판 계단·오르기(VrLadderClimbAssist 가 몸 높이 고정을 풀었다 조였다 함)가 원인으로 보여
+    // 사다리 기능을 모두 끈다. 사다리는 잡아서 옮기는 소품으로만 남는다. 다시 쓰려면 true.
+    public static bool FeatureEnabled = false;
+
     private void Awake()
     {
         _sync = GetComponent<SyncGrab>();
+        if (!FeatureEnabled) { enabled = false; return; }
         BuildSteps();
     }
 

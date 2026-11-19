@@ -1285,7 +1285,21 @@ public partial class CarPartService : NetworkBehaviour
     }
 
     public static int PartCount => Defs.Length;
-    public static int IndexOf(string id) { for (int i = 0; i < Defs.Length; i++) if (Defs[i].id == id) return i; return -1; }
+    // id → 인덱스 사전(처음 쓸 때 한 번 만든다). 예전엔 문자열 선형 비교였는데 CanRemove/ParentIndex 를 통해
+    // 매 프레임 부품 125개 호버·집중 루프 안에서 불려 O(n²) 비교가 됐다. Defs 는 static readonly 라 id 가 바뀌지 않는다.
+    private static Dictionary<string, int> s_indexById;
+    public static int IndexOf(string id)
+    {
+        if (id == null) return -1;
+        if (s_indexById == null)
+        {
+            var m = new Dictionary<string, int>(Defs.Length, System.StringComparer.Ordinal);
+            for (int i = 0; i < Defs.Length; i++)
+                if (Defs[i].id != null && !m.ContainsKey(Defs[i].id)) m[Defs[i].id] = i;   // 중복 id 는 예전처럼 앞의 것
+            s_indexById = m;
+        }
+        return s_indexById.TryGetValue(id, out int k) ? k : -1;
+    }
 
     private static int[] s_off;   // 부위별 볼트 시작 번호
     private static int s_total;
@@ -3054,7 +3068,7 @@ public partial class CarPartService : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void ProgressServerRpc(int idx, float v, bool assemble)
     {
-        if (idx < 0 || idx >= _prog.Count) return;
+        if (idx < 0 || idx >= _prog.Count || float.IsNaN(v) || float.IsInfinity(v)) return;   // NaN 은 Clamp01·비교를 그대로 통과한다
         int p = PartOfBolt(idx);
         if (p < 0 || p >= _state.Count) return;
         int st = _state[p];
@@ -3178,6 +3192,7 @@ public partial class CarPartService : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void ImpactServerRpc(int p, float speed)
     {
+        if (float.IsNaN(speed) || float.IsInfinity(speed)) return;   // NaN 은 Clamp01·비교를 그대로 통과한다
         if (!_freeMode || p < 0 || p >= Defs.Length || _state[p] != (int)PartState.Off || _damaged.Contains(p)) return;
         if (!CarPartAccident.IsDamageable(Defs[p].id) || speed < CarPartAccident.BreakSpeed) return;
         Vector3? at = null; Quaternion? rot = null;

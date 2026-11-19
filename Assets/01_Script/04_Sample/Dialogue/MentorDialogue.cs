@@ -324,7 +324,7 @@ public class MentorDialogue : MonoBehaviour
         if (_vr)
         {
             cv.renderMode = RenderMode.WorldSpace;
-            var rt0 = cv.GetComponent<RectTransform>(); rt0.sizeDelta = new Vector2(w, h); rt0.localScale = Vector3.one * 0.0011f;
+            var rt0 = cv.GetComponent<RectTransform>(); rt0.sizeDelta = new Vector2(w, h); rt0.localScale = Vector3.one * 0.00125f;
         }
         else
         {
@@ -374,7 +374,9 @@ public class MentorDialogue : MonoBehaviour
         var bi = btn.gameObject.AddComponent<Image>(); bi.color = new Color(1f, 1f, 1f, 0.14f);
         var b = btn.gameObject.AddComponent<Button>(); b.targetGraphic = bi; b.onClick.AddListener(() => _skip = true);
         var bt = NewText("SkipText", btn, 22f, TextAlignmentOptions.Center); Stretch(bt.rectTransform); bt.text = "건너뛰기 (Enter)"; bt.color = new Color(0.85f, 0.9f, 1f);
+        if (_vr) btn.gameObject.SetActive(false);   // VR 에는 Enter 도 없고 월드 캔버스 버튼을 누를 수단도 없다 — 대사는 알아서 넘어간다
 
+        if (_vr) VrUi.Finish(_root);   // 가이드 화살표·차체에 가려지지 않게 맨 앞에
         _root.SetActive(false);
     }
 
@@ -414,10 +416,11 @@ public class MentorDialogue : MonoBehaviour
     {
         var cam = Camera.main; if (cam == null || _root == null) return;
         Vector3 fwd = cam.transform.forward; fwd.y = 0f; if (fwd.sqrMagnitude < 0.01f) fwd = Vector3.forward; fwd.Normalize();
-        Vector3 pos = cam.transform.position + fwd * 1.4f + Vector3.down * 0.38f;
-        Quaternion rot = Quaternion.LookRotation(pos - cam.transform.position, Vector3.up);
+        Vector3 pos = cam.transform.position + fwd * 1.3f + Vector3.down * 0.30f;
+        Quaternion rot = Quaternion.LookRotation(fwd, Vector3.up);   // 위아래로 기울이지 않는다(비스듬히 보이던 문제) — 수평 시선 방향만
         var tr = _root.transform;
-        tr.SetPositionAndRotation(snap ? pos : Vector3.Lerp(tr.position, pos, Time.unscaledDeltaTime * 4f), snap ? rot : Quaternion.Slerp(tr.rotation, rot, Time.unscaledDeltaTime * 4f));
+        float k = 1f - Mathf.Exp(-9f * Time.unscaledDeltaTime);   // 빠르게 따라와 머리를 돌려도 뒤처지지 않게
+        tr.SetPositionAndRotation(snap ? pos : Vector3.Lerp(tr.position, pos, k), snap ? rot : Quaternion.Slerp(tr.rotation, rot, k));
     }
 
     private static RectTransform NewRect(string name, Transform parent)

@@ -59,30 +59,13 @@ public class InteractionProgressBarUI : MonoBehaviour
         _lastShowTime = Time.unscaledTime;
         _boltVisible = true;
 
-        // (11/19) PC·모바일: 가운데 큰 패널(860×560) 대신 감전 위험 게이지와 같은 자리·모양의 얇은 막대.
-        // 감전 위험 게이지가 함께 떠 있으면 그 아래로 비켜 선다. VR 은 기존 패널 그대로.
-        if(!GameScenePlatformManager.IsVR)
-        {
-            if(boltPanelGroup != null) { boltPanelGroup.DOKill(); boltPanelGroup.alpha = 0f; }
-            float r = value;
-            if(boltProgressBar != null && boltProgressBar.maxValue > boltProgressBar.minValue)
-                r = Mathf.InverseLerp(boltProgressBar.minValue, boltProgressBar.maxValue, value);
-            ShowCompact(Mathf.Clamp01(r), taskName, objName, instruction);
-            return;
-        }
-        if(boltPanelGroup == null) return;
-
-        // 현재 보이지 않는 상태라면 페이드 인 시작
-        if(boltPanelGroup.alpha < 0.1f)
-        {
-            boltPanelGroup.DOKill();
-            boltPanelGroup.DOFade(1f, 0.2f).SetEase(Ease.OutQuad);
-        }
-
-        boltProgressBar.value = value;
-        if(boltTaskText != null) boltTaskText.text = taskName;
-        if(boltTargetText != null) boltTargetText.text = $"대상: {objName}";
-        if(boltInstructionText != null) boltInstructionText.text = instruction;
+        // (11/19) 가운데 큰 패널(860×560) 대신 감전 위험 게이지와 같은 자리·모양의 얇은 막대 — PC·모바일은 화면에, VR 은 시선 앞 월드 캔버스에(VrUi.NewHudCanvas).
+        // 감전 위험 게이지가 함께 떠 있으면 그 위로 올라간다. 예전 VR 패널(boltPanelGroup)은 쓰지 않는다.
+        if(boltPanelGroup != null) { boltPanelGroup.DOKill(); boltPanelGroup.alpha = 0f; }
+        float r = value;
+        if(boltProgressBar != null && boltProgressBar.maxValue > boltProgressBar.minValue)
+            r = Mathf.InverseLerp(boltProgressBar.minValue, boltProgressBar.maxValue, value);
+        ShowCompact(Mathf.Clamp01(r), taskName, objName, instruction);
     }
 
     public void HideBoltProgress()
@@ -150,12 +133,7 @@ public class InteractionProgressBarUI : MonoBehaviour
 
     private void BuildCompact()
     {
-        _compact = new GameObject("[BoltProgress_Canvas]");
-        var cv = _compact.AddComponent<Canvas>();
-        cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 69;
-        var sc = _compact.AddComponent<CanvasScaler>();
-        sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        sc.referenceResolution = new Vector2(1920f, 1080f); sc.matchWidthOrHeight = 0.5f;
+        _compact = VrUi.NewHudCanvas("[BoltProgress_Canvas]", 69).gameObject;
 
         _compactBack = NewRect("Back", _compact.transform);
         _compactBack.anchorMin = _compactBack.anchorMax = new Vector2(0.5f, 0.5f); _compactBack.pivot = new Vector2(0.5f, 0.5f);
@@ -171,6 +149,7 @@ public class InteractionProgressBarUI : MonoBehaviour
 
         _compactLabel = NewText(_compactBack, "Label", 24f, new Vector2(0f, 38f), Color.white);
         _compactSub = NewText(_compactBack, "Sub", 19f, new Vector2(0f, -34f), new Color(0.8f, 0.9f, 1f));
+        VrUi.Finish(_compact);   // VR: 맨 앞에 그리기
     }
 
     private static RectTransform NewRect(string name, Transform parent)

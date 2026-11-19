@@ -302,6 +302,7 @@ namespace DoDrill.Training
 
             // UI 초기화
             _notifCanvasGroup.alpha = 0f;
+            VrToastFollow.Attach(_notifCanvasGroup.transform);   // VR: 선임 정비사 패널과 같은 속도로 시선을 따라온다(VR 이 아니면 아무것도 안 함)
             _notifCanvasGroup.gameObject.SetActive(true);
 
             // 연출 시작
