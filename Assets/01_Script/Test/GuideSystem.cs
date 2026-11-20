@@ -136,6 +136,15 @@ public class GuideSystem : MonoBehaviour
     private void Start()
     {
         hintButton?.SetActive(false);
+        // (11/20) 시작할 때 UI 가 겹쳐 보이던 것: 단계 설명 팝업(Popup_Panel)은 씬에 알파 1·'12V 배터리'·'현재 수행할 Task 설명이 표시됩니다' 자리표시 글자로 구워져 있다.
+        // Awake 에서는 플랫폼이 아직 확정되기 전이라 엉뚱한 플랫폼의 그룹만 숨겨져, 실제 플랫폼의 팝업이 첫 단계 전까지 그대로 떠 있었다.
+        // → 플랫폼이 정해진 지금 한 번 더 맞추고, 세 플랫폼의 팝업을 모두 숨긴다.
+        SetupPlatformUI();
+        foreach(var g in new[] { pcUI.group, mobileUI.group, vrUI.group })
+        {
+            if(g == null) continue;
+            g.alpha = 0f; g.interactable = false; g.blocksRaycasts = false;
+        }
         SetCenterAlpha(0f, "Start Initializing");
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using FishNet;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -319,8 +320,25 @@ public class MentorDialogue : MonoBehaviour
         return r == "trainee" || r == "me" || r == "나" || r == "player" ? DialogueSpeaker.Trainee : DialogueSpeaker.Mentor;
     }
 
+    // 홈으로 등으로 접속이 끊기면 말하던 대사·대기열·화면을 바로 거둔다 — 이 캔버스는 씬이 바뀌어도 남아(DontDestroyOnLoad)
+    // 메인 메뉴로 돌아가는 검은 화면 위에 선임 정비사 패널이 한참 떠 있었다.
+    private void ResetForLeave()
+    {
+        if (_play != null) { StopCoroutine(_play); _play = null; }
+        if (_fade != null) { StopCoroutine(_fade); _fade = null; }
+        _queue.Clear();
+        _lastSaid.Clear();
+        _playingStep = -1;
+        _scenarioId = null; _lastKey = null; _curModule = null; _local = null;
+        StopVoice();
+        HideView();
+    }
+
     private void Update()
     {
+        if ((_play != null || (_root != null && _root.activeSelf) || _scenarioId != null)
+            && InstanceFinder.NetworkManager != null && !InstanceFinder.IsClientStarted && !InstanceFinder.IsServerStarted)
+            ResetForLeave();
         if (_play != null && Input.GetKeyDown(KeyCode.Return)) _skip = true;
         if (_root != null && _vr) FollowHead();
     }

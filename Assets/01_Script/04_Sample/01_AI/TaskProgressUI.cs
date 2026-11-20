@@ -138,6 +138,8 @@ namespace DoDrill.Training
 
         private void Start()
         {
+            // (11/20) 시나리오 데이터가 오기 전에는 씬에 구워진 자리표시 글자('현재 수행할 Task 설명이 표시됩니다')를 보여 주지 않는다
+            if (_scenarioData == null && _descriptionText != null) _descriptionText.text = "";
             if (_scenarioData != null) return;
 
             var sr = FindFirstObjectByType<ScenarioStateReceiver>();
