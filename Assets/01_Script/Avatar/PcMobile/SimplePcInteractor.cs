@@ -22,8 +22,16 @@ using UnityEngine.InputSystem;
 //    · 네트워크 아이템(SyncGrab): SyncGrab 의 PC 잡기를 쓴다(서버 권한 소유·동기화). 내 HoldPoint(태그 "HoldPoint")로 날아온다.
 //      들고 있을 때 클릭 → 구역을 보고 있으면 그 자리에 얹어 놓고, 아니면 그 자리에 놓는다.
 // ============================================================
-public class SimplePcInteractor : MonoBehaviour
+public class SimplePcInteractor : MonoBehaviour, IPcLookController
 {
+    // ── IPcLookController: PcMobileAvatarController 가 읽어 아바타 걷기 애니메이션·IK·머리 방향을 구동한다 ──
+    private Vector3 _planarVelocity;
+    private float _crouchInput;
+    public Vector3 CurrentPlanarVelocity => _planarVelocity;
+    public float CurrentPitch => _pitch;
+    public float CrouchInput => _crouchInput;
+    public float MoveSpeed => moveSpeed;
+
     public Camera cam;
     public float moveSpeed = 2.5f;
     public float lookSpeed = 0.15f;
@@ -81,6 +89,12 @@ public class SimplePcInteractor : MonoBehaviour
             if (KeyHeld('E')) dir += Vector3.up;
         }
         transform.position += transform.TransformDirection(dir.normalized) * moveSpeed * Time.deltaTime;
+
+        // 아바타 구동용 값: 수평 속도(월드), 웅크리기(왼쪽 Ctrl 을 누르면 낮추고, 떼면 다시 일어선다)
+        Vector3 planar = transform.TransformDirection(new Vector3(dir.x, 0f, dir.z).normalized) * moveSpeed;
+        _planarVelocity = Vector3.Lerp(_planarVelocity, planar, 1f - Mathf.Exp(-12f * Time.deltaTime));
+        var avatar = GetComponent<PcMobileAvatarController>();
+        _crouchInput = CrouchHeld() ? 1f : (avatar != null && avatar.Crouch01 > 0f ? -1f : 0f);
 
         if (RightHeld())
         {
@@ -229,6 +243,7 @@ public class SimplePcInteractor : MonoBehaviour
         }
         return false;
     }
+    private static bool CrouchHeld() => Keyboard.current != null && Keyboard.current.leftCtrlKey.isPressed;
     private static bool UseDown() => Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame;
     private static bool LeftDown() => Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
     private static bool RightHeld() => Mouse.current != null && Mouse.current.rightButton.isPressed;
@@ -236,6 +251,7 @@ public class SimplePcInteractor : MonoBehaviour
     private static Vector2 MousePos() => Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
 #else
     private static bool KeyHeld(char k) => Input.GetKey((KeyCode)char.ToLower(k));
+    private static bool CrouchHeld() => Input.GetKey(KeyCode.LeftControl);
     private static bool UseDown() => Input.GetKeyDown(KeyCode.F);
     private static bool LeftDown() => Input.GetMouseButtonDown(0);
     private static bool RightHeld() => Input.GetMouseButton(1);

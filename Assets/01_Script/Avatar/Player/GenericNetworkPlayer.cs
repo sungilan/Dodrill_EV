@@ -25,6 +25,8 @@ public class GenericNetworkPlayer : NetworkBehaviour
 
         if (cam != null)
         {
+            // 아바타 컨트롤러(PcMobileAvatarController)는 Awake 에서 모든 복사본의 카메라 오브젝트를 꺼 두므로, 소유자만 다시 켠다
+            if (mine) cam.gameObject.SetActive(true);
             cam.enabled = mine;
             if (mine) cam.tag = "MainCamera";
         }

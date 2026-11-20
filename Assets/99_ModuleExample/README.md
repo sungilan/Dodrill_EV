@@ -4,6 +4,7 @@
 
 | 예제 | 씬 | 콘텐츠 코드 | 보여 주는 것 |
 |---|---|---|---|
+| 멀티플레이 예제(아바타) | `Example_MultiplayerAvatar.unity` | 없음 | 위와 같되 플레이어가 정비사 아바타(`GenericAvatarPlayer`) — 걷기 애니메이션·손 뻗기·웅크리기(왼쪽 Ctrl). 메뉴 `Tools ▸ DoDrill ▸ 멀티플레이 예제 씬 만들기 (아바타 플레이어)` |
 | 멀티플레이 예제 | `Example_Multiplayer.unity` | 없음 | 범용 프리팹(플레이어·네트워크 아이템·엔진·HUD)만으로 호스트 시작 → 접속자마다 플레이어 생성 → 렌치 집기·작업대에 놓기·버튼 누르기 |
 | 범용 모듈 예제 | `Example_Workbench.unity` | 없음 | 렌치 집기 → 작업대에 놓기 → 버튼 누르기를 JSON과 모듈 부품만으로 구성 |
 | 최소 예제 | `Example_MinimalScenario.unity` | 단계 모듈 2개 | C# 단계 모듈을 직접 만들어 등록하는 방법 |

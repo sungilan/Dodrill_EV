@@ -1,4 +1,5 @@
 using DoDrill.Training;
+using FishNet.Component.Animating;
 using FishNet.Component.Spawning;
 using FishNet.Managing;
 using FishNet.Managing.Object;
@@ -28,7 +29,9 @@ using UnityEngine.SceneManagement;
 public static class GenericPrefabBuilder
 {
     public const string PlayerPath = "Assets/01_Script/Avatar/Prefabs/Players/GenericPlayer.prefab";
-    public const string ItemPath = "Assets/01_Script/Interaction/Prefabs/NetworkItem.prefab";
+    public const string AvatarPlayerPath = "Assets/01_Script/Avatar/Prefabs/Players/GenericAvatarPlayer.prefab";
+    public const string MechanicAvatarPath = "Assets/01_Script/Avatar/Prefabs/Avatars/PcAvatar_Mechanic.prefab";
+    public const string ItemPath ="Assets/01_Script/Interaction/Prefabs/NetworkItem.prefab";
     public const string ZonePath = "Assets/01_Script/Interaction/Prefabs/TaskZone.prefab";
     public const string ButtonPath = "Assets/01_Script/Interaction/Prefabs/TaskButton.prefab";
     public const string EnginePath = "Assets/01_Script/Engine/Prefabs/ScenarioEngine.prefab";
@@ -47,6 +50,7 @@ public static class GenericPrefabBuilder
         }
         int made = 0;
         made += Build(PlayerPath, MakePlayer) ? 1 : 0;
+        made += Build(AvatarPlayerPath, MakeAvatarPlayer) ? 1 : 0;
         made += Build(ItemPath, MakeItem) ? 1 : 0;
         made += Build(ZonePath, MakeZone) ? 1 : 0;
         made += Build(ButtonPath, MakeButton) ? 1 : 0;
@@ -68,6 +72,7 @@ public static class GenericPrefabBuilder
         if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null) return false;
         EnsureFolder(System.IO.Path.GetDirectoryName(path).Replace('\\', '/'));
         var go = make();
+        if (go == null) return false;
         PrefabUtility.SaveAsPrefabAsset(go, path);
         Object.DestroyImmediate(go);
         return true;
@@ -166,6 +171,115 @@ public static class GenericPrefabBuilder
         return root;
     }
 
+    // ── 아바타 플레이어 ─────────────────────────────
+    // GenericPlayer(캡슐) 대신 아바타 프리팹(PcAvatar_Mechanic)을 몸으로 쓰는 플레이어.
+    // PcMobileAvatarController 가 SimplePcInteractor(IPcLookController)의 이동·시점 값으로 걷기 애니메이션·IK·손 뻗기·머리 방향을 구동한다.
+    // (EV 의 PcAvatarInstaller 와 같은 연결을 모듈 안에서 직접 한다 — 이식할 때 Editor 기본 어셈블리의 도구에 기대지 않기 위해)
+    private const float EyeHeight = 1.7f;
+
+    private static GameObject MakeAvatarPlayer()
+    {
+        var avatarAsset = AssetDatabase.LoadAssetAtPath<GameObject>(MechanicAvatarPath);
+        if (avatarAsset == null) { Debug.LogError($"[GenericPrefab] 아바타 프리팹이 없습니다: {MechanicAvatarPath}"); return null; }
+
+        var root = new GameObject("GenericAvatarPlayer");
+        root.AddComponent<NetworkObject>();
+        root.AddComponent<LocalNetworkTransform>();
+
+        var pivot = new GameObject("CameraPivot");
+        pivot.transform.SetParent(root.transform, false);
+        pivot.transform.localPosition = new Vector3(0f, EyeHeight, 0f);
+
+        var camGo = new GameObject("Camera", typeof(Camera), typeof(AudioListener));
+        camGo.transform.SetParent(pivot.transform, false);
+        var cam = camGo.GetComponent<Camera>();
+        cam.nearClipPlane = 0.01f;
+        cam.enabled = false;
+        var listener = camGo.GetComponent<AudioListener>();
+        listener.enabled = false;
+
+        var hold = new GameObject("HoldPoint");
+        hold.tag = "HoldPoint";
+        hold.transform.SetParent(camGo.transform, false);
+        hold.transform.localPosition = new Vector3(0.25f, -0.2f, 0.6f);
+
+        var interactor = root.AddComponent<SimplePcInteractor>();
+        interactor.cam = cam;
+        interactor.pitchPivot = pivot.transform;
+        interactor.flyVertical = false;
+        interactor.enabled = false;
+
+        var player = root.AddComponent<GenericNetworkPlayer>();
+        var pso = new SerializedObject(player);
+        pso.FindProperty("cam").objectReferenceValue = cam;
+        pso.FindProperty("listener").objectReferenceValue = listener;
+        pso.FindProperty("interactor").objectReferenceValue = interactor;
+        pso.ApplyModifiedPropertiesWithoutUndo();
+
+        var avatarGo = (GameObject)PrefabUtility.InstantiatePrefab(avatarAsset, root.transform);
+        avatarGo.name = "Avatar";
+        avatarGo.transform.localPosition = Vector3.zero;
+        avatarGo.transform.localRotation = Quaternion.identity;
+
+        var anim = avatarGo.GetComponent<Animator>();
+        var locomotion = avatarGo.GetComponent<PcLocomotionAnimator>();
+        var armReach = avatarGo.GetComponent<PcArmReach>();
+        var headAim = avatarGo.GetComponent<PcHeadAim>();
+        if (anim == null || locomotion == null || armReach == null)
+        {
+            Debug.LogError("[GenericPrefab] 아바타 프리팹에 Animator / PcLocomotionAnimator / PcArmReach 가 없습니다.");
+            Object.DestroyImmediate(root);
+            return null;
+        }
+        SetRef(headAim, "ownerCamera", cam.transform);
+        SetRef(armReach, "bodyRef", root.transform);
+
+        var heads = new System.Collections.Generic.List<Renderer>();
+        foreach (var r in avatarGo.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            string n = r.name.ToLowerInvariant();
+            if (n.Contains("head") || n.Contains("hair") || n.Contains("eyes") || n.Contains("facemask") || n.Contains("faceshield") || n.Contains("glasses")) heads.Add(r);
+        }
+
+        var ctrl = root.AddComponent<PcMobileAvatarController>();
+        var so = new SerializedObject(ctrl);
+        so.FindProperty("avatarAnimator").objectReferenceValue = anim;
+        so.FindProperty("cameraPivot").objectReferenceValue = pivot.transform;
+        so.FindProperty("lookControllerBehaviour").objectReferenceValue = interactor;
+        so.FindProperty("locomotion").objectReferenceValue = locomotion;
+        so.FindProperty("armReach").objectReferenceValue = armReach;
+        so.FindProperty("eyeHeight").floatValue = EyeHeight;
+        so.FindProperty("pinRootToGround").boolValue = false;       // 바닥 높이를 유지하며 걷는다(수직 비행 없음)
+        var hide = so.FindProperty("hideRenderersForOwner");
+        hide.arraySize = heads.Count;
+        for (int i = 0; i < heads.Count; i++) hide.GetArrayElementAtIndex(i).objectReferenceValue = heads[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        // 걷기·웅크리기 애니메이션 파라미터를 다른 사람 화면에 전파
+        var na = root.AddComponent<NetworkAnimator>();
+        var nso = new SerializedObject(na);
+        SetObj(nso, "_animator", anim);
+        SetBool(nso, "_smoothFloats", true);
+        SetInt(nso, "_interpolation", 2);
+        SetBool(nso, "_clientAuthoritative", true);
+        SetBool(nso, "_sendToOwner", false);
+        nso.ApplyModifiedPropertiesWithoutUndo();
+        return root;
+    }
+
+    private static void SetRef(Object target, string field, Object value)
+    {
+        if (target == null) return;
+        var so = new SerializedObject(target);
+        var p = so.FindProperty(field);
+        if (p == null) { Debug.LogWarning($"[GenericPrefab] {target.GetType().Name}.{field} 필드를 찾지 못했습니다."); return; }
+        p.objectReferenceValue = value;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+    private static void SetObj(SerializedObject so, string name, Object v) { var p = so.FindProperty(name); if (p != null) p.objectReferenceValue = v; else Debug.LogWarning($"[GenericPrefab] NetworkAnimator.{name} 없음"); }
+    private static void SetBool(SerializedObject so, string name, bool v) { var p = so.FindProperty(name); if (p != null) p.boolValue = v; else Debug.LogWarning($"[GenericPrefab] NetworkAnimator.{name} 없음"); }
+    private static void SetInt(SerializedObject so, string name, int v) { var p = so.FindProperty(name); if (p != null) p.intValue = v; else Debug.LogWarning($"[GenericPrefab] NetworkAnimator.{name} 없음"); }
+
     // ── 아이템·구역·버튼 ─────────────────────────────
     private static GameObject MakeItem()
     {
@@ -259,7 +373,7 @@ public static class GenericPrefabBuilder
             list = ScriptableObject.CreateInstance<SinglePrefabObjects>();
             AssetDatabase.CreateAsset(list, ListPath);
         }
-        foreach (var p in new[] { PlayerPath, ItemPath })
+        foreach (var p in new[] { PlayerPath, AvatarPlayerPath, ItemPath })
         {
             var nob = AssetDatabase.LoadAssetAtPath<GameObject>(p)?.GetComponent<NetworkObject>();
             if (nob != null) list.AddObject(nob, true, false);

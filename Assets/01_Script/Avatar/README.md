@@ -41,9 +41,22 @@ FishNet, AutoHand(+FinalIK·OpenXR 연동), FinalIK(RootMotion), InputSystem, XR
 | 프리팹 | 내용 |
 |---|---|
 | `Prefabs/Players/GenericPlayer.prefab` | 콘텐츠 없는 PC 1인칭 플레이어(네트워크). 몸통(캡슐)·카메라 받침·카메라·`HoldPoint`(태그), `LocalNetworkTransform`, `GenericNetworkPlayer`, `SimplePcInteractor`. 내 것일 때만 카메라·조작이 켜지고 남의 것은 몸통만 보인다. FishNet `PlayerSpawner`의 Player Prefab에 넣으면 접속자마다 생긴다 |
+| `Prefabs/Players/GenericAvatarPlayer.prefab` | `GenericPlayer`의 몸을 정비사 아바타(`PcAvatar_Mechanic`)로 바꾼 플레이어. `SimplePcInteractor`(IPcLookController 구현)의 이동·시점 값으로 `PcMobileAvatarController`가 걷기 애니메이션·IK·손 뻗기·머리 방향을 구동하고 `NetworkAnimator`가 다른 사람 화면에 전파. 웅크리기는 왼쪽 Ctrl |
 | `Prefabs/Players/VR_Player.prefab` | EV 스크립트 없는 VR 플레이어(Ui·Safety 모듈 스크립트 포함) |
 | `Prefabs/Avatars/PcAvatar_*.prefab` | PC 아바타(몸) |
 
 - 프로젝트 Tags에 `HoldPoint`가 있어야 한다(`SyncGrab`이 이 태그로 내 손 위치를 찾는다).
 - 조작: WASD 이동, 오른쪽 버튼 끌기 시점, 왼쪽 클릭 집기·놓기·누르기, F 사용. 아이템을 들고 작업 구역을 보며 클릭하면 그 자리에 얹어 놓는다.
 - 만들기: 메뉴 **Tools ▸ DoDrill ▸ 범용 프리팹 만들기**(`99_ModuleExample/Editor/GenericPrefabBuilder.cs`). 이미 있는 프리팹은 건너뛴다.
+
+## 아트 에셋 위치
+
+아바타가 쓰는 캐릭터 아트는 이 폴더 안에 있다(2026-11-20 이동, GUID 유지).
+
+| 폴더 | 내용 |
+|---|---|
+| `Art/Character/FBX` | 정비사(`Rig_Player_Mechanic`)·특수요원(`Swat`) 모델, 애니메이터 컨트롤러, 기본 아바타 |
+| `Art/Character/Materials`, `Art/Character/Textures` | 정비사·특수요원·청년 재질과 텍스처 |
+| `Art/Vr/Materials`, `Art/Vr/Textures` | VR 플레이어(손·보안요원) 재질과 텍스처 |
+
+패키지 샘플(XR Hands `HandVisualizer` 손 모델 2개)은 옮기지 않았다 — XR Hands 패키지의 샘플을 가져오면 된다.

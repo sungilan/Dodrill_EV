@@ -19,13 +19,17 @@
 
 ## 새 프로젝트에 적용하는 순서
 
-1. **외부 플러그인 설치**: FishNet 4.6.x, MasterServerToolkit, AutoHand(+FinalIK), TextMeshPro, DOTween, Newtonsoft Json, Localization. 가져갈 모듈 asmdef의 `references`에 적힌 것만 있으면 된다.
+1. **외부 플러그인 설치**: FishNet 4.6.x, MasterServerToolkit, AutoHand(+FinalIK), TextMeshPro, DOTween, Newtonsoft Json, Localization. Odin Inspector는 없어도 된다(`Common/Core/OdinShim.cs`가 빈 어트리뷰트를 대신 제공, 인스펙터 버튼만 사라짐). DOTween은 설정(`DOTweenSettings`)에서 asmdef 생성을 켜야 `DOTween.Modules`가 만들어진다. 가져갈 모듈 asmdef의 `references`에 적힌 것만 있으면 된다.
 2. **모듈 폴더 복사**: Common → Interaction → (Avatar) → Engine 순서로, 하위부터 필요한 만큼. 하위만으로도 컴파일된다. `.meta`까지 같이 복사해야 프리팹 연결이 유지된다.
 3. **단계 정의**: 먼저 범용 모듈(`config.type`: Confirm, GrabToZone, UseItem, GrabAll, Measure, Wait)로 JSON만 작성한다(`Engine/README.md` 범용 모듈 표). 범용으로 안 되는 단계만 `ITaskModule`을 구현한다. `ModuleId`는 시나리오 JSON의 `moduleId`와 같아야 한다. 완료 조건이 되면 `onComplete`를 호출한다. (예: `Assets/99_ModuleExample/Scripts/ExampleModules.cs`)
 4. **콘텐츠 등록(바인딩)**: `ScenarioHooks.AddModuleProvider("내콘텐츠", 순서, registry => registry.Register(...))`. 필요한 다른 훅도 같은 곳에서 채운다. EV는 `Content/Features/App/Bindings/Ev*Binding.cs`가 이 역할을 한다.
 5. **시나리오 JSON 작성**: `Resources/Scenarios/<scenarioId>.json`. 형식은 `Engine/Scenario/Data/ScenarioData.cs` 참고. 단계 목록은 `scenario.tasks`, 단계별 설정은 `modules[].config`(`extra` key/ko/en/vi)에 넣는다.
 6. **씬 구성**: FishNet `NetworkManager`, `ScenarioBootstrapper`, `ScenarioRunner`(`_bootstrapper` 연결), 필요하면 `ScenarioSpawner`·`SpawnPoint`. 서버가 `ScenarioRunner.StartScenario(data)`를 호출하면 진행이 시작된다.
 7. **등록 확인**: 시작 로그의 `[HookCheck:<이름>]` 줄을 본다. `HookRegistry.Verify("이름", 훅 클래스들)`를 콘텐츠 쪽에서 한 번 부르면 비어 있는 훅이 경고로 남는다. 등록이 빠져도 오류 없이 기능만 사라지므로 이 로그로 확인한다.
+
+## 이식 시험 도구
+
+`Tools/ModuleMigration/blank_port_test.py <대상 폴더>` — 새 Unity 프로젝트를 만들어 플러그인과 모듈만 복사하고 배치 모드로 컴파일해 오류를 센다(결과는 `port_errors.txt`). 대상 폴더는 경로가 짧은 곳에 둔다(Windows 경로 길이 제한).
 
 ## 최소 예제
 

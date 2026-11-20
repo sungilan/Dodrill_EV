@@ -18,15 +18,22 @@ using UnityEngine.SceneManagement;
 public static class MultiplayerExampleBuilder
 {
     private const string Root = "Assets/99_ModuleExample";
-    private const string ScenePath = Root + "/Example_Multiplayer.unity";
+    private const string ScenePathCapsule = Root + "/Example_Multiplayer.unity";
+    private const string ScenePathAvatar = Root + "/Example_MultiplayerAvatar.unity";
     private const string JsonPath = Root + "/Scenarios/example_multiplayer.json";
     private const string WrenchPath = Root + "/Prefabs/Item_Wrench.prefab";
     private const string ListPath = Root + "/ExampleMultiplayerPrefabs.asset";
     private const string MatDir = Root + "/Materials";
 
     [MenuItem("Tools/DoDrill/멀티플레이 예제 씬 만들기 (범용 프리팹)")]
-    public static void Build()
+    public static void Build() => Build(false);
+
+    [MenuItem("Tools/DoDrill/멀티플레이 예제 씬 만들기 (아바타 플레이어)")]
+    public static void BuildAvatar() => Build(true);
+
+    private static void Build(bool avatar)
     {
+        string ScenePath = avatar ? ScenePathAvatar : ScenePathCapsule;
         if (EditorApplication.isPlayingOrWillChangePlaymode)
         {
             EditorUtility.DisplayDialog("멀티플레이 예제", "플레이 중에는 만들 수 없습니다. 플레이를 멈춘 뒤 다시 실행하세요.", "확인");
@@ -34,7 +41,8 @@ public static class MultiplayerExampleBuilder
         }
         // 범용 프리팹이 없으면 먼저 만든다
         if (AssetDatabase.LoadAssetAtPath<GameObject>(GenericPrefabBuilder.PlayerPath) == null ||
-            AssetDatabase.LoadAssetAtPath<GameObject>(GenericPrefabBuilder.EnginePath) == null)
+            AssetDatabase.LoadAssetAtPath<GameObject>(GenericPrefabBuilder.EnginePath) == null ||
+            (avatar && AssetDatabase.LoadAssetAtPath<GameObject>(GenericPrefabBuilder.AvatarPlayerPath) == null))
             GenericPrefabBuilder.BuildAll();
 
         if (!Application.isBatchMode && AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null &&
@@ -97,6 +105,13 @@ public static class MultiplayerExampleBuilder
             var nmSo = new SerializedObject(net.GetComponent<NetworkManager>());
             nmSo.FindProperty("_spawnablePrefabs").objectReferenceValue = list;     // 플레이어 + 렌치
             nmSo.ApplyModifiedPropertiesWithoutUndo();
+            if (avatar)
+            {
+                // 접속 때 캡슐 대신 아바타(정비사) 플레이어를 만든다
+                var psSo = new SerializedObject(net.GetComponent<FishNet.Component.Spawning.PlayerSpawner>());
+                psSo.FindProperty("_playerPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(GenericPrefabBuilder.AvatarPlayerPath).GetComponent<NetworkObject>();
+                psSo.ApplyModifiedPropertiesWithoutUndo();
+            }
 
             var engine = Inst(GenericPrefabBuilder.EnginePath, "ScenarioEngine", Vector3.zero);
             var spawner = engine.GetComponentInChildren<ScenarioSpawner>(true);
@@ -168,7 +183,7 @@ public static class MultiplayerExampleBuilder
             AssetDatabase.CreateAsset(list, ListPath);
         }
         list.Clear();
-        foreach (var go in new[] { AssetDatabase.LoadAssetAtPath<GameObject>(GenericPrefabBuilder.PlayerPath), wrench })
+        foreach (var go in new[] { AssetDatabase.LoadAssetAtPath<GameObject>(GenericPrefabBuilder.PlayerPath), AssetDatabase.LoadAssetAtPath<GameObject>(GenericPrefabBuilder.AvatarPlayerPath), wrench })
         {
             var nob = go != null ? go.GetComponent<NetworkObject>() : null;
             if (nob != null) list.AddObject(nob, true, false);

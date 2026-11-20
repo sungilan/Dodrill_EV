@@ -1,0 +1,147 @@
+// 빈 프로젝트 이식 시험용 에디터 스크립트 — blank_port_test.py --runtime 이 대상 프로젝트의 Assets/Editor/PortCheck.cs 로 복사한다.
+// ① 모듈 프리팹의 누락 스크립트·끊긴 참조를 센다 ② 예제 씬(아바타 플레이어)을 만든다 ③ Play 에서 호스트 시작→플레이어 생성→집기→놓기→버튼→완료를 확인한다.
+// 결과는 로그의 [PortCheck] 줄. 끝나면 에디터를 스스로 종료한다.
+using System.Text;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+[InitializeOnLoad]
+public static class PortCheck
+{
+    const string SceneToPlay = "Assets/99_ModuleExample/Example_MultiplayerAvatar.unity";
+    const string K = "PortCheck.stage";
+    const string KT = "PortCheck.t0";
+    static float _lastClick;
+
+    static bool _ended;
+
+    static PortCheck()
+    {
+        EditorApplication.update += Tick;
+        Application.logMessageReceived += (msg, stack, type) => { if (msg.Contains("[ScenarioRunner] 시나리오 종료")) _ended = true; };
+    }
+
+    public static void Run()
+    {
+        ScanPrefabs();
+        // 복사돼 온 예제 씬을 지우고 메뉴로 새로 만든다(빌더 시험). 저장된 씬을 먼저 열어 둬야 추가 씬을 만들 수 있다.
+        EditorSceneManager.OpenScene("Assets/99_ModuleExample/Example_Workbench.unity", OpenSceneMode.Single);
+        AssetDatabase.DeleteAsset(SceneToPlay);
+        EditorApplication.ExecuteMenuItem("Tools/DoDrill/멀티플레이 예제 씬 만들기 (아바타 플레이어)");
+        AssetDatabase.Refresh();
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(SceneToPlay) == null) { Debug.Log("[PortCheck] FAIL 예제 씬 생성 실패"); EditorApplication.Exit(2); return; }
+        EditorSceneManager.OpenScene(SceneToPlay, OpenSceneMode.Single);
+        SessionState.SetInt(K, 1);
+        SessionState.SetFloat(KT, (float)EditorApplication.timeSinceStartup);
+        EditorApplication.EnterPlaymode();
+    }
+
+    static void ScanPrefabs()
+    {
+        int prefabs = 0, missingScripts = 0, brokenRefs = 0;
+        var sb = new StringBuilder();
+        foreach (var g in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/01_Script", "Assets/99_ModuleExample" }))
+        {
+            var path = AssetDatabase.GUIDToAssetPath(g);
+            var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (go == null) continue;
+            prefabs++;
+            foreach (var t in go.GetComponentsInChildren<Transform>(true))
+                missingScripts += GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(t.gameObject);
+            foreach (var c in go.GetComponentsInChildren<Component>(true))
+            {
+                if (c == null) continue;
+                var so = new SerializedObject(c);
+                var it = so.GetIterator();
+                while (it.NextVisible(true))
+                    if (it.propertyType == SerializedPropertyType.ObjectReference && it.objectReferenceValue == null && it.objectReferenceInstanceIDValue != 0)
+                    { brokenRefs++; sb.AppendLine($"   끊긴 참조: {System.IO.Path.GetFileName(path)} / {c.GetType().Name}.{it.propertyPath}"); }
+            }
+        }
+        Debug.Log($"[PortCheck] 프리팹 {prefabs}개, 누락 스크립트 {missingScripts}, 끊긴 참조 {brokenRefs}\n{sb}");
+    }
+
+    static string Describe()
+    {
+        var sb = new StringBuilder();
+        var nm = FishNet.InstanceFinder.NetworkManager;
+        sb.Append($"server={FishNet.InstanceFinder.IsServerStarted} client={FishNet.InstanceFinder.IsClientStarted}");
+        var p = GameObject.Find("Local Player");
+        sb.Append($" player={(p != null)}");
+        if (p != null)
+        {
+            var ctrl = p.GetComponent<PcMobileAvatarController>();
+            var cam = p.GetComponentInChildren<Camera>(true);
+            sb.Append($" camOn={(cam != null && cam.enabled && cam.gameObject.activeInHierarchy)} avatarAnim={(ctrl != null && ctrl.AvatarAnimator != null && ctrl.AvatarAnimator.runtimeAnimatorController != null)}");
+        }
+        var rec = ScenarioStateReceiver.Instance;
+        sb.Append($" scenario={(rec != null && rec.CurrentScenario != null ? rec.CurrentScenario.scenarioId : "none")}");
+        if (rec != null && rec.CurrentScenario != null) sb.Append($" task={rec.GetCurrentTaskIndex()}/{rec.GetCurrentTask()?.moduleId}");
+        sb.Append($" wrench={(GameObject.Find("Wrench(Persist)") != null)}");
+        return sb.ToString();
+    }
+
+    static void Tick()
+    {
+        int stage = SessionState.GetInt(K, 0);
+        if (stage == 0) return;
+        float t = (float)EditorApplication.timeSinceStartup - SessionState.GetFloat(KT, 0f);
+
+        if (stage == 1 && EditorApplication.isPlaying && t > 12f)
+        {
+            Debug.Log("[PortCheck] 시작 12초 뒤: " + Describe());
+            var w = GameObject.Find("Wrench(Persist)");
+            if (w != null) w.GetComponent<SyncGrab>().OnPCClick();
+            SessionState.SetInt(K, 2); SessionState.SetFloat(KT, (float)EditorApplication.timeSinceStartup);
+        }
+        else if (stage == 2 && EditorApplication.isPlaying && t > 4f)
+        {
+            Debug.Log("[PortCheck] 집은 뒤: " + Describe());
+            var w = GameObject.Find("Wrench(Persist)");
+            var zone = TaskInteractionZone.Find("Zone_Bench");
+            if (w != null && zone != null)
+            {
+                var b = zone.GetComponent<Collider>().bounds;
+                var tr = w.transform;
+                tr.SetPositionAndRotation(new Vector3(b.center.x, b.min.y + 0.02f, b.center.z), Quaternion.identity);
+                w.GetComponent<SyncGrab>().RequestRelease();
+            }
+            SessionState.SetInt(K, 3); SessionState.SetFloat(KT, (float)EditorApplication.timeSinceStartup);
+        }
+        else if (stage == 3 && EditorApplication.isPlaying && t > 5f)
+        {
+            Debug.Log("[PortCheck] 놓은 뒤: " + Describe());
+            SessionState.SetInt(K, 4); SessionState.SetFloat(KT, (float)EditorApplication.timeSinceStartup);
+        }
+        else if (stage == 4 && EditorApplication.isPlaying)
+        {
+            // 서버가 3단계를 시작하기 전에 누른 신호는 무시되므로, 완료될 때까지 1.5초마다 다시 누른다(최대 20초)
+            bool done = _ended;
+            if (done || t > 20f)
+            {
+                Debug.Log("[PortCheck] 버튼 뒤: " + Describe() + $" 시나리오완료={done}");
+                Debug.Log(done ? "[PortCheck] RESULT PASS" : "[PortCheck] RESULT FAIL");
+                SessionState.SetInt(K, 5);
+                EditorApplication.isPlaying = false;
+            }
+            else if (Time.realtimeSinceStartup - _lastClick > 1.5f)
+            {
+                _lastClick = Time.realtimeSinceStartup;
+                var btn = GameObject.Find("StartButton");
+                if (btn != null) btn.GetComponent<TaskClickTarget>().OnPCClick();
+            }
+        }
+        else if (stage == 5 && !EditorApplication.isPlaying && !EditorApplication.isPlayingOrWillChangePlaymode)
+        {
+            SessionState.SetInt(K, 0);
+            EditorApplication.Exit(0);
+        }
+        else if (EditorApplication.isPlaying && t > 90f)
+        {
+            Debug.Log("[PortCheck] RESULT TIMEOUT " + Describe());
+            SessionState.SetInt(K, 5);
+            EditorApplication.isPlaying = false;
+        }
+    }
+}
