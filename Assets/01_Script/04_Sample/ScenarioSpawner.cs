@@ -393,21 +393,11 @@ public class ScenarioSpawner : NetworkBehaviour
     }
 
     /// <summary>
-    /// 씬의 VehicleLiftController에 스폰된 차량을 자동 연결.
-    /// prefabId에 "Ioniq" 또는 "Vehicle"이 포함된 경우에만 시도.
+    /// 스폰된 지도 오브젝트를 콘텐츠가 후처리하게 한다(EV: 차량을 리프트에 자동 연결 — EvScenarioBinding).
     /// </summary>
     private void TryLinkVehicleToLift(GameObject go)
     {
-        string id = go.name;
-        bool isVehicle = id.Contains("Ioniq") || id.Contains("Vehicle") || id.Contains("Car");
-        if (!isVehicle) return;
-
-        var lift = FindFirstObjectByType<VehicleLiftController>();
-        if (lift != null)
-        {
-            lift.AttachVehicle(go.transform);
-            Debug.Log($"[ScenarioSpawner] VehicleLiftController ← {go.name} 자동 연결");
-        }
+        ScenarioHooks.OnMapObjectSpawned?.Invoke(go);
     }
 
     /// <summary>MapObjectEntry.properties를 GO에 적용</summary>
@@ -451,8 +441,8 @@ public class ScenarioSpawner : NetworkBehaviour
             // 아이템 좌우 분산 계산
             float xOffset = (i - (count - 1) * 0.5f) * SPAWN_SPREAD;
             var bundle = taskDef.spawnObjects[i];
-            // 시연용(DemoSettings): 자유 탈거에서 테스트용 특수 공구(Equip_Tool_*)는 스폰하지 않는다
-            if(DemoSettings.SkipSpawn(bundle.prefabId, scenarioId)) { Debug.Log($"[Spawn] 시연용: {bundle.prefabId} 스폰 생략"); continue; }
+            // 콘텐츠 스폰 필터(ScenarioHooks.SpawnFilter — EV 는 시연용 DemoSettings: 자유 탈거의 테스트용 특수 공구는 스폰하지 않는다)
+            if(ScenarioHooks.ShouldSkipSpawn(bundle.prefabId, scenarioId)) { Debug.Log($"[Spawn] 필터: {bundle.prefabId} 스폰 생략"); continue; }
 
             if(!IsPerPlayer(bundle))
             {
@@ -486,7 +476,7 @@ public class ScenarioSpawner : NetworkBehaviour
         if(bundle == null || string.IsNullOrEmpty(bundle.prefabId)) return false;
         if(bundle.perPlayer) return true;
         var prefab = FindPrefab(bundle.prefabId);
-        return prefab != null && prefab.GetComponentInChildren<ImpactWrench>(true) != null;
+        return prefab != null && ScenarioHooks.PerPlayerPrefab(prefab);   // 사람마다 따로 쓰는 공구인지는 콘텐츠가 안다
     }
 
     /// <summary>이전 단계에서 더 많은 인원으로 남겨 둔 복사본 중 이번에 쓰지 않는 것은 치운다(누가 들고 있으면 둔다).</summary>

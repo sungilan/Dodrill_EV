@@ -122,7 +122,7 @@ public class StartPanel : UIView
                 ScenarioHead h = null;
                 try { h = JsonUtility.FromJson<ScenarioHead>(ta.text); } catch { }
                 if (h == null || string.IsNullOrEmpty(h.scenarioId)) continue;
-                if (!DemoSettings.ScenarioAllowed(h.scenarioId)) continue;   // 시연용 목록
+                if (!ScenarioHooks.ScenarioAllowed(h.scenarioId)) continue;   // 콘텐츠 필터(시연용 목록)
                 string n = h.scenarioName != null && !string.IsNullOrEmpty(h.scenarioName.ko) ? h.scenarioName.ko : h.scenarioId;
                 _soloScenarios.Add((h.scenarioId, n));
             }

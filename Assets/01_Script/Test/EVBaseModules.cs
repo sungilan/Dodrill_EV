@@ -145,7 +145,7 @@ public abstract class ZoneAndUseModule : ITaskModule
 //        public override string ModuleId => "Voltage_Verification";
 //    }
 // ──────────────────────────────────────────────────────────────
-public abstract class ZoneAndMeasureModule : ITaskModule
+public abstract class ZoneAndMeasureModule : IMeasureTaskModule
 {
     public abstract string ModuleId { get; }
 

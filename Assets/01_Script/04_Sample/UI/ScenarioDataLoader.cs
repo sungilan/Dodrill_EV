@@ -73,7 +73,7 @@ namespace DoDrill.Training
             {
                 var data = JsonUtility.FromJson<ScenarioData>(asset.text);
                 if (data == null) continue;
-                if (!DemoSettings.ScenarioAllowed(data.scenarioId)) continue;   // 시연용: DemoSettings.ScenarioListDemoOnly 가 true 면 지정한 시나리오만 목록에
+                if (!ScenarioHooks.ScenarioAllowed(data.scenarioId)) continue;   // 콘텐츠 필터(EV: 시연용 DemoSettings.ScenarioListDemoOnly)
 
                 // 진행률 초기화
                 int total = data.scenario?.tasks?.Count ?? 0;

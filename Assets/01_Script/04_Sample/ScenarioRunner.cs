@@ -247,7 +247,7 @@ public class ScenarioRunner : MonoBehaviour
             return -1;
         }
 
-        return ClickableAnimatorManager.TryGetRecentActor(signal.zoneId, 3f, out int actor) ? actor : -1;
+        return ScenarioHooks.TryGetRecentActor(signal.zoneId, 3f, out int actor) ? actor : -1;
     }
 
     /// <summary>존 신호 위반(순서 위반)을 실제로 행동한 사람에게 기록한다.</summary>
@@ -455,7 +455,7 @@ public class ScenarioRunner : MonoBehaviour
         // 진행자를 아직 모르면(후드 래치·12V 커버처럼 서버가 클릭 상태를 적용하면서 바로 완료되는 단계)
         // 방금 그 오브젝트를 누른 사람을 진행자로 쓴다. 예전에는 비어 있어서 완료 알림이 'Player' 로 떴다.
         if(_activePlayerId < 0 && !string.IsNullOrEmpty(config?.targetObjName) &&
-           ClickableAnimatorManager.TryGetRecentActor(config.targetObjName, 5f, out int clicker))
+           ScenarioHooks.TryGetRecentActor(config.targetObjName, 5f, out int clicker))
             _activePlayerId = clicker;
 
         string taskTitle = string.Empty;
@@ -536,15 +536,8 @@ public class ScenarioRunner : MonoBehaviour
     /// <summary>리프트 상승 단계(차량 Car_Lift_Up / 배터리 잭 BatteryJack_Lift_Up…)를 시작한 뒤 해당 리프트 UP 버튼을 누른 사람.</summary>
     private bool TryGetLiftActor(string moduleId, out int clientId)
     {
-        clientId = -1;
         bool battery = moduleId.IndexOf("Battery", System.StringComparison.OrdinalIgnoreCase) >= 0;
-        foreach(var lift in FindObjectsByType<LiftControllerBase>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-        {
-            if(battery != (lift is BatteryLiftController)) continue;
-            if(lift.TryGetMoveActor(_taskStartTime, out clientId)) return true;
-        }
-        clientId = -1;
-        return false;
+        return ScenarioHooks.TryGetLiftActor(battery, _taskStartTime, out clientId);   // 리프트 종류는 콘텐츠(EV) 쪽이 안다
     }
 
     private void FailCurrentTask()
@@ -930,7 +923,7 @@ public class ScenarioRunner : MonoBehaviour
         }
 
         // ── [3단계] 모듈 타입 캐스팅 확인 ──
-        if(_currentModule is ZoneAndMeasureModule measureModule)
+        if(_currentModule is IMeasureTaskModule measureModule)
         {
             Debug.Log($"<color=cyan>[Runner-Measure]</color> <b>검증 시작</b>: 단자={signal.terminalId}, 값={signal.value:F2}");
 
@@ -963,7 +956,7 @@ public class ScenarioRunner : MonoBehaviour
         else
         {
             Debug.LogError($"<color=red>[Runner-Measure]</color> 타입 불일치 에러: " +
-                           $"현재 모듈은 <b>{_currentModule.GetType().Name}</b>이며, ZoneAndMeasureModule이 아닙니다.");
+                           $"현재 모듈은 <b>{_currentModule.GetType().Name}</b>이며, 측정 모듈(IMeasureTaskModule)이 아닙니다.");
         }
     }
 
@@ -1123,7 +1116,7 @@ public class ScenarioRunner : MonoBehaviour
     public void RecordObjectViolation(string objId, string ruleId, string detail)
     {
         if (!InstanceFinder.IsServerStarted || _currentTaskState.status != TaskStatus.Running) return;
-        if (!ClickableAnimatorManager.TryGetRecentActor(objId, 3f, out int actor) || actor < 0) return;
+        if (!ScenarioHooks.TryGetRecentActor(objId, 3f, out int actor) || actor < 0) return;
         _eval.Record(actor, ruleId, _currentTaskState.taskIndex, detail);
     }
 
