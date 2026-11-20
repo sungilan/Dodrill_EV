@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
 빈 프로젝트 이식 시험 — 새 Unity 프로젝트를 만들어 플러그인과 모듈 폴더만 복사한 뒤 컴파일 오류를 센다.
-  python blank_port_test.py <대상 폴더> [--modules Common,Interaction,Avatar,Engine,Ui,Safety,Solo] [--odin] [--skip-create] [--runtime] [--lobby] [--roomstart]
+  python blank_port_test.py <대상 폴더> [--modules Common,Interaction,Avatar,Engine,Ui,Safety,Solo] [--odin] [--skip-create] [--runtime] [--lobby] [--roomstart] [--package <파일.unitypackage>] [--lean]
   · --lobby : Lobby 모듈(+MST)도 복사하고, --runtime 이면 PortCheck 대신 LobbyCheck(로비 흐름 시험)를 실행
+  · --lean : 서버 빌드 시험용 — Avatar 의 무거운 아트·프리팹(Avatar/Art, Avatar/Prefabs)을 시험 프로젝트에서 뺀다(스크립트는 유지). 윈도우 룸 서버 빌드의 셰이더 변형 폭증을 피함
+  · --package <파일> : 모듈 폴더를 복사하는 대신 이 .unitypackage 를 -importPackage 로 가져온 뒤 컴파일(패키지 검증용; 플러그인·태그·DOTween 설정은 그대로 복사)
   · --roomstart : (--lobby 와 함께) 룸 서버·마스터 서버를 윈도우 플레이어로 빌드하고, 마스터를 띄운 뒤 에디터 클라이언트로 방 만들기→준비→시작→룸 서버 기동까지 확인(수 분 걸림)
   · --runtime : 컴파일이 통과하면 PortCheck.cs 를 넣고 예제 씬을 만들어 Play 로 시나리오 완주까지 확인(로그 [PortCheck])
   · 대상 폴더는 저장소 밖에 둔다(Library 가 크다). 이미 있으면 Assets/Packages 를 비우고 다시 복사한다.
@@ -49,6 +51,8 @@ def main():
     if '--modules' in args: mods = args[args.index('--modules') + 1]
     mods = [m for m in mods.split(',') if m]
     lobby = '--lobby' in args
+    lean = '--lean' in args
+    pkg = os.path.abspath(args[args.index('--package') + 1]) if '--package' in args else None
     if lobby and 'Lobby' not in mods: mods.append('Lobby')
     odin = '--odin' in args
     A = os.path.join(REPO, 'Assets')
@@ -67,8 +71,15 @@ def main():
     os.makedirs(os.path.join(T, '01_Script'), exist_ok=True); os.makedirs(os.path.join(T, 'Resources'), exist_ok=True)
     for p in PLUGINS: copy(os.path.join(A, p), os.path.join(T, p))
     if odin: copy(os.path.join(A, 'Plugins/Sirenix'), os.path.join(T, 'Plugins/Sirenix'))
-    for m in mods: copy(os.path.join(A, '01_Script', m), os.path.join(T, '01_Script', m))
-    copy(os.path.join(A, '99_ModuleExample'), os.path.join(T, '99_ModuleExample'))
+    if not pkg:
+        for m in mods: copy(os.path.join(A, '01_Script', m), os.path.join(T, '01_Script', m))
+        if 'Avatar' in mods and not lean: copy(os.path.join(A, '99_ModuleExample'), os.path.join(T, '99_ModuleExample'))   # 예제 에디터 어셈블리가 Avatar 를 참조
+    if lean and not pkg:
+        for sub in ('Art', 'Prefabs'):
+            d = os.path.join(T, '01_Script', 'Avatar', sub)
+            if os.path.isdir(d): shutil.rmtree(d)
+            if os.path.exists(d + '.meta'): os.remove(d + '.meta')
+        print('lean: Avatar/Art, Avatar/Prefabs 제거')
     shutil.copy2(os.path.join(REPO, 'ProjectSettings', 'TagManager.asset'), os.path.join(target, 'ProjectSettings', 'TagManager.asset'))
     for f in ('DOTweenSettings.asset',):
         s = os.path.join(A, 'Resources', f)
@@ -82,6 +93,11 @@ def main():
         if k in src: man['dependencies'][k] = src[k]
     json.dump(man, open(mp, 'w', encoding='utf-8'), indent=2)
 
+    if pkg:
+        ilog = os.path.join(target, 'port_import.log')
+        t1 = time.time()
+        r = run([UNITY, '-batchmode', '-quit', '-projectPath', target, '-importPackage', pkg, '-logFile', ilog])
+        print('패키지 가져오기 종료 코드 %d, %.0f초' % (r.returncode, time.time() - t1))
     log = os.path.join(target, 'port_compile.log')
     t0 = time.time()
     r = run([UNITY, '-batchmode', '-quit', '-projectPath', target, '-logFile', log])

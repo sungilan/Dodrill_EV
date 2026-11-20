@@ -15,7 +15,7 @@ EV에서 쓰는 로비(MasterServerToolkit 기반: 로그인 → 방 목록 → 
 | `Art/Sprites` | 로비 전용 스프라이트(`Legacy/`는 예전 UI 텍스처) |
 | `Scenes` | 템플릿 씬 `Client`·`Master`·`Spawner`·`Room` |
 | `Resources` | `LobbySettings.asset`(EV 기본값) |
-| `Editor` | `LobbySceneInstaller`(메뉴 `Tools ▸ DoDrill ▸ 로비 템플릿 씬 설치`) |
+| `Editor` | `LobbySceneInstaller`(메뉴 `Tools ▸ DoDrill ▸ 로비 템플릿 씬 설치`), `LobbyBuildProfiles`(메뉴 `Tools ▸ DoDrill ▸ 로비 빌드 프로필` — 룸·마스터 서버·PC 클라이언트 빌드 버튼) |
 
 필요 에셋 목록: `Prefabs/ASSET_MANIFEST.md`(자동 생성).
 
@@ -44,7 +44,11 @@ EV에서 쓰는 로비(MasterServerToolkit 기반: 로그인 → 방 목록 → 
 4. 메뉴 `Tools ▸ DoDrill ▸ 로비 템플릿 씬 설치` → `Assets/Scenes/Lobby`에 4개 씬 복사, FishNet `DefaultScene` 경로 보정, 빌드 설정에 Client·Game 추가.
 5. 씬의 서버 주소 설정(템플릿은 `127.0.0.1`): `ClientToMasterConnector.serverIp`(Client·Room), `SpawnerBehaviour.machineIp`(Master·Spawner), Tugboat `_clientAddress`(Client·Room). 마스터 포트 기본 9035.
 6. 게임 씬(`gameSceneName`)과 시나리오 JSON(`Resources/Scenarios`)을 콘텐츠가 만든다.
-7. 서버 빌드: 마스터·스포너·룸은 각각 Linux Server(또는 Windows) 빌드로 만든다. EV는 `Dodrill 빌드 프로필`이 한다(일반화하지 않음). 마스터 실행 인자는 MST 기본(`-mstStartMaster` 등).
+7. 서버 빌드: 메뉴 `Tools ▸ DoDrill ▸ 로비 빌드 프로필`의 버튼("서버 둘 다 빌드")이 아래 과정을 자동으로 한다. 수동 절차는 다음과 같다(EV 방식 = Linux Dedicated Server; Windows 플레이어로 빌드하면 셰이더 변형 준비가 수십 분 이상 걸린다):
+   - Unity Hub에서 해당 에디터 버전에 **Linux Dedicated Server Build Support**(와 Linux Build Support)를 추가한다. Windows에서 빌드하려면 패키지 `com.unity.toolchain.win-x86_64-linux`, `com.unity.sdk.linux-x86_64`(1.1.1)가 필요하다.
+   - 마스터: 빌드 대상 Linux, Server 서브타깃, 씬 `Master`만 → `MasterServer.x86_64`. 룸: 씬 `Room`(첫 번째)·게임 씬 → `RoomServer.x86_64`. 빌드 전 XR 자동 초기화를 끈다. EV는 `Tools ▸ Dodrill ▸ 빌드 프로필`이 이 설정을 한 번에 한다(일반화하지 않음).
+   - Docker(NAS 등)로 올릴 때: 빌드 프로필 창의 `룸 서버 실행 경로`에 **컨테이너 안** 경로(예: `/home/RoomServer/RoomServer.x86_64`), `스포너 machineIp`에 클라이언트가 접속할 서버 주소를 적고 빌드한다. 마스터 빌드 폴더의 내용을 컨테이너 폴더 루트에, 룸 서버 빌드 폴더의 내용을 그 안 `RoomServer/`에 넣고, 마스터 포트(9035)와 룸 서버 포트 범위를 컨테이너에 게시한다. 클라이언트 씬의 `ClientToMasterConnector.serverIp`는 그 서버 주소로 바꾼다.
+   - 마스터 안 스포너의 `executableFilePath`·`machineIp`를 룸 서버 파일·마스터 주소로 지정한 뒤 마스터를 빌드한다. 마스터 실행 인자는 MST 기본(`-mstStartMaster -mstMasterIp <ip> -mstMasterPort 9035` 등).
 
 ## 한계
 

@@ -17,18 +17,32 @@ public static class RoomBuild
     const string RoomScene = "Assets/Scenes/Lobby/Room.unity";
     const string MasterScene = "Assets/Scenes/Lobby/Master.unity";
 
+
+    // 모듈 예제(Example_Workbench)에 기대지 않고, 저장된 빈 씬을 하나 만들어 연다(설치기가 씬을 추가로 열려면 저장된 씬이 열려 있어야 한다)
+    static void OpenStartScene()
+    {
+        const string p = "Assets/Scenes/_Start.unity";
+        if (!AssetDatabase.IsValidFolder("Assets/Scenes")) AssetDatabase.CreateFolder("Assets", "Scenes");
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(p) == null)
+        {
+            var s = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            EditorSceneManager.SaveScene(s, p);
+        }
+        EditorSceneManager.OpenScene(p, OpenSceneMode.Single);
+    }
+
     public static void BuildAll()
     {
         string outDir = Environment.GetEnvironmentVariable("LOBBY_BUILD_DIR");
         if (string.IsNullOrEmpty(outDir)) { Debug.Log("[RoomBuild] FAIL LOBBY_BUILD_DIR 없음"); EditorApplication.Exit(2); return; }
 
-        EditorSceneManager.OpenScene("Assets/99_ModuleExample/Example_Workbench.unity", OpenSceneMode.Single);
+        OpenStartScene();
         if (!AssetDatabase.IsValidFolder("Assets/Scenes")) AssetDatabase.CreateFolder("Assets", "Scenes");
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(GameScene) == null)
         {
             var gs = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);   // 빈 게임 씬(카메라·빛)
             EditorSceneManager.SaveScene(gs, GameScene);
-            EditorSceneManager.OpenScene("Assets/99_ModuleExample/Example_Workbench.unity", OpenSceneMode.Single);
+            OpenStartScene();
         }
         EditorApplication.ExecuteMenuItem("Tools/DoDrill/로비 템플릿 씬 설치");   // Game 씬이 있으므로 Room 의 DefaultScene 온라인 경로가 맞춰진다
         AssetDatabase.Refresh();
@@ -73,8 +87,56 @@ public static class RoomBuild
             scenes = scenes, locationPathName = exePath,
             target = BuildTarget.StandaloneWindows64, targetGroup = BuildTargetGroup.Standalone, options = BuildOptions.None
         };
-        var rep = BuildPipeline.BuildPlayer(opts);
-        Debug.Log($"[RoomBuild] 빌드 {Path.GetFileName(exePath)}: {rep.summary.result} ({rep.summary.totalSize / (1024 * 1024)} MB, 오류 {rep.summary.totalErrors}) 씬={string.Join(",", scenes.Select(Path.GetFileNameWithoutExtension))}");
+        // 서버 빌드에는 XR 이 필요 없다 — 윈도우 XR 자동 초기화를 끈다(EV 빌드 프로필도 같은 설정을 쓴다)
+        try
+        {
+            var sgs = UnityEditor.XR.Management.XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(BuildTargetGroup.Standalone);
+            if (sgs != null) { sgs.InitManagerOnStart = false; EditorUtility.SetDirty(sgs); AssetDatabase.SaveAssets(); }
+        }
+        catch (Exception e) { Debug.Log("[RoomBuild] XR 설정 건너뜀: " + e.Message); }
+
+        // OpenXR 패키지는 설정 에셋(Assets/XR/Settings/OpenXR Package Settings.asset)이 없으면 "빌드 도중"에 만들려다 BuildFailedException 으로 빌드를 실패시킨다.
+        // 빌드 시작 전에 패키지의 생성 함수(internal)를 불러 설정 에셋과 EditorBuildSettings 등록을 미리 해 둔다.
+        try
+        {
+            var type = Type.GetType("UnityEditor.XR.OpenXR.OpenXRPackageSettings, Unity.XR.OpenXR.Editor");
+            var m = type != null ? type.GetMethod("GetOrCreateInstance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) : null;
+            if (m != null) { m.Invoke(null, null); AssetDatabase.SaveAssets(); AssetDatabase.Refresh(); Debug.Log("[RoomBuild] OpenXR 설정 사전 생성/등록: " + AssetDatabase.LoadMainAssetAtPath("Assets/XR/Settings/OpenXR Package Settings.asset")); }
+            else Debug.Log("[RoomBuild] OpenXRPackageSettings 를 찾지 못함 — 건너뜀");
+        }
+        catch (Exception e) { Debug.Log("[RoomBuild] OpenXR 사전 생성 건너뜀: " + e.Message); }
+
+        // 서버 빌드에는 XR 이 필요 없다 — 윈도우 XR 자동 초기화를 끈다(EV 빌드 프로필도 같은 설정을 쓴다)
+        try
+        {
+            var sgs = UnityEditor.XR.Management.XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(BuildTargetGroup.Standalone);
+            if (sgs != null) { sgs.InitManagerOnStart = false; EditorUtility.SetDirty(sgs); AssetDatabase.SaveAssets(); }
+        }
+        catch (Exception e) { Debug.Log("[RoomBuild] XR 설정 건너뜀: " + e.Message); }
+
+        // OpenXR 패키지는 설정 에셋을 "빌드 도중"에 처음 등록하려다 BuildFailedException 으로 빌드를 실패시킨다(OpenXRPackageSettings.Instance).
+        // 빌드 시작 전에 설정 객체를 미리 EditorBuildSettings 에 등록해 둔다(키는 EV 의 EditorBuildSettings 와 같음).
+        try
+        {
+            const string key = "com.unity.xr.openxr.settings4";
+            UnityEngine.Object cur;
+            if (!EditorBuildSettings.TryGetConfigObject(key, out cur) || cur == null)
+            {
+                var a = AssetDatabase.LoadMainAssetAtPath("Assets/XR/Settings/OpenXR Package Settings.asset");
+                if (a != null) { EditorBuildSettings.AddConfigObject(key, a, true); AssetDatabase.SaveAssets(); Debug.Log("[RoomBuild] OpenXR 설정 객체 사전 등록"); }
+                else Debug.Log("[RoomBuild] OpenXR 설정 에셋 없음 — 건너뜀");
+            }
+        }
+        catch (Exception e) { Debug.Log("[RoomBuild] OpenXR 사전 등록 건너뜀: " + e.Message); }
+
+        // 새 프로젝트의 OpenXR 는 첫 빌드에서 "설정이 아직 로드되지 않았으니 다시 빌드하라"며 실패하기도 한다 → 같은 프로세스에서 최대 3번 시도
+        BuildReport rep = null;
+        for (int attempt = 1; attempt <= 3; attempt++)
+        {
+            rep = BuildPipeline.BuildPlayer(opts);
+            Debug.Log($"[RoomBuild] 빌드 시도 {attempt} {Path.GetFileName(exePath)}: {rep.summary.result} ({rep.summary.totalSize / (1024 * 1024)} MB, 오류 {rep.summary.totalErrors}) 씬={string.Join(",", scenes.Select(Path.GetFileNameWithoutExtension))}");
+            if (rep.summary.result == BuildResult.Succeeded) break;
+        }
         if (rep.summary.result != BuildResult.Succeeded) { Debug.Log("[RoomBuild] RESULT FAIL " + exePath); EditorApplication.Exit(1); return false; }
         return true;
     }

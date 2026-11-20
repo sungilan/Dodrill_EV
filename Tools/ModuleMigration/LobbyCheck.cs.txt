@@ -49,10 +49,24 @@ public static class LobbyCheck
         };
     }
 
+
+    // 모듈 예제(Example_Workbench)에 기대지 않고, 저장된 빈 씬을 하나 만들어 연다(설치기가 씬을 추가로 열려면 저장된 씬이 열려 있어야 한다)
+    static void OpenStartScene()
+    {
+        const string p = "Assets/Scenes/_Start.unity";
+        if (!AssetDatabase.IsValidFolder("Assets/Scenes")) AssetDatabase.CreateFolder("Assets", "Scenes");
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(p) == null)
+        {
+            var s = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            EditorSceneManager.SaveScene(s, p);
+        }
+        EditorSceneManager.OpenScene(p, OpenSceneMode.Single);
+    }
+
     public static void Run()
     {
         // 저장된 씬을 먼저 열어 둔다(설치기가 씬을 추가로 열 수 있게)
-        EditorSceneManager.OpenScene("Assets/99_ModuleExample/Example_Workbench.unity", OpenSceneMode.Single);
+        OpenStartScene();
         EditorApplication.ExecuteMenuItem("Tools/DoDrill/로비 템플릿 씬 설치");
         AssetDatabase.Refresh();
         foreach (var p in new[] { ClientScene, MasterScene, "Assets/Scenes/Lobby/Spawner.unity", "Assets/Scenes/Lobby/Room.unity" })

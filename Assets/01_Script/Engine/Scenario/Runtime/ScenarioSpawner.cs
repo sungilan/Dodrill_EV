@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using FishNet;
 using FishNet.Object;
 using UnityEngine;
-using NetTaste;
 
 #if UNITY_EDITOR
 using FishNet.Managing.Object;
