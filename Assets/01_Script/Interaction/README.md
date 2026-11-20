@@ -27,3 +27,13 @@ EV 등록 위치는 `Content/Features/App/Bindings/EvInteractionBinding.cs`이�
 ## 참조 플러그인
 
 FishNet, AutoHand, DOTween, Localization
+
+## 범용 프리팹
+
+| 프리팹 | 내용 |
+|---|---|
+| `Prefabs/NetworkItem.prefab` | 집을 수 있는 네트워크 아이템: `NetworkObject`·`Rigidbody`(킨매틱 시작)·`BoxCollider`·`LocalNetworkTransform`·`TaskItem`·`SyncGrab`. **변형(Variant)** 을 만들어 `TaskItem.prefabId`와 모양만 바꿔 쓴다(예: `99_ModuleExample/Prefabs/Item_Wrench`) |
+| `Prefabs/TaskZone.prefab` | 놓는 자리(`TaskInteractionZone`). `zoneId`를 JSON `targetZoneId`와 맞춘다. 단계 중에만 보인다 |
+| `Prefabs/TaskButton.prefab` | 누르는 버튼(`TaskClickTarget`). `targetId`를 JSON `targetObjName`과 맞춘다 |
+
+새 네트워크 아이템 프리팹은 FishNet `NetworkManager`의 Spawnable Prefabs 목록과 `ScenarioSpawner`의 프리팹 목록(prefabId → 프리팹)에 모두 넣어야 한다.

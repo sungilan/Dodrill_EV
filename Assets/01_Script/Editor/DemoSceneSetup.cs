@@ -29,7 +29,7 @@ using DoDrill;
 
 public static class DemoSceneSetup
 {
-    private const string FontPath = "Assets/05_Font/Pretendard-Medium SDF.asset";
+    private const string FontPath = "Assets/01_Script/Common/Fonts/Pretendard-Medium SDF.asset";
     private const string FbxRoot  = "Assets/03_3D/Object/O_FBX/";
 
     // ── 생성 도중 guide 오브젝트 임시 보관 ────────────────────
@@ -377,7 +377,7 @@ public static class DemoSceneSetup
             if (taskListPanel != null)
             {
                 var taskItemPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                    "Assets/02_UI/02_Prefabs/Preb_TaskItem.prefab");
+                    "Assets/01_Script/Ui/Prefabs/Preb_TaskItem.prefab");
 
                 var soPanel = new SerializedObject(taskListPanel);
                 SetProp(soPanel, "_taskItemPrefab", taskItemPrefab);

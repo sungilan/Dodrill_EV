@@ -24,10 +24,10 @@ using DoDrill.Training;
 public static class TaskProgressUISetup
 {
     // ── 폰트 경로 ──────────────────────────────────────────────
-    private const string FontBold     = "Assets/05_Font/Pretendard-Bold SDF.asset";
-    private const string FontSemiBold = "Assets/05_Font/Pretendard-SemiBold SDF.asset";
-    private const string FontMedium   = "Assets/05_Font/Pretendard-Medium SDF.asset";
-    private const string FontLight    = "Assets/05_Font/Pretendard-Light SDF.asset";
+    private const string FontBold     = "Assets/01_Script/Common/Fonts/Pretendard-Bold SDF.asset";
+    private const string FontSemiBold = "Assets/01_Script/Common/Fonts/Pretendard-SemiBold SDF.asset";
+    private const string FontMedium   = "Assets/01_Script/Common/Fonts/Pretendard-Medium SDF.asset";
+    private const string FontLight    = "Assets/01_Script/Common/Fonts/Pretendard-Light SDF.asset";
 
     // ── 색상 팔레트 ────────────────────────────────────────────
     private static readonly Color PanelBg       = new Color(0.05f, 0.07f, 0.12f, 0.92f);
@@ -71,7 +71,7 @@ public static class TaskProgressUISetup
         if (fBold == null || fMedium == null)
         {
             EditorUtility.DisplayDialog("폰트 없음",
-                $"Pretendard 폰트를 찾을 수 없습니다.\n경로: Assets/05_Font/",
+                $"Pretendard 폰트를 찾을 수 없습니다.\n경로: Assets/01_Script/Common/Fonts/",
                 "확인");
             return;
         }

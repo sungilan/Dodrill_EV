@@ -30,7 +30,7 @@ using TMPro;
 
 public static class GameSceneSetup
 {
-    private const string FontPath    = "Assets/05_Font/Pretendard-Medium SDF.asset";
+    private const string FontPath    = "Assets/01_Script/Common/Fonts/Pretendard-Medium SDF.asset";
     private const string FbxItemRoot = "Assets/03_3D/Object/O_FBX/";
     private const string FbxEnvRoot  = "Assets/03_3D/Environment/E_FBX/EF_Asset/";
 

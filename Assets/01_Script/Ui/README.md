@@ -29,3 +29,9 @@ EV 등록 위치는 `Content/Features/App/Bindings/EvUiBinding.cs`이다.
 ## 참조 플러그인
 
 FishNet, AutoHand, DOTween, InputSystem, Localization, TextMeshPro, UI
+
+## 범용 프리팹
+
+| 프리팹 | 내용 |
+|---|---|
+| `Prefabs/SimpleTaskHud.prefab` | 단계 표시(시나리오 이름·단계 제목·안내·조작 도움말·종료 문구). 씬에 놓기만 하면 된다 |

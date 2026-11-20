@@ -43,7 +43,6 @@ public static class ProjectStructureEnsurer
         "Assets/04_2D/CharacterSprite",
         "Assets/04_2D/ObjectSprite",
 
-        "Assets/05_Font",
         "Assets/06_ETC"
     };
 

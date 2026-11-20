@@ -59,6 +59,8 @@ MonoBehaviour:
   vrPlayerPrefab: {fileID: 93069368751711485, guid: 487bd1994364cbf4cad53d510eb08c04, type: 3}
   pcPlayerPrefab: {fileID: 206669820842534176, guid: 6d655d106150dbd459cbba40f582d695, type: 3}
   mobilePlayerPrefab: {fileID: 206669820842534176, guid: ce7a33d163ae5da4eb03f09a842f77a8, type: 3}
+  respawnRetryDelay: 4
+  maxSpawnAttempts: 3
 --- !u!114 &971400566886596192
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -103,9 +105,9 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 27
+  <PrefabId>k__BackingField: 76
   <SpawnableCollectionId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 12090716115017773309
+  <AssetPathHash>k__BackingField: 14856340679836142458
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}

@@ -88,3 +88,15 @@ EV 등록 위치는 `Content/Features/App/Bindings/EvScenarioBinding.cs`이다.
 ## 참조 플러그인
 
 FishNet, AutoHand, DOTween, Localization, ResourceManager, TextMeshPro, UI (Newtonsoft Json은 자동 참조)
+
+## 범용 프리팹
+
+| 프리팹 | 내용 |
+|---|---|
+| `Prefabs/ScenarioEngine.prefab` | 시나리오 엔진 묶음. 루트(네트워크 아님): `ScenarioBootstrapper`·`ScenarioRunner`·`ScenarioReceiver`·`ScenarioStateReceiver`·`ScenarioAutoStarter`. 자식 `Network`: `NetworkObject`+`ScenarioSpawner`+`NetworkInteractionBridge`. 씬에 놓고 `ScenarioAutoStarter`의 시나리오 JSON, `ScenarioSpawner`의 프리팹 목록(prefabId → 프리팹)만 채운다 |
+| `Prefabs/SpawnPoint.prefab` | 아이템 스폰 자리(`pointId`를 JSON `spawnPointId`와 맞춘다) |
+| `Prefabs/NetworkManagerHost.prefab` | FishNet `NetworkManager`+`TransportManager`+`Tugboat`+`PlayerSpawner`(플레이어 = `GenericPlayer`). Spawnable Prefabs는 `GenericSpawnablePrefabs.asset`(플레이어·`NetworkItem`) — 아이템을 더하면 씬에서 목록 에셋을 따로 만들어 바꾼다 |
+
+- 이 폴더의 프리팹은 `Avatar`(GenericPlayer)·`Interaction`(NetworkItem, 재질)의 에셋을 참조한다(`Prefabs/ASSET_MANIFEST.md`). 모듈을 따로 옮길 때 함께 가져간다.
+- **서버를 켜는 `ScenarioAutoStarter`는 `NetworkObject`가 있는 오브젝트에 붙이지 않는다.** 씬에 놓인 NetworkObject는 FishNet이 서버가 켜질 때까지 꺼 두므로 시작기가 영영 실행되지 못한다(그래서 네트워크 부품을 자식으로 분리).
+- 서버 시작·시나리오 시작은 `ScenarioAutoStarter`가 한다(호스트로 시작 → JSON 읽기 → 클라이언트에 전송 → 시작).

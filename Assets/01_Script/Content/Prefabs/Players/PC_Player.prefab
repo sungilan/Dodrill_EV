@@ -200,6 +200,8 @@ MonoBehaviour:
   - {fileID: 823836868806745997}
   - {fileID: 4020026540727249397}
   - {fileID: 9159750253335240653}
+  - {fileID: 7341378439057696264}
+  - {fileID: 659577977968388952}
   - {fileID: -1832908399129904540}
   - {fileID: 309390068107612155}
   InitializedParentNetworkBehaviour: {fileID: 0}
@@ -226,9 +228,9 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 51
+  <PrefabId>k__BackingField: 111
   <SpawnableCollectionId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 17400094349353826693
+  <AssetPathHash>k__BackingField: 6890848329253459874
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
@@ -319,10 +321,18 @@ MonoBehaviour:
   laserColorEnd: {r: 1, g: 0.5529412, b: 0.08235294, a: 0}
   laserStartWidth: 0.006
   laserEndWidth: 0.002
+  laserStartForward: 0.35
+  laserStartRight: 0.14
+  laserStartDown: 0.12
   outlineHoverColor: {r: 1, g: 0.5529412, b: 0.08235294, a: 1}
   outlineWidth: 5
   dropKey: 103
   nearClip: 0.03
+  collideWithEnvironment: 1
+  collisionRadius: 0.28
+  collisionHeight: 1.7
+  taskTargetPassThrough: 1
+  beltKey: 98
 --- !u!54 &4130666190411072463
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -494,9 +504,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 057024ff4b5196e4aab9a80a6ab3b579, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PcMobileAvatarController
-  _componentIndexCache: 255
+  _componentIndexCache: 5
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   avatarAnimator: {fileID: 8869442168782103724}
   cameraPivot: {fileID: 5514779457271000912}
   lookControllerBehaviour: {fileID: 4911098314664132104}
@@ -505,6 +515,7 @@ MonoBehaviour:
   crouchDepth: 0.55
   crouchSpeed: 2.5
   extraRaise: 1.6
+  extraRaiseMobile: 0.3
   extraLower: 1
   avatarScaleOverride: 0
   armReach: {fileID: 5471905767553754437}
@@ -538,9 +549,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8cac635f24954048aad3a6ff9110beb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Animating.NetworkAnimator
-  _componentIndexCache: 255
+  _componentIndexCache: 6
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   IgnoredParameters: []
   _animator: {fileID: 8869442168782103724}
   _synchronizeWhenDisabled: 0
@@ -3833,7 +3844,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76e060d33c4336546a51e4f16eda5b1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerEquipmentSync
-  _componentIndexCache: 6
+  _componentIndexCache: 8
   _addedNetworkObject: {fileID: 7513439500318563725}
   _networkObjectCache: {fileID: 7513439500318563725}
   equipments:
@@ -9835,7 +9846,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 5
+  _componentIndexCache: 7
   _addedNetworkObject: {fileID: 7513439500318563725}
   _networkObjectCache: {fileID: 7513439500318563725}
 --- !u!1 &6802514611373444724

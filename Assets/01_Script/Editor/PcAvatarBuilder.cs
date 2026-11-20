@@ -14,7 +14,7 @@ public static class PcAvatarBuilder
 {
     public const string FbxPath = "Assets/03_3D/Character/C_FBX/Player_Character/Rig_Player_Mechanic.fbx";
     public const string ControllerPath = "Assets/03_3D/Character/C_FBX/Player_Character/Swat Animator Controller.controller";
-    public const string OutPath = "Assets/03_3D/Character/C_Prefabs/PcAvatar_Mechanic.prefab";
+    public const string OutPath = "Assets/01_Script/Avatar/Prefabs/Avatars/PcAvatar_Mechanic.prefab";
 
     // 기본으로 켜 두는 파츠(기존 PC 프리팹의 Mechanic과 동일). 나머지(FaceShield/Helmet/InsulatedShoes/SafetyGlasses)는 PPE 연출용으로 꺼 둔다.
     private static readonly string[] DefaultOff = { "SM_Mechanic_FaceShield", "SM_Mechanic_Hair_Helmet", "SM_Mechanic_InsulatedShoes", "SM_Mechnic_SafetyGlasses" };

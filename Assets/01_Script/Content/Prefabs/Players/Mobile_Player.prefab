@@ -67,12 +67,15 @@ MonoBehaviour:
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
   - {fileID: 1896947734937957779}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 1767787758507490825}
+  - {fileID: 2850406321790631773}
+  - {fileID: 6801048945401837084}
+  - {fileID: 3066194377794055998}
+  - {fileID: 6124593991742450098}
+  - {fileID: 3237916824296303461}
   - {fileID: -29995049151085023}
   InitializedParentNetworkBehaviour: {fileID: 0}
-  InitializedNestedNetworkObjects:
-  - {fileID: 0}
+  InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
   RuntimeChildNetworkBehaviours: []
   _isNetworked: 1
@@ -95,9 +98,9 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 47
+  <PrefabId>k__BackingField: 50
   <SpawnableCollectionId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 7553627198299753225
+  <AssetPathHash>k__BackingField: 16344865166144090430
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
@@ -131,9 +134,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bdf84c95dfa2ff94db2cec4e04bcb52a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoDrill.PlayerUISetup
-  _componentIndexCache: 255
+  _componentIndexCache: 1
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   _uiCamera: {fileID: 4764585132354983989}
   _nameTagCanvas: {fileID: 7623610385688241231}
   _nameText: {fileID: 3549846535634333510}
@@ -172,9 +175,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d06e0c910560f042a1f4f6f7c1831be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 255
+  _componentIndexCache: 2
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   moveSpeed: 2
   lookSensitivity: 5
   maxLookX: 80
@@ -209,6 +212,9 @@ MonoBehaviour:
   laserStartWidth: 0.006
   laserEndWidth: 0.002
   showDebugLog: 1
+  collideWithEnvironment: 1
+  collisionRadius: 0.28
+  collisionHeight: 1.7
 --- !u!54 &416602216742204258
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -248,9 +254,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d5f3cd3dd6be3a49aa81f40ab47c0ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 255
+  _componentIndexCache: 3
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   anchor: {fileID: 0}
   syncInterval: 0.05
   lerpSpeed: 10
@@ -297,9 +303,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 057024ff4b5196e4aab9a80a6ab3b579, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PcMobileAvatarController
-  _componentIndexCache: 255
+  _componentIndexCache: 4
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   avatarAnimator: {fileID: 8537150344902951422}
   cameraPivot: {fileID: 8014969165836945105}
   lookControllerBehaviour: {fileID: 2850406321790631773}
@@ -308,6 +314,7 @@ MonoBehaviour:
   crouchDepth: 0.55
   crouchSpeed: 2.5
   extraRaise: 1.6
+  extraRaiseMobile: 0.3
   extraLower: 1
   avatarScaleOverride: 0
   armReach: {fileID: 5088089997586202647}
@@ -341,9 +348,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8cac635f24954048aad3a6ff9110beb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Animating.NetworkAnimator
-  _componentIndexCache: 255
+  _componentIndexCache: 5
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   IgnoredParameters: []
   _animator: {fileID: 8537150344902951422}
   _synchronizeWhenDisabled: 0
@@ -363,9 +370,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76e060d33c4336546a51e4f16eda5b1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerEquipmentSync
-  _componentIndexCache: 255
+  _componentIndexCache: 6
   _addedNetworkObject: {fileID: 7513439500318563725}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 7513439500318563725}
   equipments:
   - prefabId: FaceShield
     objectsToActivate:
@@ -436,7 +443,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 3
+  _componentIndexCache: 7
   _addedNetworkObject: {fileID: 7513439500318563725}
   _networkObjectCache: {fileID: 7513439500318563725}
 --- !u!1 &650233390358196391

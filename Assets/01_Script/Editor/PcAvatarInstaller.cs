@@ -21,11 +21,11 @@ using UnityEngine.Rendering.Universal;
 /// </summary>
 public static class PcAvatarInstaller
 {
-    public const string MechanicAvatarPath = "Assets/03_3D/Character/C_Prefabs/PcAvatar_Mechanic.prefab";
-    public const string SwatAvatarPath = "Assets/03_3D/Character/C_Prefabs/PcAvatar_Swat.prefab";
+    public const string MechanicAvatarPath = "Assets/01_Script/Avatar/Prefabs/Avatars/PcAvatar_Mechanic.prefab";
+    public const string SwatAvatarPath = "Assets/01_Script/Avatar/Prefabs/Avatars/PcAvatar_Swat.prefab";
     public const string AvatarPrefabPath = MechanicAvatarPath;
-    public const string PcPrefabPath = "Assets/07_Resources/Prefabs/Player/PC_Player.prefab";
-    public const string MobilePrefabPath = "Assets/07_Resources/Prefabs/Player/Mobile_Player.prefab";
+    public const string PcPrefabPath = "Assets/01_Script/Content/Prefabs/Players/PC_Player.prefab";
+    public const string MobilePrefabPath = "Assets/01_Script/Content/Prefabs/Players/Mobile_Player.prefab";
 
     /// <summary>모델 크기 배율. 1 = 정비사 눈높이 약 1.65m.</summary>
     public const float AvatarScale = 1f;
