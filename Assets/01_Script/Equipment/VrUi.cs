@@ -56,6 +56,9 @@ public static class VrUi
         return s_imgMat;
     }
 
+    /// <summary>깊이 검사 없이 맨 앞에 그리는 TMP 재질(월드 3D 글자용 — HvTestTerminals 의 단자 이름표).</summary>
+    public static Material TmpOverlayMat(TMP_FontAsset font) => TmpMat(font);
+
     private static readonly Dictionary<TMP_FontAsset, Material> s_tmp = new Dictionary<TMP_FontAsset, Material>();
     private static Material TmpMat(TMP_FontAsset font)
     {

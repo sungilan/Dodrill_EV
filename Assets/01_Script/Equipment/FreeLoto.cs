@@ -740,16 +740,36 @@ public class HvShockGauge : MonoBehaviour
 }
 
 /// <summary>
-/// 자유 탈거의 방전 대기창 — 서비스 플러그를 뽑으면 위쪽에 '잔류 전압 방전 중' 막대가 나온다(시나리오의 DischargeTimerUI 에 해당).
-/// 전압이 30V 이하로 내려가면 '방전 완료 — 단자 전압을 측정하세요'로 바뀌었다가 사라진다. PC·모바일 화면용(VR 제외).
+/// 방전 대기 게이지 — 감전 위험 게이지·볼트 진행 막대와 같은 자리(화면 가운데 아래 막대)에 뜬다. 모든 시나리오·자유 탈거 공통(11/20).
+///  · 자유 탈거: 서비스 플러그를 뽑으면 '잔류 전압 방전 중' 막대가 차오르고, 30V 이하가 되면 '방전 완료 — 단자 전압을 측정하세요'로 바뀌었다 사라진다.
+///  · 시나리오: DischargeTimerUI(DischargeWait 단계)가 SetExternal 로 값을 넘겨 같은 막대를 쓴다(예전 오른쪽 위 패널은 안 띄운다).
+/// PC·모바일 화면 오버레이, VR 은 시선 앞 월드 캔버스(VrUi).
 /// </summary>
 public class FreeDischargeHud : MonoBehaviour
 {
     private GameObject _canvas;
+    private RectTransform _back;
     private UnityEngine.UI.Image _fill;
     private TMP_Text _label, _sub;
     private float _doneAt = -1f;
     private bool _dismissed;
+
+    /// <summary>방전 게이지가 지금 화면에 떠 있는가 — 볼트 분해 게이지가 같은 자리에 겹치지 않게 위로 비켜 선다.</summary>
+    public static bool Visible { get; private set; }
+
+    // 시나리오가 넘겨 주는 값 — 마지막 호출로부터 holdSeconds 동안만 유효(끊기면 저절로 사라진다)
+    private static float s_extUntil = -1f, s_extRatio;
+    private static string s_extLabel = "", s_extSub = "";
+    private static bool s_extDone;
+
+    /// <summary>시나리오 방전 대기(DischargeTimerUI)가 매 프레임 부른다. done=true 면 초록 '완료' 모양.</summary>
+    public static void SetExternal(float ratio, string label, string sub, bool done, float holdSeconds = 0.6f)
+    {
+        s_extRatio = Mathf.Clamp01(ratio); s_extLabel = label ?? ""; s_extSub = sub ?? ""; s_extDone = done;
+        s_extUntil = Time.unscaledTime + holdSeconds;
+    }
+
+    public static void ClearExternal() { s_extUntil = -1f; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
@@ -761,58 +781,75 @@ public class FreeDischargeHud : MonoBehaviour
         go.AddComponent<FreeDischargeHud>();
     }
 
+    private void Hide()
+    {
+        Visible = false;
+        if (_canvas != null && _canvas.activeSelf) _canvas.SetActive(false);
+    }
+
     private void Update()
     {
-        var sm = ElectricSafetyManager.Instance;
-        bool active = sm != null && FreeLoto.IsFreeScenario && sm.isMSDRemoved && FreeLoto.MsdAt >= 0f && !HvVoltageCheck.Verified
-                      && !(EmergencyEventManager.Instance != null && EmergencyEventManager.Instance.PopupUp);
-        if (!active) { _dismissed = false; _doneAt = -1f; if (_canvas != null && _canvas.activeSelf) _canvas.SetActive(false); return; }
-        if (_dismissed) return;
-        if (XRAirpotrSecurity.Utils.GetPlatformType() == XRAirpotrSecurity.PlatformType.VR) return;
-        if (_canvas == null) Build();
+        bool popup = EmergencyEventManager.Instance != null && EmergencyEventManager.Instance.PopupUp;
+        float ratio; string label, sub; bool done;
 
-        float v = FreeLoto.VoltageNow();
-        float total = FreeLoto.Tau * Mathf.Log(FreeLoto.PackV / FreeLoto.SafeV);
-        float el = Time.time - FreeLoto.MsdAt;
-        bool done = v <= FreeLoto.SafeV;
-        if (done)
+        if (Time.unscaledTime < s_extUntil && !popup)
         {
-            if (_doneAt < 0f) _doneAt = Time.unscaledTime;
-            if (Time.unscaledTime - _doneAt > 8f) { _dismissed = true; _canvas.SetActive(false); return; }
+            ratio = s_extRatio; label = s_extLabel; sub = s_extSub; done = s_extDone;
+            _dismissed = false; _doneAt = -1f;
         }
+        else
+        {
+            var sm = ElectricSafetyManager.Instance;
+            bool active = sm != null && FreeLoto.IsFreeScenario && sm.isMSDRemoved && FreeLoto.MsdAt >= 0f && !HvVoltageCheck.Verified && !popup;
+            if (!active) { _dismissed = false; _doneAt = -1f; Hide(); return; }
+            if (_dismissed) { Hide(); return; }
+
+            float v = FreeLoto.VoltageNow();
+            float total = FreeLoto.Tau * Mathf.Log(FreeLoto.PackV / FreeLoto.SafeV);
+            float el = Time.time - FreeLoto.MsdAt;
+            done = v <= FreeLoto.SafeV;
+            if (done)
+            {
+                if (_doneAt < 0f) _doneAt = Time.unscaledTime;
+                if (Time.unscaledTime - _doneAt > 8f) { _dismissed = true; Hide(); return; }
+            }
+            ratio = done ? 1f : Mathf.Clamp01(el / Mathf.Max(1f, total));
+            int remain = Mathf.CeilToInt(Mathf.Max(0f, total - el));
+            label = done ? "<b>방전 완료 — 단자 전압을 측정하세요</b>" : $"<b>잔류 전압 방전 중... {remain / 60}:{remain % 60:00}</b>";
+            sub = done ? "멀티미터(카트 위)로 인버터 HV 단자(청록 점)를 재서 30V 이하를 확인하세요"
+                       : $"현재 약 {v:0} V → {FreeLoto.SafeV:0} V 이하까지 기다리세요 (방전 전에 만지면 감전)";
+        }
+
+        if (_canvas == null) Build();
         if (!_canvas.activeSelf) _canvas.SetActive(true);
-        _fill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(done ? 1f : el / Mathf.Max(1f, total)), 1f);
+        Visible = true;
+        // 감전 위험 게이지가 같이 뜨면 그 위로 올라간다(볼트 게이지와 같은 규칙)
+        _back.anchoredPosition = new Vector2(0f, HvShockGauge.Visible ? -92f : -170f);
+        _fill.rectTransform.anchorMax = new Vector2(ratio, 1f);
         _fill.color = done ? new Color(0.3f, 0.85f, 0.4f, 0.95f) : new Color(1f, 0.72f, 0.2f, 0.95f);
-        int remain = Mathf.CeilToInt(Mathf.Max(0f, total - el));
-        _label.text = done ? "<b>방전 완료 — 단자 전압을 측정하세요</b>" : $"<b>잔류 전압 방전 중... {remain / 60}:{remain % 60:00}</b>";
-        _sub.text = done ? "멀티미터(카트 위)로 인버터 HV 단자(청록 점)를 재서 30V 이하를 확인하세요"
-                         : $"현재 약 {v:0} V → {FreeLoto.SafeV:0} V 이하까지 기다리세요 (방전 전에 만지면 감전)";
+        _label.text = label;
+        _label.color = done ? new Color(0.6f, 1f, 0.65f) : new Color(1f, 0.85f, 0.45f);
+        _sub.text = sub;
     }
 
     private void Build()
     {
-        _canvas = new GameObject("[FreeDischargeHud_Canvas]");
-        var cv = _canvas.AddComponent<Canvas>();
-        cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 68;
-        var sc = _canvas.AddComponent<UnityEngine.UI.CanvasScaler>();
-        sc.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize; sc.referenceResolution = new Vector2(1920f, 1080f); sc.matchWidthOrHeight = 0.5f;
+        _canvas = VrUi.NewHudCanvas("[FreeDischargeHud_Canvas]", 68).gameObject;   // PC·모바일 = 화면 오버레이, VR = 시선 앞 월드 캔버스(같은 자리·모양)
 
-        // 위에서부터: 제목(12~48) · 막대(60~74) · 설명(86~116) — 높이 128. 상태 막대(HvStatusHud) 바로 아래에 붙인다
-        var back = NewRect("Back", _canvas.transform);
-        back.anchorMin = back.anchorMax = new Vector2(0.5f, 1f); back.pivot = new Vector2(0.5f, 1f);
-        back.anchoredPosition = new Vector2(0f, -126f); back.sizeDelta = new Vector2(760f, 128f);
-        var bi = back.gameObject.AddComponent<UnityEngine.UI.Image>(); bi.color = new Color(0.07f, 0.09f, 0.12f, 0.9f); bi.raycastTarget = false;
+        // 감전 위험 게이지(HvShockGauge)·볼트 막대(InteractionProgressBarUI)와 같은 치수: 막대 620×34 @ 가운데 (0,-170), 제목 +38, 설명 -34
+        _back = NewRect("Back", _canvas.transform);
+        _back.anchorMin = _back.anchorMax = new Vector2(0.5f, 0.5f); _back.pivot = new Vector2(0.5f, 0.5f);
+        _back.anchoredPosition = new Vector2(0f, -170f); _back.sizeDelta = new Vector2(620f, 34f);
+        var bi = _back.gameObject.AddComponent<UnityEngine.UI.Image>(); bi.color = new Color(0.07f, 0.09f, 0.12f, 0.88f); bi.raycastTarget = false;
 
-        _label = NewText(back, "Label", 28f, new Vector2(0f, -12f));
-        _sub = NewText(back, "Sub", 19f, new Vector2(0f, -88f)); _sub.color = new Color(0.8f, 0.86f, 0.95f);
-
-        var bar = NewRect("Bar", back);
-        bar.anchorMin = bar.anchorMax = new Vector2(0.5f, 1f); bar.pivot = new Vector2(0.5f, 1f);
-        bar.anchoredPosition = new Vector2(0f, -60f); bar.sizeDelta = new Vector2(700f, 14f);
-        var bg = bar.gameObject.AddComponent<UnityEngine.UI.Image>(); bg.color = new Color(1f, 1f, 1f, 0.15f); bg.raycastTarget = false;
-        var fill = NewRect("Fill", bar);
-        fill.anchorMin = Vector2.zero; fill.anchorMax = new Vector2(0f, 1f); fill.pivot = new Vector2(0f, 0.5f); fill.offsetMin = fill.offsetMax = Vector2.zero;
+        var fill = NewRect("Fill", _back);
+        fill.anchorMin = new Vector2(0f, 0f); fill.anchorMax = new Vector2(0f, 1f); fill.pivot = new Vector2(0f, 0.5f);
+        fill.offsetMin = new Vector2(3f, 3f); fill.offsetMax = new Vector2(-3f, -3f);
         _fill = fill.gameObject.AddComponent<UnityEngine.UI.Image>(); _fill.raycastTarget = false;
+
+        _label = NewText(_back, "Label", 26f, new Vector2(0f, 38f));
+        _sub = NewText(_back, "Sub", 19f, new Vector2(0f, -34f)); _sub.color = new Color(0.8f, 0.86f, 0.95f);
+        VrUi.Finish(_canvas);   // VR: 맨 앞에 그리기
     }
 
     private static RectTransform NewRect(string name, Transform parent)
@@ -825,8 +862,8 @@ public class FreeDischargeHud : MonoBehaviour
     private static TMP_Text NewText(Transform parent, string name, float size, Vector2 pos)
     {
         var rt = NewRect(name, parent);
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f); rt.pivot = new Vector2(0.5f, 1f);
-        rt.anchoredPosition = pos; rt.sizeDelta = new Vector2(740f, 36f);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos; rt.sizeDelta = new Vector2(900f, 36f);
         var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
         var kf = MobileWorkButton.KoreanFont();
         if (kf != null) t.font = kf;

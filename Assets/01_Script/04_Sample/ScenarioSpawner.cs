@@ -440,7 +440,7 @@ public class ScenarioSpawner : NetworkBehaviour
     /// Task 시작 시 ScenarioRunner가 호출
     /// SpawnBundle 목록 기반으로 스폰 + 가이드 활성화
     /// </summary>
-    public void SpawnForTask(TaskDef taskDef, int playerCount = 1)
+    public void SpawnForTask(TaskDef taskDef, int playerCount = 1, string scenarioId = null)
     {
         if(taskDef.spawnObjects == null || taskDef.spawnObjects.Count == 0) return;
         if(!InstanceFinder.IsServerStarted) return;
@@ -451,6 +451,8 @@ public class ScenarioSpawner : NetworkBehaviour
             // 아이템 좌우 분산 계산
             float xOffset = (i - (count - 1) * 0.5f) * SPAWN_SPREAD;
             var bundle = taskDef.spawnObjects[i];
+            // 시연용(DemoSettings): 자유 탈거에서 테스트용 특수 공구(Equip_Tool_*)는 스폰하지 않는다
+            if(DemoSettings.SkipSpawn(bundle.prefabId, scenarioId)) { Debug.Log($"[Spawn] 시연용: {bundle.prefabId} 스폰 생략"); continue; }
 
             if(!IsPerPlayer(bundle))
             {

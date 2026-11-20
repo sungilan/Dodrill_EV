@@ -32,6 +32,7 @@ public class PcProbeAim : MonoBehaviour
     public static PcProbeAim Current { get; private set; }
 
     private const float AimDistance = 6f;
+    private const float CrossRaise = 44f;          // (11/20) 조준점·문구를 화면 가운데에서 이만큼(기준 해상도 px) 위로 — 문구가 들고 있는 계측기 본체에 걸리지 않게. 조준 레이도 같은 점에서 쏜다
     private const float CableLength = 2.6f;        // 본체 단자에서 이보다 멀어지면 프로브가 빠진다
     private const float GroundNeededWithin = 3f;   // 측정 단자에서 이 거리 안에 접지 단자가 있으면 검정을 먼저 꽂아야 한다
     private const float FlyTime = 0.22f;
@@ -216,12 +217,20 @@ public class PcProbeAim : MonoBehaviour
 
     // ── 조준 ───────────────────────────────
 
+    /// <summary>조준점이 있는 화면 좌표(픽셀) — 가운데에서 CrossRaise(기준 해상도 px)만큼 위. 조준점 UI 와 같은 값.</summary>
+    private static Vector2 AimScreenPoint()
+    {
+        var cv = s_ui != null ? s_ui.GetComponent<Canvas>() : null;
+        float scale = cv != null ? cv.scaleFactor : Mathf.Min(Screen.width / 1920f, Screen.height / 1080f);
+        return new Vector2(Screen.width * 0.5f, Screen.height * 0.5f + CrossRaise * scale);
+    }
+
     private void UpdateAim()
     {
         _aim = null;
         var cam = Camera.main;
         if (cam == null) return;
-        Ray ray = cam.ScreenPointToRay(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+        Ray ray = cam.ScreenPointToRay(AimScreenPoint());
         var hits = Physics.RaycastAll(ray, AimDistance, ~0, QueryTriggerInteraction.Collide);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
         Transform heldRoot = _heldGrab != null ? _heldGrab.transform : null;
@@ -230,7 +239,10 @@ public class PcProbeAim : MonoBehaviour
             var t = h.collider.transform;
             if (t.IsChildOf(transform) || (heldRoot != null && t.IsChildOf(heldRoot))) continue;   // 들고 있는 계측기 자신
             if (t.IsChildOf(cam.transform)) continue;
-            var mp = h.collider.GetComponent<MeasurementPoint>() ?? h.collider.GetComponentInParent<MeasurementPoint>();
+            // 가이드 구역 상자(Guide_*, 0.5m 트리거)는 측정 지점의 '자식'이라 부모 MP 로 잡혀, 상자 안 어디를 겨눠도 그 MP(빨강)가 먼저 걸렸다 →
+            // 검정 단자를 겨눠도 빨강으로 인식돼 검정 프로브가 안 꽂혔다(11/20). 가이드 구역 콜라이더는 단자로 보지 않는다.
+            var mp = h.collider.GetComponent<MeasurementPoint>();
+            if (mp == null && h.collider.GetComponent<GuideZoneData>() == null) mp = h.collider.GetComponentInParent<MeasurementPoint>();
             if (mp != null && mp.isActiveAndEnabled && !string.IsNullOrEmpty(mp.terminalId))
             {
                 _aim = mp;
@@ -269,7 +281,7 @@ public class PcProbeAim : MonoBehaviour
     {
         var cam = Camera.main;
         if (cam == null) return null;
-        Ray ray = cam.ScreenPointToRay(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+        Ray ray = cam.ScreenPointToRay(AimScreenPoint());
         foreach (var p in new[] { _red, _black })
         {
             if (p == null || p.state != State.Plugged) continue;
@@ -301,13 +313,16 @@ public class PcProbeAim : MonoBehaviour
         }
 
         bool blackIn = _black == null || BlackPlugged;
+        bool guided = HvTestTerminals.GuideActive;   // 전·후방 인버터 단자 안내가 켜진 단계 — 검정(−)/빨강(+) 표시를 따른다
         if (_aim == null)
         {
-            if (!blackIn) return NeedsBlackAnywhere() ? "검정 프로브: 접지 단자를 조준하세요" : "검정 프로브: (-)·접지 단자를 조준하세요";
-            return "측정할 단자를 조준하세요";
+            if (!blackIn) return guided ? "검정 프로브: 검정(−) 표시 단자를 조준하세요" : NeedsBlackAnywhere() ? "검정 프로브: 접지 단자를 조준하세요" : "검정 프로브: (-)·접지 단자를 조준하세요";
+            return guided ? "빨간 프로브: 빨간(+) 표시 단자를 조준하세요" : "측정할 단자를 조준하세요";
         }
 
         bool ground = IsGround(_aim);
+        var role = HvTestTerminals.RoleOf(_aim);   // 안내가 만든 단자 쌍이면 빨강/검정 역할이 있다
+        if (role == HvTestTerminals.Role.Red && !blackIn) return "검정 프로브를 먼저 — 검정(−) 표시 단자에 꽂으세요";
 
         // 1) 검정 먼저 — 근처에 접지 단자가 있는 측정(절연 저항)은 접지에만, 아니면 (-) 단자 등 아무 단자에
         if (!blackIn)
@@ -322,6 +337,7 @@ public class PcProbeAim : MonoBehaviour
         // 2) 빨강
         if (_red == null) return "측정 단자";
         if (_black != null && _black.point == _aim) return "검정 프로브가 꽂힌 단자입니다";
+        if (role == HvTestTerminals.Role.Black) return "검정(−) 단자입니다 — 빨간 프로브는 빨간(+) 표시 단자에 꽂으세요";
         if (ground) return "접지 단자 — 빨간 프로브는 측정 단자에 꽂으세요";
         if (MeterOff()) return "다이얼을 돌려 측정 모드를 먼저 고르세요";
         if (_red.state == State.Flying || _red.state == State.Returning) return "";
@@ -542,6 +558,7 @@ public class PcProbeAim : MonoBehaviour
         cgo.transform.SetParent(s_ui.transform, false);
         s_cross = (RectTransform)cgo.transform;
         s_cross.anchorMin = s_cross.anchorMax = new Vector2(0.5f, 0.5f);
+        s_cross.anchoredPosition = new Vector2(0f, CrossRaise);
         s_cross.sizeDelta = new Vector2(48f, 48f);
 
         // 가운데를 비운 + 모양 네 막대와 가운데 점 (슈팅 게임 조준점)
@@ -560,7 +577,7 @@ public class PcProbeAim : MonoBehaviour
         s_label = lgo.GetComponent<TextMeshProUGUI>();
         var lrt = s_label.rectTransform;
         lrt.anchorMin = lrt.anchorMax = new Vector2(0.5f, 0.5f);
-        lrt.anchoredPosition = new Vector2(0f, -58f);
+        lrt.anchoredPosition = new Vector2(0f, CrossRaise - 58f);
         lrt.sizeDelta = new Vector2(900f, 60f);
         var font = FindKoreanFont();
         if (font != null) s_label.font = font;

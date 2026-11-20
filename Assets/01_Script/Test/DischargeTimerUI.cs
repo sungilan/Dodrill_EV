@@ -78,6 +78,7 @@ public class DischargeTimerUI : MonoBehaviour
         _dischargeRoutine = null;
         isDischarged = false;
         if(timerPanel != null) timerPanel.SetActive(false);
+        FreeDischargeHud.ClearExternal();
     }
 
     public void StartDischarge()
@@ -99,7 +100,8 @@ public class DischargeTimerUI : MonoBehaviour
         dischargeTime = GetWaitSeconds(scenario?.GetModuleConfig("DischargeWait"), dischargeTime);
         if(progressBar != null) progressBar.maxValue = dischargeTime;
 
-        if(timerPanel != null) timerPanel.SetActive(true);
+        // (11/20) 씬의 오른쪽 위 패널 대신 감전·볼트 게이지와 같은 화면 가운데 아래 게이지(FreeDischargeHud)를 쓴다 — 모든 시나리오·기기 공통
+        if(timerPanel != null) timerPanel.SetActive(false);
         _dischargeRoutine = StartCoroutine(DischargeRoutine());
     }
 
@@ -112,11 +114,11 @@ public class DischargeTimerUI : MonoBehaviour
             t += Time.deltaTime;
 
             // 1. 텍스트 업데이트 (남은 시간 표시)
-            if(timerText != null)
-            {
-                int remain = Mathf.CeilToInt(Mathf.Max(0f, dischargeTime - t));
+            int remain = Mathf.CeilToInt(Mathf.Max(0f, dischargeTime - t));
+            if(timerText != null)
                 timerText.text = $"잔류 전압 방전 중... {remain / 60}:{remain % 60:00}";
-            }
+            FreeDischargeHud.SetExternal(t / Mathf.Max(0.01f, dischargeTime), $"<b>잔류 전압 방전 중... {remain / 60}:{remain % 60:00}</b>",
+                "전압이 충분히 내려갈 때까지 고전압 부위를 만지지 마세요", false);
 
             // 2. 슬라이더 업데이트 (진행도 표시)
             if(progressBar != null)
@@ -133,7 +135,7 @@ public class DischargeTimerUI : MonoBehaviour
         if(timerText != null)
             timerText.text = "방전 완료. 다음 단계를 진행하십시오.";
         if(timerPanel != null) timerPanel.SetActive(false);
-
+        FreeDischargeHud.SetExternal(1f, "<b>방전 완료</b>", "다음 단계를 진행하세요", true, 2.5f);   // 잠깐 초록 완료 모양으로 보여 주고 사라진다
         InteractionEvents.FireTaskConfirmed("DischargeWait");
         Debug.Log("[DischargeTimer] 방전 완료 → DischargeWait Task 완료");
     }

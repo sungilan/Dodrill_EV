@@ -81,9 +81,19 @@ public class MobileMeterReadout : MonoBehaviour
         var pgo = new GameObject("Panel", typeof(RectTransform), typeof(Image), typeof(Button));
         pgo.transform.SetParent(transform, false);
         _panel = (RectTransform)pgo.transform;
-        _panel.anchorMin = _panel.anchorMax = new Vector2(0.5f, 1f);
-        _panel.pivot = new Vector2(0.5f, 1f);
-        _panel.anchoredPosition = new Vector2(0f, -110f);
+        if (IsMobile)
+        {
+            _panel.anchorMin = _panel.anchorMax = new Vector2(0.5f, 1f);
+            _panel.pivot = new Vector2(0.5f, 1f);
+            _panel.anchoredPosition = new Vector2(0f, -110f);
+        }
+        else
+        {
+            // (11/20) PC: 위쪽 토스트 알림과 겹치지 않게 조준점 바로 위 화면 가운데로(아래 가장자리가 가운데에서 약 100px 위 = 조준점 위)
+            _panel.anchorMin = _panel.anchorMax = new Vector2(0.5f, 0.5f);
+            _panel.pivot = new Vector2(0.5f, 0f);
+            _panel.anchoredPosition = new Vector2(0f, 100f);
+        }
         _bg = pgo.GetComponent<Image>();
         WorldHoverLabel.StyleCard(_bg);
         _bg.color = NormalBg;

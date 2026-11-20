@@ -1629,6 +1629,7 @@ public partial class CarPartService : NetworkBehaviour
         FollowCarriers();
         PlaceFrames();
         EnforceHidden();
+        RefreshGenVisibility();
         if (!IsClientStarted) return;
         UpdateVisuals();
         UpdateGhost();
@@ -1640,6 +1641,21 @@ public partial class CarPartService : NetworkBehaviour
         foreach (var pt in _parts)
             if (pt != null && pt.anchor != null && pt.frame != null)
                 pt.frame.SetPositionAndRotation(pt.anchor.position, pt.anchor.rotation);
+    }
+
+    // 시연용(DemoSettings.HideGeneratedPartsInScenario): 시나리오(자유 탈거가 아님)에서는 런타임에 만든 부품 모형(def.gen — 인버터·정션 블록 등
+    // 상자·원통)을 숨긴다. 시나리오 단계의 실제 부품 위에 겹쳐 보이던 것(MSD 레버 주변 등). 0.5초마다 맞춘다 — 자유 탈거로 바뀌면 다시 보인다.
+    private float _genCheckAt;
+    private void RefreshGenVisibility()
+    {
+        if (Time.unscaledTime < _genCheckAt) return;
+        _genCheckAt = Time.unscaledTime + 0.5f;
+        bool hide = DemoSettings.HideGeneratedPartsInScenario && !FreeLoto.IsFreeScenario;
+        foreach (var pt in _parts)
+        {
+            if (pt == null || pt.def == null || pt.def.gen == null || pt.anchor == null) continue;
+            ApplyVisible(pt, pt.visible && !hide);
+        }
     }
 
     // 다른 스크립트(하이라이트·시나리오 연출)가 렌더러를 다시 켜도 떼어낸 부위는 계속 숨긴다

@@ -422,7 +422,7 @@ public class ScenarioRunner : MonoBehaviour
 
         // Task 오브젝트 스폰 (서버 전용, FishNet이 클라이언트에 자동 복제)
         // 드릴처럼 여럿이 동시에 쓰는 공구는 지금 참여 중인 인원(탈락자 제외)만큼 놓는다
-        _spawner?.SpawnForTask(taskDef, GetRequiredClientIds().Count);
+        _spawner?.SpawnForTask(taskDef, GetRequiredClientIds().Count, _data != null ? _data.scenarioId : null);
 
         // GrabUse / GrabAll 계열은 클릭/터치 후 1.5s 딜레이 (Zone은 OnReceiveZoneSignal이 직접 처리)
         bool needsDelay = module is GrabUseTaskModule || module is GrabAllItemsModule;

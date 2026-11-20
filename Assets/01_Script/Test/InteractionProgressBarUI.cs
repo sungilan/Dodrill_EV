@@ -109,7 +109,7 @@ public class InteractionProgressBarUI : MonoBehaviour
         if(!_compact.activeSelf) _compact.SetActive(true);
         // 감전 위험 게이지가 같이 뜨면 그 '위'로 올라간다 — 아래로 내리면 선임 정비사 대화창(화면 아래)을 가렸다(11/19).
         // 위로 올릴 때는 안내 한 줄을 빼서 조준점(화면 가운데)까지 내려오지 않게 한다.
-        bool both = HvShockGauge.Visible;
+        bool both = HvShockGauge.Visible || FreeDischargeHud.Visible;
         _compactBack.anchoredPosition = new Vector2(0f, both ? -92f : -170f);
         _compactLabel.rectTransform.anchoredPosition = new Vector2(0f, both ? 30f : 38f);
         if (_compactSub.gameObject.activeSelf == both) _compactSub.gameObject.SetActive(!both);

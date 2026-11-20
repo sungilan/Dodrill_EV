@@ -107,6 +107,9 @@ namespace DoDrill.Training
 
             float w = Mathf.Max(prt.sizeDelta.x, 460f);
             prt.sizeDelta = new Vector2(w, 200f);
+            // (11/20) PC·모바일은 화면 정가운데 — 위쪽 토스트 카드 가이드와 겹치지 않게(PC 는 씬 값이 가운데에서 390 위였다). VR 은 시선 따라오기(VrToastFollow)가 맡는다
+            if (!VrProbeHandling.IsVRDevice && prt.anchorMin == new Vector2(0.5f, 0.5f) && prt.anchorMax == new Vector2(0.5f, 0.5f))
+                prt.anchoredPosition = new Vector2(0f, ToastRaise);
 
             foreach (Transform child in prt)
             {
@@ -391,6 +394,25 @@ namespace DoDrill.Training
         private const float DescFontSize = 22f;
         private const float ProgressFontSize = 20f;
         private bool _compact;
+
+        // 작업 완료 패널: 가운데에서 이만큼(기준 해상도 px) 위 — 방전·볼트 게이지(가운데 아래)의 제목 글씨와 겹치지 않게(11/20)
+        private const float ToastRaise = 70f;
+
+        // '남은 볼트: n / m' — 진행도 패널 바로 아래(패널과 같은 부모에서 높이를 따라간다). 예전엔 씬의 고정 자리(화면 한가운데 왼쪽)에 떠 있었다.
+        private void LateUpdate()
+        {
+            if (!_compact || _panel == null || _boltProgressText == null || !_boltProgressText.gameObject.activeSelf) return;
+            var prt = (RectTransform)_panel.transform;
+            if (prt.parent == null) return;
+            var brt = _boltProgressText.rectTransform;
+            if (brt.parent != prt.parent) brt.SetParent(prt.parent, false);
+            brt.anchorMin = brt.anchorMax = new Vector2(0f, 1f);
+            brt.pivot = new Vector2(0f, 1f);
+            brt.sizeDelta = new Vector2(320f, 30f);
+            // 패널 아래 왼쪽에는 '지도'·'키' 버튼이 있어 그 오른쪽 옆에 붙인다
+            brt.anchoredPosition = new Vector2(prt.anchoredPosition.x + 150f, prt.anchoredPosition.y - prt.sizeDelta.y - 12f);
+            _boltProgressText.alignment = TextAlignmentOptions.TopLeft;
+        }
         private Image _barFill;
 
         private void SetupCompactLayout()
