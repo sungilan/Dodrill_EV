@@ -33,6 +33,9 @@ public static class ScenarioHooks
         _providers[key] = new Provider { order = order, fn = register };
     }
 
+    /// <summary>지금 등록된 모듈 공급자 수(HookRegistry 자가 점검이 읽는다 — 0 이면 시나리오 단계가 모두 더미로 대기한다)</summary>
+    public static int ProviderCount => _providers.Count;
+
     /// <summary>등록된 공급자 수를 돌려준다(0 이면 모듈이 하나도 없는 것 — 호출 쪽에서 경고)</summary>
     public static int ApplyModuleProviders(ModuleRegistry registry)
     {

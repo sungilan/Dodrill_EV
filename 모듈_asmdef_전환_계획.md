@@ -72,3 +72,67 @@
 ## 8. 기능 폴더 분류 (2026-11-20, 완료)
 어셈블리 경계는 두고 폴더만 기능별로 다시 나눴다 → **`코드_기능분류표.md`**(파일별 역할·비고). 배정표 `Tools/ModuleMigration/feature_map.py`, 이동 도구 `reorg.py`. 이전의 `assignment.json`·`migrate.py` 경로는 이 정리 전 기준이라 더는 쓰지 않는다.
 Content 의 새 폴더: App · Lobby · Menu · Input · Scenario · Guide · Hud · Ui · Vr · Safety · Evaluation · Measure · Tools · Vehicle · Disassembly · Manual · World · Legacy · Debug · External. 다음 단계(asmdef 분리)는 이 경계를 따른다.
+
+## 9. P0 정리 (2026-11-20, 완료 — 컴파일 오류 0·런타임 미검증)
+1. **asmdef 참조 가지치기** — `Tools/ModuleMigration/prune_refs.py`(코드가 쓰는 네임스페이스의 소유 어셈블리만 남김, `--apply`). 외부 참조 수: Common 25→16, Interaction 24→6, Avatar 25→13, Engine 26→11, Content 35→25, Solo 1. **Engine→Avatar 참조를 끊었다**(실제로 안 씀). 스캔이 못 잡는 것(시그니처로만 노출되는 타입·여러 asmdef 가 같은 네임스페이스를 쓰는 AutoHand)은 스크립트의 `EXTRA` 에 적어 둔다: Common{AutoHandAssembly, Unity.XR.OpenXR}, Avatar{Unity.InputSystem}, Content{QuickOutline, LomoCamera, Unity.ResourceManager}. ※ 에디터(Windows)에서 컴파일되지 않는 `#if UNITY_ANDROID` 구간은 이 스캔이 포함하지만 컴파일로는 못 확인했다 → Android(VR·모바일) 빌드로 확인 필요.
+2. **훅 등록 자가 점검** — `Common/Core/HookRegistry.cs`(훅 클래스의 public static 델리게이트 필드를 훑어 빈 것을 로그, `[OptionalHook]` 으로 제외) + `Content/App/Bindings/EvHookSelfCheck.cs`(앱 시작 직후 ScenarioHooks·AvatarHooks·GrabHooks·InteractionEvents·VrUi 점검, 모듈 공급자 ≥1 필수). 로그 `[HookCheck:EV]` — 정상이면 "훅 N개 모두 등록됨", 아니면 빠진 이름·오류. `ScenarioHooks.ProviderCount` 추가.
+3. **공통 인터랙션 개념 정리** — `IWorldClickable` 을 `Interaction/Click/` 으로 이동(ClickableAnimator 를 아는 `WorldClickPriority` 는 `Content/World/Interactive/` 로 분리). `EquipFx.cs` 를 책임별로 분리: EquipFx(효과·소리·안내) / `Disassembly/Bolt/BoltWork·BoltHint·BoltHintFlash` / `Vr/Interaction/LocalHands`. 남은 '아래로 내릴 후보'(`EquipFx` 45개 파일이 사용, `Bolt`·`InteractablePart`)는 Content.Core 어셈블리 분리(P1)에서 처리.
+
+## 10. P1 — Content 를 의존 층으로 4분할 (2026-11-20, 컴파일 오류 0·런타임/빌드 미검증)
+**분석 결과**: 기능 폴더(Safety·Vr·Equipment…) 단위로는 어셈블리를 나눌 수 없다 — Content 의 .cs 269개 중 **103개(35.6k줄, Content 의 70%)가 하나의 순환 덩어리(강연결 성분)** 이다(Bolt·InteractablePart·EquipFx·ClickableAnimator·FreeLoto·CarPartService·GuideSystem·FreeLookController·VrPalmMenu 가 서로를 부름). 폴더로 자르면 어셈블리끼리 순환 참조가 되어 컴파일이 안 된다. 그래서 **코드는 한 줄도 바꾸지 않고, 의존 방향으로** 나눴다(`Tools/ModuleMigration/content_layers.py`, partial 클래스는 한 덩어리):
+
+| 어셈블리 | 폴더 | 파일·줄 | 의미 | 참조 |
+|---|---|---:|---|---|
+| `DoDrill.Content.Base` | `Content/Base/…` | 36 · 4.7k | 코어가 쓰기만 하고 코어를 모르는 하위 부품(WorldHoverLabel·ScreenToast·Bolt 일부·LocalHands·LiftControllerBase…) | Common·Interaction·Avatar·Engine |
+| `DoDrill.Content.Core` | `Content/Core/…` | 103 · 35.6k | EV 정비 도메인의 서로 얽힌 핵심 덩어리 | + Base |
+| `DoDrill.Content.Shell` | `Content/Shell/…` | 72 · 6.3k | 코어와 무관한 껍데기 — 로비·메뉴·UI 위젯·평가 UI·간호술기 레거시·VR UI 일부 | + Base, Solo |
+| `DoDrill.Content.Features` | `Content/Features/…` | 58 · 10.3k | 코어 위에 얹힌 기능 — EV 바인딩·시나리오 모듈·진단기·보관함 화면·HUD 레이아웃 | + Base·Core·Shell, Solo |
+(각 폴더 안은 이전 기능 폴더 구조 그대로, 예: `Content/Core/Disassembly/Bolt/…`. 예전 `DoDrill.Content` 는 없앴다. 어셈블리 폴더·참조는 `prune_refs.py` 의 ASM 표가 원본.)
+- 컴파일 확인 중 고친 것: `internal` 이던 `VrPartTray.PokeSurface`·`NetworkedSessionUserList.ResolveLocalDisplayName/PlatformToByte`·`HvStatusHud.MakeCircle` 를 `public` 으로(어셈블리 경계).
+- **효과**: 새 코드가 아래→위 참조를 만들면 컴파일이 막는다(층 규칙 강제). Shell·Features 는 코어 없이 따로 컴파일되고, 코어는 껍데기·기능을 못 부른다.
+- **한계**: ③ 보호구(Safety)·⑤ VR UI 의 알맹이(FreeLoto·ElectricSafetyManager·VrPalmMenu…)는 아직 Core 안이다.
+
+### 코어를 쪼개려면 (다음 단계)
+파일 단위 의존 390개 중 **약 59개를 끊어야 순환이 풀린다**(추정 최소). 가장 많이 '거꾸로' 불리는 대상 = FreeLoto(7), CarPartService(6), FreeLookController(4), GuideSystem(3), VrPalmMenu(3), FocusMode·AirImpactWrench·ImpactWrench·ScenarioExitHandler·VrControllerHints·FreeLockControllerMobile·CarPartRules·MiniMapComponent(각 2). 이 호출들을 `GrabHooks`·`AvatarHooks` 같은 훅/인터페이스로 바꾸면 Safety·VrUi·EvInput·Equipment 를 어셈블리로 뽑을 수 있다(작업량 큼, 기능 하나씩).
+
+## 11. Core 분해 계획 — 전체 분석 결과 (2026-11-20, 분석만·코드 변경 없음)
+**측정 방법**: Core 103개 파일을 최상위 타입 기준(중첩 타입·메서드명 오탐 제거)으로 기능 폴더 36개에 묶어 의존 그래프를 만들고, 아래→위 방향 순서를 정해 '거꾸로 가는 참조'를 센다. 거꾸로 가는 참조가 0이면 그 순서대로 어셈블리를 나눌 수 있다.
+
+### 11.1 결론
+- 순환의 원인은 **전체가 서로 얽힌 것이 아니라 소수의 허브 클래스**다. 목표 구조(아래 11.2)로 나누려면 끊어야 할 참조 타입이 **약 49개**(이 중 상당수는 같은 허브를 부르는 것이라 실제 작업은 **8개 작업 묶음**).
+- 검색(어닐링)으로 본 하한: 어셈블리 6개·각 9k줄 이하 → 31, 8개 → 33, 10개 → 37. 즉 **의미 있게 나누려면 대략 30~50개 참조를 끊는 작업**이 필요하고, 그보다 적게는 안 된다.
+- 허브(거꾸로 가장 많이 불리는 것): **CarPartService**(Safety·Equipment·Disassembly 안쪽에서 7타입), **FreeLoto**(Bolt·ClickableAnimator·Measure·Disassembly 등 4곳), **GuideSystem**(Disassembly·Measure·Evaluation·VrPalmMenu), **WarningPopup/DischargeTimerUI/UIHoverFader**(작은 UI 부품이 Core 안에 갇힘), **FreeLookController·FreeLockControllerMobile**(CreeperRide·EVInventorySlot 이 직접 부름), **VrPalmMenu**(EquipFx 가 설정값 하나 때문에 부름).
+
+### 11.2 목표 어셈블리 (아래 → 위)
+| 층 | 내용 | 줄 | 비고 |
+|---|---|---:|---|
+| Foundation | Tools/Core·World·World/Interactive·Disassembly/Bolt·Input/Shared·Vehicle/Body | 3.5k | 모든 기능의 바닥 |
+| Measure | Measure·Measure/Probe(멀티미터·메거) | 3.0k | |
+| **Safety (③)** | Safety/Accident·HighVoltage | 2.0k | 보호구·LOTO·감전/사고 |
+| Equipment | Tools/Hand·Workshop | 4.8k | 공구·작업장 장비 |
+| Disassembly | Disassembly/*·Manual/* | 8.5k | 분해·조립·타이어·보관함·매뉴얼 점검 |
+| Vehicle | Vehicle/Service·Diagnostics | 0.8k | |
+| Guide | Guide·Guide/View·MiniMap | 3.5k | |
+| Hud | Hud·Hud/Session·Hud/Task | 1.7k | |
+| **VrUi (⑤)** | Vr/Hints·Tutorial·Ui·Tools/Belt | 2.5k | |
+| Input (①의 입력부) | Input/Pc·Mobile·External/Inventory | 4.0k | |
+| Menu | Evaluation·Lobby·Menu/Popups | 1.3k | |
+(③·⑤ 를 독립 모듈로 쓰려면 Safety·VrUi 가 아래쪽에 있을수록 좋다 — 그래서 아래 작업 묶음이 Safety 를 CarPartService·Guide 에서 떼어 내는 데 집중한다.)
+
+### 11.3 작업 묶음 (효과 큰 순서 · 한 묶음씩 컴파일·동작 확인)
+| # | 묶음 | 끊는 참조 | 방법 | 난이도 |
+|---|---|---|---|---|
+| 1 | **오탐·작은 부품 정리(기계적)** | WarningPopup·GuideMarker·LobbyPanel 은 이미 Base 로 내려갈 수 있음(Target·Follow 오탐), `UIHoverFader` 를 FreeLookController.cs 에서 별도 파일로, `VrProbeHandling.IsVRDevice`→`VrDevice`, `VrPalmMenu.InfoCardsAllowed`→설정 정적 클래스, `HoldScalePolicy` 의 소품 타입 검사→마커 인터페이스, `VrToastFollow` 이동 | ~15타입 | 파일 이동·이름 정리 | 쉬움 |
+| 2 | **FreeLoto 의 자유 실습 상태 분리** | IsFreeScenario·FreeScenarioId·IsFreePractice·Battery12VOff 를 `FreePracticeState`(Foundation)로 — Bolt·ClickableAnimator·ElectricSafetyManager·Battery12VServiceVisual·HvVoltageCheck 가 FreeLoto(1.1k줄)를 안 부르게. `TryTerminalVoltage`(Measure)·`InterceptMsdLever`(ClickableAnimator)는 훅 | ~6 | 정적 클래스 추출 + 훅 2개 | 보통 |
+| 3 | **CarPartService 허브 분리** | PartDef·Defs·IndexOf·NameOfBolt(데이터)를 `CarPartCatalog`(Foundation)로, 상태 조회(Instance·StateOf·IsFreeSlotNear·TryGetPartAnchor)는 `ICarPartService` 인터페이스(Foundation)로 — Safety·Equipment·Manual·Rules 가 구현이 아닌 인터페이스를 본다. CarPartService(3.5k줄) 자체는 Disassembly 에 그대로 | ~10 | 인터페이스 추출 | 보통~어려움 |
+| 4 | **Guide 훅** | GuideSystem 직접 호출(ShowHintForCurrentTask·CenterPopupEnabled·Instance 조회·GhostManager·NextActionGuide)을 `GuideHooks`(Foundation 또는 Engine)로 | ~6 | 훅/이벤트 | 보통 |
+| 5 | **입력 컨트롤러 인터페이스화** | CreeperRide·EVInventorySlot 이 FreeLookController/FreeLockControllerMobile 을 직접 찾는 것을 `IPcLookController`(Avatar 에 이미 있음)로 — 필요한 멤버만 인터페이스에 추가 | ~4 | 기존 인터페이스 확장 | 쉬움 |
+| 6 | **Hud 정리** | DischargeTimerUI·FreeDischargeHud·EVInventoryUI.TryToggle·EvaluationClientUI 호출을 이벤트/훅으로 | ~6 | 훅 | 보통 |
+| 7 | **차량·장비 잔여** | ShopCrane.All(Accident), CoolantReservoir(Rules·Body), Battery12VServiceVisual(FreeLoto), AirImpactWrench(Workshop), TorqueSpec(Hand), TireWheel/TireService(Foundation) — 각각 인터페이스 또는 위치 이동 | ~10 | 개별 | 보통 |
+| 8 | **어셈블리 분할 실행** | 11.2 표대로 폴더·asmdef 분할(`content_layers.py` 와 같은 방식, 층 순서만 11.2 로) | — | 도구 + 컴파일 오류 수정 | 쉬움(위 1~7 뒤) |
+
+### 11.4 순서·위험·확인
+- **순서**: 1 → 2 → 3(가장 큼) → 4·5 → 6·7 → 8. 1·5 는 위험이 낮고 효과가 바로 보인다(Core 가 줄어듦). 3 이 끝나면 Safety·Equipment 가 Disassembly 에서 풀린다.
+- **매 묶음 뒤**: `content_layers.py` 로 Core 크기 재측정(줄어야 함) → 컴파일 → PC·모바일·VR 시나리오 한 번 → `[HookCheck:EV]` 확인.
+- **위험**: ① 훅 추가가 늘면 '등록 누락 = 기능 사라짐' 위험이 커진다 → HookRegistry 가 새 훅을 자동 점검하므로 필수. ② FreeLoto·CarPartService 는 네트워크 메시지·RPC 를 가진다 → 클래스 이름·메시지 구조를 바꾸지 말고(서버·클라 계약 유지) 정적 상태·인터페이스만 새로 만든다. ③ 씬·프리팹이 MonoBehaviour 를 GUID 로 참조하므로 **MonoBehaviour 클래스는 파일을 쪼개지 말고**(새 클래스만 새 파일) 이동만 한다.
+- **끝났을 때 얻는 것**: Safety(③)·VrUi(⑤)·Input(①)·Equipment·Disassembly 가 컴파일 단위로 독립 → 다른 프로젝트에 어셈블리 단위로 가져가고, 훅으로만 연결.
