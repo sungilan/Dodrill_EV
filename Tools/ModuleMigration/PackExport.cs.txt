@@ -1,0 +1,84 @@
+// 모듈 패키지 내보내기 — Assets/Editor/PackExport.cs 로 복사한 뒤 배치 모드로 실행하고 지운다.
+//   Unity.exe -batchmode -quit -projectPath <EV> -executeMethod PackExport.Run -logFile <log>  (환경변수 PACK_OUT_DIR = 출력 폴더)
+// 만드는 것:
+//   DoDrill_Modules_<날짜>.unitypackage    : 모듈 폴더 9개(Common·Interaction·Avatar·Engine·Ui·Solo·Safety·Lobby·Setup) + 폴더 밖에서 쓰는 에셋(플러그인·패키지·Settings 제외)
+//   DoDrill_EV_Plugins_<날짜>.unitypackage : EV 수정본 FishNet·MasterServerToolkit·AutoHand (모듈이 기대는 수정이 들어 있다)
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEngine;
+
+public static class PackExport
+{
+    static readonly string[] Roots =
+    {
+        "Assets/01_Script/Common", "Assets/01_Script/Interaction", "Assets/01_Script/Avatar", "Assets/01_Script/Engine",
+        "Assets/01_Script/Ui", "Assets/01_Script/Solo", "Assets/01_Script/Safety", "Assets/01_Script/Lobby", "Assets/01_Script/Setup",
+    };
+
+    static bool Under(string p, string[] roots) { foreach (var r in roots) if (p == r || p.StartsWith(r + "/")) return true; return false; }
+
+    public static void Run()
+    {
+        string outDir = Environment.GetEnvironmentVariable("PACK_OUT_DIR");
+        if (string.IsNullOrEmpty(outDir)) { Debug.Log("[PackExport] FAIL PACK_OUT_DIR 없음"); EditorApplication.Exit(2); return; }
+        Directory.CreateDirectory(outDir);
+        string date = DateTime.Now.ToString("yyyyMMdd");
+
+        // 1) 모듈
+        var files = new List<string>();
+        foreach (var g in AssetDatabase.FindAssets("", Roots))
+        {
+            string p = AssetDatabase.GUIDToAssetPath(g);
+            if (!AssetDatabase.IsValidFolder(p) && !files.Contains(p)) files.Add(p);
+        }
+        files.Add("Assets/01_Script/README.md");
+        // 로비 프리팹이 쓰는 서드파티 스크립트(SimpleSpinner, TrueShadow — 유료 에셋이므로 내부 시험용)는 폴더째 넣는다
+        foreach (var g in AssetDatabase.FindAssets("", new[] { "Assets/ThirtParty/SimpleSpinner", "Assets/ThirtParty/Le Tai's Asset" }))
+        {
+            string p = AssetDatabase.GUIDToAssetPath(g);
+            if (!AssetDatabase.IsValidFolder(p) && !files.Contains(p)) files.Add(p);
+        }
+        int inside = files.Count;
+
+        var skipPrefix = new[] { "Packages/", "Assets/Plugins/", "Assets/Packages/", "Assets/Settings/" };
+        var outside = new Dictionary<string, bool>();
+        var outsideScripts = new List<string>();
+        // 직접 의존만 따라 내려간다(recursive=false). DefaultPrefabObjects 처럼 EV 네트워크 프리팹 전체를 물고 있는 에셋은 건너뛴다(통째로 따라가면 수천 개가 딸려 온다).
+        var queue = new Queue<string>(files);
+        var seen = new Dictionary<string, bool>();
+        foreach (var f in files) seen[f] = true;
+        while (queue.Count > 0)
+        {
+            string cur = queue.Dequeue();
+            foreach (var d in AssetDatabase.GetDependencies(cur, false))
+            {
+                if (seen.ContainsKey(d)) continue;
+                seen[d] = true;
+                if (Under(d, Roots) || d == "Assets/01_Script/README.md") continue;
+                if (skipPrefix.Any(s => d.StartsWith(s))) continue;
+                if (d.Contains("/Samples/") || d.EndsWith("DefaultPrefabObjects.asset")) continue;
+                if (d.EndsWith(".cs")) { outsideScripts.Add(d + "   <- " + cur); continue; }
+                outside[d] = true;
+                queue.Enqueue(d);
+            }
+        }
+        foreach (var o in outside.Keys) files.Add(o);
+        foreach (var s in outsideScripts) Debug.Log("[PackExport] 경고: 모듈이 폴더 밖 스크립트에 의존 " + s);
+
+        string modPath = Path.Combine(outDir, $"DoDrill_Modules_{date}.unitypackage");
+        AssetDatabase.ExportPackage(files.ToArray(), modPath, ExportPackageOptions.Default);
+        Debug.Log($"[PackExport] 모듈 패키지: 폴더 안 {inside}개 + 밖 {outside.Count}개 → {modPath} ({new FileInfo(modPath).Length / (1024 * 1024)} MB)");
+        foreach (var o in outside.Keys) Debug.Log("[PackExport]   밖: " + o);
+
+        if (Environment.GetEnvironmentVariable("PACK_PLUGINS") == "0") { Debug.Log("[PackExport] RESULT PASS (플러그인 패키지 건너뜀)"); EditorApplication.Exit(0); return; }
+        // 2) EV 수정본 플러그인
+        string plPath = Path.Combine(outDir, $"DoDrill_EV_Plugins_{date}.unitypackage");
+        AssetDatabase.ExportPackage(new[] { "Assets/Packages/FishNet", "Assets/Packages/MasterServerToolkit", "Assets/Packages/AutoHand" }, plPath, ExportPackageOptions.Recurse);
+        Debug.Log($"[PackExport] 플러그인 패키지 → {plPath} ({new FileInfo(plPath).Length / (1024 * 1024)} MB)");
+        Debug.Log("[PackExport] RESULT PASS");
+        EditorApplication.Exit(0);
+    }
+}
