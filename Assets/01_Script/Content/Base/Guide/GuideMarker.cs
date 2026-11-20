@@ -47,6 +47,30 @@ public class GuideMarker : MonoBehaviour
     {
         _followTarget = target;
         if (target != null) _followOffset = transform.position - target.position;
+        _carrierChecked = false;
+    }
+
+    /// <summary>
+    /// (11/20 내부 시연) 리프트로 차를 올려도 차 쪽 노란 가이드가 제자리에 남았다 — 가이드 대상(Guide_* 지점·스폰 지점)이
+    /// 차의 자식이 아니라 씬에 따로 놓여 있었기 때문이다. 리프트(VehicleLiftController)가 이 함수를 채워 주면,
+    /// 마커가 차 안쪽에 있고 대상이 차에 붙어 있지 않을 때 차를 따라가게 한다. 인자: 마커 위치 → 그 자리를 품은 차(없으면 null).
+    /// </summary>
+    public static System.Func<Vector3, Transform> CarrierAt;
+    private bool _carrierChecked;
+
+    private void ResolveCarrier()
+    {
+        _carrierChecked = true;
+        if (CarrierAt == null) return;
+        var car = CarrierAt(transform.position);
+        if (car == null) return;
+        if (_followTarget != null)
+        {
+            if (_followTarget == car || _followTarget.IsChildOf(car)) return;      // 이미 차와 같이 움직인다
+            if (_followTarget.GetComponentInParent<Rigidbody>() != null) return;  // 들고 다니는 물건은 그대로 따라간다
+        }
+        _followTarget = car;
+        _followOffset = transform.position - car.position;
     }
 
     private void Awake()
@@ -96,6 +120,7 @@ public class GuideMarker : MonoBehaviour
     // 가까이서 보면 화살표·라벨이 화면을 가득 채워 시야를 가리던 문제 방지
     private void LateUpdate()
     {
+        if (!_carrierChecked) ResolveCarrier();
         if (_followTarget != null)
             transform.position = _followTarget.position + _followOffset;
         UpdateYield();

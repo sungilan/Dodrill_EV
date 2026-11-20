@@ -60,8 +60,8 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
     private bool UseAvatarRig => cameraPivot != null && _avatarCtrl != null;
 
     // 높이(크라우치) 버튼용 — MoveUp = 일어서기, MoveDown = 낮추기
-    public void MoveUp() { if (LadderProp.TryClimbStep(transform, +1)) return; _crouchInput = -1f; desiredVertical = 0f; }   // 사다리 가까이면 한 칸 오르기
-    public void MoveDown() { if (LadderProp.TryClimbStep(transform, -1)) return; _crouchInput = 1f; desiredVertical = 0f; }
+    public void MoveUp() { if (PcMobileMotor.TryClimbStep(transform, +1)) return; _crouchInput = -1f; desiredVertical = 0f; }   // 사다리 가까이면 한 칸 오르기
+    public void MoveDown() { if (PcMobileMotor.TryClimbStep(transform, -1)) return; _crouchInput = 1f; desiredVertical = 0f; }
     public void StopMove() { _crouchInput = 0f; desiredVertical = 0f; }
 
     [Header("Joystick/Touch")]
@@ -190,60 +190,26 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         for(int i = 0; i < 40; i++)
         {
             var es = EventSystem.current;
-            if(es != null) { UseLegacyTouchModule(es); break; }
+            if(es != null) { MobileTouchUi.UseLegacyTouchModule(es, Log); break; }
             yield return new WaitForSeconds(0.25f);
         }
 
         // UI 는 플랫폼 설정 뒤에 켜지는 경우가 있어 한동안 반복해서 점검
         for(int i = 0; i < 24; i++)
         {
-            EnsureRaycasters();
+            MobileTouchUi.EnsureRaycasters(Log);
             yield return new WaitForSeconds(2.5f);
         }
     }
 
-    private void UseLegacyTouchModule(EventSystem es)
-    {
-        if(!Application.isMobilePlatform) return;   // 에디터·PC 에서는 기존 모듈 유지
-
-        StandaloneInputModule legacy = es.GetComponent<StandaloneInputModule>();
-        bool changed = false;
-        foreach(var m in es.GetComponents<BaseInputModule>())
-        {
-            if(m == null || m is StandaloneInputModule) continue;
-            if(m.GetType().Name == "InputSystemUIInputModule" && m.enabled) { m.enabled = false; changed = true; }
-        }
-        if(legacy == null) { legacy = es.gameObject.AddComponent<StandaloneInputModule>(); changed = true; }
-        if(!legacy.enabled) { legacy.enabled = true; changed = true; }
-        if(changed) Log("UI 입력 모듈을 레거시 터치(StandaloneInputModule)로 전환");
-    }
-
-    private void EnsureRaycasters()
-    {
-        foreach(var c in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-        {
-            if(!c.isRootCanvas || c.renderMode == RenderMode.WorldSpace) continue;
-            if(c.GetComponent<GraphicRaycaster>() != null) continue;
-            if(c.GetComponentInChildren<Selectable>(true) == null && c.GetComponentInChildren<ScrollRect>(true) == null) continue;
-            c.gameObject.AddComponent<GraphicRaycaster>();
-            Log($"GraphicRaycaster 없는 캔버스에 추가: {c.name}");
-        }
-    }
+    // (모듈화 ①) UI 터치 보강·카메라 켜기·이동·시점 공통부는 Avatar 모듈(MobileTouchUi·PcMobileMotor)로 옮겼다
 
     private IEnumerator InitCamera()
     {
-        _mainCamera = GetComponentInChildren<Camera>(true);
+        // PcMobileAvatarController 가 모든 카메라를 꺼 두므로 'UI' 카메라(자식)까지 다시 켠다
+        _mainCamera = PcMobileMotor.ActivateOwnCamera(this, nearClip);
         if(_mainCamera != null)
         {
-            _mainCamera.gameObject.SetActive(true);
-            _mainCamera.enabled = true;
-            _mainCamera.tag = "MainCamera";
-            // 프리팹 루트 카메라의 near clip(0.3m) 때문에 가까운 물체가 잘려 보이는 문제 방지
-            if(nearClip > 0f && _mainCamera.nearClipPlane > nearClip)
-                _mainCamera.nearClipPlane = nearClip;
-            // PcMobileAvatarController 가 모든 카메라를 꺼 두므로 'UI' 카메라(자식)도 다시 켠다
-            foreach(var cam in GetComponentsInChildren<Camera>(true))
-                if(cam.gameObject.name.Contains("UI")) cam.gameObject.SetActive(true);
             _cameraReady = true;
             Log("카메라 준비 완료");
         }
@@ -282,22 +248,12 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
     private void Move()
     {
         Vector2 moveInput = (moveJoyStick != null) ? moveJoyStick.InputDirection : Vector2.zero;
-        Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
-        Vector3 moveDir = transform.right * moveInput.x + flatForward * moveInput.y;
-        Vector3 desiredMove = moveDir * moveSpeed;
+        Vector3 desiredMove = PcMobileMotor.PlanarDirection(transform, moveInput) * moveSpeed;
         currentVelocity = Vector3.Lerp(currentVelocity, desiredMove, Time.deltaTime / moveSmoothTime);
 
-        if(UseAvatarRig)
-        {
-            _planarVelocity = MoveWithCollision(currentVelocity * Time.deltaTime);
-            return;
-        }
-
-        float targetVerticalVel = desiredVertical * moveSpeed;
-        currentVerticalVelocity = Mathf.Lerp(currentVerticalVelocity, targetVerticalVel, Time.deltaTime / verticalSmoothTime);
-
         _planarVelocity = MoveWithCollision(currentVelocity * Time.deltaTime);
-        transform.position += Vector3.up * (currentVerticalVelocity * Time.deltaTime);
+        if(!UseAvatarRig)
+            PcMobileMotor.StepFreeVertical(transform, ref currentVerticalVelocity, desiredVertical, moveSpeed, verticalSmoothTime);
     }
 
     [Header("이동 충돌 (벽·가구)")]
@@ -309,22 +265,8 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
     /// <summary>수평 이동량(이번 프레임)을 충돌을 적용해 옮기고, 실제로 움직인 속도(m/s)를 돌려준다(걷기 애니메이션용).</summary>
     private Vector3 MoveWithCollision(Vector3 wantDelta)
     {
-        float dt = Mathf.Max(Time.deltaTime, 1e-4f);
-        if(!collideWithEnvironment)
-        {
-            transform.position += wantDelta;
-            return wantDelta / dt;
-        }
-
         float s = _avatarCtrl != null ? _avatarCtrl.AvatarScale : 1f;
-        Vector3 before = transform.position;
-        Vector3 after = PlayerCollision.Move(before, wantDelta, collisionRadius * s, collisionHeight * s);
-        transform.position = after;
-
-        Vector3 actual = (after - before); actual.y = 0f;
-        Vector3 vel = actual / dt;
-        float max = Mathf.Max(moveSpeed, 0.01f) * 1.5f;
-        return vel.magnitude > max ? vel.normalized * max : vel;
+        return PcMobileMotor.MoveWithCollision(transform, wantDelta, collideWithEnvironment, collisionRadius, collisionHeight, s, moveSpeed);
     }
 
     // 오른쪽 절반은 시선 회전 영역이지만, 짧게 톡 치면(이동 거의 없음) 상호작용으로 처리한다.
@@ -374,15 +316,7 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
                 if(LookLocked) delta.y = 0f;
                 rotY += delta.x * lookSensitivity * 0.02f;
                 rotX = Mathf.Clamp(rotX + (delta.y * lookSensitivity * -0.02f), minLookX, maxLookX);
-                if(UseAvatarRig)
-                {
-                    transform.rotation = Quaternion.Euler(0f, rotY, 0f);
-                    cameraPivot.localRotation = Quaternion.Euler(rotX, 0f, 0f);
-                }
-                else
-                {
-                    transform.rotation = Quaternion.Euler(rotX, rotY, 0f);
-                }
+                PcMobileMotor.ApplyLook(transform, cameraPivot, UseAvatarRig, rotX, rotY);
                 lastLookTouchPos = t.position;
             }
         }

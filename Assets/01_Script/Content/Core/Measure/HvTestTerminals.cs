@@ -66,34 +66,46 @@ public class HvTestTerminals : MonoBehaviour
         return s_inst._terms.TryGetValue(mp.GetInstanceID(), out var t) ? t.role : Role.None;
     }
 
+    // (11/20 내부 시연) 절연 저항 점검에서 검정 프로브(접지) 위치도 안내해 달라 → 접지 측정점(terminalId 에 'Ground')에 검정 단자 표시를 띄운다.
+    // 위치는 옮기지 않는다(프리팹에 놓인 자리 그대로). PcProbeAim 의 역할 판정(RoleOf)에는 넣지 않는다.
+    private readonly Dictionary<int, Term> _grounds = new Dictionary<int, Term>();
+    private const string GroundLabel = "<b>검정 프로브 (−)</b>\n<size=72%>접지에 먼저 물리기</size>";
+
+    private static bool IsInsulationStep(string module) =>
+        !string.IsNullOrEmpty(module) &&
+        (module.StartsWith("Insulation_Test") || module == "Insulation_Resistance_Test" || module == "Megger_Setup_Ground");
+
     private void Update()
     {
         if (Time.unscaledTime >= _nextScan) { _nextScan = Time.unscaledTime + 1f; Scan(); }
-        if (_terms.Count == 0) { GuideActive = false; return; }
+        if (_terms.Count == 0 && _grounds.Count == 0) { GuideActive = false; return; }
 
         string module = CurrentModule();
         bool eval = EvaluationMode.ClientIsEvaluation;
         var cam = Camera.main;
         bool any = false;
         float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
-        foreach (var t in _terms.Values)
-        {
-            if (t.root == null) continue;
-            bool show = ShouldShow(t.id, module);
-            if (t.root.activeSelf != show) t.root.SetActive(show);
-            if (!show) continue;
-            if (t.guideOnly != null)
-                foreach (var g in t.guideOnly) if (g != null && g.activeSelf == eval) g.SetActive(!eval);
-            if (eval) continue;
-            any = true;
-            if (t.halo != null) t.halo.localScale = Vector3.one * (0.125f + 0.025f * pulse);
-            if (t.label != null && cam != null)
-            {
-                Vector3 look = t.label.position - cam.transform.position;
-                if (look.sqrMagnitude > 1e-6f) t.label.rotation = Quaternion.LookRotation(look, Vector3.up);
-            }
-        }
+        bool insul = IsInsulationStep(module) || DebugShowAll;
+        foreach (var t in _terms.Values) any |= Tick(t, ShouldShow(t.id, module), eval, cam, pulse);
+        foreach (var t in _grounds.Values) any |= Tick(t, insul, eval, cam, pulse);
         GuideActive = any;
+    }
+
+    private static bool Tick(Term t, bool show, bool eval, Camera cam, float pulse)
+    {
+        if (t.root == null) return false;
+        if (t.root.activeSelf != show) t.root.SetActive(show);
+        if (!show) return false;
+        if (t.guideOnly != null)
+            foreach (var g in t.guideOnly) if (g != null && g.activeSelf == eval) g.SetActive(!eval);
+        if (eval) return false;
+        if (t.halo != null) t.halo.localScale = Vector3.one * (0.125f + 0.025f * pulse);
+        if (t.label != null && cam != null)
+        {
+            Vector3 look = t.label.position - cam.transform.position;
+            if (look.sqrMagnitude > 1e-6f) t.label.rotation = Quaternion.LookRotation(look, Vector3.up);
+        }
+        return true;
     }
 
     /// <summary>점검용 — true 면 측정 단계가 아니어도 단자 안내를 항상 보인다(에디터에서 모양 확인).</summary>
@@ -134,10 +146,24 @@ public class HvTestTerminals : MonoBehaviour
         var dead = new List<int>();
         foreach (var kv in _terms) if (kv.Value.mp == null) dead.Add(kv.Key);
         foreach (var k in dead) { if (_terms[k].root != null) Destroy(_terms[k].root); _terms.Remove(k); }
+        dead.Clear();
+        foreach (var kv in _grounds) if (kv.Value.mp == null) dead.Add(kv.Key);
+        foreach (var k in dead) { if (_grounds[k].root != null) Destroy(_grounds[k].root); _grounds.Remove(k); }
 
         var groups = new Dictionary<string, List<MeasurementPoint>>();
         foreach (var mp in FindObjectsByType<MeasurementPoint>(FindObjectsSortMode.None))
         {
+            if (mp != null && mp.isActiveAndEnabled && !string.IsNullOrEmpty(mp.terminalId) && mp.terminalId.Contains("Ground")
+                && !_grounds.ContainsKey(mp.GetInstanceID()))
+            {
+                var par = mp.transform.parent;
+                Vector3 outward = par != null ? par.right : Vector3.right; outward.y = 0f;
+                if (outward.sqrMagnitude < 1e-6f) outward = Vector3.right;
+                var g = new Term { mp = mp, id = mp.terminalId, role = Role.Black, outward = outward.normalized };
+                BuildVisual(g, GroundLabel);
+                _grounds[mp.GetInstanceID()] = g;
+                continue;
+            }
             if (mp == null || !mp.isActiveAndEnabled || System.Array.IndexOf(Ids, mp.terminalId) < 0) continue;
             if (!groups.TryGetValue(mp.terminalId, out var l)) groups[mp.terminalId] = l = new List<MeasurementPoint>();
             l.Add(mp);
@@ -205,11 +231,15 @@ public class HvTestTerminals : MonoBehaviour
         return go;
     }
 
-    private void BuildVisual(Term t)
+    // (11/20 내부 시연) 빨간 프로브 안내가 빨간색이라 배터리·주황 커넥터 사이에서 잘 안 보였다 →
+    // 단자 머리(실제 단자 색)는 빨강 그대로 두고, 후광·고리·이름표는 눈에 띄는 노랑으로 바꾼다.
+    private static readonly Color RedGuide = new Color(1f, 0.92f, 0.1f, 1f);
+
+    private void BuildVisual(Term t, string labelText = null)
     {
         bool red = t.role == Role.Red;
         Color cap = red ? new Color(1f, 0.12f, 0.12f, 1f) : new Color(0.12f, 0.12f, 0.15f, 1f);
-        Color glow = red ? new Color(1f, 0.25f, 0.2f, 1f) : new Color(0.75f, 0.85f, 1f, 1f);
+        Color glow = red ? RedGuide : new Color(0.75f, 0.85f, 1f, 1f);
 
         t.root = new GameObject("[HvTestTerminal_" + (red ? "Red" : "Black") + "]");
         t.root.transform.SetParent(t.mp.transform, false);
@@ -245,8 +275,8 @@ public class HvTestTerminals : MonoBehaviour
         tmp.textWrappingMode = TextWrappingModes.NoWrap;
         tmp.richText = true;
         tmp.rectTransform.sizeDelta = new Vector2(0.40f, 0.12f);
-        tmp.text = red ? "<b>빨간 프로브 (+)</b>\n<size=72%>여기에 꽂기</size>" : "<b>검정 프로브 (−)</b>\n<size=72%>먼저 여기에 꽂기</size>";
-        tmp.color = red ? new Color(1f, 0.55f, 0.5f) : Color.white;
+        tmp.text = labelText ?? (red ? "<b>빨간 프로브 (+)</b>\n<size=72%>여기에 꽂기</size>" : "<b>검정 프로브 (−)</b>\n<size=72%>먼저 여기에 꽂기</size>");
+        tmp.color = red ? RedGuide : Color.white;
         var om = font != null ? VrUi.TmpOverlayMat(font) : null;
         if (om != null) tmp.fontSharedMaterial = om;
         var mr = tgo.GetComponent<MeshRenderer>(); if (mr != null) mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

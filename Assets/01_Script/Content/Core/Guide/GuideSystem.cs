@@ -647,6 +647,12 @@ public class GuideSystem : MonoBehaviour
         }
     }
 
+    private static bool IsObdGuide(string guideId, string targetName, ModuleConfig config)
+    {
+        bool Obd(string s) => !string.IsNullOrEmpty(s) && s.IndexOf("OBD", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        return Obd(guideId) || Obd(targetName) || (config != null && (Obd(config.targetObjName) || Obd(config.targetZoneId)));
+    }
+
     private void ProcessTargetGuide(string guideId, string prefabId, ModuleConfig config)
     {
         // ── 1. 목표 지점(Target) 결정 ──
@@ -675,6 +681,8 @@ public class GuideSystem : MonoBehaviour
             bool shouldSpawnMarker = hasZoneData && zoneData.showGuide;
             // (11/20) 멀티미터 전압 측정 단계는 단자 쪽 빨강·파랑 표시(HvTestTerminals)로 안내하므로 노란 목표 마커(원)는 만들지 않는다
             if(config != null && !string.IsNullOrEmpty(config.actionType) && config.actionType.StartsWith("MeasureVoltage", System.StringComparison.OrdinalIgnoreCase)) shouldSpawnMarker = false;
+            // (11/20 내부 시연) GDS 진단기는 들기만 하면 연결되므로(GdsTablet.autoConnect) OBD 단자 위치 안내는 띄우지 않는다
+            if(IsObdGuide(guideId, markerTargetGO.name, config)) shouldSpawnMarker = false;
             bool shouldSpawnGhost = hasZoneData && zoneData.showGhost;
 
             Debug.Log($"<color=yellow>[Guide-Check]</color> 타겟: <b>{markerTargetGO.name}</b> | " +

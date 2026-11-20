@@ -1,0 +1,32 @@
+{
+  "scenarioId": "example_minimal",
+  "scenarioName": { "ko": "모듈 최소 예제", "en": "Module minimal example", "vi": "" },
+  "version": "1.0",
+  "map": { "objects": [] },
+  "scenario": {
+    "tasks": [
+      { "moduleId": "Example_Wait", "timeout": 0, "completionMode": "AnyPlayer", "spawnObjects": [] },
+      { "moduleId": "Example_PressKey", "timeout": 0, "completionMode": "AnyPlayer", "spawnObjects": [] }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "Example_Wait",
+      "config": {
+        "extra": [
+          { "key": "title", "ko": "잠시 대기", "en": "Wait", "vi": "" },
+          { "key": "seconds", "ko": "3", "en": "3", "vi": "" }
+        ]
+      }
+    },
+    {
+      "moduleId": "Example_PressKey",
+      "config": {
+        "extra": [
+          { "key": "title", "ko": "스페이스 키 누르기", "en": "Press Space", "vi": "" },
+          { "key": "key", "ko": "Space", "en": "Space", "vi": "" }
+        ]
+      }
+    }
+  ]
+}

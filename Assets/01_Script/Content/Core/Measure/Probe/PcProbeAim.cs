@@ -161,6 +161,7 @@ public class PcProbeAim : MonoBehaviour
         if (p.pen != null) p.pen.SetActive(false);
         if (p.cord != null) p.cord.enabled = false;
         if (p.cable != null) p.cable.enabled = true;
+        if (wasOut) ProbePoseNet.Report(this, p.red, false, Vector3.zero, Vector3.zero);
     }
 
     // ── 매 프레임 ───────────────────────────
@@ -489,6 +490,7 @@ public class PcProbeAim : MonoBehaviour
         Vector3 c2 = b - dir * Mathf.Min(0.12f, d * 0.3f) + Vector3.down * sag * 0.6f;
         if (!p.cord.enabled) p.cord.enabled = true;
         for (int i = 0; i < CordSegments; i++) p.cord.SetPosition(i, Bezier(a, c1, c2, b, (float)i / (CordSegments - 1)));
+        ProbePoseNet.Report(this, p.red, true, tip, b);   // 다른 사람 화면에도 같은 자리에 보이게
     }
 
     private static Vector3 Bezier(Vector3 a, Vector3 b, Vector3 c, Vector3 d, float t)

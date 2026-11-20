@@ -75,6 +75,7 @@ public class MultimeterMaster : MonoBehaviour
     {
         // 싱글톤 선택적 — 여러 대 있을 수 있으므로 약한 참조
         if (Instance == null) Instance = this;
+        ProbePoseNet.Init();   // 프로브 위치를 다른 사람과 맞추는 신호(서버·클라이언트) 등록
         MobileMeterReadout.Register(this);   // 모바일·PC: 화면에 측정값을 크게 띄우는 패널
         // VR: 프로브를 손으로 꺼내 단자에 대는 측정 (VR 기기가 아니면 스스로 꺼진다)
         if (GetComponent<VrProbeHandling>() == null) gameObject.AddComponent<VrProbeHandling>();

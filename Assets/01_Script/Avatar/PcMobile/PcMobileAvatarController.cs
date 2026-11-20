@@ -31,6 +31,8 @@ public class PcMobileAvatarController : NetworkBehaviour
     [SerializeField] private float crouchSpeed = 2.5f;
     [Tooltip("261026 촬영용: 선 키보다 더 올라갈 수 있는 높이(m, 아바타 스케일 1 기준). 0이면 기존처럼 서기까지만.")]
     [SerializeField] private float extraRaise = 1.6f;
+    [Tooltip("(11/20 내부 시연) 모바일은 서기 버튼을 끝까지 누르면 시야가 지나치게 높아졌다 → 모바일만 이만큼(m)까지로 제한")]
+    [SerializeField] private float extraRaiseMobile = 0.3f;
     [Tooltip("261026 촬영용: 크라우치 최저보다 더 내려갈 수 있는 높이(m).")]
     [SerializeField] private float extraLower = 1.0f;
     [Tooltip("비우면 avatarAnimator의 Transform 스케일을 사용. 수동으로 스케일 계수를 강제하려면 0보다 큰 값.")]
@@ -288,7 +290,8 @@ public class PcMobileAvatarController : NetworkBehaviour
         // 261026: 카메라 높이 범위만 넓힌다 — 크라우치 값이 0..1 밖(서기 위/크라우치 아래)이어도 되고, 애니메이터엔 0..1 로 자른 값만 준다
         if (_look != null && !Lying)   // 누워 있는 동안엔 높이 조절 입력을 쌓지 않는다(일어난 뒤 높이가 끝까지 밀려 고정돼 보이던 문제)
         {
-            float lo = crouchDepth > 0.0001f ? -extraRaise / crouchDepth : 0f;
+            float raise = XRAirpotrSecurity.Utils.GetPlatformType() == XRAirpotrSecurity.PlatformType.Mobile ? Mathf.Min(extraRaise, extraRaiseMobile) : extraRaise;
+            float lo = crouchDepth > 0.0001f ? -raise / crouchDepth : 0f;
             float hi = crouchDepth > 0.0001f ? 1f + extraLower / crouchDepth : 1f;
             _crouch01 = Mathf.Clamp(_crouch01 + _look.CrouchInput * crouchSpeed * dt, lo, hi);
         }

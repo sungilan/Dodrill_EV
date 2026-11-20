@@ -13,7 +13,9 @@ public static class FishNetScenarioSerializers
     // UTF-8 안전 string 읽기/쓰기
     // ─────────────────────────────────────────
 
-    private static void WriteUtf8String(this Writer writer, string value)
+    // (11/20) 예전엔 private 확장 메서드(this Writer, string)라 FishNet 코드 생성기가 'string 직렬화기'로 등록하려다
+    // MethodAccessException 으로 생성 직렬화기 초기화가 실패했다(어셈블리 분리 후 드러남). 확장이 아닌 도우미로 둔다 — 바이트 형식은 같다.
+    private static void WStr(Writer writer, string value)
     {
         if (value == null) { writer.WriteInt32(-1); return; }
         byte[] bytes = Encoding.UTF8.GetBytes(value);
@@ -21,7 +23,7 @@ public static class FishNetScenarioSerializers
         writer.WriteBytes(bytes, 0, bytes.Length);
     }
 
-    private static string ReadUtf8String(this Reader reader)
+    private static string RStr(Reader reader)
     {
         int len = reader.ReadInt32();
         if (len < 0) return null;
@@ -40,9 +42,9 @@ public static class FishNetScenarioSerializers
         bool isNull = value == null;
         writer.WriteBoolean(isNull);
         if (isNull) return;
-        writer.WriteUtf8String(value.ko);
-        writer.WriteUtf8String(value.en);
-        writer.WriteUtf8String(value.vi);
+        WStr(writer, value.ko);
+        WStr(writer, value.en);
+        WStr(writer, value.vi);
     }
 
     public static LocalizedString ReadLocalizedString(this Reader reader)
@@ -50,9 +52,9 @@ public static class FishNetScenarioSerializers
         if (reader.ReadBoolean()) return null;
         return new LocalizedString
         {
-            ko = reader.ReadUtf8String(),
-            en = reader.ReadUtf8String(),
-            vi = reader.ReadUtf8String(),
+            ko = RStr(reader),
+            en = RStr(reader),
+            vi = RStr(reader),
         };
     }
 
@@ -62,20 +64,20 @@ public static class FishNetScenarioSerializers
 
     public static void WriteStringKVPair(this Writer writer, StringKVPair value)
     {
-        writer.WriteUtf8String(value.key);
-        writer.WriteUtf8String(value.ko);
-        writer.WriteUtf8String(value.en);
-        writer.WriteUtf8String(value.vi);
+        WStr(writer, value.key);
+        WStr(writer, value.ko);
+        WStr(writer, value.en);
+        WStr(writer, value.vi);
     }
 
     public static StringKVPair ReadStringKVPair(this Reader reader)
     {
         return new StringKVPair
         {
-            key = reader.ReadUtf8String(),
-            ko = reader.ReadUtf8String(),
-            en = reader.ReadUtf8String(),
-            vi = reader.ReadUtf8String(),
+            key = RStr(reader),
+            ko = RStr(reader),
+            en = RStr(reader),
+            vi = RStr(reader),
         };
     }
 
@@ -86,11 +88,11 @@ public static class FishNetScenarioSerializers
 
     public static void WriteSpawnBundle(this Writer writer, SpawnBundle value)
     {
-        writer.WriteUtf8String(value.prefabId ?? string.Empty);
-        writer.WriteUtf8String(value.spawnPointId ?? string.Empty);
-        writer.WriteUtf8String(value.guideId ?? string.Empty);
+        WStr(writer, value.prefabId ?? string.Empty);
+        WStr(writer, value.spawnPointId ?? string.Empty);
+        WStr(writer, value.guideId ?? string.Empty);
         // 예전에는 아래 4개를 보내지 않아 클라이언트가 항상 기본값(showGuide=true 등)을 받았다
-        writer.WriteUtf8String(value.targetGuideId ?? string.Empty);
+        WStr(writer, value.targetGuideId ?? string.Empty);
         writer.WriteBoolean(value.showGuide);
         writer.WriteBoolean(value.persist);
         writer.WriteBoolean(value.attachToSpawnPoint);
@@ -100,10 +102,10 @@ public static class FishNetScenarioSerializers
     {
         return new SpawnBundle
         {
-            prefabId = reader.ReadUtf8String(),
-            spawnPointId = reader.ReadUtf8String(),
-            guideId = reader.ReadUtf8String(),
-            targetGuideId = reader.ReadUtf8String(),
+            prefabId = RStr(reader),
+            spawnPointId = RStr(reader),
+            guideId = RStr(reader),
+            targetGuideId = RStr(reader),
             showGuide = reader.ReadBoolean(),
             persist = reader.ReadBoolean(),
             attachToSpawnPoint = reader.ReadBoolean(),
@@ -117,9 +119,9 @@ public static class FishNetScenarioSerializers
 
     public static void WriteTaskDef(this Writer writer, TaskDef value)
     {
-        writer.WriteUtf8String(value.moduleId ?? string.Empty);
+        WStr(writer, value.moduleId ?? string.Empty);
         writer.WriteSingle(value.timeout);
-        writer.WriteUtf8String(value.completionMode ?? string.Empty);
+        WStr(writer, value.completionMode ?? string.Empty);
 
         // spawnObjects null → 빈 리스트로 전송
         var list = value.spawnObjects ?? new List<SpawnBundle>();
@@ -131,16 +133,16 @@ public static class FishNetScenarioSerializers
         var despawn = value.despawnObjectIds ?? new List<string>();
         writer.WriteInt32(despawn.Count);
         foreach (var id in despawn)
-            writer.WriteUtf8String(id ?? string.Empty);
+            WStr(writer, id ?? string.Empty);
     }
 
     public static TaskDef ReadTaskDef(this Reader reader)
     {
         var task = new TaskDef
         {
-            moduleId = reader.ReadUtf8String(),
+            moduleId = RStr(reader),
             timeout = reader.ReadSingle(),
-            completionMode = reader.ReadUtf8String(),
+            completionMode = RStr(reader),
             spawnObjects = new List<SpawnBundle>(),
             despawnObjectIds = new List<string>(),
         };
@@ -157,7 +159,7 @@ public static class FishNetScenarioSerializers
         if (despawnCount > 0)
         {
             for (int i = 0; i < despawnCount; i++)
-                task.despawnObjectIds.Add(reader.ReadUtf8String());
+                task.despawnObjectIds.Add(RStr(reader));
         }
 
         return task;
@@ -170,7 +172,7 @@ public static class FishNetScenarioSerializers
     public static void WriteItemUsedSignal(this Writer writer, ItemUsedSignal value)
     {
         writer.WriteInt32(value.taskIndex);
-        writer.WriteUtf8String(value.itemId ?? string.Empty);
+        WStr(writer, value.itemId ?? string.Empty);
         writer.WriteInt32(value.clientId);
     }
 
@@ -179,7 +181,7 @@ public static class FishNetScenarioSerializers
         return new ItemUsedSignal
         {
             taskIndex = reader.ReadInt32(),
-            itemId    = reader.ReadUtf8String(),
+            itemId    = RStr(reader),
             clientId  = reader.ReadInt32(),
         };
     }
@@ -191,7 +193,7 @@ public static class FishNetScenarioSerializers
     public static void WriteItemGrabbedSignal(this Writer writer, ItemGrabbedSignal value)
     {
         writer.WriteInt32(value.taskIndex);
-        writer.WriteUtf8String(value.itemId ?? string.Empty);
+        WStr(writer, value.itemId ?? string.Empty);
         writer.WriteInt32(value.clientId);
     }
 
@@ -200,7 +202,7 @@ public static class FishNetScenarioSerializers
         return new ItemGrabbedSignal
         {
             taskIndex = reader.ReadInt32(),
-            itemId    = reader.ReadUtf8String(),
+            itemId    = RStr(reader),
             clientId  = reader.ReadInt32(),
         };
     }
@@ -212,7 +214,7 @@ public static class FishNetScenarioSerializers
     public static void WriteTaskConfirmSignal(this Writer writer, TaskConfirmSignal value)
     {
         writer.WriteInt32(value.taskIndex);
-        writer.WriteUtf8String(value.moduleId ?? string.Empty);
+        WStr(writer, value.moduleId ?? string.Empty);
         writer.WriteInt32(value.clientId);
     }
 
@@ -221,7 +223,7 @@ public static class FishNetScenarioSerializers
         return new TaskConfirmSignal
         {
             taskIndex = reader.ReadInt32(),
-            moduleId  = reader.ReadUtf8String(),
+            moduleId  = RStr(reader),
             clientId  = reader.ReadInt32(),
         };
     }
@@ -233,8 +235,8 @@ public static class FishNetScenarioSerializers
     public static void WriteZoneInteractionSignal(this Writer writer, ZoneInteractionSignal value)
     {
         writer.WriteInt32(value.taskIndex);
-        writer.WriteUtf8String(value.zoneId ?? string.Empty);
-        writer.WriteUtf8String(value.itemId ?? string.Empty);
+        WStr(writer, value.zoneId ?? string.Empty);
+        WStr(writer, value.itemId ?? string.Empty);
         writer.WriteInt32(value.clientId);
     }
 
@@ -243,8 +245,8 @@ public static class FishNetScenarioSerializers
         return new ZoneInteractionSignal
         {
             taskIndex = reader.ReadInt32(),
-            zoneId    = reader.ReadUtf8String(),
-            itemId    = reader.ReadUtf8String(),
+            zoneId    = RStr(reader),
+            itemId    = RStr(reader),
             clientId  = reader.ReadInt32(),
         };
     }
@@ -256,8 +258,8 @@ public static class FishNetScenarioSerializers
     public static void WritePlaySnapAnimBroadcast(this Writer writer, PlaySnapAnimBroadcast value)
     {
         writer.WriteInt32(value.taskIndex);
-        writer.WriteUtf8String(value.itemId  ?? string.Empty);
-        writer.WriteUtf8String(value.guideId ?? string.Empty);
+        WStr(writer, value.itemId  ?? string.Empty);
+        WStr(writer, value.guideId ?? string.Empty);
         writer.WriteSingle(value.snapDuration);
     }
 
@@ -266,8 +268,8 @@ public static class FishNetScenarioSerializers
         return new PlaySnapAnimBroadcast
         {
             taskIndex    = reader.ReadInt32(),
-            itemId       = reader.ReadUtf8String(),
-            guideId      = reader.ReadUtf8String(),
+            itemId       = RStr(reader),
+            guideId      = RStr(reader),
             snapDuration = reader.ReadSingle(),
         };
     }

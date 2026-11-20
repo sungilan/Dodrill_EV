@@ -538,9 +538,59 @@ public class SyncGrab : NetworkBehaviour
                 }
             }
         }
+        if(_rb != null && !_isGrabbed.Value) SnapDownIfFloating();
         if(_rb != null && !_isGrabbed.Value) LiftAboveGround();
         _settleCo = null;
         _serverSettling = false;
+    }
+
+    // ── (11/20 내부 시연) 놓은 물건이 허공에 떠 있음(모바일에서 주로 보임) ──
+    // 서버 낙하가 받침 없이 멈춘 것으로 판정되면(사람 몸·손 콜라이더에 얹힘, 다른 물체에 끼어 속도 0, 6초 시간 초과 등)
+    // 그 자리에서 고정돼 공중에 남았다. 멈춘 뒤 아래 4곳+가운데를 내려 쏴서, 아래끝 3cm 안에 받침이 하나도 없으면
+    // 가장 높은 받침 면(없으면 가상 바닥)까지 내려놓는다. 사람(손·플레이어 레이어)·누가 잡고 있는 물체는 받침으로 치지 않는다.
+    private static int s_notSupportMask = -1;
+    private void SnapDownIfFloating()
+    {
+        if(s_notSupportMask == -1)
+        {
+            s_notSupportMask = 0;
+            foreach(var ln in new[] { "Hand", "HandPlayer", "Player", "Grabbing" })
+            {
+                int l = LayerMask.NameToLayer(ln);
+                if(l >= 0) s_notSupportMask |= 1 << l;
+            }
+        }
+        bool any = false; Bounds cb = default;
+        foreach(var c in GetComponentsInChildren<Collider>())
+        {
+            if(c == null || !c.enabled || c.isTrigger) continue;
+            if(!any) { cb = c.bounds; any = true; } else cb.Encapsulate(c.bounds);
+        }
+        if(!any) return;
+        float low = cb.min.y;
+        float top = cb.max.y + 0.05f;
+        Vector3 e = cb.extents * 0.8f;
+        Vector3[] xz = { Vector3.zero, new Vector3(e.x, 0, e.z), new Vector3(-e.x, 0, e.z), new Vector3(e.x, 0, -e.z), new Vector3(-e.x, 0, -e.z) };
+        float ground = float.NegativeInfinity;
+        foreach(var o in xz)
+        {
+            Vector3 from = new Vector3(cb.center.x + o.x, top, cb.center.z + o.z);
+            foreach(var h in Physics.RaycastAll(from, Vector3.down, top - serverFloorY + 1f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                var col = h.collider;
+                if(col == null || col.transform.IsChildOf(transform)) continue;
+                if(((1 << col.gameObject.layer) & s_notSupportMask) != 0) continue;
+                var sg = col.GetComponentInParent<SyncGrab>();
+                if(sg != null && sg._isGrabbed.Value) continue;
+                if(h.point.y > low + 0.03f) continue;   // 물체 옆·위에 걸친 것
+                if(h.point.y > ground) ground = h.point.y;
+            }
+        }
+        if(float.IsNegativeInfinity(ground)) ground = serverFloorY;
+        float gap = low - ground;
+        if(gap <= 0.03f) return;   // 받침 위에 제대로 놓여 있음
+        transform.position += Vector3.down * gap;
+        Debug.Log($"[SyncGrab] {name}: 놓은 뒤 받침 없이 {gap:F2}m 떠 있어 아래 면으로 내려놓음");
     }
 
     [Tooltip("내려놓아 멈춘 뒤 보이는 모델 아래끝을 바로 아래 바닥 면보다 이만큼 위에 둔다(m) — 콜라이더가 모델보다 작아 바닥에 묻혀 보이던 문제")]
@@ -1070,8 +1120,10 @@ public class SyncGrab : NetworkBehaviour
         if(!IsOwner) return;
 
         _isPCHolding = false;
+        _isTweening = false;   // 손으로 날아오는 중에 놓으면(모바일 두 번 탭 등) 이 표시가 남아 물리 보정·다시 잡기가 막혔다
         _pendingHand = null;
         DOTween.Kill(transform);
+        _lnt?.ClearTargetPosition();
         StopCoroutineIfRunning(ref _grabCoroutine);
 
         OnReleased?.Invoke();
@@ -1156,10 +1208,26 @@ public class SyncGrab : NetworkBehaviour
     /// 거부 시: DenyGrabTargetRpc.
     /// Kinematic은 여기서만 해제 — 타이밍 역전 원천 차단.
     /// </summary>
+    /// <summary>
+    /// (11/20 내부 시연) 멀티미터 본체는 A 가 들고 프로브는 C 가 잡는 일이 있었다.
+    /// 붙어 있는 물건(부모·자식 SyncGrab — 본체와 프로브 등) 중 하나를 다른 사람이 들고 있으면 잡지 못하게 한다.
+    /// </summary>
+    private bool HeldByOtherInFamily(NetworkConnection sender)
+    {
+        for(var t = transform.parent; t != null; t = t.parent)
+        {
+            var sg = t.GetComponent<SyncGrab>();
+            if(sg != null && sg != this && sg.enabled && sg._isGrabbed.Value && sg.Owner != sender) return true;
+        }
+        foreach(var sg in GetComponentsInChildren<SyncGrab>(true))
+            if(sg != this && sg.enabled && sg._isGrabbed.Value && sg.Owner != sender) return true;
+        return false;
+    }
+
     [ServerRpc(RequireOwnership = false)]
     private void RequestGrabServerRpc(NetworkConnection sender = null)
     {
-        if(_isGrabbed.Value || _isDespawning.Value)
+        if(_isGrabbed.Value || _isDespawning.Value || HeldByOtherInFamily(sender))
         {
             DenyGrabTargetRpc(sender);
             return;

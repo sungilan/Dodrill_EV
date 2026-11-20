@@ -77,6 +77,8 @@ public class WorldSfx : MonoBehaviour
         a.transform.position = pos;
         a.pitch = pitch;
         a.PlayOneShot(clip, volume);
+        // (11/20 내부 시연 '아무것도 안 하는데 철커덕 소리' 추적용) 어떤 소리가 어디서 났는지 남긴다 — 로그의 호출 위치로 원인 확인
+        Debug.Log($"[WorldSfx] {clip.name} @ {pos:F1} (vol {volume:F2})");
     }
 
     /// <summary>볼트가 빠지는 짧은 금속음.</summary>

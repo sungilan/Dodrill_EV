@@ -30,6 +30,10 @@ public static class AvatarHooks
     public static Func<Vector3, float> GroundBonus;
     public static float GroundBonusAt(Vector3 worldPos) => GroundBonus != null ? GroundBonus(worldPos) : 0f;
 
+    // ── PC·모바일 높이 조절 키(Q/E·서기/앉기 버튼)를 눌렀을 때 콘텐츠가 대신 처리할 한 칸 이동(사다리 등) ──
+    //    (root, +1 오르기 / -1 내려오기) → 처리했으면 true
+    public static Func<Transform, int, bool> ClimbStep;
+
     // ── 화면 알림(키 맞추기 안내 등): (key, title, message, warn, showSeconds, cooldownSeconds) ──
     public static Action<string, string, string, bool, float, float> NoticeHandler;
 

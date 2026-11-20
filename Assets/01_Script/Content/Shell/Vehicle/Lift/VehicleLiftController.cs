@@ -20,6 +20,100 @@ public class VehicleLiftController : LiftControllerBase
 
     protected override float GetMaxHeight() => maxHeight;
 
+    // ── (11/20 내부 시연) 차를 올리면 차 쪽 가이드 마커도 같이 올라가게 ──
+    // GuideMarker 가 '이 자리를 품은 차'를 물으면, 리프트에 올라간 차의 렌더러 경계 안인지 보고 차를 돌려준다.
+    private static readonly System.Collections.Generic.List<VehicleLiftController> s_lifts = new System.Collections.Generic.List<VehicleLiftController>();
+    private Renderer[] _vehRenderers;
+    private Transform _vehRenderersOf;
+
+    private void OnEnable()
+    {
+        if (!s_lifts.Contains(this)) s_lifts.Add(this);
+        GuideMarker.CarrierAt = CarrierAt;
+    }
+
+    private void OnDisable() => s_lifts.Remove(this);
+
+    // 차 안쪽에 따로 놓인 가이드 지점(GuideZoneData)·작업 구역(TaskInteractionZone)은 차의 자식이 아니라서 리프트를 올려도 제자리에 남았다
+    // (노란 링·화살표가 공중에 남고, 구역 판정도 어긋남). 차가 움직인 만큼 같이 옮긴다 — 모든 기기에서 각자.
+    private readonly System.Collections.Generic.List<Transform> _riders = new System.Collections.Generic.List<Transform>();
+    private Vector3 _lastVehPos;
+    private Transform _lastVeh;
+    private float _nextRiderScan;
+
+    private void LateUpdate()
+    {
+        var v = CurrentVehicle;
+        if (v == null) { _lastVeh = null; return; }
+        if (v != _lastVeh) { _lastVeh = v; _lastVehPos = v.position; _riders.Clear(); _nextRiderScan = 0f; }
+
+        Vector3 delta = v.position - _lastVehPos;
+        _lastVehPos = v.position;
+        if (delta.sqrMagnitude > 1e-10f)
+        {
+            for (int i = _riders.Count - 1; i >= 0; i--)
+            {
+                var r = _riders[i];
+                if (r == null || r.IsChildOf(v)) { _riders.RemoveAt(i); continue; }
+                r.position += delta;
+            }
+        }
+        // 차가 내려와 있을 때만 새로 생긴 지점을 찾는다(올라간 상태에서 찾으면 바닥 쪽 물건을 잘못 태울 수 있다)
+        else if (CurrentHeight < 0.05f && Time.unscaledTime >= _nextRiderScan)
+        {
+            _nextRiderScan = Time.unscaledTime + 2f;
+            ScanRiders(v);
+        }
+    }
+
+    private void ScanRiders(Transform v)
+    {
+        if (_vehRenderersOf != v) { _vehRenderers = v.GetComponentsInChildren<Renderer>(); _vehRenderersOf = v; }
+        bool has = false; Bounds b = default;
+        foreach (var r in _vehRenderers)
+        {
+            if (r == null || !r.enabled || r is ParticleSystemRenderer || r is LineRenderer) continue;
+            if (!has) { b = r.bounds; has = true; } else b.Encapsulate(r.bounds);
+        }
+        if (!has) return;
+        b.Expand(0.3f);
+        void Consider(Component c)
+        {
+            if (c == null) return;
+            var t = c.transform;
+            if (t.IsChildOf(v) || _riders.Contains(t) || !b.Contains(t.position)) return;
+            if (c.GetComponentInParent<Rigidbody>() != null) return;   // 물리로 따로 움직이는 것(들고 다니는 물건)은 제외
+            foreach (var r in _riders) if (r != null && t.IsChildOf(r)) return;   // 부모가 이미 같이 움직인다
+            _riders.RemoveAll(r => r != null && r.IsChildOf(t));                 // 자식이 먼저 들어 있었다면 두 번 옮기지 않게 뺀다
+            _riders.Add(t);
+        }
+        foreach (var g in FindObjectsByType<GuideZoneData>(FindObjectsSortMode.None)) Consider(g);
+        foreach (var z in FindObjectsByType<TaskInteractionZone>(FindObjectsSortMode.None)) Consider(z);
+    }
+
+    private Transform CurrentVehicle => liftMode == LiftMode.TransformBased ? vehicleTransform : animVehicleTransform;
+
+    private static Transform CarrierAt(Vector3 pos)
+    {
+        foreach (var l in s_lifts)
+        {
+            if (l == null) continue;
+            var v = l.CurrentVehicle;
+            if (v == null) continue;
+            if (l._vehRenderersOf != v) { l._vehRenderers = v.GetComponentsInChildren<Renderer>(); l._vehRenderersOf = v; }
+            bool has = false; Bounds b = default;
+            foreach (var r in l._vehRenderers)
+            {
+                if (r == null || !r.enabled || r is ParticleSystemRenderer || r is LineRenderer) continue;
+                if (!has) { b = r.bounds; has = true; } else b.Encapsulate(r.bounds);
+            }
+            if (!has) continue;
+            b.Expand(0.4f);   // 차 표면 바로 바깥(문 앞·바퀴 옆) 마커도 포함
+            if (b.Contains(pos)) return v;
+        }
+        return null;
+    }
+
     protected override void OnLiftStart()
     {
         Debug.Log($"<color=cyan>[VehicleLift]</color> ✓ OnLiftStart 호출됨! (Mode: {liftMode})");

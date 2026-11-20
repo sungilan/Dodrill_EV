@@ -131,17 +131,3 @@ public static class VehicleStateSync
         if (s_all.TryGetValue(b.id, out var s)) s.ApplyState(b.v);
     }
 }
-
-/// <summary>눌렀을 때 동작을 델리게이트로 지정하는 간단한 클릭 대상(경적·냉각수 뚜껑 등).</summary>
-public class ClickProxy : MonoBehaviour, IWorldClickable
-{
-    public string displayName = "";
-    public Action onClick;
-    public Func<bool, string> hover;
-    public bool vrPokeable = true;
-
-    public string DisplayName => displayName;
-    public bool VrPokeable => vrPokeable;
-    public string HoverMessage(bool touch) => hover != null ? hover(touch) : (touch ? "터치" : "클릭");
-    public void OnPCClick() { onClick?.Invoke(); }
-}

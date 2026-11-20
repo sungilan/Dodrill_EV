@@ -13,7 +13,7 @@ public static class EvHookSelfCheck
     private static void Check()
     {
         HookRegistry.Verify("EV",
-            new[] { typeof(ScenarioHooks), typeof(AvatarHooks), typeof(GrabHooks), typeof(InteractionEvents), typeof(VrUi) },
+            new[] { typeof(ScenarioHooks), typeof(AvatarHooks), typeof(GrabHooks), typeof(InteractionEvents), typeof(VrUi), typeof(SafetyHooks), typeof(UiHooks) },
             new[]
             {
                 new HookRegistry.Critical("시나리오 모듈 공급자(EV)", () => ScenarioHooks.ProviderCount >= 1),

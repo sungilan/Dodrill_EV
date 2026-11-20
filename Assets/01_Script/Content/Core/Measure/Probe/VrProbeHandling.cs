@@ -318,6 +318,13 @@ public class VrProbeHandling : MonoBehaviour
     private bool TryTake(Hand hand, bool bySqueeze)
     {
         if (!isActiveAndEnabled || hand == null || IsHolding(hand) || hand.GetHeld() != null) return false;
+        // (11/20 내부 시연) 본체를 다른 사람이 들고 있으면 그 사람의 프로브다 — 늘어진 끝을 쥐어도 꺼내지 않는다
+        var bodySync = GetComponent<SyncGrab>();
+        if (bodySync != null && bodySync.IsGrabbed && !bodySync.IsOwner)
+        {
+            FlashGuide("다른 사람이 사용 중인 계측기입니다");
+            return false;
+        }
         Vector3 palm = hand.palmTransform != null ? hand.palmTransform.position : hand.transform.position;
 
         Probe pick = null;
@@ -788,11 +795,13 @@ public class VrProbeHandling : MonoBehaviour
         Vector3 c2 = b - dir * Mathf.Min(0.1f, d * 0.3f) + Vector3.down * sag * 0.6f;
         if (!p.cord.enabled) p.cord.enabled = true;
         for (int i = 0; i < CordSegments; i++) p.cord.SetPosition(i, Bezier(a, c1, c2, b, (float)i / (CordSegments - 1)));
+        ProbePoseNet.Report(this, p.red, true, tip, b);   // 다른 사람 화면에도 같은 자리에 보이게
     }
 
     private void HidePen(Probe p)
     {
         if (p == null) return;
+        if (p.pen != null && p.pen.activeSelf) ProbePoseNet.Report(this, p.red, false, Vector3.zero, Vector3.zero);
         if (p.pen != null && p.pen.activeSelf) p.pen.SetActive(false);
         if (p.cord != null) p.cord.enabled = false;
         if (p.cable != null) p.cable.enabled = true;

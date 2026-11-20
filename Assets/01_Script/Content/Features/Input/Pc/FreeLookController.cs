@@ -273,49 +273,19 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     // 카메라 초기화
     // ═══════════════════════════════════════════════════════
 
-    private void DisableAllChildCameras()
-    {
-        foreach(var cam in GetComponentsInChildren<Camera>(includeInactive: true))
-        {
-            // 루트 오브젝트에 카메라가 있는 구버전 프리팹: 오브젝트를 끄면 플레이어 전체(아바타 포함)가 사라진다 → 컴포넌트만 끔
-            if(cam.gameObject == gameObject) cam.enabled = false;
-            else cam.gameObject.SetActive(false);
-            cam.tag = "Untagged";
-        }
-    }
+    // (모듈화 ①) 카메라 켜고 끄기·VR 판정·이동·시점 공통부는 Avatar 모듈의 PcMobileMotor 로 옮겼다
+    private void DisableAllChildCameras() => PcMobileMotor.DisableChildCameras(this);
 
     [Header("카메라")]
     [Tooltip("플레이어 카메라의 near clip(m). 프리팹의 루트 카메라가 0.3m라 손에 든 물체·가까운 모델이 잘려 보이던 문제를 막는다. 0 이하면 프리팹 값을 그대로 사용.")]
     public float nearClip = 0.03f;
 
-    private void ApplyNearClip(Camera cam)
-    {
-        if(cam == null || nearClip <= 0f) return;
-        if(cam.nearClipPlane > nearClip)
-        {
-            Log($"카메라 near clip {cam.nearClipPlane:F2} → {nearClip:F2}");
-            cam.nearClipPlane = nearClip;
-        }
-    }
-
     private void EnableMyCamera()
     {
-        Camera found = GetComponentInChildren<Camera>(includeInactive: true);
+        Camera found = PcMobileMotor.ActivateOwnCamera(this, nearClip);
         if(found == null) { Log("자식 카메라 없음"); return; }
-
-        found.gameObject.SetActive(true);
-        found.enabled = true;
-        found.tag = "MainCamera";
         _mainCamera = found;
-        ApplyNearClip(found);
-
-        foreach(var cam in GetComponentsInChildren<Camera>(includeInactive: true))
-        {
-            if(cam.gameObject.name.Contains("UI"))
-                cam.gameObject.SetActive(true);
-        }
-
-        Log($"내 카메라 활성화: {found.name}");
+        Log($"내 카메라 활성화: {found.name} (near clip {found.nearClipPlane:F2})");
     }
 
     private IEnumerator InitCameraForDrag()
@@ -347,15 +317,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         Log($"카메라 준비 완료 (Camera.main 폴백) — {_mainCamera.name}");
     }
 
-    private bool IsVRDevice()
-    {
-#if ENABLE_VR || UNITY_XR_MANAGEMENT
-        if(UnityEngine.XR.XRSettings.isDeviceActive) return true;
-        var d = UnityEngine.XR.XRSettings.loadedDeviceName;
-        if(!string.IsNullOrEmpty(d) && d != "None") return true;
-#endif
-        return false;
-    }
+    private bool IsVRDevice() => PcMobileMotor.IsVRDevice();
 
     // ═══════════════════════════════════════════════════════
     // Update
@@ -442,31 +404,14 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
 
     private void HandleMovement()
     {
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-
         // 앞/뒤는 몸이 바라보는 수평면 기준 (아바타 리그에서는 루트가 기울지 않지만 구 프리팹 대비)
-        Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
-        Vector3 moveDir = transform.right * x + flatForward * z;
-        Vector3 horizontalVelocity = moveDir * moveSpeed;
+        var input = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        Vector3 horizontalVelocity = PcMobileMotor.PlanarDirection(transform, input) * moveSpeed;
 
-        if(UseAvatarRig)
-        {
-            // 수직 자유 비행 대신 크라우치/높이 조절(PcMobileAvatarController)이 담당, 루트 Y는 접지 처리
-            _planarVelocity = MoveWithCollision(horizontalVelocity * Time.deltaTime);
-            return;
-        }
-
-        float targetVerticalVel = _desiredVertical * moveSpeed;
-        _currentVerticalVelocity = Mathf.Lerp(
-            _currentVerticalVelocity,
-            targetVerticalVel,
-            Time.deltaTime / Mathf.Max(0.0001f, verticalSmoothTime)
-        );
-
-        // 수직(자유 비행)은 그대로, 수평만 벽·가구에 막는다
+        // 수평은 벽·가구에 막는다. 아바타 리그면 수직은 크라우치/높이 조절(PcMobileAvatarController)이 담당, 루트 Y는 접지 처리
         _planarVelocity = MoveWithCollision(horizontalVelocity * Time.deltaTime);
-        transform.position += Vector3.up * (_currentVerticalVelocity * Time.deltaTime);
+        if(!UseAvatarRig)
+            PcMobileMotor.StepFreeVertical(transform, ref _currentVerticalVelocity, _desiredVertical, moveSpeed, verticalSmoothTime);
     }
 
     [Header("이동 충돌 (벽·가구)")]
@@ -478,22 +423,8 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     /// <summary>수평 이동량(이번 프레임)을 충돌을 적용해 옮기고, 실제로 움직인 속도(m/s)를 돌려준다(걷기 애니메이션용).</summary>
     private Vector3 MoveWithCollision(Vector3 wantDelta)
     {
-        float dt = Mathf.Max(Time.deltaTime, 1e-4f);
-        if(!collideWithEnvironment)
-        {
-            transform.position += wantDelta;
-            return wantDelta / dt;
-        }
-
         float s = _avatarCtrl != null ? _avatarCtrl.AvatarScale : 1f;
-        Vector3 before = transform.position;
-        Vector3 after = PlayerCollision.Move(before, wantDelta, collisionRadius * s, collisionHeight * s);
-        transform.position = after;
-
-        Vector3 actual = (after - before); actual.y = 0f;
-        Vector3 vel = actual / dt;
-        float max = Mathf.Max(moveSpeed, 0.01f) * 1.5f;           // 겹침 해소로 튄 값이 걷기 속도를 부풀리지 않게
-        return vel.magnitude > max ? vel.normalized * max : vel;
+        return PcMobileMotor.MoveWithCollision(transform, wantDelta, collideWithEnvironment, collisionRadius, collisionHeight, s, moveSpeed);
     }
 
     private void HandleCameraLook()
@@ -505,16 +436,8 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         if(!LookLocked) _rotX += Input.GetAxis("Mouse Y") * lookSensitivity * -1f;
         _rotX = Mathf.Clamp(_rotX, minLookX, maxLookX);
 
-        if(UseAvatarRig)
-        {
-            // 루트에는 yaw만 (몸이 기울지 않음), 피치는 카메라 피벗에만
-            transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y + y, 0f);
-            cameraPivot.localRotation = Quaternion.Euler(_rotX, 0f, 0f);
-        }
-        else
-        {
-            transform.eulerAngles = new Vector3(_rotX, transform.eulerAngles.y + y, 0f);
-        }
+        // 아바타 리그면 루트에는 yaw만 (몸이 기울지 않음), 피치는 카메라 피벗에만
+        PcMobileMotor.ApplyLook(transform, cameraPivot, UseAvatarRig, _rotX, transform.eulerAngles.y + y);
     }
 
     private void HandleVerticalInput()
@@ -522,8 +445,8 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         // 소켓 교체(에어 임팩트 렌치)·색 바꾸기(도색 건)는 마우스 휠로 옮겼다 → Q 는 무엇을 들고 있어도 높이 올리기
         // (예전엔 두 기능이 Q 를 같이 써서, 그 도구를 든 동안 Q 높이 올리기를 막아 두었다)
         // 사다리 가까이에선 Q/E 가 한 칸 오르기/내려오기(LadderProp)
-        if(Input.GetKeyDown(KeyCode.Q) && !LadderProp.TryClimbStep(transform, +1)) MoveUp();
-        if(Input.GetKeyDown(KeyCode.E) && !LadderProp.TryClimbStep(transform, -1)) MoveDown();
+        if(Input.GetKeyDown(KeyCode.Q) && !PcMobileMotor.TryClimbStep(transform, +1)) MoveUp();
+        if(Input.GetKeyDown(KeyCode.E) && !PcMobileMotor.TryClimbStep(transform, -1)) MoveDown();
         if(Input.GetKeyUp(KeyCode.Q)) StopVertical();
         if(Input.GetKeyUp(KeyCode.E)) StopVertical();
 

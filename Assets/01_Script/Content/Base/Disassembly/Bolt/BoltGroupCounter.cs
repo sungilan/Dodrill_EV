@@ -313,6 +313,10 @@ public class BoltGroupCounter : MonoBehaviour
         if (msg.groupId != groupId) return;
         _removedCount = msg.removed;
 
+        // 진행 패널의 '남은 볼트' 표시 (예전엔 TaskProgressUI 가 이 브로드캐스트를 직접 받았다)
+        int remaining = msg.total - msg.removed;
+        DoDrill.Training.TaskProgressUI.SetSubProgress(remaining > 0 ? $"남은 볼트: <color=yellow>{remaining}</color> / {msg.total}" : null);
+
         // ✅ 클라이언트도 진행도가 다 차면 부품을 끔/켬
         if (_removedCount >= _totalCount && targetPart != null)
         {

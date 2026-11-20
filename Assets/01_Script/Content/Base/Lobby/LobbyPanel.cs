@@ -51,10 +51,21 @@ public class LobbyPanel : UIView
 
     private static LobbyPanel s_instance;
 
+    // 준비 버튼 표시·시작 중복 방지용. 인스펙터에 비어 있으면 onClick 연결(OnReadyClick/OnStartGame)로 찾는다.
+    [SerializeField] private Button readyButton;
+    private TMP_Text _readyLabel, _startLabel;
+    private string _readyLabelDefault, _startLabelDefault;
+    private Color _readyColorDefault = Color.white;
+    private static readonly Color ReadyOnColor = new Color(0.25f, 0.55f, 1f);
+    private bool _starting;
+    private float _startingSince;
+    private const float StartTimeout = 30f;
+
     protected override void Awake()
     {
         base.Awake();
         s_instance = this;
+        BindLobbyButtons();
         Mst.Events.AddListener(MstEventKeys.showLobbyView, OnShowLobbyViewEventHandler);
     }
 
@@ -128,13 +139,16 @@ public class LobbyPanel : UIView
         UnsubscribeLobbyEvents();   // Start()에서 다시 불릴 때 += 가 중복되어 화면 갱신이 여러 번 일어나던 문제
         _lobby.OnMemberJoinedEvent += OnMemberJoined;
         _lobby.OnMemberLeftEvent += OnMemberLeft;
+        _lobby.OnChatMessageReceivedEvent += OnLobbyChat;
         _lobby.OnMemberReadyStatusChangedEvent += OnMemberReadyStatusChanged;
         _lobby.OnMemberPropertyChangedEvent += OnMemberPropertyChanged;
         _lobby.OnMemberTeamChangedEvent += OnMemberTeamChangedEvent;
 
         bool isMasterUser = _lobby.IsMasterUser(Mst.Client.Auth.AccountInfo.Username);
         startGameButton.gameObject.SetActive(isMasterUser);
+        SetStarting(false);
         SyncLocalReadyStatus();
+        RefreshReadyButton();
 
         RefreshContentInfo();
         Show();
@@ -145,6 +159,7 @@ public class LobbyPanel : UIView
         if(_lobby == null) return;
         _lobby.OnMemberJoinedEvent -= OnMemberJoined;
         _lobby.OnMemberLeftEvent -= OnMemberLeft;
+        _lobby.OnChatMessageReceivedEvent -= OnLobbyChat;
         _lobby.OnMemberReadyStatusChangedEvent -= OnMemberReadyStatusChanged;
         _lobby.OnMemberPropertyChangedEvent -= OnMemberPropertyChanged;
         _lobby.OnMemberTeamChangedEvent -= OnMemberTeamChangedEvent;
@@ -247,6 +262,7 @@ public class LobbyPanel : UIView
         {
             case LobbyState.FailedToStart:
                 Debug.Log("LobbyView:OnLobbyStateChange:FailedToStart");
+                if(_starting) { SetStarting(false); ShowNotice("훈련을 시작하지 못했습니다. 다시 시도해 주세요."); }
                 //TrainingSessionLoadingFlow.Reset();
                 break;
             case LobbyState.Preparations:
@@ -369,6 +385,7 @@ public class LobbyPanel : UIView
             info.SetReadyStatus(member.IsReady);
             index++;
         }
+        RefreshReadyButton();
     }
 
     public void OnReadyClick()
@@ -381,7 +398,69 @@ public class LobbyPanel : UIView
         {
             if(isSuccessful)
                 readyStatus = nextReadyState;
+            RefreshReadyButton();
         });
+    }
+
+    private void BindLobbyButtons()
+    {
+        if(readyButton == null || startGameButton == null)
+        {
+            foreach(var b in GetComponentsInChildren<Button>(true))
+            {
+                for(int i = 0; i < b.onClick.GetPersistentEventCount(); i++)
+                {
+                    string m = b.onClick.GetPersistentMethodName(i);
+                    if(readyButton == null && m == nameof(OnReadyClick)) readyButton = b;
+                    else if(startGameButton == null && m == nameof(OnStartGame)) startGameButton = b;
+                }
+            }
+        }
+        if(readyButton != null)
+        {
+            _readyLabel = readyButton.GetComponentInChildren<TMP_Text>(true);
+            if(_readyLabel != null) _readyLabelDefault = _readyLabel.text;
+            if(readyButton.targetGraphic != null) _readyColorDefault = readyButton.targetGraphic.color;
+        }
+        if(startGameButton != null)
+        {
+            _startLabel = startGameButton.GetComponentInChildren<TMP_Text>(true);
+            if(_startLabel != null) _startLabelDefault = _startLabel.text;
+        }
+    }
+
+    // 준비 상태를 버튼 색·문구로 보여준다 (예전에는 목록의 작은 아이콘만 바뀌어 눌렀는지 알기 어려웠다)
+    private void RefreshReadyButton()
+    {
+        if(readyButton == null) return;
+        bool on = TryGetLocalMember(out var me) ? me.IsReady : readyStatus;
+        // 버튼을 눌렀을 때 나오는 그래픽(ClickButton 눌림 스프라이트·흰 글자)을 준비 완료 동안 그대로 유지한다
+        var latch = readyButton.GetComponent<IPressLatch>();
+        if(latch != null) latch.SetLatched(on);
+        else if(readyButton.targetGraphic != null)
+            readyButton.targetGraphic.color = on ? ReadyOnColor : _readyColorDefault;
+        if(_readyLabel != null)
+            _readyLabel.text = on ? "준비 완료" : (string.IsNullOrEmpty(_readyLabelDefault) ? "준비하기" : _readyLabelDefault);
+    }
+
+    private void SetStarting(bool starting)
+    {
+        _starting = starting;
+        _startingSince = Time.unscaledTime;
+        if(startGameButton != null) startGameButton.interactable = !starting;
+        if(_startLabel != null && _startLabelDefault != null)
+            _startLabel.text = starting ? "시작 중..." : _startLabelDefault;
+        if(starting) ShowNotice("훈련을 시작하는 중입니다. 잠시만 기다려 주세요.");
+    }
+
+    private void Update()
+    {
+        // 서버 응답이 끝내 오지 않으면 다시 누를 수 있게 풀어준다
+        if(_starting && Time.unscaledTime - _startingSince > StartTimeout)
+        {
+            SetStarting(false);
+            ShowNotice("시작 응답이 없습니다. 다시 시도해 주세요.");
+        }
     }
 
     private bool TryGetLocalMember(out LobbyMemberData localMember)
@@ -448,6 +527,7 @@ public class LobbyPanel : UIView
     public void OnStartGame()
     {
         if(_lobby == null) return;
+        if(_starting) { ShowNotice("훈련을 시작하는 중입니다. 잠시만 기다려 주세요."); return; }
         int total = _lobby.Members.Count;
         int ready = _lobby.Members.Values.Count(m => m.IsReady);
         if(ready < total)
@@ -456,11 +536,12 @@ public class LobbyPanel : UIView
             return;
         }
 
-
+        SetStarting(true);
         _lobby.SetLobbyProperty(Mst.Args.Names.RoomOnlineScene, "Game", (isSuccessful, error) =>
         {
             if(!isSuccessful)
             {
+                SetStarting(false);
                 Debug.LogError($"Set Property Error: {error}");
                 ShowNotice($"시작하지 못했습니다: {error}");
                 Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
@@ -470,6 +551,7 @@ public class LobbyPanel : UIView
             {
                 if(!isSuccessful2)
                 {
+                    SetStarting(false);
                     Debug.LogError($"Set Property Error: {error2}");
                     ShowNotice($"시작하지 못했습니다: {error2}");
                     Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
@@ -479,13 +561,43 @@ public class LobbyPanel : UIView
                 {
                     if(!isSuccessful3)
                     {
-                        Debug.LogError($"Start Game Error: {error3}");
-                        ShowNotice($"게임을 시작하지 못했습니다: {error3}");
+                        SetStarting(false);
+                        Debug.LogError($"Start Game Error: {error3} / 이유: {StartFailReason("(마스터 서버가 이유를 보내지 않음)")}");
+                        ShowNotice($"게임을 시작하지 못했습니다: {StartFailReason(error3)}");
                         Mst.Events.Invoke(MstEventKeys.hideLoadingInfo);
                     }
                 });
             });
         });
+    }
+
+    // 마스터 서버는 '훈련 시작' 거절 이유(서버 부족·준비 안 됨·방 상태 등)를 응답이 아니라 로비 채팅(오류)으로 보낸다.
+    // 응답에는 'Failed starting the game'만 와서 이유를 알 수 없었다 → 오류 채팅을 로그·안내로 보여 준다.
+    private void OnLobbyChat(LobbyChatPacket packet)
+    {
+        if(packet == null || !packet.IsError) return;
+        Debug.LogWarning($"[LobbyPanel] 마스터 서버 알림: {packet.Message}");
+        _lastLobbyError = TranslateLobbyError(packet.Message);
+        _lastLobbyErrorAt = Time.unscaledTime;
+        ShowNotice(_lastLobbyError);
+    }
+
+    private string _lastLobbyError;
+    private float _lastLobbyErrorAt = -10f;
+    // 시작 실패 응답 직전에 온 거절 이유(있으면 그것, 없으면 응답 문구)
+    private string StartFailReason(string fallback) =>
+        !string.IsNullOrEmpty(_lastLobbyError) && Time.unscaledTime - _lastLobbyErrorAt < 3f ? _lastLobbyError : fallback;
+
+    private static string TranslateLobbyError(string msg)
+    {
+        if(string.IsNullOrEmpty(msg)) return msg;
+        if(msg.Contains("Servers are busy")) return "게임 서버를 띄울 수 없습니다 (스포너/룸 서버 확인 필요)";
+        if(msg.Contains("Not all players are ready")) return "아직 준비하지 않은 참가자가 있습니다";
+        if(msg.Contains("Invalid lobby state")) return "이미 시작 중이거나 진행 중인 방입니다. 방을 나갔다가 다시 만들어 주세요";
+        if(msg.Contains("not the master")) return "방장만 훈련을 시작할 수 있습니다";
+        if(msg.Contains("Not enough players")) return "참가 인원이 부족합니다";
+        if(msg.Contains("cannot start the game manually")) return "이 방은 수동 시작이 꺼져 있습니다";
+        return msg;
     }
 
     private void OnMemberJoined(LobbyMemberData member) => DrawPlayersList();

@@ -342,12 +342,21 @@ public class MentorDialogue : MonoBehaviour
         HideView();
     }
 
+    private static bool TypingInUI()
+    {
+        var es = UnityEngine.EventSystems.EventSystem.current;
+        var sel = es != null ? es.currentSelectedGameObject : null;
+        return sel != null && (sel.GetComponent<TMP_InputField>() != null || sel.GetComponent<UnityEngine.UI.InputField>() != null);
+    }
+
     private void Update()
     {
         if ((_play != null || (_root != null && _root.activeSelf) || _scenarioId != null)
-            && InstanceFinder.NetworkManager != null && !InstanceFinder.IsClientStarted && !InstanceFinder.IsServerStarted)
+            // InstanceFinder.NetworkManager 는 없으면 매번 'not found' 로그를 남긴다 → 목록으로 먼저 확인
+            && FishNet.Managing.NetworkManager.Instances.Count > 0 && !InstanceFinder.IsClientStarted && !InstanceFinder.IsServerStarted)
             ResetForLeave();
-        if (_play != null && Input.GetKeyDown(KeyCode.Return)) _skip = true;
+        // 건너뛰기: 스페이스바(시연 피드백). Enter 도 계속 받는다. 입력창에 타이핑 중이면 무시
+        if (_play != null && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return)) && !TypingInUI()) _skip = true;
         if (_root != null && _vr) FollowHead();
     }
 
@@ -421,7 +430,7 @@ public class MentorDialogue : MonoBehaviour
         var btn = NewRect("Skip", panel); btn.anchorMin = btn.anchorMax = new Vector2(1f, 1f); btn.pivot = new Vector2(1f, 1f); btn.anchoredPosition = new Vector2(-16f, -12f); btn.sizeDelta = new Vector2(150f, 40f);
         var bi = btn.gameObject.AddComponent<Image>(); bi.color = new Color(1f, 1f, 1f, 0.14f);
         var b = btn.gameObject.AddComponent<Button>(); b.targetGraphic = bi; b.onClick.AddListener(() => _skip = true);
-        var bt = NewText("SkipText", btn, 22f, TextAlignmentOptions.Center); Stretch(bt.rectTransform); bt.text = "건너뛰기 (Enter)"; bt.color = new Color(0.85f, 0.9f, 1f);
+        var bt = NewText("SkipText", btn, 22f, TextAlignmentOptions.Center); Stretch(bt.rectTransform); bt.text = "건너뛰기 (Space)"; bt.color = new Color(0.85f, 0.9f, 1f);
         if (_vr) btn.gameObject.SetActive(false);   // VR 에는 Enter 도 없고 월드 캔버스 버튼을 누를 수단도 없다 — 대사는 알아서 넘어간다
 
         if (_vr) VrUi.Finish(_root);   // 가이드 화살표·차체에 가려지지 않게 맨 앞에

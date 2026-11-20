@@ -89,7 +89,21 @@ public class ImpactWrench : MonoBehaviour
     private void Awake()
     {
         UpdateVisuals();
+        ToolWorkNet.Init();
+        // 다른 사람이 쓰는 드릴 소리도 들리도록(ToolWorkNet) — 거리에 따라 작아지는 3D 소리로
+        if (workAudio != null)
+        {
+            workAudio.spatialBlend = 1f;
+            workAudio.rolloffMode = AudioRolloffMode.Linear;
+            workAudio.minDistance = 1.5f;
+            workAudio.maxDistance = 18f;
+        }
     }
+
+    // 남이 든 렌치의 작동 상태(ToolWorkNet 이 전해 준다) — 소리·회전 애니메이션만 켠다
+    private bool _remoteWorking;
+    private float _remoteAt;
+    public void SetRemoteWorking(bool working) { _remoteWorking = working; _remoteAt = Time.unscaledTime; }
 
     private void OnDisable()
     {
@@ -110,7 +124,9 @@ public class ImpactWrench : MonoBehaviour
         {
             if (_targetBolt != null) ClearTarget();
             _buttonHeld = false;
-            ApplyEffects(false);
+            // 남이 들고 작동 중이면 소리·애니메이션만(30초 넘게 소식이 없으면 끈다 — 나간 사람 등)
+            bool remote = _remoteWorking && Time.unscaledTime - _remoteAt < 30f && _sync != null && _sync.IsGrabbed;
+            ApplyEffects(remote, false);
             SetMobileButton(false);
             return;
         }
@@ -145,6 +161,7 @@ public class ImpactWrench : MonoBehaviour
 
         bool working = _buttonHeld;
         if (!working) _needRelease = false;
+        ScanOverlap(working);
         ApplyEffects(working);
         if (working) s_lastWorkTime = Time.unscaledTime;
         UpdateBlockedHint();
@@ -308,12 +325,19 @@ public class ImpactWrench : MonoBehaviour
 
     // ── 효과 적용 ───────────────────────────────────────────
 
-    private void ApplyEffects(bool working)
+    private bool _wasLocalWorking;
+    private bool _countedLocal;
+
+    private void ApplyEffects(bool working, bool local = true)
     {
+        // 내가 작동을 시작·멈출 때 다른 사람에게 알린다
+        if (local && working != _wasLocalWorking) { _wasLocalWorking = working; ToolWorkNet.Report(this, working); }
+        else if (!local && _wasLocalWorking) { _wasLocalWorking = false; ToolWorkNet.Report(this, false); }
         if (working == _wasWorking) return;
         _wasWorking = working;
-        if (working) s_workingCount++;
-        else { s_workingCount = Mathf.Max(0, s_workingCount - 1); s_lastWorkTime = Time.unscaledTime; }
+        // 내 작동 횟수(RecentlyWorking)에는 내가 누른 것만 센다
+        if (working && local) { s_workingCount++; _countedLocal = true; }
+        else if (!working && _countedLocal) { _countedLocal = false; s_workingCount = Mathf.Max(0, s_workingCount - 1); s_lastWorkTime = Time.unscaledTime; }
 
         if (wrenchAnimator != null)
             wrenchAnimator.SetBool(IsWorkingHash, working);
@@ -379,6 +403,51 @@ public class ImpactWrench : MonoBehaviour
         string actionName = _targetBolt.isAssembleMode ? "볼트 체결" : "볼트 분해";
         ShowProgress(actionName, GetPlatformInstruction(actionName, false));
         if (BoltHint.NeedsLube(_targetBolt)) BoltHint.NoticeSeized();
+    }
+
+    // ── (11/20 내부 시연) 드릴을 잡고 바로 볼트에 대면 안 풀리고, 놓았다 다시 잡아야 되던 문제 ──
+    // 잡은 직후(소유권이 넘어오기 전)에 볼트에 들어가면 TryAcquire 가 '내가 든 게 아님'으로 거르고,
+    // 그 뒤 렌치가 멈춰 있으면(리지드바디 슬립) OnTriggerStay 가 다시 안 와서 대상이 끝까지 안 잡혔다.
+    // → 손에 든 동안 대상이 없으면 0.1초마다 직접 겹침을 확인해 잡고, 잡은 볼트에서 벗어났는데 Exit 가 안 오면 놓는다.
+    private Collider[] _selfTriggers;
+    private readonly Collider[] _overlapBuf = new Collider[16];
+    private float _nextOverlapScan;
+
+    private void ScanOverlap(bool working)
+    {
+        if (Time.unscaledTime < _nextOverlapScan) return;
+        _nextOverlapScan = Time.unscaledTime + 0.1f;
+        if (_selfTriggers == null)
+        {
+            var list = new System.Collections.Generic.List<Collider>();
+            foreach (var c in GetComponents<Collider>()) if (c.isTrigger) list.Add(c);
+            _selfTriggers = list.ToArray();
+        }
+        if (_selfTriggers.Length == 0) return;
+
+        bool any = false; Bounds self = default;
+        foreach (var c in _selfTriggers)
+        {
+            if (c == null || !c.enabled) continue;
+            if (!any) { self = c.bounds; any = true; } else self.Encapsulate(c.bounds);
+        }
+        if (!any) return;
+
+        if (_targetBolt != null)
+        {
+            // 대상에서 이미 벗어났는데 Exit 가 안 온 경우만 정리(작업 중엔 건드리지 않는다)
+            if (working || _currentBoltGameObject == null) return;
+            var bc = _currentBoltGameObject.GetComponent<Collider>();
+            if (bc != null && !bc.bounds.Intersects(self)) ClearTarget();
+            return;
+        }
+
+        int n = Physics.OverlapBoxNonAlloc(self.center, self.extents, _overlapBuf, Quaternion.identity, ~0, QueryTriggerInteraction.Collide);
+        for (int i = 0; i < n && _targetBolt == null; i++)
+        {
+            var o = _overlapBuf[i];
+            if (o != null && o.enabled && o.gameObject.activeInHierarchy) TryAcquire(o);
+        }
     }
 
     private Bolt _blockedCandidate;

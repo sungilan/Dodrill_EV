@@ -80,9 +80,10 @@ namespace DoDrill
         {
             Hide();
 
-            if (_exitHandler != null)
+            if (_exitHandler != null || FishNet.InstanceFinder.IsClientStarted)
             {
-                _exitHandler.ReturnToTitle();
+                // (11/20 내부 시연) 시나리오 종료 후 확인은 방 전원을 메인 화면으로 돌려보낸다
+                ScenarioExitAll.RequestAll();
             }
             else
             {

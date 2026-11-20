@@ -384,9 +384,20 @@ public class GdsTablet : MonoBehaviour
         if (!_overlay) PokeVR();
     }
 
+    [Tooltip("(11/20 내부 시연) true 면 OBD 단자에 대지 않아도 진단기를 드는 순간 VCI 가 연결된다")]
+    public bool autoConnect = true;
+
     private void UpdateVci()
     {
         if (!LocalHeld) return;   // 들고 있는 사람이 판정해서 모두에게 알린다
+        if (autoConnect)
+        {
+            if (Vci) return;
+            Debug.Log($"[GDS] VCI 자동 연결 — 단계 {GdsModel.CurrentModule}");
+            GdsSync.Request(Screen, Arg, true, Cleared);
+            EquipFx.Notice("gds_vci", "VCI 연결됨", "차량과 통신을 시작합니다 — 원클릭 진단으로 전체 시스템을 검사하세요", EquipFx.Info, 3f, 5f);
+            return;
+        }
         if (_obd == null && Time.unscaledTime >= _nextObdSearch)
         {
             _nextObdSearch = Time.unscaledTime + 2f;
@@ -673,7 +684,8 @@ public class GdsTablet : MonoBehaviour
         if (!Vci)
         {
             Box(_content, 140, 90, 1000, 360, $"<size=34><b>VCI 미연결</b></size>\n\n{what}을(를) 하려면 진단기를 차량에 연결해야 합니다.\n\n" +
-                "태블릿을 <color=#00A0E9><b>운전석 하단 OBD-II 자기 진단 커넥터(DLC)</b></color>에 가까이 대세요.\n연결 후에는 무선으로 유지됩니다.", WarnC);
+                (autoConnect ? "진단기를 <color=#00A0E9><b>손에 들면</b></color> 차량과 자동으로 연결됩니다."
+                             : "태블릿을 <color=#00A0E9><b>운전석 하단 OBD-II 자기 진단 커넥터(DLC)</b></color>에 가까이 대세요.\n연결 후에는 무선으로 유지됩니다."), WarnC);
             _footer.text = "매뉴얼: 진단 기기를 자기 진단 커넥터(DLC)에 연결한다";
             return false;
         }
@@ -698,7 +710,7 @@ public class GdsTablet : MonoBehaviour
     private void PageHome()
     {
         _title.text = "메인 메뉴";
-        _footer.text = Vci ? "차량 연결됨 — 원하는 기능을 고르세요" : "태블릿을 차량 OBD-II 단자에 대면 VCI 가 연결됩니다";
+        _footer.text = Vci ? "차량 연결됨 — 원하는 기능을 고르세요" : (autoConnect ? "진단기를 들면 VCI 가 연결됩니다" : "태블릿을 차량 OBD-II 단자에 대면 VCI 가 연결됩니다");
         var tiles = new (string t, string s, string go, Color c)[]
         {
             ("원클릭 전체 진단", "모든 제어기 고장 코드 검색", "scan", Accent),

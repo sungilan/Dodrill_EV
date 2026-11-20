@@ -204,6 +204,8 @@ public class NextActionGuide : MonoBehaviour
 
             // 대상이 지금 내 손에 든 물건이면(보호구 착용 등) 가리킬 곳이 없다
             if (focus != null && IsInMyHand(focus, myId)) { focus = null; label = ring = false; }
+            // (11/20 내부 시연) GDS 는 들기만 하면 연결된다 — OBD 단자 위치는 가리키지 않는다(링·라벨·나침반 모두)
+            if (focus != null && focus.name.IndexOf("OBD", System.StringComparison.OrdinalIgnoreCase) >= 0) { focus = null; label = ring = false; }
         }
 
         // 효과음: 볼트 하나 끝 / 도구 집음

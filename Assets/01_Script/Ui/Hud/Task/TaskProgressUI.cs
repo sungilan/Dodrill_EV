@@ -1,0 +1,572 @@
+using DG.Tweening;
+using FishNet;
+using Newtonsoft.Json;
+using TMPro;
+using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
+using UnityEngine.UI;
+using static ScenarioRunner;
+
+namespace DoDrill.Training
+{
+    // ============================================================
+    //  TaskProgressUI.cs
+    //  전 플랫폼 Task 진행 UI (VR HUD / PC / Mobile 공용)
+    //
+    //  역할:
+    //    1. 현재 Task 설명 표시 (task index, moduleId, description)
+    //    2. "완료" 버튼 → InteractionEvents.FireTaskConfirmed 발행
+    //       → NetworkInteractionBridge가 TaskConfirmSignal로 서버 전달
+    //    3. 모든 모듈 타입의 폴백 완료 경로 제공
+    //
+    //  ConfirmTaskModule:    버튼 클릭 → FireTaskConfirmed(moduleId) → 정상 경로
+    //  GrabZone/Use/All:     VR은 물리 인터랙션 우선, 실패 시 버튼 폴백
+    //
+    //  배치: Canvas(World Space 또는 Screen Space) 하위에 이 컴포넌트 부착
+    //        Inspector에서 UI 요소 연결 필요
+    // ============================================================
+
+    public class TaskProgressUI : MonoBehaviour
+    {
+        [Header("UI References")]
+        [SerializeField] private GameObject _panel;
+        [SerializeField] private TMP_Text   _progressText;    // "1 / 8"
+        [SerializeField] private TMP_Text   _moduleText;      // "HandHygiene"
+        [SerializeField] private TMP_Text   _descriptionText; // extra.description
+        [SerializeField] private TMP_Text   _statusText;      // Running / Failed
+        [SerializeField] private Button     _confirmButton;   // 완료 버튼
+        [SerializeField] private TMP_Text   _confirmBtnLabel; // 버튼 텍스트
+        [SerializeField] private TMP_Text _boltProgressText;
+
+        [Header("Notification UI (New)")]
+        [SerializeField] private CanvasGroup _notifCanvasGroup; // 알림 패널의 CanvasGroup
+        [SerializeField] private TMP_Text _notifText;          // 알림 텍스트 메쉬
+        [SerializeField] private float _displayDuration = 3f;  // 표시 시간
+
+        [Header("Localization Settings")]
+        [SerializeField] private UnityEngine.Localization.LocalizedString _lsRunning;
+        [SerializeField] private UnityEngine.Localization.LocalizedString _lsFailed;
+        [SerializeField] private UnityEngine.Localization.LocalizedString _lsCompleted;
+        [SerializeField] private UnityEngine.Localization.LocalizedString _lsRetrying;
+
+        private ScenarioData _scenarioData;
+        private int          _currentTaskIndex = -1;
+        private int          _totalCount;
+        private string       _currentModuleId  = string.Empty;
+        private bool         _confirmAllowed;
+
+        // ScenarioData.modules[].config.actionType 값 — UI 확인으로 끝나는 단계
+        private const string ConfirmActionType = "ConfirmTask";
+
+        // ── 생명주기 ──────────────────────────────────────────────
+
+        // ── 텍스트 넘침 방지 ──────────────────────────────────────
+
+        /// <summary>글이 길어져도 박스 밖으로 튀어나오지 않도록 자동 크기 조절 + 말줄임.</summary>
+        private static void FitText(TMP_Text t, float minRatio)
+        {
+            if (t == null) return;
+            float max = t.fontSize;
+            t.enableAutoSizing = true;
+            t.fontSizeMax = max;
+            t.fontSizeMin = Mathf.Max(8f, max * minRatio);
+            t.overflowMode = TextOverflowModes.Ellipsis;
+        }
+
+        /// <summary>제목이 없을 때의 대비책: "Front_Cover_Removal" → "Front Cover Removal".</summary>
+        private static string PrettifyId(string id)
+            => string.IsNullOrEmpty(id) ? string.Empty : id.Replace('_', ' ');
+
+        private void Awake()
+        {
+            FitText(_descriptionText, 0.6f);
+            FitText(_moduleText, 0.7f);
+            FitText(_boltProgressText, 0.7f);
+            SetupCompactLayout();
+            FixToastLayout();
+
+            // 시작 시 알림창을 확실히 숨김
+            if(_notifCanvasGroup != null)
+            {
+                _notifCanvasGroup.alpha = 0f;
+                _notifCanvasGroup.interactable = false;
+                _notifCanvasGroup.blocksRaycasts = false;
+            }
+        }
+
+        /// <summary>
+        /// ‘~가 ~를 완료하였습니다’ 알림: 글이 3줄로 늘어나 위쪽 체크 아이콘과 겹치던 것을 막는다
+        /// (패널을 조금 키우고 아이콘은 위, 글은 아래 영역에 두며 자동 크기 + 말줄임).
+        /// </summary>
+        private void FixToastLayout()
+        {
+            if (_notifCanvasGroup == null || _notifText == null) return;
+            var prt = _notifCanvasGroup.GetComponent<RectTransform>();
+            if (prt == null) return;
+
+            float w = Mathf.Max(prt.sizeDelta.x, 460f);
+            prt.sizeDelta = new Vector2(w, 200f);
+            // (11/20) PC·모바일은 화면 정가운데 — 위쪽 토스트 카드 가이드와 겹치지 않게(PC 는 씬 값이 가운데에서 390 위였다). VR 은 시선 따라오기(VrToastFollow)가 맡는다
+            if (!VrDevice.IsActive && prt.anchorMin == new Vector2(0.5f, 0.5f) && prt.anchorMax == new Vector2(0.5f, 0.5f))
+                prt.anchoredPosition = new Vector2(0f, ToastRaise);
+
+            // (11/20) '~가 ~를 완료하였습니다' 패널은 불투명하게, 다른 화면 글자(조준 안내 등) 위로 — 뒤 글자가 비쳐 겹쳐 보였다
+            var bg = prt.GetComponent<Image>();
+            if (bg != null) { var bc = bg.color; bc.a = 1f; bg.color = bc; }
+            var nestedCanvas = prt.GetComponent<Canvas>();
+            if (nestedCanvas == null) nestedCanvas = prt.gameObject.AddComponent<Canvas>();
+            nestedCanvas.overrideSorting = true;
+            nestedCanvas.sortingOrder = 900;
+
+            foreach (Transform child in prt)
+            {
+                if (child == _notifText.transform || child.GetComponent<Image>() == null) continue;
+                ((RectTransform)child).anchoredPosition = new Vector2(0f, 64f);   // 체크 아이콘: 위쪽
+            }
+
+            var trt = _notifText.rectTransform;
+            trt.anchoredPosition = new Vector2(0f, -30f);
+            trt.sizeDelta = new Vector2(w - 28f, 112f);
+            _notifText.alignment = TextAlignmentOptions.Center;
+            float max = _notifText.fontSize;
+            _notifText.enableAutoSizing = true;
+            _notifText.fontSizeMax = max;
+            _notifText.fontSizeMin = Mathf.Max(14f, max * 0.6f);
+            _notifText.overflowMode = TextOverflowModes.Ellipsis;
+        }
+
+        private void Start()
+        {
+            // (11/20) 시나리오 데이터가 오기 전에는 씬에 구워진 자리표시 글자('현재 수행할 Task 설명이 표시됩니다')를 보여 주지 않는다
+            if (_scenarioData == null && _descriptionText != null) _descriptionText.text = "";
+            if (_scenarioData != null) return;
+
+            var sr = FindFirstObjectByType<ScenarioStateReceiver>();
+            if (sr?.CurrentScenario != null)
+            {
+                _scenarioData = sr.CurrentScenario;
+                _totalCount   = sr.TotalTaskCount;
+                Refresh(sr.CurrentTaskState);
+                return;
+            }
+
+            var receiver = FindFirstObjectByType<ScenarioReceiver>();
+            if (receiver?.ReceivedData != null)
+                _scenarioData = receiver.ReceivedData;
+        }
+
+        private void OnEnable()
+        {
+            ScenarioStateReceiver.OnTaskStateUpdated += OnTaskStateUpdated;
+            ScenarioStateReceiver.OnSnapshotReceived += OnSnapshotReceived;
+            ScenarioReceiver.OnScenarioReceived      += OnScenarioReceived;
+            s_subProgressRequested += ShowSubProgress;
+            InstanceFinder.ClientManager?.RegisterBroadcast<TaskNotificationBroadcast>(OnTaskNotificationReceived);
+            s_toastRequested += ShowToast;
+
+            if (_confirmButton != null)
+                _confirmButton.onClick.AddListener(OnConfirmClicked);
+        }
+
+        private void OnDisable()
+        {
+            ScenarioStateReceiver.OnTaskStateUpdated -= OnTaskStateUpdated;
+            ScenarioStateReceiver.OnSnapshotReceived -= OnSnapshotReceived;
+            ScenarioReceiver.OnScenarioReceived      -= OnScenarioReceived;
+            s_subProgressRequested -= ShowSubProgress;
+            InstanceFinder.ClientManager?.UnregisterBroadcast<TaskNotificationBroadcast>(OnTaskNotificationReceived);
+            s_toastRequested -= ShowToast;
+
+            if (_confirmButton != null)
+                _confirmButton.onClick.RemoveListener(OnConfirmClicked);
+        }
+
+        // ── 수신 핸들러 ───────────────────────────────────────────
+
+        private void OnScenarioReceived(ScenarioData data)
+        {
+            if (data == null) return;
+            _scenarioData = data;
+
+            var sr = FindFirstObjectByType<ScenarioStateReceiver>();
+            if (sr != null && sr.CurrentTaskState.taskIndex >= 0)
+            {
+                _totalCount = sr.TotalTaskCount;
+                Refresh(sr.CurrentTaskState);
+            }
+        }
+
+        private void OnTaskStateUpdated(TaskStateBroadcast broadcast)
+        {
+            _totalCount = broadcast.totalTaskCount;
+
+            if (_scenarioData == null)
+            {
+                var sr = FindFirstObjectByType<ScenarioStateReceiver>();
+                if (sr?.CurrentScenario != null)
+                    _scenarioData = sr.CurrentScenario;
+                else
+                {
+                    var receiver = FindFirstObjectByType<ScenarioReceiver>();
+                    if (receiver?.ReceivedData != null)
+                        _scenarioData = receiver.ReceivedData;
+                }
+            }
+
+            Refresh(broadcast.currentTask);
+        }
+
+        private void OnSnapshotReceived(ScenarioSnapshotBroadcast broadcast)
+        {
+            _scenarioData = broadcast.scenarioData;
+            _totalCount   = broadcast.totalTaskCount;
+            Refresh(broadcast.currentTask);
+        }
+
+        // (11/20 UI 모듈 분리) 예전엔 여기서 볼트 브로드캐스트를 직접 받았다. 이제 콘텐츠(BoltGroupCounter)가 문구를 만들어 SetSubProgress 로 넘긴다.
+        private static event System.Action<string> s_subProgressRequested;
+
+        /// <summary>진행 패널 아래 보조 진행 문구(예: 남은 볼트). null/빈 문자열이면 숨긴다.</summary>
+        public static void SetSubProgress(string richText) => s_subProgressRequested?.Invoke(richText);
+
+        private void ShowSubProgress(string richText)
+        {
+            if(_boltProgressText == null) return;
+            bool on = !string.IsNullOrEmpty(richText);
+            _boltProgressText.gameObject.SetActive(on);
+            if(on) _boltProgressText.text = richText;
+        }
+
+        /// <summary>서버가 보낸 단계 이름(어느 언어든)과 같은 title 을 가진 모듈을 찾아 현재 언어로 돌려준다. 못 찾으면 받은 그대로.</summary>
+        private string ResolveLocalizedTitle(string received)
+        {
+            if (string.IsNullOrEmpty(received) || _scenarioData?.modules == null) return received;
+            foreach (var entry in _scenarioData.modules)
+            {
+                var extra = entry?.config?.extra;
+                if (extra == null) continue;
+                foreach (var kv in extra)
+                {
+                    if (kv.key != "title") continue;
+                    if (kv.ko == received || kv.en == received || kv.vi == received)
+                    {
+                        string local = kv.GetLocalized();
+                        return string.IsNullOrEmpty(local) ? received : local;
+                    }
+                }
+            }
+            return received;
+        }
+
+        private void OnTaskNotificationReceived(TaskNotificationBroadcast msg, FishNet.Transporting.Channel channel)
+        {
+            if(_notifCanvasGroup == null || _notifText == null) return;
+
+            // ── 1. 이름 결정 로직 (ScenarioRunner가 보낸 이름을 우선 사용) ──
+            string activePlayerName = msg.clientName;
+
+            // 서버가 이름을 찾지 못해 빈 값이 오면 접속자 목록(UserStateRow)과 같은 규칙의 번호로 대체
+            if(string.IsNullOrEmpty(activePlayerName) && msg.clientId >= 0)
+                activePlayerName = $"Player {msg.clientId + 1}";
+
+            // ── 2. 텍스트 구성 및 색상 적용 ──
+            // 요청하신 형광 초록 계열 색상 (#00f800) 적용
+            string pColor = "#00f800";
+            // 서버는 자기 언어 설정(기본 en)으로 단계 이름을 골라 보내므로, 시나리오 데이터에서 같은 단계를 찾아 이 기기의 언어로 다시 표시한다
+            string taskTitle = ResolveLocalizedTitle(msg.taskName);
+            // clientId -2: 모든 작업자가 각자 마친 단계(보호구 착용 등)
+            if(msg.clientId == -2)
+            {
+                ShowToast($"<color={pColor}><b>모든 작업자</b></color>가\n<b>{taskTitle}</b>을(를) 완료하였습니다.");
+                return;
+            }
+            // 진행자를 알 수 없으면(이름도 번호도 없음) 'Player' 로 얼버무리지 않고 주어 없이 단계 이름만 알린다
+            if(string.IsNullOrEmpty(activePlayerName))
+                ShowToast($"<b>{taskTitle}</b>를 완료하였습니다.");
+            else
+                ShowToast($"<color={pColor}><b>{activePlayerName}</b></color>(이)가\n<b>{taskTitle}</b>를 완료하였습니다.");
+        }
+
+        // ── 공용 안내 토스트 (작업 완료 알림 패널 재사용) ──
+        // 보호구 착용, 입장/퇴장 등 다른 곳에서 TaskProgressUI.RequestToast(...) 로 같은 팝업을 띄운다.
+        // 화면에 켜져 있는 TaskProgressUI(플랫폼별 하나)가 받아서 표시한다.
+        private static event System.Action<string> s_toastRequested;
+
+        /// <summary>작업 완료 알림과 같은 팝업에 안내 문구를 띄운다(TMP 리치텍스트 가능).</summary>
+        public static void RequestToast(string richText)
+        {
+            if (string.IsNullOrEmpty(richText)) return;
+            s_toastRequested?.Invoke(richText);
+        }
+
+        private void ShowToast(string richText)
+        {
+            if(_notifCanvasGroup == null || _notifText == null) return;
+            _notifText.text = richText;
+
+            // ── DOTween 연출 (나타났다 사라지기) ──
+            _notifCanvasGroup.DOKill(); // 진행 중인 연출 즉시 중단
+
+            Sequence seq = DOTween.Sequence();
+
+            // UI 초기화
+            _notifCanvasGroup.alpha = 0f;
+            VrToastFollow.Attach(_notifCanvasGroup.transform);   // VR: 선임 정비사 패널과 같은 속도로 시선을 따라온다(VR 이 아니면 아무것도 안 함)
+            _notifCanvasGroup.gameObject.SetActive(true);
+
+            // 연출 시작
+            seq.Append(_notifCanvasGroup.DOFade(1f, 0.5f).SetEase(Ease.OutCubic)); // 부드럽게 나타남
+            seq.AppendInterval(_displayDuration);                                 // 설정된 시간만큼 대기
+            seq.Append(_notifCanvasGroup.DOFade(0f, 0.8f).SetEase(Ease.InSine));   // 천천히 사라짐
+            seq.OnComplete(() => {
+                _notifCanvasGroup.gameObject.SetActive(false);
+            });
+        }
+
+        private void Refresh(TaskState state)
+        {
+            if(_boltProgressText != null) _boltProgressText.gameObject.SetActive(false);
+
+            _currentTaskIndex = state.taskIndex;
+
+            bool visible = state.status == TaskStatus.Running
+                        || state.status == TaskStatus.Failed;
+            _panel?.SetActive(visible);
+
+            if (_progressText != null)
+                _progressText.text = $"{state.taskIndex + 1} / {_totalCount}";
+            UpdateProgressBar(state.taskIndex);
+
+            if(_statusText != null)
+            {
+                var lse = _statusText.GetComponent<LocalizeStringEvent>();
+                if(lse != null)
+                {
+                    lse.StringReference = state.status switch
+                    {
+                        TaskStatus.Running => _lsRunning,
+                        TaskStatus.Failed => _lsFailed,
+                        TaskStatus.Completed => _lsCompleted,
+                        _ => null
+                    };
+                }
+                //_statusText.gameObject.SetActive(true);
+            }
+
+            _confirmAllowed = false;
+
+            if (_scenarioData != null && state.taskIndex < _scenarioData.scenario.tasks.Count)
+            {
+                var taskDef = _scenarioData.scenario.tasks[state.taskIndex];
+                _currentModuleId = taskDef.moduleId;
+                var config = _scenarioData.GetModuleConfig(taskDef.moduleId);
+
+                // '완료' 버튼은 UI 확인으로 끝나는 단계(actionType = ConfirmTask)에서만 허용.
+                // 물건 집기·존 도착·측정 단계는 실제 상호작용으로만 완료되어야 한다.
+                _confirmAllowed = config != null
+                    && string.Equals(config.actionType, ConfirmActionType, System.StringComparison.OrdinalIgnoreCase);
+
+                // 내부 ID(Front_Cover_Removal 등)를 그대로 보여주지 않고 시나리오의 단계 제목(extra.title)을 쓴다.
+                if (_moduleText != null)
+                {
+                    string title = config?.GetExtra("title");
+                    _moduleText.text = string.IsNullOrEmpty(title) ? PrettifyId(taskDef.moduleId) : title;
+                }
+
+                if (_descriptionText != null)
+                {
+                    string desc = config?.GetExtra("description");
+                    _descriptionText.text = string.IsNullOrEmpty(desc) ? PrettifyId(taskDef.moduleId) : desc;
+                }
+            }
+
+            // 완료 버튼: Running 상태이면서 UI 확인 단계일 때만 활성화
+            if (_confirmButton != null)
+                _confirmButton.interactable = state.status == TaskStatus.Running && _confirmAllowed;
+
+            if (_confirmBtnLabel != null)
+                _confirmBtnLabel.text = state.status == TaskStatus.Failed ? "재시도 대기 중..." : "완료";
+
+            ResizePanel();
+        }
+
+        // ── 컴팩트 패널 · 진행도 바 (공군 프로젝트 방식) ──────────────
+        //  - PC·모바일(오버레이 캔버스) 패널만: 작게 줄이고, 설명 글 양에 맞춰 높이가 변하게 한다. VR(월드 스페이스)은 그대로.
+        //  - '3 / 42' 가 줄바꿈되던 것을 NoWrap + 자동 크기로 막는다.
+        //  - 구분선(Divider)을 진행도 바로 쓴다 (현재 단계 / 전체 단계).
+        private const float PanelWidth = 420f;
+        private const float PanelPad = 16f;
+        private const float DescTop = 62f;
+        private const float DescFontSize = 22f;
+        private const float ProgressFontSize = 20f;
+        private bool _compact;
+
+        // 작업 완료 패널: 가운데에서 이만큼(기준 해상도 px) 위 — 방전·볼트 게이지(가운데 아래)의 제목 글씨와 겹치지 않게(11/20)
+        private const float ToastRaise = 70f;
+
+        // '남은 볼트: n / m' — 진행도 패널 바로 아래(패널과 같은 부모에서 높이를 따라간다). 예전엔 씬의 고정 자리(화면 한가운데 왼쪽)에 떠 있었다.
+        private void LateUpdate()
+        {
+            if (!_compact || _panel == null || _boltProgressText == null || !_boltProgressText.gameObject.activeSelf) return;
+            var prt = (RectTransform)_panel.transform;
+            if (prt.parent == null) return;
+            var brt = _boltProgressText.rectTransform;
+            if (brt.parent != prt.parent) brt.SetParent(prt.parent, false);
+            brt.anchorMin = brt.anchorMax = new Vector2(0f, 1f);
+            brt.pivot = new Vector2(0f, 1f);
+            brt.sizeDelta = new Vector2(320f, 30f);
+            // 패널 아래 왼쪽에는 '지도'·'키' 버튼이 있어 그 오른쪽 옆에 붙인다
+            brt.anchoredPosition = new Vector2(prt.anchoredPosition.x + 150f, prt.anchoredPosition.y - prt.sizeDelta.y - 12f);
+            _boltProgressText.alignment = TextAlignmentOptions.TopLeft;
+        }
+        private Image _barFill;
+
+        private void SetupCompactLayout()
+        {
+            if (_panel == null) return;
+            var cv = _panel.GetComponentInParent<Canvas>();
+            if (cv == null || cv.rootCanvas.renderMode == RenderMode.WorldSpace) return;
+            _compact = true;
+
+            var prt = (RectTransform)_panel.transform;
+            prt.anchorMin = prt.anchorMax = new Vector2(0f, 1f);
+            prt.pivot = new Vector2(0f, 1f);
+            prt.sizeDelta = new Vector2(PanelWidth, prt.sizeDelta.y);
+
+            float inner = PanelWidth - PanelPad * 2f;
+
+            // 머리줄: [1 / 42] ........ [진행 중]
+            if (_progressText != null)
+            {
+                var row = _progressText.transform.parent as RectTransform;
+                if (row != null && row != prt)
+                {
+                    row.anchorMin = row.anchorMax = new Vector2(0f, 1f);
+                    row.pivot = new Vector2(0f, 1f);
+                    row.anchoredPosition = new Vector2(PanelPad, -12f);
+                    row.sizeDelta = new Vector2(inner, 30f);
+                }
+                var pr = _progressText.rectTransform;
+                pr.anchorMin = new Vector2(0f, 0f); pr.anchorMax = new Vector2(0f, 1f); pr.pivot = new Vector2(0f, 0.5f);
+                pr.anchoredPosition = new Vector2(pr.parent == prt ? PanelPad : 0f, 0f); pr.sizeDelta = new Vector2(150f, 0f);   // 패널 바로 아래면 안쪽 여백
+                _progressText.margin = Vector4.zero;
+                _progressText.textWrappingMode = TextWrappingModes.NoWrap;
+                _progressText.overflowMode = TextOverflowModes.Ellipsis;
+                _progressText.enableAutoSizing = true;
+                // PC 는 너무 크고 모바일은 너무 작던 것: 프리팹마다 달랐던 글자 크기를 한 값으로 통일한다(캔버스 배율은 각 플랫폼이 알아서 적용)
+                _progressText.fontSizeMax = ProgressFontSize;
+                _progressText.fontSizeMin = 14f;
+                _progressText.fontSize = ProgressFontSize;
+            }
+            if (_statusText != null)
+            {
+                var sr = _statusText.rectTransform;
+                sr.anchorMin = new Vector2(1f, 0f); sr.anchorMax = new Vector2(1f, 1f); sr.pivot = new Vector2(1f, 0.5f);
+                sr.anchoredPosition = new Vector2(sr.parent == prt ? -PanelPad : 0f, 0f); sr.sizeDelta = new Vector2(150f, 0f);   // ‘진행 중’ 이 패널 오른쪽 밖으로 나가던 것: 안쪽 여백
+                _statusText.alignment = TextAlignmentOptions.MidlineRight;
+                // 씬의 ‘진행 중’ 글자에 오른쪽 여백이 -26.9 로 들어 있어 글자가 상자 밖(패널 밖)으로 튀어나왔다 → 여백 0
+                _statusText.margin = Vector4.zero;
+                _statusText.textWrappingMode = TextWrappingModes.NoWrap;
+                _statusText.enableAutoSizing = false;
+                _statusText.fontSize = ProgressFontSize;
+            }
+            // 모듈 ID/제목 줄은 숨긴다(설명 문장이 핵심, 내부 ID 노출 방지)
+            if (_moduleText != null) _moduleText.gameObject.SetActive(false);
+
+            // 구분선 = 진행도 바 자리
+            var div = FindDivider();
+            if (div != null)
+            {
+                div.anchorMin = div.anchorMax = new Vector2(0f, 1f); div.pivot = new Vector2(0f, 1f);
+                div.anchoredPosition = new Vector2(PanelPad, -48f); div.sizeDelta = new Vector2(inner, 5f);
+            }
+
+            if (_descriptionText != null)
+            {
+                _descriptionText.textWrappingMode = TextWrappingModes.Normal;
+                _descriptionText.overflowMode = TextOverflowModes.Overflow;
+                _descriptionText.enableAutoSizing = false;   // 높이를 글 양에 맞추므로 글자 크기는 고정
+                _descriptionText.fontSize = DescFontSize;
+                _descriptionText.alignment = TextAlignmentOptions.TopLeft;
+                var dr = _descriptionText.rectTransform;
+                dr.anchorMin = dr.anchorMax = new Vector2(0f, 1f); dr.pivot = new Vector2(0f, 1f);
+                dr.anchoredPosition = new Vector2(PanelPad, -DescTop); dr.sizeDelta = new Vector2(inner, 40f);
+            }
+
+            ResizePanel();
+        }
+
+        private RectTransform FindDivider()
+        {
+            if (_panel == null) return null;
+            foreach (var im in _panel.GetComponentsInChildren<Image>(true))
+                if (im.name.IndexOf("Divider", System.StringComparison.OrdinalIgnoreCase) >= 0 || im.name == "Line") return im.rectTransform;
+            return null;
+        }
+
+        private void ResizePanel()
+        {
+            if (!_compact || _panel == null || _descriptionText == null) return;
+            var prt = (RectTransform)_panel.transform;
+            float inner = PanelWidth - PanelPad * 2f;
+
+            Vector2 pref = _descriptionText.GetPreferredValues(_descriptionText.text, inner, 0f);
+            float h = Mathf.Clamp(pref.y, 24f, 260f);
+            var dr = _descriptionText.rectTransform;
+            dr.anchoredPosition = new Vector2(PanelPad, -DescTop);
+            dr.sizeDelta = new Vector2(inner, h);
+
+            float bottom = DescTop + h + 16f;
+            if (_confirmButton != null && _confirmButton.gameObject.activeInHierarchy)
+            {
+                var crt = (RectTransform)_confirmButton.transform;
+                crt.anchorMin = crt.anchorMax = new Vector2(0f, 1f); crt.pivot = new Vector2(0f, 1f);
+                crt.anchoredPosition = new Vector2(PanelPad, -(bottom - 4f)); crt.sizeDelta = new Vector2(inner, 40f);
+                bottom += 48f;
+            }
+            prt.sizeDelta = new Vector2(PanelWidth, bottom);
+        }
+
+        private void UpdateProgressBar(int idx)
+        {
+            if (!_compact || _panel == null) return;
+            if (_barFill == null)
+            {
+                var div = FindDivider();
+                if (div == null) return;
+                var existing = div.Find("ProgressFill");
+                GameObject go = existing != null ? existing.gameObject : new GameObject("ProgressFill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.transform.SetParent(div, false);
+                _barFill = go.GetComponent<Image>();
+                _barFill.raycastTarget = false;
+                _barFill.color = new Color(0.25f, 0.82f, 1f, 1f);
+                var frt = _barFill.rectTransform;
+                frt.pivot = new Vector2(0f, 0.5f);
+                frt.offsetMin = frt.offsetMax = Vector2.zero;
+                var dimg = div.GetComponent<Image>();
+                if (dimg != null) dimg.color = new Color(1f, 1f, 1f, 0.18f);
+            }
+            float frac = _totalCount > 0 && idx >= 0 ? Mathf.Clamp01((idx + 1f) / _totalCount) : 0f;
+            var r = _barFill.rectTransform;
+            r.anchorMin = new Vector2(0f, 0f); r.anchorMax = new Vector2(frac, 1f);
+            r.offsetMin = r.offsetMax = Vector2.zero;
+        }
+
+        // ── 완료 버튼 클릭 ─────────────────────────────────────────
+
+        private void OnConfirmClicked()
+        {
+            if (_currentTaskIndex < 0 || !_confirmAllowed || string.IsNullOrEmpty(_currentModuleId)) return;
+
+            // 정식 확인 경로: InteractionEvents → NetworkInteractionBridge → TaskConfirmSignal → 서버.
+            // 서버(ScenarioRunner.OnReceiveTaskConfirm)가 현재 단계·moduleId 일치를 검증한 뒤 처리한다.
+            // 디버그 명령을 쓰지 않으므로 DebugBootstrapper.isDebugMode 와 무관하게 동작한다.
+            InteractionEvents.FireTaskConfirmed(_currentModuleId);
+
+#if UNITY_EDITOR
+            Debug.Log($"[TaskProgressUI] 완료 버튼: moduleId={_currentModuleId}, task={_currentTaskIndex}");
+#endif
+        }
+    }
+}

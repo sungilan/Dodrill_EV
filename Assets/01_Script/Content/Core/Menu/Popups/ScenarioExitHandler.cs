@@ -111,6 +111,100 @@ namespace DoDrill
     /// <see cref="MonoBehaviour.StartCoroutine(System.Collections.IEnumerator)"/>가 실패하지 않도록
     /// 항상 활성인 숨김 호스트에서 코루틴을 실행합니다.
     /// </summary>
+    // ============================================================
+    //  ScenarioExitAll — (11/20 내부 시연) 시나리오를 다 마치고 PC 가 종료를 눌렀는데 PC 만 메인으로 가고
+    //  다른 플레이어는 계속 남아 있었다. 종료 팝업의 '확인'은 서버에 알리고, 서버가 방 전원에게 복귀 신호를 보낸다.
+    //  (게임 도중 홈 버튼으로 혼자 나가는 것은 그대로 개인 종료)
+    // ============================================================
+    public static class ScenarioExitAll
+    {
+        private static bool s_exiting;
+        private static FishNet.Managing.Server.ServerManager s_sm;
+        private static FishNet.Managing.Client.ClientManager s_cm;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void Boot()
+        {
+            var go = new GameObject("[DoDrill] ScenarioExitAll");
+            Object.DontDestroyOnLoad(go);
+            go.hideFlags = HideFlags.HideInHierarchy;
+            go.AddComponent<Poller>();
+        }
+
+        // 네트워크 매니저가 늦게 생기거나 바뀌어도 한 번씩 등록한다
+        private sealed class Poller : MonoBehaviour
+        {
+            private float _next;
+            private void Update()
+            {
+                if (Time.unscaledTime < _next) return;
+                _next = Time.unscaledTime + 1f;
+                var sm = InstanceFinder.ServerManager;
+                var cm = InstanceFinder.ClientManager;
+                ToolWorkNet.Init();    // 드릴 작동 소리 중계
+                ProbePoseNet.Init();   // 프로브 위치 중계도 서버가 계측기보다 먼저 떠 있을 때를 대비해 여기서 함께 등록
+                if (sm != null && sm != s_sm)
+                {
+                    if (s_sm != null) s_sm.UnregisterBroadcast<ScenarioExitAllRequest>(OnServerRequest);
+                    sm.RegisterBroadcast<ScenarioExitAllRequest>(OnServerRequest);
+                    s_sm = sm;
+                }
+                if (cm != null && cm != s_cm)
+                {
+                    if (s_cm != null) s_cm.UnregisterBroadcast<ScenarioExitAllBroadcast>(OnClientExit);
+                    cm.RegisterBroadcast<ScenarioExitAllBroadcast>(OnClientExit);
+                    s_cm = cm;
+                }
+                // 접속이 끊긴 뒤(메인 화면)에는 다음 판을 위해 플래그를 푼다
+                if (s_exiting && !InstanceFinder.IsClientStarted && !InstanceFinder.IsServerStarted) s_exiting = false;
+            }
+        }
+
+        private static void OnServerRequest(FishNet.Connection.NetworkConnection conn, ScenarioExitAllRequest msg, Channel channel)
+        {
+            Debug.Log($"[ScenarioExitAll] 클라이언트 {conn?.ClientId} 종료 요청 → 전원 복귀 신호");
+            InstanceFinder.ServerManager.Broadcast(new ScenarioExitAllBroadcast());
+        }
+
+        private static void OnClientExit(ScenarioExitAllBroadcast msg, Channel channel)
+        {
+            if (s_exiting) return;
+            Debug.Log("[ScenarioExitAll] 전원 종료 신호 수신 → 메인 화면으로");
+            Go();
+        }
+
+        /// <summary>종료 팝업 확인: 방 전원 종료를 요청하고, 신호가 나간 뒤 나도 나간다.</summary>
+        public static void RequestAll()
+        {
+            if (s_exiting) return;
+            if (InstanceFinder.IsClientStarted && InstanceFinder.ClientManager != null)
+            {
+                InstanceFinder.ClientManager.Broadcast(new ScenarioExitAllRequest());
+                s_exiting = true;
+                ScenarioExitCoroutineHost.Run(GoAfter(0.4f));   // 요청이 서버에 닿을 시간을 두고 내 접속을 끊는다
+                return;
+            }
+            Go();
+        }
+
+        private static System.Collections.IEnumerator GoAfter(float sec)
+        {
+            yield return new WaitForSecondsRealtime(sec);
+            s_exiting = false;
+            Go();
+        }
+
+        private static void Go()
+        {
+            s_exiting = true;
+            Mst.Events.Invoke(ScenarioEventKeys.HideEndPopup);
+            Mst.Events.Invoke(ScenarioEventKeys.HideExitPopup);
+            var h = ScenarioExitHandler.FindAnyInScene();
+            if (h != null) h.ReturnToTitle();
+            else ScenarioExitHandler.ReturnToTitleWithoutHandler();
+        }
+    }
+
     internal static class ScenarioExitCoroutineHost
     {
         private static Host _host;

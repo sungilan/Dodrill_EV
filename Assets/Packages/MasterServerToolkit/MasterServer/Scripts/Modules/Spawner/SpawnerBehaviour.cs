@@ -240,7 +240,8 @@ namespace MasterServerToolkit.MasterServer
                 logger.Info($"Spawner stopped. Id: {spawnerController.SpawnerId}");
 
             // Destroy spawner
-            spawnerController.Dispose();
+            // [DoDrill 11/20] 끊김 이벤트가 두 번 오면 두 번째에 null 이라 예외가 났다
+            spawnerController?.Dispose();
             spawnerController = null;
 
             OnSpawnerStoppedEvent?.Invoke();
