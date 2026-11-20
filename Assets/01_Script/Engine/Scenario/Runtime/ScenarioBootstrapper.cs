@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 // ============================================================
@@ -27,8 +27,12 @@ using Debug = UnityEngine.Debug;
             // 콘텐츠 모듈은 각 콘텐츠가 ScenarioHooks.AddModuleProvider 로 등록해 둔다
             //   간호술기 → 04_Sample/Modules/NursingModuleSet.cs / EV → Test/EvScenarioBinding.cs
             int providers = ScenarioHooks.ApplyModuleProviders(Registry);
+
+            // 범용 모듈 종류(Confirm·GrabToZone·UseItem·GrabAll·Measure·Wait) — 콘텐츠가 없어도 JSON 만으로 단계를 돌릴 수 있게 항상 등록
+            GenericModules.RegisterTypes(Registry);
+
             if (providers == 0)
-                Debug.LogWarning("[ScenarioBootstrapper] 등록된 모듈 공급자가 없습니다 — 콘텐츠의 ScenarioHooks.AddModuleProvider 등록(EvScenarioBinding 등)이 실행됐는지 확인");
+                Debug.Log("[ScenarioBootstrapper] 콘텐츠 모듈 공급자 없음 — 범용 모듈(config.type)만 사용합니다");
 
         Debug.Log($"[ScenarioBootstrapper] 총 {Registry.Count}개 모듈 등록 완료");
         }

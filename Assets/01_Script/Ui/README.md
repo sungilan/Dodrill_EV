@@ -1,4 +1,4 @@
-# DoDrill.Ui (L3)
+﻿# DoDrill.Ui (L3)
 
 콘텐츠와 무관한 화면 부품 모음이다. 참조: Common, Interaction, Avatar, Engine.
 
@@ -9,7 +9,7 @@
 | `Widgets` | `ClickButton`(눌림 그래픽·고정 표시 `IPressLatch`), `ToggleButton`, `SlidingPanel`, `ClickDropdown`, `CustomInputField`, `SimpleTogglePanelUI`, `BillboardUI`, `PopupWorldSpaceAnchor` |
 | `Vr` | `VRUIFollower`(시선 따라오는 창), `VrToastFollow`, `VRUiMetaRepositionDrag`(창 재배치), `VrUiMasterVolumeToggle`, `VrTaskListToggle` |
 | `Hud` | `ScreenToast`, `WarningPopup`(PC·모바일은 토스트, VR은 월드 창), `WorldHoverLabel`, `ItemNameTag`, `UIHoverFader`, `CountdownUI`, `PlayerUISetup`, `InfoCardPolicy` |
-| `Hud/Task` | `TaskProgressUI`(단계 진행 패널, 엔진 상태 구독), `TaskListPanel`, `TaskItemUI`, `ProgressHUD` |
+| `Hud/Task` | `SimpleTaskHud`(프리팹 없는 시험용 단계 표시), `TaskProgressUI`(단계 진행 패널, 엔진 상태 구독), `TaskListPanel`, `TaskItemUI`, `ProgressHUD` |
 
 ## 콘텐츠와 연결
 

@@ -93,7 +93,7 @@ public class StandaloneScenarioRunner : MonoBehaviour
 
         var taskDef = _data.scenario.tasks[index];
         var config  = _data.GetModuleConfig(taskDef.moduleId);
-        var module  = _bootstrapper.Registry.Get(taskDef.moduleId);
+        var module  = _bootstrapper.Registry.Resolve(taskDef.moduleId, config);
 
         if (module == null)
         {

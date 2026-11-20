@@ -1,4 +1,4 @@
-# DoDrill.Avatar (L2)
+﻿# DoDrill.Avatar (L2)
 
 PC·모바일·VR 플레이어 아바타와 PC·모바일 1인칭 이동·시점 공통부를 담당한다. 참조: Common, Interaction.
 
@@ -8,7 +8,7 @@ PC·모바일·VR 플레이어 아바타와 PC·모바일 1인칭 이동·시점
 |---|---|
 | `Player` | `BasePlayer`, `PlayerSpawnner`, `AvatarBodyFit`(키 맞춤), `HeldObjectHandAttach`, `AvatarHooks` |
 | `Vr` | `VRPlayer`, `VrLeftLaser` |
-| `PcMobile` | `PcMobileAvatarController`(애니메이터·IK 구동), 팔 뻗기·머리 조준·앉기 IK, `PlayerCollision`(벽 충돌), `IPcLookController`, `PcMobileMotor`(이동·충돌·시점·카메라 준비 공통부), `MobileTouchUi`(모바일 UI 터치 보강) |
+| `PcMobile` | `PcMobileAvatarController`(애니메이터·IK 구동), 팔 뻗기·머리 조준·앉기 IK, `PlayerCollision`(벽 충돌), `IPcLookController`, `PcMobileMotor`(이동·충돌·시점·카메라 준비 공통부), `MobileTouchUi`(모바일 UI 터치 보강), `SimplePcInteractor`(아바타 없는 최소 1인칭 조작: 이동·시점·클릭으로 집기/놓기/누르기 — 새 콘텐츠 시험용) |
 
 ## PC·모바일 조작 컨트롤러 만들기
 

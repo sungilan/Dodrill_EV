@@ -1,0 +1,48 @@
+{
+  "scenarioId": "example_workbench",
+  "scenarioName": { "ko": "범용 모듈 예제 — 렌치 작업", "en": "Generic module example — wrench", "vi": "" },
+  "version": "1.0",
+  "scenario": {
+    "tasks": [
+      { "moduleId": "Pick_Wrench" },
+      { "moduleId": "Place_Wrench" },
+      { "moduleId": "Press_Start" }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "Pick_Wrench",
+      "config": {
+        "type": "GrabAll",
+        "requiredItems": [ "Wrench" ],
+        "extra": [
+          { "key": "title", "ko": "렌치 집기", "en": "Pick up the wrench" },
+          { "key": "hint", "ko": "왼쪽 테이블 위의 렌치를 클릭해서 집으세요.", "en": "Click the wrench on the left table." }
+        ]
+      }
+    },
+    {
+      "moduleId": "Place_Wrench",
+      "config": {
+        "type": "GrabToZone",
+        "requiredItems": [ "Wrench" ],
+        "targetZoneId": "Zone_Bench",
+        "extra": [
+          { "key": "title", "ko": "작업대에 놓기", "en": "Place it on the workbench" },
+          { "key": "hint", "ko": "작업대 위 초록색 자리를 클릭해 렌치를 놓으세요.", "en": "Click the green spot on the workbench." }
+        ]
+      }
+    },
+    {
+      "moduleId": "Press_Start",
+      "config": {
+        "type": "Confirm",
+        "targetObjName": "StartButton",
+        "extra": [
+          { "key": "title", "ko": "시작 버튼 누르기", "en": "Press the start button" },
+          { "key": "hint", "ko": "오른쪽 받침대의 빨간 버튼을 클릭하세요.", "en": "Click the red button on the right." }
+        ]
+      }
+    }
+  ]
+}

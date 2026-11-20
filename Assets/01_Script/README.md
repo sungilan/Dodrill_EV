@@ -1,4 +1,4 @@
-# 두드릴 모듈 적용 가이드
+﻿# 두드릴 모듈 적용 가이드
 
 스크립트는 11개 어셈블리(asmdef)로 나뉘어 있다. 아래층은 위층을 모르고, 위층(콘텐츠)이 시작할 때 아래층의 훅(public static 델리게이트)에 자기 기능을 등록한다.
 
@@ -21,7 +21,7 @@
 
 1. **외부 플러그인 설치**: FishNet 4.6.x, MasterServerToolkit, AutoHand(+FinalIK), TextMeshPro, DOTween, Newtonsoft Json, Localization. 가져갈 모듈 asmdef의 `references`에 적힌 것만 있으면 된다.
 2. **모듈 폴더 복사**: Common → Interaction → (Avatar) → Engine 순서로, 하위부터 필요한 만큼. 하위만으로도 컴파일된다. `.meta`까지 같이 복사해야 프리팹 연결이 유지된다.
-3. **단계 모듈 작성**: `ITaskModule`을 구현한다. `ModuleId`는 시나리오 JSON의 `moduleId`와 같아야 한다. 완료 조건이 되면 `onComplete`를 호출한다. (예: `Assets/99_ModuleExample/Scripts/ExampleModules.cs`)
+3. **단계 정의**: 먼저 범용 모듈(`config.type`: Confirm, GrabToZone, UseItem, GrabAll, Measure, Wait)로 JSON만 작성한다(`Engine/README.md` 범용 모듈 표). 범용으로 안 되는 단계만 `ITaskModule`을 구현한다. `ModuleId`는 시나리오 JSON의 `moduleId`와 같아야 한다. 완료 조건이 되면 `onComplete`를 호출한다. (예: `Assets/99_ModuleExample/Scripts/ExampleModules.cs`)
 4. **콘텐츠 등록(바인딩)**: `ScenarioHooks.AddModuleProvider("내콘텐츠", 순서, registry => registry.Register(...))`. 필요한 다른 훅도 같은 곳에서 채운다. EV는 `Content/Features/App/Bindings/Ev*Binding.cs`가 이 역할을 한다.
 5. **시나리오 JSON 작성**: `Resources/Scenarios/<scenarioId>.json`. 형식은 `Engine/Scenario/Data/ScenarioData.cs` 참고. 단계 목록은 `scenario.tasks`, 단계별 설정은 `modules[].config`(`extra` key/ko/en/vi)에 넣는다.
 6. **씬 구성**: FishNet `NetworkManager`, `ScenarioBootstrapper`, `ScenarioRunner`(`_bootstrapper` 연결), 필요하면 `ScenarioSpawner`·`SpawnPoint`. 서버가 `ScenarioRunner.StartScenario(data)`를 호출하면 진행이 시작된다.

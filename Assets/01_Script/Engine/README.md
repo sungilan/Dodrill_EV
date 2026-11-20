@@ -1,4 +1,4 @@
-# DoDrill.Engine (L3)
+﻿# DoDrill.Engine (L3)
 
 시나리오 JSON을 읽어 단계(Task)를 순서대로 진행하는 서버 권한 엔진이다. 선임 대화, 평가(감점·결과)도 포함한다. 참조: Common, Interaction.
 
@@ -10,7 +10,7 @@
 4. 상태는 `TaskStateBroadcast`로 클라이언트에 전달된다. 클라이언트는 `ScenarioStateReceiver`로 받는다.
 5. 마지막 단계가 끝나면 평가 요약 후 `ScenarioEndBroadcast`를 보낸다.
 
-모듈을 찾지 못하면 더미 모듈로 대기한다. 이때 `[ModuleRegistry] 모듈 없음` 로그가 남는다.
+모듈 찾는 순서: ① `moduleId`로 등록된 C# 모듈 → ② `config.type`의 범용 모듈 → ③ `moduleId` 자체가 범용 종류 이름. 셋 다 없으면 더미 모듈로 대기한다. 이때 `[ModuleRegistry] 모듈 없음` 로그가 남는다.
 
 ## 내용
 
@@ -25,7 +25,35 @@
 | `Dialogue` | 선임 대화(`MentorDialogue`), TTS, 음성 로더 |
 | `Session`, `Debug`, `Localization`, `Legacy` | 세션 플레이어, 디버그 콘솔, 다국어, 간호 레거시 모듈 |
 
-## 단계 모듈 만들기
+## 범용 모듈 (코드 없이 JSON만으로)
+
+엔진이 항상 등록한다. 콘텐츠 바인딩이 없는 프로젝트에서도 바로 쓸 수 있다. 같은 `moduleId`의 C# 모듈이 있으면 그쪽이 먼저다.
+
+| `type` | 완료 조건 | 쓰는 설정 |
+|---|---|---|
+| `Confirm` | 대상 오브젝트 클릭 또는 확인 버튼 | `targetObjName`(비우면 확인 버튼만) |
+| `GrabToZone` | 아이템을 목표 구역에 가져다 대기 | `targetZoneId`, `requiredItems` |
+| `UseItem` | 아이템을 들고 사용 | `requiredItems` |
+| `GrabAll` | 필요 아이템 모두 집기 | `requiredItems`, extra `perPlayer`=true면 사람마다 |
+| `Measure` | 측정값이 기준 안 | `targetObjName`(단자), `targetValue`·`toleranceRatio` 또는 `maxValue`, extra `tolerance` |
+| `Wait` | 시간 경과 | extra `seconds`(기본 3) |
+
+```json
+"scenario": { "tasks": [
+  { "moduleId": "Pick_Wrench", "spawnObjects": [ { "prefabId": "Wrench", "spawnPointId": "SP_Table" } ] },
+  { "moduleId": "Place_Wrench" },
+  { "moduleId": "Press_Start" }
+]},
+"modules": [
+  { "moduleId": "Pick_Wrench",  "config": { "type": "GrabAll",    "requiredItems": ["Wrench"] } },
+  { "moduleId": "Place_Wrench", "config": { "type": "GrabToZone", "requiredItems": ["Wrench"], "targetZoneId": "Zone_Bench" } },
+  { "moduleId": "Press_Start",  "config": { "type": "Confirm",    "targetObjName": "StartButton" } }
+]
+```
+
+`completionMode`는 생략하면 `AnyPlayer`다. 로비 없이 씬을 열자마자 시나리오를 돌리려면 `ScenarioAutoStarter`(호스트 시작 + JSON 실행)를 붙인다. 전체 예제는 `Assets/99_ModuleExample/Example_Workbench.unity`. 코드는 `Modules/Generic/GenericModules.cs`.
+
+## 단계 모듈 만들기 (범용으로 안 될 때)
 
 ```csharp
 public class MyModule : ITaskModule

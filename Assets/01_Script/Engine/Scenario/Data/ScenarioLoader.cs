@@ -67,7 +67,7 @@ public static class ScenarioLoader
         foreach (var task in data.scenario.tasks)
         {
             if (string.IsNullOrEmpty(task.moduleId)) return Fail("moduleId 없는 task 존재");
-            if (string.IsNullOrEmpty(task.completionMode)) return Fail($"{task.moduleId}: completionMode 없음");
+            if (string.IsNullOrEmpty(task.completionMode)) task.completionMode = "AnyPlayer";   // 생략하면 한 명이 해도 완료
         }
 
         Debug.Log($"[ScenarioLoader] Validate 통과 — {data.scenarioId}");

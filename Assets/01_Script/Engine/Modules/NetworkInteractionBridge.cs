@@ -1,4 +1,4 @@
-
+﻿
 using DG.Tweening;
 using FishNet;
 using FishNet.Connection;
@@ -68,8 +68,8 @@ namespace DoDrill.Training
 
         private void OnEnable()
         {
-            if (InstanceFinder.IsServerStarted && !InstanceFinder.IsClientStarted) return;
-
+            // 예전: 서버만 켜진 순간이면 구독하지 않았다 → 호스트(서버 먼저, 클라이언트 나중)로 시작하는 씬 오브젝트는
+            // 활성화 시점에 따라 구독이 통째로 빠져 신호가 서버로 안 갔다. 각 핸들러가 IsClientStarted 를 확인하므로 항상 구독한다.
             _isVR = IsVRDevice();
 
             // 이벤트 구독
@@ -175,16 +175,16 @@ namespace DoDrill.Training
 
                 if (config != null)
                 {
-                    bool isConfirmAction = config.actionType.Equals("ConfirmTask", StringComparison.OrdinalIgnoreCase);
+                    bool isConfirmAction = string.Equals(config.actionType, "ConfirmTask", StringComparison.OrdinalIgnoreCase);
                     // 1. Disassemble 타입이면 자동 완료 차단
-                    if (config.actionType.Equals("Disassemble", System.StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(config.actionType, "Disassemble", StringComparison.OrdinalIgnoreCase))
                     {
                         Debug.Log($"<color=cyan>[Bridge]</color> {zoneId} 접촉: 'Disassemble' 단계이므로 직접 해제 대기.");
                         //return;
                     }
 
                     // 2. Touch 액션 여부 판단
-                    bool isTouchAction = config.actionType.Equals("Touch", System.StringComparison.OrdinalIgnoreCase);
+                    bool isTouchAction = string.Equals(config.actionType, "Touch", StringComparison.OrdinalIgnoreCase);
                     //if (string.IsNullOrEmpty(itemId) && !isTouchAction) return;
                 }
             }

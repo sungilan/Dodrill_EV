@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -240,6 +240,12 @@ public class DialogueLineJson
 [Serializable]
 public class ModuleConfig
 {
+    /// <summary>
+    /// 범용 모듈 종류(Confirm, GrabToZone, UseItem, GrabAll, Measure, Wait).
+    /// moduleId 로 등록된 C# 모듈이 없을 때 이 종류로 단계를 돌린다 — 코드 없이 JSON 만으로 단계를 만들 때 쓴다.
+    /// </summary>
+    public string type;
+
     public List<string> requiredItems = new();
 
     /// <summary>선임 정비사 대사(MentorDialogue). FishNet 으로는 전달되지 않아 클라이언트가 로컬 JSON 에서 다시 읽는다.</summary>

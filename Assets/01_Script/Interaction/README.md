@@ -1,4 +1,4 @@
-# DoDrill.Interaction (L1)
+﻿# DoDrill.Interaction (L1)
 
 물건 잡기·네트워크 동기화와 '작업 아이템이 존에 들어갔다' 같은 상호작용 신호를 담당한다. 참조: Common.
 
@@ -9,7 +9,7 @@
 | `Grab` | `SyncGrab`(VR·PC 공통 잡기, 서버 권한 동기화, 놓은 뒤 서버 안착), `LocalNetworkTransform`, `KinematicGrab`, `SnapGuide`, `HeldItemOnTop` |
 | `Hand` | `PcHandGrip` |
 | `Task` | `TaskItem`(작업 아이템 ID), `TaskInteractionZone`(놓는 자리), `InteractionEvents`(신호 발생 → 서버 모듈 전달) |
-| `Click` | `IWorldClickable`(PC 클릭·VR 찌르기 대상), `ClickProxy`(델리게이트로 동작을 지정하는 범용 클릭 대상) |
+| `Click` | `IWorldClickable`(PC 클릭·VR 찌르기 대상), `ClickProxy`(델리게이트로 동작을 지정하는 범용 클릭 대상), `TaskClickTarget`(누르면 `targetId`로 신호 → 범용 Confirm 단계 완료) |
 
 ## 훅
 

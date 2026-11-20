@@ -1,4 +1,4 @@
-using DoDrill;
+﻿using DoDrill;
 using FishNet;
 using FishNet.Broadcast;
 using FishNet.Connection;
@@ -384,7 +384,7 @@ public class ScenarioRunner : MonoBehaviour
 
         var taskDef = _data.scenario.tasks[index];
         var config = _data.GetModuleConfig(taskDef.moduleId);
-        var module = _bootstrapper.Registry.Get(taskDef.moduleId);
+        var module = _bootstrapper.Registry.Resolve(taskDef.moduleId, config);   // C# 모듈 → 없으면 config.type 범용 모듈
         var moduleId = taskDef.moduleId;
 
         if (module == null)
