@@ -52,7 +52,7 @@ public class HvTouchWarning : MonoBehaviour
 
     private void Update()
     {
-        if (!VrProbeHandling.IsVRDevice) return;
+        if (!VrDevice.IsActive) return;
         float now = Time.unscaledTime;
         if (now >= _nextHandScan) { _nextHandScan = now + 2f; ScanHands(); }
         foreach (var s in _hands) if (s.tinted.Count > 0 && now >= s.tintUntil) Untint(s);

@@ -83,7 +83,7 @@ public class PcProbeAim : MonoBehaviour
         _master = GetComponent<MultimeterMaster>();
         // 모바일(11/20): PC 와 같은 조준점·문구·프로브 꽂기. F 키 대신 화면의 '작업' 버튼(MobileWorkButton)을 누르면 꽂는다.
         _mobile = Application.isMobilePlatform || GameScenePlatformManager.CurrentPlatform == PlatformType.Mobile;
-        _active = _master != null && !VrProbeHandling.IsVRDevice && (_mobile || Utils.GetPlatformType() == PlatformType.PC);
+        _active = _master != null && !VrDevice.IsActive && (_mobile || Utils.GetPlatformType() == PlatformType.PC);
         if (!_active) { enabled = false; return; }
 
         _red = BuildProbe(_master.redProbe, true);

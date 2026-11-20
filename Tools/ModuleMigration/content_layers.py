@@ -40,10 +40,26 @@ unit_of = {f: find(f) for f in files}
 units = collections.defaultdict(list)
 for f, u in unit_of.items(): units[u].append(f)
 
+def top_types(s):
+    """중괄호 깊이를 따라가며 최상위 타입 이름만(중첩 타입 제외). 중첩 타입·메서드와 이름이 같아 생기는 가짜 의존을 막는다."""
+    res = []
+    depth = 0; pos = 0
+    ns_open = []
+    for m in re.finditer(r'\b(namespace|class|struct|enum|interface)\s+([A-Za-z_][\w.]*)', s):
+        seg = s[pos:m.start()]
+        depth += seg.count('{') - seg.count('}')
+        pos = m.start()
+        ns_open = [d for d in ns_open if depth >= d]
+        if m.group(1) == 'namespace':
+            ns_open.append(depth + 1)
+        elif depth == len(ns_open):
+            res.append(m.group(2))
+    return res
+
 owners = collections.defaultdict(set)
 for rel, s in files.items():
-    for m in re.finditer(r'\b(?:class|struct|enum|interface)\s+([A-Za-z_]\w*)', s):
-        owners[m.group(1)].add(unit_of[rel])
+    for t in set(top_types(s)):
+        owners[t].add(unit_of[rel])
 uniq = {t: next(iter(u)) for t, u in owners.items() if len(u) == 1 and len(t) > 3}
 udeps = {}
 for u, fl in units.items():
@@ -83,6 +99,12 @@ side = set(udeps) - big - down - up
 def expand(S):
     return sorted(f for u in S for f in units[u])
 out = {'Core': expand(big), 'Base': expand(down), 'Features': expand(up), 'Shell': expand(side)}
+# 의미상 고정하는 파일(그래프로는 Shell 이어도 '바인딩'은 Features 에 둔다)
+PIN = {'App/Bindings/EvHookSelfCheck.cs': 'Features'}
+for f, layer in PIN.items():
+    for k in out:
+        if f in out[k] and k != layer:
+            out[k].remove(f); out[layer].append(f)
 json.dump(out, open(os.path.join(HERE, 'content_layers.json'), 'w'), ensure_ascii=False, indent=1)
 tot = sum(len(v) for v in out.values())
 print('units', len(units), 'files', len(files), 'SCC count', len(sccs), 'biggest', len(big), 'files in core', len(out['Core']))

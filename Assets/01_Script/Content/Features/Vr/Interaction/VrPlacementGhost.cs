@@ -86,7 +86,7 @@ public class VrPlacementGhost : MonoBehaviour
 
     private void Update()
     {
-        if (!VrProbeHandling.IsVRDevice) return;
+        if (!VrDevice.IsActive) return;
         if (Time.unscaledTime >= _nextHandScan) { _nextHandScan = Time.unscaledTime + 2f; ScanHands(); }
         RecordRestPoses();
 
@@ -169,7 +169,7 @@ public class VrPlacementGhost : MonoBehaviour
 
     private bool TrySnap(SyncGrab sg, Hand hand)
     {
-        if (!isActiveAndEnabled || !VrProbeHandling.IsVRDevice || sg == null) return false;
+        if (!isActiveAndEnabled || !VrDevice.IsActive || sg == null) return false;
         if (_armedItem == null || Time.time >= _armedUntil) return false;
         var ti = sg.GetComponent<TaskItem>() ?? sg.GetComponentInParent<TaskItem>();
         if (ti != _armedItem) return false;

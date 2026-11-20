@@ -116,7 +116,7 @@ public class TaskTimeWarning : MonoBehaviour
 
     private void Rumble(float duration, float amp)
     {
-        if (!VrProbeHandling.IsVRDevice) return;
+        if (!VrDevice.IsActive) return;
         if (Time.unscaledTime >= _nextHandScan)
         {
             _nextHandScan = Time.unscaledTime + 5f;

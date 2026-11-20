@@ -41,7 +41,7 @@ public class VrControlHint : MonoBehaviour
 
     private void Update()
     {
-        if (!VrProbeHandling.IsVRDevice) return;
+        if (!VrDevice.IsActive) return;
         if (Time.unscaledTime >= _nextHandScan) { _nextHandScan = Time.unscaledTime + 2f; ScanHands(); }
 
         foreach (var s in _hands)

@@ -513,7 +513,7 @@ public class ImpactWrench : MonoBehaviour
     private void UpdateBoltSnap()
     {
         // PC·모바일도 정렬한다 — 렌치를 마음대로 기울일 수 없으므로 각도 제한 없이, 볼트를 잡은 거리(30cm) 안이면 비트를 볼트 축에 맞춘다
-        bool vr = VrProbeHandling.IsVRDevice;
+        bool vr = VrDevice.IsActive;
         float maxDist = vr ? SnapMaxDist : 0.3f, maxAng = vr ? SnapMaxAngle : 179f;
         InitBoltSnap();
         if (_snapBody == null) return;

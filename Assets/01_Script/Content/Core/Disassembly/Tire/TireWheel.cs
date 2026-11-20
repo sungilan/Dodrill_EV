@@ -9,7 +9,7 @@ using XRAirpotrSecurity;
 /// 놓으면 휠이 허브로 '착' 끼워지는 스냅 애니메이션이 나온다.
 /// </summary>
 [RequireComponent(typeof(SyncGrab))]
-public class TireWheel : MonoBehaviour
+public class TireWheel : MonoBehaviour, IHoldScaleExempt
 {
     private SyncGrab _sync;
     private NetworkObject _nob;

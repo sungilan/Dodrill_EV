@@ -28,7 +28,7 @@ ASM = {
 # 네임스페이스 이름이 우연히 겹쳐 오탐이 나는 어셈블리
 EXCLUDE = {'Unity.VisualScripting.Core', 'Unity.VisualScripting.Flow', 'Unity.VisualScripting.State', 'Unity.InternalAPIEngineBridge.004'}
 # 코드 스캔으로 안 잡히지만 필요한 것(컴파일 오류로 확인된 것들) — Autohand 네임스페이스는 asmdef 가 여러 개라 스캔이 못 고른다
-CONTENT_EXTRA = ['QuickOutline', 'LomoCamera', 'Unity.ResourceManager', 'Unity.InputSystem']
+CONTENT_EXTRA = ['QuickOutline', 'LomoCamera', 'Unity.ResourceManager', 'Unity.InputSystem', 'Unity.XR.Interaction.Toolkit']
 EXTRA = {
     'DoDrill.Common': ['AutoHandAssembly', 'Unity.XR.OpenXR'],
     'DoDrill.Avatar': ['Unity.InputSystem'],
@@ -107,6 +107,7 @@ def main():
         if os.path.exists(p):
             j = json.load(open(p, encoding='utf-8'))
             cur_ext = [r for r in j['references'] if not r.startswith('DoDrill.')]
+            if name.startswith('DoDrill.Content.'): cur_ext = sorted(set(cur_ext) | set(CONTENT_PREV))   # 파일이 층 사이를 옮겨 다니므로 항상 출발점에서 다시 고른다
         else:
             j = {'name': name, 'rootNamespace': '', 'references': [], 'includePlatforms': [], 'excludePlatforms': [], 'allowUnsafeCode': False,
                  'overrideReferences': False, 'precompiledReferences': [], 'autoReferenced': True, 'defineConstraints': [], 'versionDefines': [], 'noEngineReferences': False}

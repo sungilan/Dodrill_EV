@@ -136,3 +136,21 @@ Content 의 새 폴더: App · Lobby · Menu · Input · Scenario · Guide · Hu
 - **매 묶음 뒤**: `content_layers.py` 로 Core 크기 재측정(줄어야 함) → 컴파일 → PC·모바일·VR 시나리오 한 번 → `[HookCheck:EV]` 확인.
 - **위험**: ① 훅 추가가 늘면 '등록 누락 = 기능 사라짐' 위험이 커진다 → HookRegistry 가 새 훅을 자동 점검하므로 필수. ② FreeLoto·CarPartService 는 네트워크 메시지·RPC 를 가진다 → 클래스 이름·메시지 구조를 바꾸지 말고(서버·클라 계약 유지) 정적 상태·인터페이스만 새로 만든다. ③ 씬·프리팹이 MonoBehaviour 를 GUID 로 참조하므로 **MonoBehaviour 클래스는 파일을 쪼개지 말고**(새 클래스만 새 파일) 이동만 한다.
 - **끝났을 때 얻는 것**: Safety(③)·VrUi(⑤)·Input(①)·Equipment·Disassembly 가 컴파일 단위로 독립 → 다른 프로젝트에 어셈블리 단위로 가져가고, 훅으로만 연결.
+
+## 12. 묶음 1 결과 — Core 103 → 46개 (2026-11-20, 컴파일 오류 0·런타임/빌드 미검증)
+**한 일(동작 변경 없음)**
+- `VrProbeHandling.IsVRDevice` → `VrDevice.IsActive`(Common) 20개 파일 치환 — 가장 큰 순환 고리였다(25곳이 VrProbeHandling 클래스 전체에 매여 있었음).
+- `InfoCardPolicy`(새 정적 클래스)로 설명 카드 설정을 분리 → EquipFx 가 VrPalmMenu 를 더 이상 부르지 않음(VrPalmMenu.ShowInfoCards·InfoCardsAllowed 는 그대로 위임).
+- `UIHoverFader` 를 FreeLookController.cs 에서 별도 파일로.
+- `ToolMarkers.cs`: `IHoldScaleExempt`(HoldScalePolicy 용)·`IFloorCarried`(Openable 용) 마커 인터페이스 → 장비 클래스 6개에 붙이고 HoldScalePolicy·Openable 이 구체 장비 타입을 직접 부르지 않게.
+- 층 분류 도구를 **최상위 타입 기준**(중첩 타입·메서드명 오탐 제거)으로 바꾸고 다시 배치(`content_layers.py`, `EvHookSelfCheck` 는 Features 로 고정).
+- `ToolRenderSnap.FindAvatarHandBone` internal→public, prune_refs: Content 층들이 파일 이동 때마다 출발 참조(CONTENT_PREV)에서 다시 고르도록, Unity.XR.Interaction.Toolkit 추가.
+
+**결과**: Core 103개(35.6k줄) → **46개(17.4k줄)**, Base 46(8.6k), Features 72(19.7k), Shell 108(11.3k). Core 의 순환이 풀려 이제 Core 안의 어셈블리 간 거꾸로 참조는 **기능 폴더 수준 약 20개**(이전 49개 → 20개).
+
+**남은 Core(46개)와 끊어야 할 것 — 묶음 2 이후**
+- Safety ↔ Disassembly: `CarPartService`·`CarPartRules`·`CarPartAccident`·`EmergencyEventManager` ↔ `FreeLoto`·`ElectricSafetyManager` (묶음 2·3).
+- Measure ↔ Safety: `MultimeterMaster` → `FreeLoto.TryTerminalVoltage`/`HvVoltageCheck`/`ElectricSafetyManager` (묶음 2 훅).
+- Guide: `GuideSystem` ← Evaluation·VrProbeHandling (묶음 4).
+- Tools/Hand → Workshop(`AirCompressor`·`SocketRack`), Tools/Hand → Disassembly/Bolt(`BoltHint`·`BoltPartName`·`BoltWork` 가 Core 에 있음 → Bolt 계열을 아래로) (묶음 1 후속).
+- Hud → Safety(`FreeDischargeHud`·`HvShockGauge`·`LOTOSystem`), Vehicle/Body ↔ Service(`CoolantReservoir`), World/Interactive → `FreeLoto`.
