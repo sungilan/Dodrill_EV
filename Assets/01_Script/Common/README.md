@@ -27,3 +27,16 @@ FishNet, MasterServerToolkit, AutoHand, FinalIK(RootMotion), InputSystem, URP, T
 
 - `RoomIdleShutdown`은 배치 모드 전용 서버에서만 동작한다(접속자 0명이 3분/2분 지속되면 종료).
 - `SpawnerWatchdog`은 스포너가 한 번 등록된 프로세스(마스터)에서만 동작한다.
+
+## Localization (자산)
+
+`Localization/`에 로컬라이제이션 설정·로케일·공용 문자열 테이블이 있다(2026-11-20 `07_Resources`에서 이동, GUID 유지).
+
+| 폴더 | 내용 |
+|---|---|
+| `Settings` | `Localization Settings.asset` |
+| `Locales` | 영어(en)·한국어(ko)·베트남어(vi-VN) |
+| `Tables/UI_Text` | 로비·공용 UI·EV 아이템 이름 문구(172항목) |
+| `Tables/TaskNames` | 시나리오 단계 이름(44항목) |
+
+새 프로젝트에서는 메뉴 **Tools ▸ DoDrill ▸ Localization 설치**(`Editor/LocalizationInstaller`)를 한 번 실행한다. Addressables 설정이 없으면 만들고, 활성 Localization 설정이 없으면 위 설정을 지정하며, 로케일·테이블을 Localization 규칙의 Addressables 그룹·주소·라벨로 등록한다. 여러 번 실행해도 안전하고, EV 프로젝트에서는 변경이 없다. 로비 템플릿 설치 메뉴가 먼저 호출한다. 이미 자기 Localization 설정이 있는 프로젝트는 덮어쓰지 않는다.

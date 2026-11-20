@@ -1,0 +1,81 @@
+// 빈 프로젝트 이식 시험용 에디터 스크립트(서버 빌드) — blank_port_test.py --roomstart 가 Assets/Editor/RoomBuild.cs 로 복사한다.
+// 템플릿 씬을 설치한 뒤 윈도우 플레이어로 두 개를 빌드한다(환경변수 LOBBY_BUILD_DIR 아래).
+//   Room/RoomServer.exe     : Room(첫 씬) + Game(빈 씬)
+//   Master/MasterServer.exe : Master 씬. 안의 스포너(SpawnerAssign)가 RoomServer.exe 를 띄우도록 경로를 지정
+// 결과는 로그의 [RoomBuild] 줄. 끝나면 에디터를 스스로 종료한다.
+using System;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+public static class RoomBuild
+{
+    const string GameScene = "Assets/Scenes/Game.unity";
+    const string RoomScene = "Assets/Scenes/Lobby/Room.unity";
+    const string MasterScene = "Assets/Scenes/Lobby/Master.unity";
+
+    public static void BuildAll()
+    {
+        string outDir = Environment.GetEnvironmentVariable("LOBBY_BUILD_DIR");
+        if (string.IsNullOrEmpty(outDir)) { Debug.Log("[RoomBuild] FAIL LOBBY_BUILD_DIR 없음"); EditorApplication.Exit(2); return; }
+
+        EditorSceneManager.OpenScene("Assets/99_ModuleExample/Example_Workbench.unity", OpenSceneMode.Single);
+        if (!AssetDatabase.IsValidFolder("Assets/Scenes")) AssetDatabase.CreateFolder("Assets", "Scenes");
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(GameScene) == null)
+        {
+            var gs = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);   // 빈 게임 씬(카메라·빛)
+            EditorSceneManager.SaveScene(gs, GameScene);
+            EditorSceneManager.OpenScene("Assets/99_ModuleExample/Example_Workbench.unity", OpenSceneMode.Single);
+        }
+        EditorApplication.ExecuteMenuItem("Tools/DoDrill/로비 템플릿 씬 설치");   // Game 씬이 있으므로 Room 의 DefaultScene 온라인 경로가 맞춰진다
+        AssetDatabase.Refresh();
+
+        PlayerSettings.productName = "BlankPort";
+        PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+        PlayerSettings.defaultScreenWidth = 320; PlayerSettings.defaultScreenHeight = 240;
+        PlayerSettings.runInBackground = true;
+        PlayerSettings.forceSingleInstance = false;
+
+        string roomExe = Path.GetFullPath(Path.Combine(outDir, "Room", "RoomServer.exe"));
+        string masterExe = Path.GetFullPath(Path.Combine(outDir, "Master", "MasterServer.exe"));
+
+        if (!Build(new[] { RoomScene, GameScene }, roomExe)) return;
+
+        // 마스터 안의 스포너가 띄울 룸 서버 경로·주소를 지정(플레이어에서는 executableFilePath 를 쓴다)
+        var sc = EditorSceneManager.OpenScene(MasterScene, OpenSceneMode.Additive);
+        foreach (var r in sc.GetRootGameObjects())
+            foreach (var c in r.GetComponentsInChildren<Component>(true))
+            {
+                if (c == null || c.GetType().Name != "SpawnerBehaviour") continue;
+                var so = new SerializedObject(c);
+                so.FindProperty("executableFilePath").stringValue = roomExe.Replace('\\', '/');
+                so.FindProperty("machineIp").stringValue = "127.0.0.1";
+                so.ApplyModifiedProperties();
+                Debug.Log("[RoomBuild] 스포너 룸 서버 경로 = " + roomExe);
+            }
+        EditorSceneManager.MarkSceneDirty(sc); EditorSceneManager.SaveScene(sc); EditorSceneManager.CloseScene(sc, true);
+
+        if (!Build(new[] { MasterScene }, masterExe)) return;
+        Debug.Log("[RoomBuild] RESULT PASS 룸 서버·마스터 서버 빌드 완료");
+        EditorApplication.Exit(0);
+    }
+
+    static bool Build(string[] scenes, string exePath)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(exePath));
+        foreach (var s in scenes) if (AssetDatabase.LoadAssetAtPath<SceneAsset>(s) == null) { Debug.Log("[RoomBuild] FAIL 씬 없음 " + s); EditorApplication.Exit(3); return false; }
+        EditorBuildSettings.scenes = scenes.Select(s => new EditorBuildSettingsScene(s, true)).ToArray();
+        var opts = new BuildPlayerOptions
+        {
+            scenes = scenes, locationPathName = exePath,
+            target = BuildTarget.StandaloneWindows64, targetGroup = BuildTargetGroup.Standalone, options = BuildOptions.None
+        };
+        var rep = BuildPipeline.BuildPlayer(opts);
+        Debug.Log($"[RoomBuild] 빌드 {Path.GetFileName(exePath)}: {rep.summary.result} ({rep.summary.totalSize / (1024 * 1024)} MB, 오류 {rep.summary.totalErrors}) 씬={string.Join(",", scenes.Select(Path.GetFileNameWithoutExtension))}");
+        if (rep.summary.result != BuildResult.Succeeded) { Debug.Log("[RoomBuild] RESULT FAIL " + exePath); EditorApplication.Exit(1); return false; }
+        return true;
+    }
+}

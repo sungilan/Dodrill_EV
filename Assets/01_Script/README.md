@@ -13,13 +13,14 @@
 | L3 | `DoDrill.Solo` | `Solo` | 혼자하기(서버 없이 호스트로 실행) | O |
 | L3 | `DoDrill.Safety` | `Safety` | 고전압 안전 상태, LOTO, 사고 연출, 보호구 동기화 | 전기·안전 교육 계열 |
 | L3 | `DoDrill.Ui` | `Ui` | 위젯, VR 창 따라오기, 진행 패널·토스트·경고창·이름표 | O |
+| L4 | `DoDrill.Lobby` | `Lobby` | 로비(MST 기반 로그인·방 목록·방 만들기·대기실)·서버 씬 템플릿·설치 메뉴 | 마스터 서버(MST)를 쓰는 프로젝트 |
 | L4 | `DoDrill.Content.*` | `Content` | 전기차 정비 콘텐츠(Base·Core·Shell·Features) | X (EV 전용) |
 
 각 모듈 폴더의 `README.md`에 역할, 참조, 훅 목록을 정리해 두었다.
 
 ## 새 프로젝트에 적용하는 순서
 
-1. **외부 플러그인 설치**: FishNet 4.6.x, MasterServerToolkit, AutoHand(+FinalIK), TextMeshPro, DOTween, Newtonsoft Json, Localization. Odin Inspector는 없어도 된다(`Common/Core/OdinShim.cs`가 빈 어트리뷰트를 대신 제공, 인스펙터 버튼만 사라짐). DOTween은 설정(`DOTweenSettings`)에서 asmdef 생성을 켜야 `DOTween.Modules`가 만들어진다. 가져갈 모듈 asmdef의 `references`에 적힌 것만 있으면 된다.
+1. **외부 플러그인 설치**: FishNet 4.6.x, MasterServerToolkit, AutoHand(+FinalIK), TextMeshPro, DOTween, Newtonsoft Json, Localization. Localization은 `Common/Localization`에 설정·테이블이 있고 설치 메뉴(`Tools ▸ DoDrill ▸ Localization 설치`)가 프로젝트에 등록한다. Odin Inspector는 없어도 된다(`Common/Core/OdinShim.cs`가 빈 어트리뷰트를 대신 제공, 인스펙터 버튼만 사라짐). DOTween은 설정(`DOTweenSettings`)에서 asmdef 생성을 켜야 `DOTween.Modules`가 만들어진다. 가져갈 모듈 asmdef의 `references`에 적힌 것만 있으면 된다.
 2. **모듈 폴더 복사**: Common → Interaction → (Avatar) → Engine 순서로, 하위부터 필요한 만큼. 하위만으로도 컴파일된다. `.meta`까지 같이 복사해야 프리팹 연결이 유지된다.
 3. **단계 정의**: 먼저 범용 모듈(`config.type`: Confirm, GrabToZone, UseItem, GrabAll, Measure, Wait)로 JSON만 작성한다(`Engine/README.md` 범용 모듈 표). 범용으로 안 되는 단계만 `ITaskModule`을 구현한다. `ModuleId`는 시나리오 JSON의 `moduleId`와 같아야 한다. 완료 조건이 되면 `onComplete`를 호출한다. (예: `Assets/99_ModuleExample/Scripts/ExampleModules.cs`)
 4. **콘텐츠 등록(바인딩)**: `ScenarioHooks.AddModuleProvider("내콘텐츠", 순서, registry => registry.Register(...))`. 필요한 다른 훅도 같은 곳에서 채운다. EV는 `Content/Features/App/Bindings/Ev*Binding.cs`가 이 역할을 한다.

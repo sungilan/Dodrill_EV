@@ -34,6 +34,20 @@ namespace Sirenix.OdinInspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
     public sealed class ReadOnlyAttribute : Attribute { }
 
+    [AttributeUsage(AttributeTargets.All, AllowMultiple = true)]
+    public sealed class FoldoutGroupAttribute : Attribute
+    {
+        public FoldoutGroupAttribute(string groupName) { }
+        public FoldoutGroupAttribute(string groupName, bool expanded) { }
+    }
+
+    [AttributeUsage(AttributeTargets.All, AllowMultiple = true)]
+    public sealed class HorizontalGroupAttribute : Attribute
+    {
+        public HorizontalGroupAttribute(string group) { }
+        public HorizontalGroupAttribute(string group, float width) { }
+    }
+
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
     public sealed class FolderPathAttribute : Attribute
     {

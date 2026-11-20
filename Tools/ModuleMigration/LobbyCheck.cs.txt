@@ -1,0 +1,243 @@
+// 빈 프로젝트 이식 시험용 에디터 스크립트(로비) — blank_port_test.py --lobby --runtime 이 Assets/Editor/LobbyCheck.cs 로 복사한다.
+// 한 프로세스에서 마스터 서버(Master 씬)와 클라이언트(Client 씬)를 함께 돌려 로비 흐름을 확인한다.
+//   템플릿 씬 설치 메뉴 → Client 씬 Play → Master 씬 추가 로드 → 시작 버튼 → 마스터 연결 → 게스트 로그인 → 방 만들기 → 대기실 표시
+// 결과는 로그의 [LobbyCheck] 줄. 끝나면 에디터를 스스로 종료한다.
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
+using MasterServerToolkit.MasterServer;
+using UnityEditor;
+using UnityEditor.Localization;
+using UnityEditor.SceneManagement;
+using UnityEngine.Localization.Settings;
+using UnityEngine.Localization.Tables;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+public static class LobbyCheck
+{
+    const string K = "LobbyCheck.stage";
+    const string KT = "LobbyCheck.t0";
+    const string ClientScene = "Assets/Scenes/Lobby/Client.unity";
+    const string MasterScene = "Assets/Scenes/Lobby/Master.unity";
+    static bool _lobbyShown;
+    static float _lastAct;
+    static readonly List<string> _errors = new List<string>();
+    static readonly List<string> _info = new List<string>();
+    static int _noise;
+    static bool _stGameServer, _gameInProgress, _startFailed, _roomProcSeen;
+    static bool RoomStartMode => System.Environment.GetEnvironmentVariable("LOBBYCHECK_ROOMSTART") == "1";   // 외부 마스터(MasterServer.exe)에 연결하고 방 시작까지 확인
+    static readonly List<string> _noiseLines = new List<string>();
+
+    static LobbyCheck()
+    {
+        EditorApplication.update += Tick;
+        Application.logMessageReceived += (msg, stack, type) =>
+        {
+            string first = msg.Split('\n')[0];
+            if (!msg.StartsWith("[LobbyCheck]") && (msg.Contains("listening") || msg.Contains("Master Server") || msg.Contains("MasterServer") || msg.Contains("Connected to") || msg.Contains("Signed") || msg.Contains("Lobby") || msg.Contains("Master") || msg.Contains("server") || msg.Contains("Server")))
+            { if (_info.Count < 40) _info.Add(first); }
+            if (type != LogType.Error && type != LogType.Exception) return;
+            if (first.Contains("ArgumentOutOfRange")) return;   // Unity 검색 인덱서(SearchDatabase)의 에디터 시작 예외 — 무관
+            // 로컬라이제이션·Addressables 설정이 없어서 나는 잡음은 따로 센다(로비 흐름과 무관)
+            if (first.Contains("Addressables") || first.Contains("Locale") || first.Contains("TextDataProvider") || first.Contains("RuntimeData") || first.Contains("InvalidKey") || first.Contains("OperationException"))
+            { _noise++; if (_noiseLines.Count < 5) _noiseLines.Add(first); return; }
+            if (_errors.Count < 25) _errors.Add(first);
+        };
+    }
+
+    public static void Run()
+    {
+        // 저장된 씬을 먼저 열어 둔다(설치기가 씬을 추가로 열 수 있게)
+        EditorSceneManager.OpenScene("Assets/99_ModuleExample/Example_Workbench.unity", OpenSceneMode.Single);
+        EditorApplication.ExecuteMenuItem("Tools/DoDrill/로비 템플릿 씬 설치");
+        AssetDatabase.Refresh();
+        foreach (var p in new[] { ClientScene, MasterScene, "Assets/Scenes/Lobby/Spawner.unity", "Assets/Scenes/Lobby/Room.unity" })
+            Debug.Log("[LobbyCheck] 설치 확인 " + p + " = " + (AssetDatabase.LoadAssetAtPath<SceneAsset>(p) != null));
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ClientScene) == null) { Debug.Log("[LobbyCheck] RESULT FAIL 설치 실패"); EditorApplication.Exit(2); return; }
+        // Localization: UI_Text 테이블의 첫 번째 항목 키를 시험용으로 고른다
+        var coll = LocalizationEditorSettings.GetStringTableCollection("UI_Text");
+        Debug.Log("[LobbyCheck] Localization 활성 설정=" + (LocalizationEditorSettings.ActiveLocalizationSettings != null) + " UI_Text 컬렉션=" + (coll != null) + " 로케일 수=" + LocalizationEditorSettings.GetLocales().Count);
+        if (coll != null && coll.SharedData.Entries.Count > 0) SessionState.SetString("LobbyCheck.key", coll.SharedData.Entries[0].Key);
+        EditorSceneManager.OpenScene(ClientScene, OpenSceneMode.Single);
+        SessionState.SetInt(K, 1);
+        SessionState.SetFloat(KT, (float)EditorApplication.timeSinceStartup);
+        EditorApplication.EnterPlaymode();
+    }
+
+    static string Describe()
+    {
+        var sb = new StringBuilder();
+        bool connected = false, signedIn = false;
+        try { connected = Mst.Client.Connection != null && Mst.Client.Connection.IsConnected; } catch { }
+        try { signedIn = Mst.Client.Auth.IsSignedIn; } catch { }
+        sb.Append($"masterLoaded={SceneManager.GetSceneByName("Master").isLoaded} connected={connected} signedIn={signedIn} lobbyShown={_lobbyShown}");
+        sb.Append($" errors={_errors.Count}");
+        return sb.ToString();
+    }
+
+    static bool CheckLocalization()
+    {
+        string key = SessionState.GetString("LobbyCheck.key", "");
+        if (string.IsNullOrEmpty(key)) { Debug.Log("[LobbyCheck] Localization 확인 불가: 키 없음"); return false; }
+        try
+        {
+            var op = LocalizationSettings.StringDatabase.GetLocalizedStringAsync("UI_Text", key);
+            string s = op.WaitForCompletion();
+            bool ok = !string.IsNullOrEmpty(s) && !s.StartsWith("No translation");
+            Debug.Log($"[LobbyCheck] Localization 문구 확인: UI_Text/{key} = '{s}' → {(ok ? "OK" : "FAIL")}");
+            return ok;
+        }
+        catch (System.Exception e) { Debug.Log("[LobbyCheck] Localization 확인 예외: " + e.GetType().Name + " " + e.Message); return false; }
+    }
+
+    static void Next(int stage) { SessionState.SetInt(K, stage); SessionState.SetFloat(KT, (float)EditorApplication.timeSinceStartup); }
+
+    static void Finish(bool pass, string why)
+    {
+        Debug.Log("[LobbyCheck] 상태: " + Describe());
+        Debug.Log("[LobbyCheck] 로컬라이제이션/Addressables 잡음 오류 수: " + _noise);
+        foreach (var n in _noiseLines) Debug.Log("[LobbyCheck] 잡음: " + n);
+        foreach (var e in _info) Debug.Log("[LobbyCheck] 정보로그: " + e);
+        foreach (var e in _errors) Debug.Log("[LobbyCheck] 오류로그: " + e);
+        Debug.Log(pass ? "[LobbyCheck] RESULT PASS " + why : "[LobbyCheck] RESULT FAIL " + why);
+        SessionState.SetInt(K, 9);
+        EditorApplication.isPlaying = false;
+    }
+
+    static void Tick()
+    {
+        int stage = SessionState.GetInt(K, 0);
+        if (stage == 0) return;
+        float t = (float)EditorApplication.timeSinceStartup - SessionState.GetFloat(KT, 0f);
+
+        if (stage == 9)
+        {
+            if (!EditorApplication.isPlaying && !EditorApplication.isPlayingOrWillChangePlaymode) { SessionState.SetInt(K, 0); EditorApplication.Exit(0); }
+            return;
+        }
+        if (!EditorApplication.isPlaying) return;
+
+        if (stage == 1 && t > 3f && RoomStartMode)
+        {
+            Debug.Log("[LobbyCheck] 외부 마스터(MasterServer.exe)에 연결합니다");
+            Next(3);
+        }
+        else if (stage == 1 && t > 3f)
+        {
+            EditorSceneManager.LoadSceneInPlayMode(MasterScene, new LoadSceneParameters(LoadSceneMode.Additive));
+            Debug.Log("[LobbyCheck] Master 씬 로드 요청");
+            Next(2);
+        }
+        else if (stage == 2 && SceneManager.GetSceneByName("Master").isLoaded)
+        {
+            // 한 프로세스에서는 스포너·마스터 연결기가 클라이언트 연결과 겹치므로 제거(로비 흐름에는 필요 없음)
+            foreach (var r in SceneManager.GetSceneByName("Master").GetRootGameObjects())
+                if (r.name == "SpawnerAssign" || r.name == "MasterConnector") Object.Destroy(r);
+            Debug.Log("[LobbyCheck] Master 씬 준비 " + Describe());
+            Next(25);
+        }
+        else if (stage == 25 && t > 3f)
+        {
+            var ms = Object.FindFirstObjectByType<MasterServerBehaviour>(FindObjectsInactive.Include);
+            Debug.Log("[LobbyCheck] 마스터 오브젝트: " + (ms != null ? $"active={ms.gameObject.activeInHierarchy} enabled={ms.enabled} running={ms.IsRunning} scene={ms.gameObject.scene.name}" : "없음"));
+            if (ms != null && !ms.IsRunning)
+            {
+                try { ms.StartServer(); Debug.Log("[LobbyCheck] 마스터 수동 시작 → running=" + ms.IsRunning); }
+                catch (System.Exception e) { Debug.Log("[LobbyCheck] 마스터 수동 시작 예외: " + e.GetType().Name + " " + e.Message); }
+            }
+            Next(3);
+        }
+        else if (stage == 3 && t > 4f)
+        {
+            Mst.Events.AddListener(MstEventKeys.showLobbyView, m => _lobbyShown = true);
+            var sp = Object.FindFirstObjectByType<StartPanel>(FindObjectsInactive.Include);
+            Debug.Log("[LobbyCheck] 시작 버튼 클릭: StartPanel=" + (sp != null));
+            if (sp != null) sp.OnStartButtonClick();
+            Next(4);
+        }
+        else if (stage == 4)
+        {
+            bool connected = false;
+            try { connected = Mst.Client.Connection != null && Mst.Client.Connection.IsConnected; } catch { }
+            if (connected)
+            {
+                Debug.Log("[LobbyCheck] 마스터 연결됨 " + Describe());
+                var lp = Object.FindFirstObjectByType<LoginPanel>(FindObjectsInactive.Include);
+                if (lp != null) lp.SignInGuest();
+                Next(5);
+            }
+            else if (t > 40f) Finish(false, "마스터에 연결되지 않음");
+        }
+        else if (stage == 5)
+        {
+            bool signedIn = false;
+            try { signedIn = Mst.Client.Auth.IsSignedIn; } catch { }
+            if (signedIn)
+            {
+                Debug.Log("[LobbyCheck] 게스트 로그인됨 " + Describe());
+                Mst.Events.Invoke(MstEventKeys.showCreateLobbyView);
+                Next(6);
+            }
+            else if (t > 30f) Finish(false, "게스트 로그인 실패");
+        }
+        else if (stage == 6 && t > 4f)
+        {
+            var cp = Object.FindFirstObjectByType<CreateNewLobbyPanel>(FindObjectsInactive.Include);
+            Debug.Log("[LobbyCheck] 방 만들기: 선택 시나리오='" + (cp != null ? cp.SelectedScenarioId : "(패널 없음)") + "'");
+            if (cp != null) cp.CreateNewMatch();
+            Next(7);
+        }
+        else if (stage == 7)
+        {
+            if (_lobbyShown && RoomStartMode)
+            {
+                Debug.Log("[LobbyCheck] 대기실 표시됨 → 준비 → 시작");
+                Next(8);
+            }
+            else if (_lobbyShown)
+            {
+                bool loc = CheckLocalization();
+                bool pass = loc && _noise == 0;
+                Finish(pass, "마스터 연결 → 게스트 로그인 → 방 만들기 → 대기실 표시 | 문구 " + (loc ? "OK" : "FAIL") + " | Localization/Addressables 오류 " + _noise + "건");
+            }
+            else if (t > 40f) Finish(false, "대기실이 표시되지 않음");
+        }
+        else if (stage == 8 && t > 2f)
+        {
+            var lp = Object.FindFirstObjectByType<LobbyPanel>(FindObjectsInactive.Include);
+            Debug.Log("[LobbyCheck] 준비 클릭: LobbyPanel=" + (lp != null));
+            if (lp != null) lp.OnReadyClick();
+            Next(10);
+        }
+        else if (stage == 10 && t > 4f)
+        {
+            var lp = Object.FindFirstObjectByType<LobbyPanel>(FindObjectsInactive.Include);
+            Debug.Log("[LobbyCheck] 시작 클릭 (룸 서버 시작 요청)");
+            if (lp != null) lp.OnStartGame();
+            Next(11);
+        }
+        else if (stage == 11)
+        {
+            int rooms = 0;
+            try { rooms = Process.GetProcessesByName("RoomServer").Length; } catch { }
+            if (rooms > 0 && !_roomProcSeen) { _roomProcSeen = true; Debug.Log($"[LobbyCheck] 룸 서버 프로세스 확인: {rooms}개 ({t:F1}초 뒤)"); }
+            if (_startFailed) Finish(false, "마스터가 시작 실패(FailedToStart)를 알림");
+            else if (_gameInProgress && _roomProcSeen) { Debug.Log($"[LobbyCheck] 방 시작 확인: StartingGameServer={_stGameServer} GameInProgress={_gameInProgress} 룸프로세스={_roomProcSeen}"); Next(12); }
+            else if (t > 120f) Finish(false, $"방 시작 시간 초과: StartingGameServer={_stGameServer} GameInProgress={_gameInProgress} 룸프로세스={_roomProcSeen}");
+        }
+        else if (stage == 12 && t > 6f)
+        {
+            bool alive = false;
+            try { alive = Process.GetProcessesByName("RoomServer").Length > 0; } catch { }
+            Finish(alive, "방 만들기 → 준비 → 시작 → 마스터가 스포너로 룸 서버를 띄움 → 룸 등록(GameInProgress) | 룸 서버 프로세스 유지=" + alive);
+        }
+        else if (EditorApplication.isPlaying && t > 240f)
+        {
+            Finish(false, "시간 초과 stage=" + stage);
+        }
+    }
+}

@@ -57,6 +57,7 @@ public static class GenericPrefabBuilder
         made += Build(SpawnPointPath, MakeSpawnPoint) ? 1 : 0;
         made += Build(EnginePath, MakeEngine) ? 1 : 0;
         made += Build(HudPath, MakeHud) ? 1 : 0;
+        EnsureItemGrabbable();
         EnsureSpawnableList();
         made += Build(NetMgrPath, MakeNetworkManager) ? 1 : 0;
         AssetDatabase.SaveAssets();
@@ -294,6 +295,7 @@ public static class GenericPrefabBuilder
         Prim(PrimitiveType.Cube, "Model", root.transform, Vector3.zero, new Vector3(0.2f, 0.2f, 0.2f), mat, false);
         root.AddComponent<LocalNetworkTransform>();
         root.AddComponent<TaskItem>().prefabId = "NetworkItem";
+        root.AddComponent<Autohand.Grabbable>();    // SyncGrab 이 기대하는 AutoHand 잡기 부품(VR 잡기·시작 시 오류 방지)
         var sg = root.AddComponent<SyncGrab>();
         sg.drawOnTopWhileHeld = false;              // 맨 앞에 그리기는 EV 의 렌더러 기능이 필요 — 범용에서는 끔
         return root;
@@ -362,6 +364,24 @@ public static class GenericPrefabBuilder
     private static GameObject MakeHud()
     {
         return new GameObject("SimpleTaskHud", typeof(SimpleTaskHud));
+    }
+
+    /// <summary>
+    /// SyncGrab 은 AutoHand Grabbable 을 기대한다(없으면 시작 때 오류 로그, VR 에서 집을 수 없다).
+    /// 이미 만든 NetworkItem 에도 없으면 더한다 — 프리팹을 지우지 않고 고쳐 GUID(변형 프리팹 연결)를 유지한다.
+    /// </summary>
+    private static void EnsureItemGrabbable()
+    {
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(ItemPath) == null) return;
+        var root = PrefabUtility.LoadPrefabContents(ItemPath);
+        try
+        {
+            if (root.GetComponent<Autohand.Grabbable>() != null) return;
+            root.AddComponent<Autohand.Grabbable>();
+            PrefabUtility.SaveAsPrefabAsset(root, ItemPath);
+            Debug.Log("[GenericPrefab] NetworkItem 에 Grabbable 추가");
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
     }
 
     // ── 네트워크 매니저 ─────────────────────────────

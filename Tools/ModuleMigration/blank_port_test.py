@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 빈 프로젝트 이식 시험 — 새 Unity 프로젝트를 만들어 플러그인과 모듈 폴더만 복사한 뒤 컴파일 오류를 센다.
-  python blank_port_test.py <대상 폴더> [--modules Common,Interaction,Avatar,Engine,Ui,Safety,Solo] [--odin] [--skip-create] [--runtime]
+  python blank_port_test.py <대상 폴더> [--modules Common,Interaction,Avatar,Engine,Ui,Safety,Solo] [--odin] [--skip-create] [--runtime] [--lobby] [--roomstart]
+  · --lobby : Lobby 모듈(+MST)도 복사하고, --runtime 이면 PortCheck 대신 LobbyCheck(로비 흐름 시험)를 실행
+  · --roomstart : (--lobby 와 함께) 룸 서버·마스터 서버를 윈도우 플레이어로 빌드하고, 마스터를 띄운 뒤 에디터 클라이언트로 방 만들기→준비→시작→룸 서버 기동까지 확인(수 분 걸림)
   · --runtime : 컴파일이 통과하면 PortCheck.cs 를 넣고 예제 씬을 만들어 Play 로 시나리오 완주까지 확인(로그 [PortCheck])
   · 대상 폴더는 저장소 밖에 둔다(Library 가 크다). 이미 있으면 Assets/Packages 를 비우고 다시 복사한다.
   · --odin : Odin(Sirenix)도 복사(기본은 복사하지 않음 → Common/Core/OdinShim.cs 시험)
@@ -46,6 +48,8 @@ def main():
     mods = 'Common,Interaction,Avatar,Engine,Ui,Safety,Solo'
     if '--modules' in args: mods = args[args.index('--modules') + 1]
     mods = [m for m in mods.split(',') if m]
+    lobby = '--lobby' in args
+    if lobby and 'Lobby' not in mods: mods.append('Lobby')
     odin = '--odin' in args
     A = os.path.join(REPO, 'Assets')
     T = os.path.join(target, 'Assets')
@@ -94,12 +98,70 @@ def main():
     for e in seen[:40]: print(e[:220])
     if '--runtime' in args and not any('error CS' in e for e in seen):
         os.makedirs(os.path.join(T, 'Editor'), exist_ok=True)
-        shutil.copy2(os.path.join(HERE, 'PortCheck.cs.txt'), os.path.join(T, 'Editor', 'PortCheck.cs'))
+        check, method = ('LobbyCheck', 'LobbyCheck.Run') if lobby else ('PortCheck', 'PortCheck.Run')
+        shutil.copy2(os.path.join(HERE, check + '.cs.txt'), os.path.join(T, 'Editor', check + '.cs'))
+        if lobby:   # 로비 시험용 시나리오 JSON(Resources/Scenarios)
+            os.makedirs(os.path.join(T, 'Resources', 'Scenarios'), exist_ok=True)
+            shutil.copy2(os.path.join(A, '99_ModuleExample', 'Scenarios', 'example_workbench.json'), os.path.join(T, 'Resources', 'Scenarios', 'example_workbench.json'))
         rlog = os.path.join(target, 'port_runtime.log')
-        r = run([UNITY, '-batchmode', '-projectPath', target, '-executeMethod', 'PortCheck.Run', '-logFile', rlog])
+        r = run([UNITY, '-batchmode', '-projectPath', target, '-executeMethod', method, '-logFile', rlog])
         print('런타임 시험 종료 코드 %d' % r.returncode)
         for line in open(rlog, encoding='utf-8', errors='replace'):
-            if '[PortCheck]' in line or re.search(r'error CS\d+|Exception', line): print(line.rstrip()[:260])
+            if '[PortCheck]' in line or '[LobbyCheck]' in line or re.search(r'error CS\d+|Exception', line): print(line.rstrip()[:260])
+
+    if '--roomstart' in args and lobby:
+        roomstart(target, T, A)
+
+
+def kill_all():
+    for n in ('MasterServer.exe', 'RoomServer.exe'):
+        subprocess.run(['taskkill', '/F', '/IM', n], capture_output=True)
+
+
+def roomstart(target, T, A):
+    outdir = os.path.join(target, 'ServerBuilds')
+    shutil.rmtree(outdir, ignore_errors=True)
+    os.makedirs(outdir, exist_ok=True)
+    os.makedirs(os.path.join(T, 'Editor'), exist_ok=True)
+    shutil.copy2(os.path.join(HERE, 'RoomBuild.cs.txt'), os.path.join(T, 'Editor', 'RoomBuild.cs'))
+    shutil.copy2(os.path.join(HERE, 'LobbyCheck.cs.txt'), os.path.join(T, 'Editor', 'LobbyCheck.cs'))
+    os.makedirs(os.path.join(T, 'Resources', 'Scenarios'), exist_ok=True)
+    shutil.copy2(os.path.join(A, '99_ModuleExample', 'Scenarios', 'example_workbench.json'), os.path.join(T, 'Resources', 'Scenarios', 'example_workbench.json'))
+    env = dict(os.environ, LOBBY_BUILD_DIR=outdir)
+    blog = os.path.join(target, 'port_build.log')
+    print('서버 빌드 중(수 분)…'); sys.stdout.flush()
+    r = subprocess.run([UNITY, '-batchmode', '-projectPath', target, '-executeMethod', 'RoomBuild.BuildAll', '-logFile', blog], env=env)
+    for line in open(blog, encoding='utf-8', errors='replace'):
+        if '[RoomBuild]' in line or 'error CS' in line: print(line.rstrip()[:240])
+    master = os.path.join(outdir, 'Master', 'MasterServer.exe')
+    room = os.path.join(outdir, 'Room', 'RoomServer.exe')
+    if not (os.path.exists(master) and os.path.exists(room)):
+        print('빌드 실패 — 중단'); return
+    kill_all()
+    mlog = os.path.join(target, 'port_master.log')
+    mproc = subprocess.Popen([master, '-mstStartMaster', '-mstMasterIp', '127.0.0.1', '-mstMasterPort', '9035', '-logFile', mlog])
+    print('MasterServer.exe 실행 pid', mproc.pid); sys.stdout.flush()
+    ok = False
+    for _ in range(60):
+        time.sleep(1)
+        if os.path.exists(mlog) and 'listening' in open(mlog, encoding='utf-8', errors='replace').read():
+            ok = True; break
+    print('마스터 listening 확인:', ok)
+    if ok:
+        rlog = os.path.join(target, 'port_roomstart.log')
+        env2 = dict(os.environ, LOBBYCHECK_ROOMSTART='1')
+        r2 = subprocess.run([UNITY, '-batchmode', '-projectPath', target, '-executeMethod', 'LobbyCheck.Run', '-logFile', rlog], env=env2)
+        print('클라이언트 시험 종료 코드', r2.returncode)
+        for line in open(rlog, encoding='utf-8', errors='replace'):
+            if '[LobbyCheck]' in line and ('정보로그' not in line): print(line.rstrip()[:260])
+    time.sleep(2)
+    kill_all()
+    try: mproc.wait(timeout=5)
+    except Exception: pass
+    print('--- 마스터 로그(주요) ---')
+    if os.path.exists(mlog):
+        for line in open(mlog, encoding='utf-8', errors='replace'):
+            if any(k in line for k in ('Spawn', 'spawn', 'Room', 'room', 'listening', 'Lobby', 'Starting process', 'Error', 'Exception')): print(line.rstrip()[:240])
 
 
 if __name__ == '__main__':
