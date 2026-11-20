@@ -92,18 +92,7 @@ public class VrProbeHandling : MonoBehaviour
 
     private static GameObject s_labelPrefab;
 
-    public static bool IsVRDevice
-    {
-        get
-        {
-#if ENABLE_VR || UNITY_XR_MANAGEMENT
-            if (UnityEngine.XR.XRSettings.isDeviceActive) return true;
-            var d = UnityEngine.XR.XRSettings.loadedDeviceName;
-            if (!string.IsNullOrEmpty(d) && d != "None") return true;
-#endif
-            return false;
-        }
-    }
+    public static bool IsVRDevice => VrDevice.IsActive;   // 공통(03_ETC/VrDevice.cs)으로 옮겼다 — 아래층도 쓴다
 
     private void Start()
     {

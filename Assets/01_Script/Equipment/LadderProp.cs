@@ -303,7 +303,7 @@ public class LadderProp : MonoBehaviour
 }
 
 /// <summary>밟고 올라설 수 있는 면(사다리 발판 등). 네트워크 물체 위라도 PC·모바일 접지가 바닥으로 인정한다.</summary>
-public class ClimbSurface : MonoBehaviour { }
+public class ClimbSurface : MonoBehaviour, IClimbSurface { }
 
 // ============================================================
 //  VrLadderClimbAssist — VR 사다리 오르기 보조

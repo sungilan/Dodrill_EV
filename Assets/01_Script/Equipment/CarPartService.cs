@@ -2353,6 +2353,22 @@ public partial class CarPartService : NetworkBehaviour
         foreach (var c in b.GetComponentsInChildren<Collider>(true)) c.enabled = col;
     }
 
+    /// <summary>시나리오(자유 탈거가 아님)의 지금 단계 목표가 볼트 묶음(BoltGroupCounter)인가</summary>
+    private static bool ScenarioBoltStepActive()
+    {
+        if (FreeLoto.IsFreeScenario) return false;
+        var gs = GuideSystem.Instance;
+        var targets = gs != null ? gs.ClickTargets : null;
+        if (targets == null) return false;
+        for (int i = 0; i < targets.Count; i++)
+        {
+            var g = targets[i];
+            if (g == null || !g.activeInHierarchy) continue;
+            if (g.GetComponent<BoltGroupCounter>() != null || g.GetComponentInChildren<BoltGroupCounter>() != null) return true;
+        }
+        return false;
+    }
+
     private void UpdateVisuals()
     {
         var cam = Camera.main;
@@ -2365,9 +2381,12 @@ public partial class CarPartService : NetworkBehaviour
             foreach (var bp in _parts) RefreshBounds(bp);
         }
         RefreshYield();
+        // (11/20) 시나리오의 볼트 단계에서는 자유 탈거용 부위 볼트·카드를 숨긴다 — 비슷한 자리(리어 언더 커버 등)의 자유 탈거 볼트가 가까이 가면 나타나
+        // 시나리오 볼트와 겹쳐 헷갈렸다. 시나리오 단계가 아니거나 자유 탈거 모드에서는 예전 그대로.
+        bool scenarioBolt = ScenarioBoltStepActive();
         // 시나리오 중에도 표시는 켜 두되, 한 번에 한 부위(겨눈 부위)만 보여 준다 — 카드는 아래 cardPart 하나만
-        int hover = PickHover(cam);
-        int focus = PickFocus(cam, near);
+        int hover = scenarioBolt ? -1 : PickHover(cam);
+        int focus = scenarioBolt ? -1 : PickFocus(cam, near);
         // 볼트가 시선 각도 밖이어도 공구를 든 채 부품을 바라보면 그 부품을 작업 대상으로 (시나리오·타이어 볼트를 겨누는 중이면 제외)
         if (focus < 0 && hover >= 0 && OtherBoltAngle(cam.transform.position, cam.transform.forward, near) > 20f) focus = hover;
         UpdateHover(hover);
@@ -2415,8 +2434,8 @@ public partial class CarPartService : NetworkBehaviour
                     if (b.isloosened) done++;
                     if (b.gameObject.activeInHierarchy)
                     {
-                        bool vis = on || working || b.IsMarkedDone;
-                        ShowBolt(pt, n, b, vis, vis || (!b.isloosened && ToolDist(b.transform.position) < ToolNear));
+                        bool vis = !scenarioBolt && (on || working || b.IsMarkedDone);
+                        ShowBolt(pt, n, b, vis, !scenarioBolt && (vis || (!b.isloosened && ToolDist(b.transform.position) < ToolNear)));
                     }
                     bool open = b.gameObject.activeInHierarchy && !b.isloosened;
                     bool active = open && b.Progress > 0f && Time.time - _activeAt[idx] < 0.5f;

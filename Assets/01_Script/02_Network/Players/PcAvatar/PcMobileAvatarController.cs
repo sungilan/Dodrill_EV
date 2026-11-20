@@ -218,7 +218,7 @@ public class PcMobileAvatarController : NetworkBehaviour
             InteractionEvents.OnZoneActivated += OnAnyZone;
             InteractionEvents.OnItemGrabbed += OnAnyInteraction;
             // 해치·문 같은 씬 고정 오브젝트를 내가 직접 눌렀을 때 — 눌린 지점으로 손 뻗기
-            ClickableAnimator.OnLocalClicked += OnClickableClicked;
+            AvatarHooks.WorldClicked += OnClickableClicked;
         }
     }
 
@@ -233,7 +233,7 @@ public class PcMobileAvatarController : NetworkBehaviour
         base.OnStopClient();
         InteractionEvents.OnZoneActivated -= OnAnyZone;
         InteractionEvents.OnItemGrabbed -= OnAnyInteraction;
-        ClickableAnimator.OnLocalClicked -= OnClickableClicked;
+        AvatarHooks.WorldClicked -= OnClickableClicked;
     }
 
     // InteractionEvents 는 정적 이벤트라, 다른 사람(VR 등)의 행동이 이 클라이언트에서도 발행되면(구역 트리거·완료 알림 등)
@@ -347,7 +347,7 @@ public class PcMobileAvatarController : NetworkBehaviour
     public void RequestReach(Vector3 worldPoint)
     {
         // 드릴·렌치를 작동 중일 때는 반대 손 뻗기를 생략 (F 를 누르는 것도 ‘행동’으로 잡혀 반대 손이 같이 움직이던 문제)
-        if (ImpactWrench.RecentlyWorking) return;
+        if (AvatarHooks.IsToolBusy) return;
 
         if (armReach != null) armReach.Reach(worldPoint, AvatarScale);
         if (base.IsClientInitialized && base.IsOwner)
@@ -385,7 +385,7 @@ public class PcMobileAvatarController : NetworkBehaviour
             // 단, 사다리 발판(ClimbSurface)은 밟고 올라설 수 있다
             if (h.collider != null && h.collider.GetComponentInParent<NetworkObject>() != null) continue;
             // 사다리 발판은 바닥으로 보지 않는다 — 대신 아래에서 LadderProp.BonusAt 으로 '그 자리 높이'를 더한다(올라가고 내려오는 높이가 항상 일치)
-            if (h.collider != null && h.collider.GetComponentInParent<ClimbSurface>() != null) continue;
+            if (h.collider != null && h.collider.GetComponentInParent<IClimbSurface>() != null) continue;
             if (h.point.y > transform.position.y + maxGroundStepUp * s) continue;
             if (h.distance < bestDist)
             {
@@ -397,7 +397,7 @@ public class PcMobileAvatarController : NetworkBehaviour
         if (found)
         {
             Vector3 p = transform.position;
-            p.y = (origin.y - bestDist) + rootYOffset * s + LadderProp.BonusAt(p);
+            p.y = (origin.y - bestDist) + rootYOffset * s + AvatarHooks.GroundBonusAt(p);
             transform.position = p;
         }
     }

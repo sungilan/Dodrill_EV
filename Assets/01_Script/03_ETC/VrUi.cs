@@ -13,7 +13,9 @@ using UnityEngine.UI;
 // ============================================================
 public static class VrUi
 {
-    public static bool IsVR => GameScenePlatformManager.IsVR;
+    /// <summary>지금 VR 인가. 게임 씬의 플랫폼 관리자(EV)가 EvAvatarBinding 에서 등록한다(모듈화 — 이 클래스가 EV 를 직접 모르게). 등록 전에는 false.</summary>
+    public static System.Func<bool> IsVRProvider;
+    public static bool IsVR => IsVRProvider != null && IsVRProvider();
 
     /// <summary>HUD 캔버스. VR 이면 월드 캔버스 + VrHeadHud(시선 따라다님), 아니면 ScreenSpaceOverlay.</summary>
     public static Canvas NewHudCanvas(string name, int sortingOrder)

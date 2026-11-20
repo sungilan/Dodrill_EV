@@ -8,11 +8,6 @@ using UnityEngine.SceneManagement;
 namespace DoDrill
 {
     // ============================================================
-    //  ScenarioEndBroadcast — 서버 → 클라이언트 종료 신호
-    // ============================================================
-    public struct ScenarioEndBroadcast : IBroadcast { }
-
-    // ============================================================
     //  ScenarioExitHandler
     //  클라이언트 전용 — 시나리오 종료 시 Room 나가고 타이틀로 복귀
     //

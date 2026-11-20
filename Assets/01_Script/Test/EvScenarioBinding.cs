@@ -49,9 +49,30 @@ public static class EvScenarioBinding
             }
         };
 
+        // 커넥터 단계: 클릭 신호가 아니라 커넥터의 열림/닫힘 상태로 완료를 판정한다
+        ScenarioHooks.TargetStateOk = ConnectorStateOk;
+
         // 시연용 스위치(DemoSettings)
         ScenarioHooks.SpawnFilter = DemoSettings.SkipSpawn;
         ScenarioHooks.ScenarioListFilter = DemoSettings.ScenarioAllowed;
+    }
+
+    /// <summary>
+    /// 분리 단계(…Disconnect / …Removal)는 커넥터가 열려(분리) 있어야, 연결 단계(…Connect / …Reinstall)는 닫혀(연결) 있어야 완료로 본다.
+    /// 대상은 Conn_ 으로 시작하는 커넥터(고전압·ICCU·BMU·접지)만. 다른 오브젝트·모르는 단계 이름은 예전처럼 클릭만으로 통과.
+    /// (예전: 클릭하면 상태와 상관없이 신호가 나가, 후방 커넥터를 재연결하다 '열렸는데' 단계가 넘어갔다)
+    /// 서버에서도 이 오브젝트(ClickableAnimator)가 같은 상태로 적용돼 있어 서버가 직접 판정한다.
+    /// </summary>
+    private static bool ConnectorStateOk(string moduleId, string targetObjName)
+    {
+        if (string.IsNullOrEmpty(targetObjName) || !targetObjName.StartsWith("Conn_")) return true;
+        var anim = ClickableAnimatorManager.Get(targetObjName);
+        if (anim == null) return true;
+        bool wantOpen;
+        if (moduleId.IndexOf("Disconnect", System.StringComparison.OrdinalIgnoreCase) >= 0 || moduleId.IndexOf("Removal", System.StringComparison.OrdinalIgnoreCase) >= 0) wantOpen = true;
+        else if (moduleId.IndexOf("Connect", System.StringComparison.OrdinalIgnoreCase) >= 0 || moduleId.IndexOf("Reinstall", System.StringComparison.OrdinalIgnoreCase) >= 0) wantOpen = false;
+        else return true;
+        return anim.IsOpen == wantOpen;
     }
 
     /// <summary>리프트 상승 단계(차량 Car_Lift_Up / 배터리 잭 BatteryJack_Lift_Up…)를 시작한 뒤 해당 리프트 UP 버튼을 누른 사람</summary>

@@ -43,6 +43,7 @@ public class NextActionGuide : MonoBehaviour
     private Renderer[] _focusRenderers;
     private bool _itemStep;
     private bool _showLabel, _showRing;
+    private bool _noRing;   // 전압 측정·커넥터 등 링 안내를 끈 단계 — 남은 시간 경고(Emphasize)가 와도 링·라벨을 되살리지 않는다
     private string _title, _action;
     private float _ringRadius;
     private Color _color;
@@ -122,6 +123,7 @@ public class NextActionGuide : MonoBehaviour
         Vector3 head = HeadPos();
 
         Transform focus = null;
+        _noRing = false;
         bool itemStep = false, label = false, ring = false;
         string title = null, action = null;
         float radius = 0.05f;
@@ -190,6 +192,13 @@ public class NextActionGuide : MonoBehaviour
                     action = ActionVerb(cfg);
                     label = ring = true;
                     radius = Radius(tgt, 0.03f, 0.2f);
+                    // (11/20) 전압 측정 단계는 단자의 빨강·파랑 표시(HvTestTerminals)가 따로 있고, 커넥터 단계는 위치가 부정확한 노란 원보다
+                    // 아웃라인 강조가 낫다는 의견 → 이 두 경우는 링·라벨을 띄우지 않는다(아웃라인·나침반은 그대로)
+                    bool measure = cfg != null && !string.IsNullOrEmpty(cfg.actionType) && cfg.actionType.StartsWith("MeasureVoltage", System.StringComparison.OrdinalIgnoreCase);
+                    var ca = tgt.GetComponent<ClickableAnimator>() ?? tgt.GetComponentInParent<ClickableAnimator>();
+                    // 커넥터·냉각수 호스·12V 단자처럼 특정 단계에서만 누르는 ClickableAnimator(targetTaskIds 가 있는 것)는 아웃라인만
+                    bool stepClickable = ca != null && ca.targetTaskIds != null && ca.targetTaskIds.Count > 0;
+                    if (measure || stepClickable) { label = ring = false; _noRing = true; }
                 }
             }
 
@@ -379,14 +388,14 @@ public class NextActionGuide : MonoBehaviour
         // 렌치가 이미 이 볼트를 겨누고 있으면 렌치의 초록 진행 링만 보이게 한다
         var working = ImpactWrench.LocalTargetBolt;
         bool emph = Emphasized;
-        bool ringOn = (_showRing || emph) && !(working != null && working.transform == _focus);
+        bool ringOn = (_showRing || (emph && !_noRing)) && !(working != null && working.transform == _focus);
         if (ringOn)
         {
             ShowRing(c);   // 깊이 무시(ZTest Always)로 그려 차체에 가려도 보인다
         }
         else if (_ring != null && _ring.gameObject.activeSelf) _ring.gameObject.SetActive(false);
 
-        if (_showLabel || (emph && !string.IsNullOrEmpty(_title)))
+        if (_showLabel || (emph && !_noRing && !string.IsNullOrEmpty(_title)))
         {
             Vector3 lp = FocusCenter(out top);
             lp = new Vector3(lp.x, Mathf.Max(top, lp.y + _ringRadius) + 0.05f, lp.z);

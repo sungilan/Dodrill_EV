@@ -579,9 +579,9 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         }
 
         Ray ray = _mainCamera.ScreenPointToRay(screenPos);
-        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
+        if(!ClickRay.Cast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
         {
-            if(!Physics.Raycast(ray, out hit, raycastMaxDistance))
+            if(!ClickRay.Cast(ray, out hit, raycastMaxDistance))
             {
                 Log("[Touch] 히트 없음");
                 return;
@@ -799,8 +799,8 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
                               new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
 
         Ray ray = _mainCamera.ScreenPointToRay(screenPoint);
-        bool hit = Physics.Raycast(ray, out RaycastHit hitInfo, raycastMaxDistance, clickLayers);
-        if(!hit) hit = Physics.Raycast(ray, out hitInfo, raycastMaxDistance);
+        bool hit = ClickRay.Cast(ray, out RaycastHit hitInfo, raycastMaxDistance, clickLayers);
+        if(!hit) hit = ClickRay.Cast(ray, out hitInfo, raycastMaxDistance);
 
         Collider hoveredCol = hit ? hitInfo.collider : null;
 
@@ -990,8 +990,8 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
                               new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
 
         Ray ray = _mainCamera.ScreenPointToRay(screenPoint);
-        bool hit = Physics.Raycast(ray, out RaycastHit hitInfo, raycastMaxDistance, clickLayers);
-        if(!hit) hit = Physics.Raycast(ray, out hitInfo, raycastMaxDistance);
+        bool hit = ClickRay.Cast(ray, out RaycastHit hitInfo, raycastMaxDistance, clickLayers);
+        if(!hit) hit = ClickRay.Cast(ray, out hitInfo, raycastMaxDistance);
 
         if(!hit)
         {

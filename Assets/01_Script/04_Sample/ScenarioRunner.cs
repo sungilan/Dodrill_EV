@@ -521,12 +521,13 @@ public class ScenarioRunner : MonoBehaviour
         _retryCount = 0;
 
         var currentTaskDef = _data.scenario.tasks[_currentTaskState.taskIndex];
-        _spawner?.DespawnCurrentTask(currentTaskDef);
+        int next = _currentTaskState.taskIndex + 1;
+        var nextTaskDef = next < _data.scenario.tasks.Count ? _data.scenario.tasks[next] : null;
+        _spawner?.DespawnCurrentTask(currentTaskDef, false, nextTaskDef);   // 같은 자리에 새 물체를 놓는 단계면 헌 물체는 새 것이 나온 뒤에 치운다
         BroadcastState();
 
         Debug.Log($"[ScenarioRunner] Task[{_currentTaskState.taskIndex}] 완료 - 진행자: {activePlayerName}");
 
-        int next = _currentTaskState.taskIndex + 1;
         StartTask(next);
     }
 

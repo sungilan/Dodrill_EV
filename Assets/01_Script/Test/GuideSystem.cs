@@ -664,6 +664,8 @@ public class GuideSystem : MonoBehaviour
             //bool shouldSpawnMarker = hasZoneData ? zoneData.showGuide : true;
             //bool shouldSpawnGhost = hasZoneData ? zoneData.showGhost : true;
             bool shouldSpawnMarker = hasZoneData && zoneData.showGuide;
+            // (11/20) 멀티미터 전압 측정 단계는 단자 쪽 빨강·파랑 표시(HvTestTerminals)로 안내하므로 노란 목표 마커(원)는 만들지 않는다
+            if(config != null && !string.IsNullOrEmpty(config.actionType) && config.actionType.StartsWith("MeasureVoltage", System.StringComparison.OrdinalIgnoreCase)) shouldSpawnMarker = false;
             bool shouldSpawnGhost = hasZoneData && zoneData.showGhost;
 
             Debug.Log($"<color=yellow>[Guide-Check]</color> 타겟: <b>{markerTargetGO.name}</b> | " +
@@ -1013,10 +1015,12 @@ public class GuideSystem : MonoBehaviour
             _clickRetryTask = taskDef;
         }
         else _clickRetryConfig = null;
+        // (11/20) 멀티미터 전압 측정 단계: 단자에는 빨강·파랑 표시가 따로 있으므로 노란 아웃라인은 켜지 않는다
+        bool measureVoltage = config != null && !string.IsNullOrEmpty(config.actionType) && config.actionType.StartsWith("MeasureVoltage", System.StringComparison.OrdinalIgnoreCase);
         foreach(var t in _clickTargets)
         {
             // 아웃라인은 여기서 켜줍니다.
-            SetOutline(t, true);
+            if(!measureVoltage) SetOutline(t, true);
 
             // ★ 마커 생성 중복 방지 로직 ★
             // 이미 _targetMarker가 존재하거나 ProcessTargetGuide에서 처리되었다면 여기서 생성하지 않음

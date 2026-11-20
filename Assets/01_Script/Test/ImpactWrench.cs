@@ -119,6 +119,9 @@ public class ImpactWrench : MonoBehaviour
         if (CachedPlatform == PlatformType.PC)
         {
             _buttonHeld = Input.GetKey(workKey);
+            // (11/20 진단) 'F 를 눌러도 볼트가 안 풀린다' 재현용 — 누를 때마다 왜 일을 못 하는지 한 줄 남긴다(처음 몇 번 시도에서 안 풀리던 원인 확인)
+            if (Input.GetKeyDown(workKey))
+                Debug.Log($"<color=white>[ImpactWrench]</color> {workKey} 눌림 — 대상볼트={(_targetBolt != null ? _targetBolt.name : "없음")}, 다시눌러야함={_needRelease}, 벨트={(_sync != null && _sync.IsHolstered)}, 잡힘={(_sync != null && _sync.IsGrabbed)}, 후보볼트={(_blockedCandidate != null ? _blockedCandidate.name : "없음")}");
         }
         else if (CachedPlatform == PlatformType.Mobile)
         {

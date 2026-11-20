@@ -75,20 +75,8 @@ public class TaskInteractionZone : MonoBehaviour
 
     private bool IsCurrentTaskValid(string itemId)
     {
-        var receiver = GameObject.FindAnyObjectByType<ScenarioStateReceiver>();
-        if(receiver == null) return true;
-
-        var config = receiver.GetCurrentTaskConfig();
-        if(config == null) return true;
-
-        if(!string.IsNullOrEmpty(config.targetZoneId) && config.targetZoneId != zoneId) return false;
-
-        if(config.requiredItems != null && config.requiredItems.Count > 0)
-        {
-            return config.requiredItems.Contains(itemId);
-        }
-
-        return true;
+        // 현재 단계의 구역·필요 아이템 판정은 시나리오 엔진이 InteractionEvents.ZoneValidator 로 등록한다(EngineInteractionBinding)
+        return InteractionEvents.IsZoneValid(zoneId, itemId);
     }
 
     // ── 외부 제어 (매니저에서 호출) ────────────────────────────────────────────

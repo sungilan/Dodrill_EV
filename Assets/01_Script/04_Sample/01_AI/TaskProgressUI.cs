@@ -111,6 +111,14 @@ namespace DoDrill.Training
             if (!VrProbeHandling.IsVRDevice && prt.anchorMin == new Vector2(0.5f, 0.5f) && prt.anchorMax == new Vector2(0.5f, 0.5f))
                 prt.anchoredPosition = new Vector2(0f, ToastRaise);
 
+            // (11/20) '~가 ~를 완료하였습니다' 패널은 불투명하게, 다른 화면 글자(조준 안내 등) 위로 — 뒤 글자가 비쳐 겹쳐 보였다
+            var bg = prt.GetComponent<Image>();
+            if (bg != null) { var bc = bg.color; bc.a = 1f; bg.color = bc; }
+            var nestedCanvas = prt.GetComponent<Canvas>();
+            if (nestedCanvas == null) nestedCanvas = prt.gameObject.AddComponent<Canvas>();
+            nestedCanvas.overrideSorting = true;
+            nestedCanvas.sortingOrder = 900;
+
             foreach (Transform child in prt)
             {
                 if (child == _notifText.transform || child.GetComponent<Image>() == null) continue;

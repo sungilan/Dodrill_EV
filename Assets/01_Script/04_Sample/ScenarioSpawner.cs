@@ -64,6 +64,9 @@ public class ScenarioSpawner : NetworkBehaviour
 
     // 현재 Task에서 스폰된 NetworkObject 목록
     private readonly List<NetworkObject> _activeObjects = new();
+    // 각 스폰 물체가 놓인 스폰 포인트 — 다음 단계가 같은 자리에 다른 물체를 놓을 때 '교체'로 보고, 새 것이 나타난 뒤에 헌 것을 치운다
+    private readonly Dictionary<NetworkObject, string> _spawnPointOf = new();
+    private const float SwapDespawnDelay = 0.8f;
 
     // --- [추가] persist=true 로 유지되고 있는 오브젝트 목록 ---
     private readonly List<NetworkObject> _persistedObjects = new();
@@ -436,11 +439,24 @@ public class ScenarioSpawner : NetworkBehaviour
         if(!InstanceFinder.IsServerStarted) return;
 
         int count = taskDef.spawnObjects.Count;
+
+        // 아이템 좌우 분산 — 같은 스폰 자리를 나눠 쓰는 것끼리만 벌린다.
+        // (예전에는 이 단계의 모든 물건을 한 줄로 벌려, 물건이 많은 자유 탈거(31개)에서는 ±3m 씩 밀려 벽 너머에 놓였다)
+        var groupSize = new Dictionary<string, int>();
+        var groupRank = new int[count];
+        for(int g = 0; g < count; g++)
+        {
+            string key = taskDef.spawnObjects[g] != null ? (taskDef.spawnObjects[g].spawnPointId ?? "") : "";
+            groupSize.TryGetValue(key, out int seen);
+            groupRank[g] = seen;
+            groupSize[key] = seen + 1;
+        }
+
         for(int i = 0; i < count; i++)
         {
-            // 아이템 좌우 분산 계산
-            float xOffset = (i - (count - 1) * 0.5f) * SPAWN_SPREAD;
             var bundle = taskDef.spawnObjects[i];
+            string gkey = bundle != null ? (bundle.spawnPointId ?? "") : "";
+            float xOffset = (groupRank[i] - (groupSize[gkey] - 1) * 0.5f) * SPAWN_SPREAD;
             // 콘텐츠 스폰 필터(ScenarioHooks.SpawnFilter — EV 는 시연용 DemoSettings: 자유 탈거의 테스트용 특수 공구는 스폰하지 않는다)
             if(ScenarioHooks.ShouldSkipSpawn(bundle.prefabId, scenarioId)) { Debug.Log($"[Spawn] 필터: {bundle.prefabId} 스폰 생략"); continue; }
 
@@ -534,8 +550,17 @@ public class ScenarioSpawner : NetworkBehaviour
     /// 1. despawnObjectIds에 명시된 persist 오브젝트 삭제
     /// 2. 일반 오브젝트 삭제 및 새로 생긴 persist 오브젝트 이관
     /// </summary>
-    public void DespawnCurrentTask(TaskDef taskDef, bool failed = false)
+    public void DespawnCurrentTask(TaskDef taskDef, bool failed = false, TaskDef nextTask = null)
     {
+        // 다음 단계가 같은 스폰 포인트에 새 물체를 놓는다면(예: PRA 제거 — 배터리 팩 교체) 헌 물체를 바로 치우지 않는다.
+        // 바로 치우면 새 물체가 클라이언트에 나타나기 전까지 배터리가 잠깐 사라져 보였다. 새 것이 스폰된 뒤 SwapDespawnDelay 초 뒤에 치운다.
+        HashSet<string> nextPoints = null;
+        if(!failed && nextTask != null && nextTask.spawnObjects != null)
+        {
+            nextPoints = new HashSet<string>();
+            foreach(var b in nextTask.spawnObjects) if(b != null && !string.IsNullOrEmpty(b.spawnPointId)) nextPoints.Add(b.spawnPointId);
+        }
+
         Debug.Log($"<color=orange>[Despawn-Start]</color> TaskID: {taskDef.moduleId}{(failed ? " (실패 — despawnObjectIds 유지)" : "")}");
 
         // 1. despawnObjectIds 처리 — '이 단계를 마치면 치울 물건'이므로 성공했을 때만.
@@ -547,15 +572,33 @@ public class ScenarioSpawner : NetworkBehaviour
             {
                 // 인원수만큼 놓았던 복사본(#2, #3 …)까지 함께 치운다
                 var targets = _persistedObjects.FindAll(x => x != null && IsPersistCopyOf(x, id, out _));
+                // (11/20) 이번 단계에서 막 스폰·재사용한 persist 물체(아직 _persistedObjects 로 넘어가기 전)도 같은 단계의 despawnObjectIds 로 치울 수 있게
+                foreach(var act in _activeObjects)
+                    if(act != null && IsPersistCopyOf(act, id, out _) && !targets.Contains(act)) targets.Add(act);
                 foreach (var target in targets)
                 {
                     _persistedObjects.Remove(target);
                     _activeObjects.Remove(target);
-                    SafeDespawn(target);
+                    // 다음 단계가 같은 자리에 새 물체를 놓으면(배터리 팩 교체 등) 헌 물체는 새 것이 나온 뒤에 치운다
+                    if(nextPoints != null && _spawnPointOf.TryGetValue(target, out var tsp) && !string.IsNullOrEmpty(tsp) && nextPoints.Contains(tsp))
+                    {
+                        Debug.Log($"<color=orange>[Despawn-Swap]</color> {target.name} — 다음 단계가 같은 자리({tsp})에 새 물체를 놓으므로 {SwapDespawnDelay}초 뒤에 치웁니다");
+                        StartCoroutine(DespawnAfter(target, SwapDespawnDelay));
+                    }
+                    else SafeDespawn(target);
                 }
                 if (targets.Count == 0)
                 {
-                    Debug.LogWarning($"<color=yellow>[Despawn-Skip]</color> 지우려고 했으나 리스트에 없음: {id}");
+                    // (11/20) 스폰한 물체 '안에 든' NetworkObject(배터리 팩 안의 Old_PRA_Unit 등)도 이름으로 치울 수 있게 한다.
+                    // 팩을 지우지 않고 유지하게 바꾼 뒤, 떼어 낸 기존 PRA 가 사라지지 않고 팩 밑으로 빠져 들어갔다.
+                    var nested = FindNestedNetworkObjects(id);
+                    foreach (var n in nested)
+                    {
+                        Debug.Log($"<color=red>[Despawn-Nested]</color> {n.name} 제거(스폰 물체 안의 오브젝트)");
+                        SafeDespawn(n);
+                    }
+                    if (nested.Count == 0)
+                        Debug.LogWarning($"<color=yellow>[Despawn-Skip]</color> 지우려고 했으나 리스트에 없음: {id}");
                 }
             }
         }
@@ -575,6 +618,11 @@ public class ScenarioSpawner : NetworkBehaviour
                     Debug.Log($"<color=green>[Persist-Transfer]</color> {obj.name} → _persistedObjects 이관");
                 }
             }
+            else if(nextPoints != null && _spawnPointOf.TryGetValue(obj, out var spId) && !string.IsNullOrEmpty(spId) && nextPoints.Contains(spId))
+            {
+                Debug.Log($"<color=orange>[Despawn-Swap]</color> {obj.name} — 다음 단계가 같은 자리({spId})에 새 물체를 놓으므로 {SwapDespawnDelay}초 뒤에 치웁니다");
+                StartCoroutine(DespawnAfter(obj, SwapDespawnDelay));
+            }
             else
             {
                 Debug.Log($"<color=red>[Despawn-Cleanup]</color> 일반 오브젝트 제거: {obj.name}");
@@ -582,6 +630,41 @@ public class ScenarioSpawner : NetworkBehaviour
             }
         }
         _activeObjects.Clear();
+    }
+
+    /// <summary>지금 스폰해 둔 물체(활성·persist)의 자식 NetworkObject 중 이름이 id(또는 id(Clone))인 것</summary>
+    private List<NetworkObject> FindNestedNetworkObjects(string id)
+    {
+        var found = new List<NetworkObject>();
+        void Scan(NetworkObject root)
+        {
+            if (root == null) return;
+            foreach (var n in root.GetComponentsInChildren<NetworkObject>(true))
+                if (n != root && n.IsSpawned && (n.name == id || n.name == id + "(Clone)") && !found.Contains(n)) found.Add(n);
+        }
+        foreach (var r in _activeObjects) Scan(r);
+        foreach (var r in _persistedObjects) Scan(r);
+        return found;
+    }
+
+    private readonly Dictionary<string, Transform> _namedPointCache = new();
+
+    /// <summary>스폰 자리 해석: SpawnPoint(pointId) 우선, 없으면 씬에서 이름이 같은 오브젝트</summary>
+    private Transform ResolveSpawnTransform(string id)
+    {
+        if(string.IsNullOrEmpty(id)) return null;
+        if(_spawnPointCache.TryGetValue(id, out var sp) && sp != null) return sp.transform;
+        if(_namedPointCache.TryGetValue(id, out var cached) && cached != null) return cached;
+        var go = GameObject.Find(id);
+        if(go == null) return null;
+        _namedPointCache[id] = go.transform;
+        return go.transform;
+    }
+
+    private System.Collections.IEnumerator DespawnAfter(NetworkObject obj, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if(obj != null) { _spawnPointOf.Remove(obj); SafeDespawn(obj); }
     }
 
     /// <summary>
@@ -623,6 +706,7 @@ public class ScenarioSpawner : NetworkBehaviour
     {
         if (obj == null) return;
         _homePoses.Remove(obj);
+        _spawnPointOf.Remove(obj);
         if (!obj.IsSpawned) return;
 
         // Rigidbody가 있으면 물리 시스템에서 먼저 분리
@@ -792,11 +876,13 @@ public class ScenarioSpawner : NetworkBehaviour
         Transform targetParent = null;
 
         // 스폰포인트 ID가 있으면 무조건 찾아서 부모 후보로 등록
-        if(!string.IsNullOrEmpty(bundle.spawnPointId) && _spawnPointCache.TryGetValue(bundle.spawnPointId, out var sp))
+        // (SpawnPoint 가 아니어도 씬에 같은 이름의 오브젝트가 있으면 그 자리를 쓴다 — 예: 서랍 안 장비 자리표 Slot_W2_Drawer1_0_…)
+        Transform spTransform = ResolveSpawnTransform(bundle.spawnPointId);
+        if(spTransform != null)
         {
-            spawnPos = sp.transform.position;
-            spawnRot = sp.transform.rotation;
-            targetParent = sp.transform; // 무조건 부모로 설정
+            spawnPos = spTransform.position;
+            spawnRot = spTransform.rotation;
+            targetParent = spTransform; // 무조건 부모로 설정
             Debug.Log($"[Spawn-Pos] 부모(SpawnPoint) 발견: {bundle.spawnPointId}");
         }
 
@@ -804,6 +890,7 @@ public class ScenarioSpawner : NetworkBehaviour
         if(string.IsNullOrEmpty(bundle.prefabId)) return;
 
         NetworkObject instanceToSpawn = GetPersistedObject(bundle.prefabId, copySuffix);
+        bool keepInPlace = false;   // 다시 쓰는 물체를 누가 지금 들고 있으면 그 상태(손·꽂은 프로브 등)를 그대로 둔다
 
         if(instanceToSpawn != null)
         {
@@ -813,7 +900,12 @@ public class ScenarioSpawner : NetworkBehaviour
             if(InstanceFinder.IsServerStarted)
             {
                 var sg = instanceToSpawn.GetComponent<SyncGrab>() ?? instanceToSpawn.GetComponentInChildren<SyncGrab>();
-                if(sg != null && instanceToSpawn.IsSpawned) sg.ServerResetToRest();
+                if(sg != null && instanceToSpawn.IsSpawned)
+                {
+                    // (11/20) 절연저항 측정처럼 단계가 바뀌어도 같은 계측기를 들고 이어서 쓰는 경우: 들고 있으면 제자리로 되돌리지 않는다
+                    if(sg.IsGrabbed) { keepInPlace = true; Debug.Log($"<color=green>[Spawn-Reuse]</color> {bundle.prefabId}: 들고 있는 중이라 위치·상태를 그대로 둡니다"); }
+                    else sg.ServerResetToRest();
+                }
             }
         }
         else
@@ -837,6 +929,8 @@ public class ScenarioSpawner : NetworkBehaviour
         if(instanceToSpawn != null)
         {
             _activeObjects.Add(instanceToSpawn);
+            _spawnPointOf[instanceToSpawn] = bundle.spawnPointId;
+            if(keepInPlace) return;   // 이미 스폰돼 손에 들려 있다 — 다시 스폰·부모 지정·위치 재설정을 하지 않는다
 
             if(InstanceFinder.IsServerStarted)
             {
@@ -855,7 +949,7 @@ public class ScenarioSpawner : NetworkBehaviour
                         instanceToSpawn.SetParent(parentNob);
                         instanceToSpawn.transform.SetParent(targetParent);
                         // 자식으로 들어갔으므로 로컬 좌표 초기화 (살짝 위로 배치)
-                        instanceToSpawn.transform.localPosition = new Vector3(xOffset, SPAWN_HEIGHT, zOffset);
+                        instanceToSpawn.transform.localPosition = new Vector3(xOffset + bundle.offsetX, SPAWN_HEIGHT + bundle.offsetY, zOffset + bundle.offsetZ);
                         instanceToSpawn.transform.localRotation = Quaternion.identity;
 
                         Debug.Log($"<color=lime>[Spawn-Parent]</color> {instanceToSpawn.name} -> {targetParent.name} (SetParent 완료)");
@@ -864,7 +958,7 @@ public class ScenarioSpawner : NetworkBehaviour
                     {
                         // 부모가 일반 오브젝트인 경우 (차선책)
                         instanceToSpawn.transform.SetParent(targetParent);
-                        instanceToSpawn.transform.localPosition = new Vector3(xOffset, SPAWN_HEIGHT, zOffset);
+                        instanceToSpawn.transform.localPosition = new Vector3(xOffset + bundle.offsetX, SPAWN_HEIGHT + bundle.offsetY, zOffset + bundle.offsetZ);
                         Debug.LogWarning($"<color=yellow>[Spawn-Parent]</color> 부모({targetParent.name})에 NetworkObject가 없어 Transform으로만 연결됨");
                     }
                 }

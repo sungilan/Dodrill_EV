@@ -303,7 +303,8 @@
           {
             "prefabId": "Megger",
             "spawnPointId": "SP_Megger",
-            "guideId": "Guide_PRA_BPA_Plus_Point"
+            "guideId": "Guide_PRA_BPA_Plus_Point",
+            "persist": true
           }
         ]
       },
@@ -315,7 +316,8 @@
           {
             "prefabId": "Megger",
             "spawnPointId": "SP_Megger",
-            "guideId": "Guide_PRA_BPA_Minus_Point"
+            "guideId": "Guide_PRA_BPA_Minus_Point",
+            "persist": true
           }
         ]
       },
@@ -327,7 +329,8 @@
           {
             "prefabId": "Megger",
             "spawnPointId": "SP_Megger",
-            "guideId": "Guide_PRA_Inverter_Plus_Point"
+            "guideId": "Guide_PRA_Inverter_Plus_Point",
+            "persist": true
           }
         ]
       },
@@ -339,10 +342,11 @@
           {
             "prefabId": "Megger",
             "spawnPointId": "SP_Megger",
-            "guideId": "Guide_PRA_Inverter_Minus_Point"
+            "guideId": "Guide_PRA_Inverter_Minus_Point",
+            "persist": true
           }
         ],
-        "despawnObjectIds": [ "BatteryPack_Disassemble"]
+        "despawnObjectIds": [ "BatteryPack_Disassemble", "Megger" ]
       },
       {
         "moduleId": "PRA_Removal",
@@ -352,9 +356,11 @@
           {
             "prefabId": "BatteryPack_Open",
             "spawnPointId": "SP_Battery",
-            "guideId": "Guide_PRA_Location"
+            "guideId": "Guide_PRA_Location",
+            "persist": true
           }
-        ]
+        ],
+        "despawnObjectIds": [ "Old_PRA_Unit" ]
       },
       {
         "moduleId": "PRA_Replace",
@@ -362,16 +368,12 @@
         "completionMode": "AnyPlayer",
         "spawnObjects": [
           {
-            "prefabId": "BatteryPack_Open_RemovePRA",
-            "spawnPointId": "SP_Battery",
-            "guideId": ""
-          },
-          {
             "prefabId": "New_PRA_Unit",
             "spawnPointId": "SP_NewPRA",
             "guideId": "Guide_PRA_Zone"
           }
-        ]
+        ],
+        "despawnObjectIds": [ "BatteryPack_Open" ]
       },
       {
         "moduleId": "BatteryPackTopCover_Assemble",

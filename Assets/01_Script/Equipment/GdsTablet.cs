@@ -96,6 +96,7 @@ public class GdsTablet : MonoBehaviour
 
     private void Awake()
     {
+        GdsSync.NotifyCreated();   // (11/20) 진단기가 하나도 없다가 새로 스폰되면(마지막 진단 단계) 화면·VCI·소거 상태를 처음으로 되돌린다
         _sync = GetComponent<SyncGrab>();
         _item = GetComponent<TaskItem>();
         // 11/16 VR 테스트 '진단기 고정 안 됨': 놓으면 서버 중력 낙하로 바닥에 떨어져, 계속 들고 있어야 했다.
@@ -113,7 +114,7 @@ public class GdsTablet : MonoBehaviour
         ClearMirror();
     }
 
-    private void OnDestroy() { if (_openBtnCanvas != null) Destroy(_openBtnCanvas); }
+    private void OnDestroy() { GdsSync.NotifyDestroyed(); if (_openBtnCanvas != null) Destroy(_openBtnCanvas); }
 
     private void Start()
     {
@@ -1597,6 +1598,26 @@ public static class GdsSync
     }
 
     public static void Unregister(GdsTablet t) => s_all.Remove(t);
+
+    // ── 새로 스폰되면 처음 화면으로 (11/20) ──
+    // 상태(s_state)는 정적이라 같은 시나리오 안에서 진단기가 다시 스폰돼도(처음 진단 → 마지막 진단) 마지막으로 누른 화면·VCI 연결·소거 상태가 그대로였다.
+    // 살아 있는 진단기가 하나도 없다가 새 진단기가 생기면 홈 · VCI 미연결 · 소거 안 함으로 되돌린다. (켜고 끄는 OnEnable/OnDisable 이 아니라 생성·파괴로 센다)
+    private static int s_live;
+    private static bool s_hadTablet;
+
+    public static void NotifyCreated()
+    {
+        if (s_live == 0 && s_hadTablet)
+        {
+            NavigatedThisScenario = false;
+            Debug.Log("[GDS] 진단기 새로 스폰 — 화면·VCI·소거 상태 초기화");
+            Apply(new GdsBroadcast { screen = "home", arg = "", vci = false, cleared = false });
+        }
+        s_live++;
+        s_hadTablet = true;
+    }
+
+    public static void NotifyDestroyed() { s_live = Mathf.Max(0, s_live - 1); }
 
     private static void EnsureRegistered()
     {

@@ -226,7 +226,7 @@ public class LocalAvatarHeightFit : MonoBehaviour
         float local = _calibSumLocal / _calibT, rem = _calibSumRemote / _calibT;
         if (local < 1.3f || local > 1.95f)
         {
-            EquipFx.Notice("height_calib", "키 맞추기", $"높이 {local:F2}m 는 서 있는 키로 보기 어렵습니다.\n똑바로 서서 다시 눌러 주세요", EquipFx.Warn, 3f, 0.5f);
+            AvatarHooks.Notice("height_calib", "키 맞추기", $"높이 {local:F2}m 는 서 있는 키로 보기 어렵습니다.\n똑바로 서서 다시 눌러 주세요", true, 3f, 0.5f);
             return;
         }
         _autoDone = true;   // 직접 맞췄으면 자동 보정은 더 하지 않는다
@@ -238,10 +238,10 @@ public class LocalAvatarHeightFit : MonoBehaviour
         _stand.Lock(local);
         if (_vrPlayer != null) _vrPlayer.SendCalibratedHeight(rem);
         Debug.Log($"[AvatarFit] 키 {(auto ? "자동 " : "")}보정 {local:F2}m (원격 {rem:F2}m)");
-        EquipFx.Notice("height_calib", "키 맞추기",
+        AvatarHooks.Notice("height_calib", "키 맞추기",
             auto ? $"키를 자동으로 맞췄습니다 (머리 높이 {local:F2}m)\n다시 맞추려면 똑바로 서서 왼쪽 스틱을 2초간 누르세요"
                  : $"키를 맞췄습니다 (머리 높이 {local:F2}m)",
-            EquipFx.Info, auto ? 5f : 2.5f, 0.5f);
+            false, auto ? 5f : 2.5f, 0.5f);
     }
 
     private static bool LeftStickPressed()

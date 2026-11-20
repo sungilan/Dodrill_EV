@@ -236,6 +236,13 @@ public class PcHudLayout : MonoBehaviour
         }
         _map = map != null ? map.gameObject : null;
         _keys = keys != null ? keys.gameObject : null;
+        if (keys != null)
+        {
+            // (11/20) 키 안내 패널이 화면 왼쪽 아래 퀵슬롯(허리 벨트 막대, 아래 32px · 높이 138px)과 겹쳤다 — 그 위로 올린다.
+            // 씬을 불러올 때마다 새 패널이라 한 번만 적용된다
+            var krt = (RectTransform)keys;
+            krt.anchoredPosition += new Vector2(0f, 147f);
+        }
         HideChild(map, "TogglePanel");
         HideChild(keys, "TogglePanel");
         _mapOn = PlayerPrefs.GetInt(PrefMap, 0) == 1;

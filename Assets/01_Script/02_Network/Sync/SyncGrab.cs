@@ -629,7 +629,7 @@ public class SyncGrab : NetworkBehaviour
 
         if(!IsOwner) return;
 
-        GuideSystem.Instance?.OnItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
+        GrabHooks.RaiseItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
 
         if(_isDespawning.Value)
         {
@@ -689,7 +689,7 @@ public class SyncGrab : NetworkBehaviour
 
         if(_isGrabbed.Value) return;
 
-        GuideSystem.Instance?.OnItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
+        GrabHooks.RaiseItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
 
         // 클릭 시점에 항상 '내' 플레이어의 HoldPoint 로 맞춘다 (FindWithTag 는 다른 플레이어 복사본을 돌려줄 수 있음)
         EnsureOwnHoldPoint();
@@ -785,7 +785,7 @@ public class SyncGrab : NetworkBehaviour
     {
         bool orphan = IsOwner && _isGrabbed.Value && !IsHolstered && !_isPCHolding && !_isTweening
                       && _pendingHand == null && _onGranted == null && _grab != null && _grabCoroutine == null
-                      && VrProbeHandling.IsVRDevice && _grab.GetHeldBy().Count == 0;
+                      && VrDevice.IsActive && _grab.GetHeldBy().Count == 0;
         if(!orphan) { _orphanSince = -1f; return; }
         if(_orphanSince < 0f) { _orphanSince = Time.time; return; }
         if(Time.time - _orphanSince < 1f) return;
@@ -822,7 +822,7 @@ public class SyncGrab : NetworkBehaviour
     private bool IsVRMeterHeld()
     {
         if(_isPCHolding || _grab == null || !_grab.IsHeld()) return false;
-        if(_isMeter < 0) _isMeter = GetComponentInChildren<MultimeterMaster>(true) != null ? 1 : 0;
+        if(_isMeter < 0) _isMeter = GrabHooks.MeterHeld(gameObject) ? 1 : 0;
         return _isMeter == 1;
     }
 
@@ -1331,7 +1331,7 @@ public class SyncGrab : NetworkBehaviour
         if(!asServer && prev && !next && (_isPCHolding || _isTweening)) DropLocalHold();
         // 누군가(다른 클라이언트 포함)가 잡았으면 이 화면의 '여기 있음' 가이드 마커도 치운다.
         // 예전에는 잡은 클라이언트에서만 치워서, 다른 사람 화면에는 마커가 잡기 전 자리에 계속 남았다.
-        if(next) GuideSystem.Instance?.OnItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
+        if(next) GrabHooks.RaiseItemGrabbed(GetComponent<TaskItem>()?.prefabId ?? "");
         // 잡힘 상태가 바뀌면 물리 상태를 다시 맞춘다(소유자가 아닌 쪽은 잡힌 동안 kinematic, 놓으면 원래 값)
         ApplyKinematic(_isKinematic.Value);
         if(!_isKinematic.Value && _rb != null && !_rb.isKinematic)
@@ -1408,19 +1408,19 @@ public class SyncGrab : NetworkBehaviour
         if(dg.OnPull == null) dg.OnPull = new UnityHandGrabEvent();
         string label = GetPrefabId();
         // 안내 마커(빨간 아웃라인 + 이름 라벨)가 이미 붙은 도구는 이름표를 또 띄우지 않는다 — 라벨이 겹쳐 보였다
-        dg.StartTargeting.AddListener((h, g) => { if(!_isGrabbed.Value && !(GuideSystem.Instance != null && GuideSystem.Instance.HasSpawnMarker(label))) ItemNameTag.Show(transform, label); });
-        dg.StopTargeting.AddListener((h, g) => ItemNameTag.Hide(transform));
-        dg.StartSelecting.AddListener((h, g) => ItemNameTag.Hide(transform));
+        dg.StartTargeting.AddListener((h, g) => { if(!_isGrabbed.Value && !GrabHooks.GuideMarkerShown(label)) GrabHooks.NameTagShow(transform, label); });
+        dg.StopTargeting.AddListener((h, g) => GrabHooks.NameTagHide(transform));
+        dg.StartSelecting.AddListener((h, g) => GrabHooks.NameTagHide(transform));
         // 당기는 순간: AutoHand 의 Hand.Grab 은 Kinematic(내려놓아 고정된) 물체를 잡지 않으므로,
         // 여기서 먼저 서버에 소유권을 요청하고 물리를 풀어 둔다. 소유권을 받으면 TryGrabAfterOwnership 이 손으로 바로 잡는다.
         dg.OnPull.AddListener((h, g) =>
         {
-            ItemNameTag.Hide(transform);
+            GrabHooks.NameTagHide(transform);
             if(_isGrabbed.Value || _isDespawning.Value) return;
             if(IsOwner) { if(_rb != null) { _rb.isKinematic = false; _rb.useGravity = false; } return; }
             OnBeforeGrab(h, g);
         });
-        _grab.onGrab.AddListener((h, g) => ItemNameTag.Hide(transform));
+        _grab.onGrab.AddListener((h, g) => GrabHooks.NameTagHide(transform));
     }
 
     /// <summary>
@@ -1449,8 +1449,7 @@ public class SyncGrab : NetworkBehaviour
         if(GetComponent<TaskItem>() == null) return false;
         // 바닥에 끌고 다니는 장비(오일 받이·사다리·리프트)는 레이저로 당겨 오지 않는다 — 순간 당기기가 네트워크 위치와 엇갈려
         // 장비가 두 개로 보이고(손 앞 + 원래 자리), 바닥 고정과 싸우며 손이 늘어났다. 가까이 가서 잡는다.
-        if(GetComponent<FloorDragProp>() != null) return false;
-        if(GetComponentInParent<VehiclePartsManager>() != null) return false;
+        if(GrabHooks.NotHandheld(this)) return false;   // 바닥 끄는 장비·차량 부품은 콘텐츠(EV)가 판정한다
         for(var t = transform.parent; t != null; t = t.parent)
             if(t.name.Contains("Ioniq")) return false;
         bool any = false; Bounds b = default;

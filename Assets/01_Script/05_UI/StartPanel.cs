@@ -20,7 +20,9 @@ public class StartPanel : UIView
     private void Start()
     {
         AddSoloButton();
-        AddSoloScenarioButton();
+        // (11/20) '혼자 하기' 아래의 시나리오 전환 버튼(▶ [P0AA6] …)은 뺀다 — 혼자 하기는 SoloModeLauncher.ScenarioId 기본 시나리오로 시작한다.
+        // 다시 쓰려면 ShowSoloScenarioButton 을 true 로.
+        if (ShowSoloScenarioButton) AddSoloScenarioButton();
     }
 
     // StartButton OnClick에 연결
@@ -100,6 +102,7 @@ public class StartPanel : UIView
     // 혼자 하기는 방 옵션이 없어 시나리오가 SoloModeLauncher.ScenarioId 로 고정이었다.
     // '혼자 하기' 아래에 버튼을 하나 더 복제해, 누를 때마다 Resources/Scenarios 의 시나리오를 차례로 넘긴다.
 
+    private const bool ShowSoloScenarioButton = false;
     private const string SoloScenarioButtonName = "BTN_SoloScenario";
 
     [Serializable] private class ScenarioHead { public string scenarioId; public NameHead scenarioName; }

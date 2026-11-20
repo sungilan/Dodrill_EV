@@ -303,6 +303,7 @@ public class ClickableAnimator : MonoBehaviour
     {
         if(!CanInteract()) return;
         try { OnLocalClicked?.Invoke(ReachPoint()); } catch(Exception e) { Debug.LogException(e); }
+        AvatarHooks.RaiseWorldClicked(ReachPoint());   // 아바타가 EV 를 모르고 손 뻗기를 받는 통로
         RequestSetState(!_isOpen);
     }
 

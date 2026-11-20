@@ -79,37 +79,11 @@ public class NetworkObjectFinder : MonoBehaviour
         return obj;
     }
 
-    /// <summary>InteractablePart 컴포넌트가 붙어 있는 경우 반환</summary>
-    public InteractablePart GetInteractablePart(string objName)
-    {
-        var obj = Get(objName);
-        return obj != null ? obj.GetComponent<InteractablePart>() : null;
-    }
-
     public bool Contains(string objName) => _registry.ContainsKey(CleanName(objName));
 
     public int Count => _registry.Count;
 
-    // ── DTCData 스텝 캐시 배치 ────────────────
-
-    /// <summary>
-    /// DTCData 에 포함된 모든 RepairStep 의 cachedTarget 을
-    /// 현재 등록된 오브젝트로 일괄 채움.
-    /// TrainingFlowManager.StartTraining() 직후 호출 권장.
-    /// </summary>
-    public void CacheStepTargets(DTCData data)
-    {
-        if(data?.repairSteps == null) return;
-
-        foreach(var step in data.repairSteps)
-        {
-            if(string.IsNullOrEmpty(step.targetObjName)) continue;
-            step.cachedTarget = Get(step.targetObjName);
-
-            if(step.cachedTarget == null)
-                Debug.LogWarning($"[ObjectFinder] '{step.targetObjName}' 오브젝트를 찾을 수 없음 — 씬에 등록됐는지 확인");
-        }
-    }
+    // (EV 전용 InteractablePart 조회·DTCData 스텝 캐시는 Test/NetworkObjectFinderEv.cs 의 확장 메서드로 옮겼다 — 모듈화 2단계)
 
     // ── 유틸 ─────────────────────────────────
 

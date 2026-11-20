@@ -377,7 +377,9 @@ public static class BoltWork
     /// 녹슬어 뻑뻑한 볼트 — 볼트 묶음마다 일부(형제 순서로 정해 모든 플레이어가 같은 볼트). 분해할 때만.
     /// 윤활제를 뿌리면 오히려 잘 풀린다.
     /// </summary>
-    public static bool IsSeized(Bolt b) => b != null && !b.isAssembleMode && b.transform.GetSiblingIndex() % 4 == 1;
+    // (11/20) 자유 탈거(연습) 모드에서만 — 시나리오에서는 녹슨 볼트를 만들지 않는다. 시나리오에는 방청제 도구가 없는데 볼트 4개 중 1개가
+    // 0.35배 속도로 풀려 'F 를 눌러도 안 풀린다'(0%에 머문다)로 보였고, 갈색 안내만 뜨고 해결할 방법이 없었다.
+    public static bool IsSeized(Bolt b) => b != null && !b.isAssembleMode && FreeLoto.IsFreeScenario && b.transform.GetSiblingIndex() % 4 == 1;
 
     /// <summary>풀림 속도 배율: 윤활 1.6배, 녹슨 볼트 0.35배, 보통 1배.</summary>
     public static float SpeedFactor(Bolt b)

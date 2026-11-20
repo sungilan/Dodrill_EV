@@ -68,6 +68,12 @@ public abstract class ConfirmTaskModule : ITaskModule
         // ClickableAnimator가 보낸 uniqueId가 현재 모듈의 목표와 일치하면 완료
         if(!string.IsNullOrEmpty(_targetObjName) && id == _targetObjName && CanConfirm())
         {
+            // 클릭 신호만으로 끝내지 않고 대상의 상태(열림/닫힘 등)가 이 단계가 요구하는 상태인지 콘텐츠가 확인한다(ScenarioHooks.TargetStateOk)
+            if(!ScenarioHooks.TargetStateAccepted(ModuleId, _targetObjName))
+            {
+                Debug.Log($"[{ModuleId}] 대상({_targetObjName}) 상태가 이 단계가 요구하는 상태가 아니라 완료하지 않습니다.");
+                return;
+            }
             Debug.Log($"[{ModuleId}] 대상 오브젝트({_targetObjName}) 클릭 확인됨. 단계를 완료합니다.");
             Complete();
         }

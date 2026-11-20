@@ -8,6 +8,12 @@ using UnityEngine;
 /// </summary>
 public static class InteractionEvents
 {
+    // ── 구역 유효성 훅 (모듈화 2단계) ───────────────────────────
+    // TaskInteractionZone 이 "지금 단계에서 이 구역·아이템이 유효한가"를 물을 때 쓴다. 시나리오 엔진이 시작할 때 등록한다
+    // (EngineInteractionBinding). 등록이 없으면 모두 유효로 본다.
+    public static Func<string, string, bool> ZoneValidator;
+    public static bool IsZoneValid(string zoneId, string itemId) => ZoneValidator == null || ZoneValidator(zoneId, itemId);
+
     // ── 서버 중계 표시 (11/18) ─────────────────────────────────
     // 같은 이벤트를 두 뜻으로 쓴다: 클라이언트에선 '내가 집었다/썼다'(→ NetworkInteractionBridge·PlayerEquipmentSync 가 서버로 전송),
     // 서버에선 ScenarioRunner 가 받은 신호를 모듈에 알리려고 다시 발생시킨다.

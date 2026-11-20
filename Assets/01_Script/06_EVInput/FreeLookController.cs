@@ -572,9 +572,9 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             // 실제 마우스 위치를 향해 레이캐스트
             Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
 
-            hit = Physics.Raycast(ray, out hitInfo, raycastMaxDistance, clickLayers);
+            hit = ClickRay.Cast(ray, out hitInfo, raycastMaxDistance, clickLayers);
             if(!hit)
-                hit = Physics.Raycast(ray, out hitInfo, raycastMaxDistance);
+                hit = ClickRay.Cast(ray, out hitInfo, raycastMaxDistance);
         }
 
         Collider hoveredCol = hit ? hitInfo.collider : null;
@@ -836,7 +836,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             return true;
         }
 
-        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance)) return false;
+        if(!ClickRay.Cast(ray, out RaycastHit hit, raycastMaxDistance)) return false;
 
         // LiftButtonUI 확인
         var liftBtn = hit.collider.GetComponent<LiftButtonUI>()
@@ -958,7 +958,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     {
         Ray ray = _mainCamera.ScreenPointToRay(screenPos);
 
-        if (!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
+        if (!ClickRay.Cast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
             return false;
 
         Log($"[Raycast] 클릭 감지됨: {hit.collider.name}");
@@ -1041,7 +1041,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
     {
         if(_mainCamera == null) return null;
         Ray ray = _mainCamera.ScreenPointToRay(screenPos);
-        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance)) return null;
+        if(!ClickRay.Cast(ray, out RaycastHit hit, raycastMaxDistance)) return null;
 
         return hit.collider.GetComponent<TaskInteractionZone>()
             ?? hit.collider.GetComponentInParent<TaskInteractionZone>();
@@ -1069,7 +1069,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             if (_mainCamera == null) return;
             Ray ray = _mainCamera.ScreenPointToRay(
                 new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
-            if(Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance))
+            if(ClickRay.Cast(ray, out RaycastHit hit, raycastMaxDistance))
             {
                 var zone = hit.collider.GetComponent<TaskInteractionZone>()
                         ?? hit.collider.GetComponentInParent<TaskInteractionZone>();
@@ -1111,7 +1111,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         {
             Ray ray = _mainCamera.ScreenPointToRay(
                 new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
-            if(Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance))
+            if(ClickRay.Cast(ray, out RaycastHit hit, raycastMaxDistance))
             {
                 var zone = hit.collider.GetComponent<TaskInteractionZone>()
                         ?? hit.collider.GetComponentInParent<TaskInteractionZone>();
@@ -1341,7 +1341,7 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         if(showDebugRay)
             Debug.DrawRay(ray.origin, ray.direction * raycastMaxDistance, Color.red, 0.3f);
 
-        if(!Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
+        if(!ClickRay.Cast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
         {
             Log("레이캐스트 히트 없음");
             return null;
@@ -1568,7 +1568,9 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
         // 들고 있는 동안 줄여 보이는 물체는 원래 크기로 따진다
         Vector3 cur = sg.transform.localScale;
         float k = Mathf.Abs(cur.x) > 0.0001f ? Mathf.Abs(_heldOriginalScale.x / cur.x) : 1f;
-        if(maxDim * k > 0.75f) { why = "너무 큰 물체입니다 — G 로 내려놓으세요"; return false; }
+        // (11/20) 멀티미터·메거는 손에 쥐는 작은 계측기인데, 프로브 선(SkinnedMeshRenderer)까지 늘어난 경계 상자가 커서 '너무 큰 물체'로 걸려 퀵슬롯에 못 넣었다 → 계측기는 크기 검사를 건너뛴다
+        bool instrument = sg.GetComponentInChildren<MultimeterMaster>(true) != null;
+        if(!instrument && maxDim * k > 0.75f) { why = "너무 큰 물체입니다 — G 로 내려놓으세요"; return false; }
         return true;
     }
 
@@ -1687,10 +1689,10 @@ public class FreeLookController : NetworkBehaviour, IPcLookController
             // ★ 화면 중앙이 아닌 실제 마우스 포인터 위치를 향해 레이를 쏩니다
             Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
 
-            bool isHit = Physics.Raycast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers);
+            bool isHit = ClickRay.Cast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers);
             if(!isHit)
             {
-                isHit = Physics.Raycast(ray, out hit, raycastMaxDistance);
+                isHit = ClickRay.Cast(ray, out hit, raycastMaxDistance);
             }
 
             if(isHit)

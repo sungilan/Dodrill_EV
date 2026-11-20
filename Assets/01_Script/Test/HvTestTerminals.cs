@@ -24,10 +24,9 @@ public class HvTestTerminals : MonoBehaviour
 
     private static readonly string[] Ids = { "HV_Front_Cable_Term", "HV_Rear_Cable_Term" };
     private const string FrontStep = "HV_Front_Voltage", RearStep = "HV_Rear_Voltage";
-    private const float DropDown = 0.10f;     // 밑판 속 → 밑판 바로 밑
+    private const float DropDown = 0.02f;     // (11/20) 0.10 → 0.02: 주황색 커넥터(PRA) 높이에 맞춘다. 원래 단자 높이와 거의 같다
     private const float HalfGap = 0.055f;     // 빨강·검정 사이 간격의 절반
     private const float BoxSize = 0.07f;      // 판정 상자 한 변(m)
-    private const float BeamLength = 1.3f;
 
     private class Term
     {
@@ -36,7 +35,6 @@ public class HvTestTerminals : MonoBehaviour
         public Role role;
         public GameObject root;
         public Transform halo, label;
-        public LineRenderer beam;
         public GameObject[] guideOnly;   // 평가 모드에서 숨기는 것들(후광·이름표·빛줄기)
         public Vector3 outward;          // 이름표를 놓을 쪽(세계 방향, 수평)
     }
@@ -183,11 +181,11 @@ public class HvTestTerminals : MonoBehaviour
 
     // ── 보이는 부분 ─────────────────────────────
 
-    private static Material Unlit(Color c, bool onTop)
+    private static Material Unlit(Color c, bool onTop, int queue = 4000)
     {
         var sh = Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default");
         var m = new Material(sh) { color = c };
-        if (onTop) { m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always); m.renderQueue = 4000; }
+        if (onTop) { m.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always); m.renderQueue = queue; }
         else m.renderQueue = 3000;
         return m;
     }
@@ -219,25 +217,16 @@ public class HvTestTerminals : MonoBehaviour
         t.root.transform.localRotation = Quaternion.identity;
 
         // 실제 단자: 기둥(빨강/검정 머리) + 주황 지지대(밑판까지)
-        Prim(PrimitiveType.Cylinder, "Post", t.root.transform, Vector3.zero, new Vector3(0.036f, 0.022f, 0.036f), Unlit(cap, false));
-        Prim(PrimitiveType.Cylinder, "Ring", t.root.transform, new Vector3(0f, 0.018f, 0f), new Vector3(0.046f, 0.004f, 0.046f), Unlit(glow, false));
-        Prim(PrimitiveType.Cylinder, "Stem", t.root.transform, new Vector3(0f, 0.062f, 0f), new Vector3(0.012f, 0.040f, 0.012f), Unlit(new Color(1f, 0.45f, 0.05f, 1f), false));
+        Prim(PrimitiveType.Cylinder, "Post", t.root.transform, Vector3.zero, new Vector3(0.036f, 0.022f, 0.036f), Unlit(cap, true, 3996));   // (11/20) 맨 앞에 — 배터리 메쉬에 가려지지 않게
+        Prim(PrimitiveType.Cylinder, "Ring", t.root.transform, new Vector3(0f, 0.018f, 0f), new Vector3(0.046f, 0.004f, 0.046f), Unlit(glow, true, 3997));
+        Prim(PrimitiveType.Cylinder, "Stem", t.root.transform, new Vector3(0f, 0.062f, 0f), new Vector3(0.012f, 0.040f, 0.012f), Unlit(new Color(1f, 0.45f, 0.05f, 1f), true, 3995));
 
-        // 안내(평가 모드에서는 숨김): 후광 · 아래로 뻗은 빛줄기 · 맨 앞 이름표
+        // 안내(평가 모드에서는 숨김): 후광 · 맨 앞 이름표
         var guide = new List<GameObject>();
-        var halo = Prim(PrimitiveType.Sphere, "Halo", t.root.transform, Vector3.zero, Vector3.one * 0.125f, Unlit(new Color(glow.r, glow.g, glow.b, 0.30f), false));
+        var halo = Prim(PrimitiveType.Sphere, "Halo", t.root.transform, Vector3.zero, Vector3.one * 0.125f, Unlit(new Color(glow.r, glow.g, glow.b, 0.30f), true, 3990));
         t.halo = halo.transform; guide.Add(halo);
 
-        var beamGo = new GameObject("Beam");
-        beamGo.transform.SetParent(t.root.transform, false);
-        var lr = beamGo.AddComponent<LineRenderer>();
-        lr.useWorldSpace = false; lr.positionCount = 2;
-        lr.SetPosition(0, new Vector3(0f, -0.04f, 0f)); lr.SetPosition(1, new Vector3(0f, -BeamLength, 0f));
-        lr.widthMultiplier = 0.014f;
-        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; lr.receiveShadows = false;
-        lr.sharedMaterial = Unlit(Color.white, true);
-        lr.startColor = new Color(glow.r, glow.g, glow.b, 0.95f); lr.endColor = new Color(glow.r, glow.g, glow.b, 0.05f);
-        t.beam = lr; guide.Add(beamGo);
+        // (11/20) 아래로 뻗은 빨강·파랑 빛줄기(Beam)는 뺐다 — 후광·이름표로 충분하다는 의견
 
         var labelRoot = new GameObject("Label");
         labelRoot.transform.SetParent(t.root.transform, false);

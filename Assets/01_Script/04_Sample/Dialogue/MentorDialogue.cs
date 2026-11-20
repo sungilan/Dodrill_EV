@@ -88,7 +88,26 @@ public class MentorDialogue : MonoBehaviour
     private string _lastKey;
     private string _curModule;
 
-    private class Item { public DialogueLineJson line; public bool coach; }
+    // step: 이 대사가 속한 단계 번호(-1 = 단계와 무관). 단계가 바뀌면 이전 단계의 대사는 기다리지 않고 버린다
+    private class Item { public DialogueLineJson line; public bool coach; public int step = -1; }
+    private int _playingStep = -1;   // 지금 말하고 있는 대사의 단계
+    private static int CurrentStep()
+    {
+        var rec = ScenarioStateReceiver.Instance;
+        return rec != null ? rec.CurrentTaskState.taskIndex : -1;
+    }
+
+    /// <summary>새 단계가 시작됐다 — 지난 단계의 대사는 대기열에서 빼고, 말하는 중이면 끊어 새 단계 안내가 바로 나오게 한다(예전에는 앞 대사가 끝나길 기다려 한참 늦게 나왔다)</summary>
+    private void PurgeStale(int step)
+    {
+        if (_queue.Count > 0)
+        {
+            var keep = new List<Item>();
+            foreach (var q in _queue) if (q.step < 0 || q.step == step) keep.Add(q);
+            if (keep.Count != _queue.Count) { _queue.Clear(); foreach (var q in keep) _queue.Enqueue(q); }
+        }
+        if (_play != null && _playingStep >= 0 && _playingStep != step) _skip = true;
+    }
     private readonly Queue<Item> _queue = new Queue<Item>();
     private readonly Dictionary<string, float> _lastSaid = new Dictionary<string, float>();
     private Coroutine _play;
@@ -121,6 +140,7 @@ public class MentorDialogue : MonoBehaviour
         _lastKey = key;
         EnsureScenario(sc);
         _curModule = tasks[t.taskIndex].moduleId;
+        PurgeStale(t.taskIndex);
         if (EvaluationMode.IsEvaluation(sc.scenarioId)) return;   // 평가 중에는 도움말을 주지 않는다
         PlayModule(_curModule);
     }
@@ -166,7 +186,7 @@ public class MentorDialogue : MonoBehaviour
         if (lines == null) return;
         foreach (var l in lines)
             if (l != null && string.IsNullOrEmpty(l.trigger) && !string.IsNullOrWhiteSpace(l.ko + l.en + l.vi))
-                _queue.Enqueue(new Item { line = l, coach = false });
+                _queue.Enqueue(new Item { line = l, coach = false, step = CurrentStep() });
         Kick();
     }
 
@@ -188,7 +208,7 @@ public class MentorDialogue : MonoBehaviour
         int pendingCoach = 0; foreach (var q in _queue) if (q.coach) pendingCoach++;
         if (pendingCoach >= 2) return;   // 코칭이 밀려 있으면 새 코칭은 버린다(오래된 말이 뒤늦게 나오지 않게)
         _lastSaid[trigger] = Time.unscaledTime;
-        foreach (var l in found) _queue.Enqueue(new Item { line = l, coach = true });
+        foreach (var l in found) _queue.Enqueue(new Item { line = l, coach = true, step = CurrentStep() });
         Kick();
     }
 
@@ -211,6 +231,7 @@ public class MentorDialogue : MonoBehaviour
         while (_queue.Count > 0)
         {
             var it = _queue.Dequeue();
+            _playingStep = it.step;
             var sp = ParseSpeaker(it.line.speaker);
             string text = it.line.GetLocalizedText();
             _skip = false;
@@ -241,6 +262,7 @@ public class MentorDialogue : MonoBehaviour
             yield return new WaitForSecondsRealtime(0.15f);
         }
         HideView();
+        _playingStep = -1;
         _play = null;
     }
 
@@ -285,7 +307,7 @@ public class MentorDialogue : MonoBehaviour
             _lastSaid[key] = Time.unscaledTime;
         }
         else { _queue.Clear(); _skip = true; }   // 사용자가 직접 물었다(물음표·전구 버튼) — 하던 말을 끊고 바로 답한다
-        _queue.Enqueue(new Item { line = new DialogueLineJson { speaker = "Mentor", ko = text, en = text, vi = text }, coach = false });
+        _queue.Enqueue(new Item { line = new DialogueLineJson { speaker = "Mentor", ko = text, en = text, vi = text }, coach = false, step = CurrentStep() });
         Kick();
         return true;
     }

@@ -160,6 +160,9 @@ public class SpawnBundle
     /// 접속 인원수만큼 스폰(여럿이 같은 단계를 동시에 작업하는 공구용). 임팩트 렌치는 이 값이 없어도 자동으로 인원수만큼 놓는다.
     /// </summary>
     public bool perPlayer = false;
+
+    /// <summary>스폰 자리 기준 추가 위치 보정(m, 자리의 로컬 축). 같은 자리 옆에 겹치지 않게 놓을 때(예: 구리스를 스프레이 옆에). 서버의 스포너만 읽는다.</summary>
+    public float offsetX, offsetY, offsetZ;
 }
 
 [Serializable]

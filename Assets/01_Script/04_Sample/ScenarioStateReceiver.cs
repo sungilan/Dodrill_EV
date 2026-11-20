@@ -58,7 +58,7 @@ public class ScenarioStateReceiver : MonoBehaviour
 
         RefreshTaskItemFilter(broadcast.currentTask.taskIndex);
 
-        NetworkedSessionUserList.InvokeActivePlayerChanged(broadcast.currentTask.activePlayerId, "");
+        ScenarioHooks.RaiseActivePlayerChanged(broadcast.currentTask.activePlayerId, "");   // 접속자 목록 UI 가 구독한다
     }
     private void RefreshTaskItemFilter(int taskIndex)
     {

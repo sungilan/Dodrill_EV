@@ -80,6 +80,15 @@ public static class ScenarioHooks
     public static Func<Component, bool> IsPerPlayerPrefab;
     public static bool PerPlayerPrefab(Component prefab) => prefab != null && IsPerPlayerPrefab != null && IsPerPlayerPrefab(prefab);
 
+    // ── 10) 오브젝트 클릭으로 끝나는 단계(ConfirmTask)의 "상태 확인": (moduleId, targetObjName) → false 면 클릭이 있어도 완료하지 않는다 ──
+    // 예: 커넥터 재연결 단계에서 커넥터가 열렸다면 완료가 아니다. 클릭 자체가 아니라 오브젝트의 상태(열림/닫힘)를 서버가 보고 판정한다.
+    public static Func<string, string, bool> TargetStateOk;
+    public static bool TargetStateAccepted(string moduleId, string targetObjName) => TargetStateOk == null || TargetStateOk(moduleId, targetObjName);
+
+    // ── 9) 진행 중인 플레이어가 바뀌었을 때(clientId, 표시 이름) — 접속자 목록 UI 등이 구독 ──
+    public static event Action<int, string> ActivePlayerChanged;
+    public static void RaiseActivePlayerChanged(int clientId, string displayName) => ActivePlayerChanged?.Invoke(clientId, displayName);
+
     // ── 8) 지도 오브젝트(차량 등)가 스폰된 뒤 콘텐츠가 후처리(예: 리프트에 차량 연결) ──
     public static Action<GameObject> OnMapObjectSpawned;
 }

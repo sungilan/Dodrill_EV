@@ -15,6 +15,27 @@ public static class DemoSettings
     /// <summary>자유 탈거 모드의 테스트용 특수 공구(prefabId 가 Equip_Tool_ 로 시작)를 스폰하지 않는다</summary>
     public static bool HideSpecialToolsInFreeMode = true;
 
+    /// <summary>
+    /// 맵에 깔린 장비 자리표(EquipmentSlot) 중 아래 이름의 것은 장비를 만들지 않는다(11/20 자유 탈거 정리).
+    ///  · 탁자 위 토크렌치 2개·절연 토크렌치·절연 테이프, 배터리 리프트(자키) 자리표
+    ///  · 흰 서랍 2번 칸의 스패너 2·드라이버 1 자리 — 이 자리(위치)는 자유 탈거의 임팩트 렌치·메거·멀티미터가 대신 쓴다(시나리오 JSON 의 spawnPointId)
+    /// 이름은 씬의 [Equipment Slots] 아래 오브젝트 이름이다. 값을 false 로 두면 예전처럼 모두 만든다.
+    /// </summary>
+    public static bool HideTidiedEquipmentSlots = true;
+
+    public static readonly string[] HiddenEquipmentSlots =
+    {
+        "Slot_W_TorqueWrench", "Slot_W3_TorqueWrench_Insulated", "Slot_W3_InsulationTape", "Slot_BatteryLift",
+        "Slot_W2_Drawer1_0_Equip_Spanner", "Slot_W2_Drawer1_1_Equip_Spanner", "Slot_W2_Drawer1_2_Equip_Screwdriver",
+    };
+
+    public static bool HideEquipmentSlot(string slotName)
+    {
+        if (!HideTidiedEquipmentSlots || string.IsNullOrEmpty(slotName)) return false;
+        foreach (var n in HiddenEquipmentSlots) if (n == slotName) return true;
+        return false;
+    }
+
     /// <summary>시나리오 목록에 DemoScenarioIds 만 보이게 한다</summary>
     public static bool ScenarioListDemoOnly = true;
 

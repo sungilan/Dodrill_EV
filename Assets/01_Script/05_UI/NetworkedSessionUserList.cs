@@ -49,6 +49,14 @@ public class NetworkedSessionUserList : MonoBehaviour
             rowParent = userStateTemplate.parent;
     }
 
+    // 엔진(ScenarioStateReceiver)이 알리는 활성 플레이어 변경을 기존 정적 이벤트로 전달 — 엔진이 이 UI 를 직접 부르지 않게
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void HookEngine()
+    {
+        ScenarioHooks.ActivePlayerChanged -= InvokeActivePlayerChanged;
+        ScenarioHooks.ActivePlayerChanged += InvokeActivePlayerChanged;
+    }
+
     private void OnEnable()
     {
         if (InstanceFinder.ClientManager != null)

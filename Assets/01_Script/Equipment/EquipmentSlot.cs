@@ -23,6 +23,8 @@ public class EquipmentSlot : MonoBehaviour
 
     private void Awake()
     {
+        // 자리표를 끄는 것은 장비를 만들지 않는다는 뜻(오브젝트는 그대로 — 시나리오 스폰 자리로 이름을 쓸 수 있다). OnEnable 의 등록도 건너뛴다.
+        if (DemoSettings.HideEquipmentSlot(name)) { enabled = false; return; }
         if (decor != null)
         {
             foreach (var r in decor.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
