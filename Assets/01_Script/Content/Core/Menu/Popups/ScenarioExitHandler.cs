@@ -142,6 +142,7 @@ namespace DoDrill
                 var sm = InstanceFinder.ServerManager;
                 var cm = InstanceFinder.ClientManager;
                 ToolWorkNet.Init();    // 드릴 작동 소리 중계
+                MeasureAnnounceNet.Init();
                 ProbePoseNet.Init();   // 프로브 위치 중계도 서버가 계측기보다 먼저 떠 있을 때를 대비해 여기서 함께 등록
                 if (sm != null && sm != s_sm)
                 {

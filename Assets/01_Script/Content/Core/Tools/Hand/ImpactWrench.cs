@@ -107,6 +107,8 @@ public class ImpactWrench : MonoBehaviour
 
     private void OnDisable()
     {
+        if (LocalHeldWrench == this) LocalHeldWrench = null;
+        _touchTarget = false;
         RestoreHandVisuals();
         ResetBoltSnap();
         _buttonHeld = false;
@@ -122,7 +124,9 @@ public class ImpactWrench : MonoBehaviour
         // 다른 사람이 든(또는 아무도 안 든) 렌치는 내 입력·안내와 무관하다
         if (!IsLocalHeld)
         {
+            if (LocalHeldWrench == this) LocalHeldWrench = null;
             if (_targetBolt != null) ClearTarget();
+            _touchTarget = false;
             _buttonHeld = false;
             // 남이 들고 작동 중이면 소리·애니메이션만(30초 넘게 소식이 없으면 끈다 — 나간 사람 등)
             bool remote = _remoteWorking && Time.unscaledTime - _remoteAt < 30f && _sync != null && _sync.IsGrabbed;
@@ -131,6 +135,7 @@ public class ImpactWrench : MonoBehaviour
             return;
         }
 
+        LocalHeldWrench = this;
         // 입력 상태 확인
         if (CachedPlatform == PlatformType.PC)
         {
@@ -252,6 +257,7 @@ public class ImpactWrench : MonoBehaviour
         if (LocalTargetBolt == _targetBolt) LocalTargetBolt = null;
         _targetBolt = null;
         _currentBoltGameObject = null;
+        _touchTarget = false;
         HideRing();
     }
 
@@ -393,8 +399,14 @@ public class ImpactWrench : MonoBehaviour
         if (!IsCorrectBoltTask(detectedBolt)) { _blockedCandidate = detectedBolt; return; }
 
         // 일치할 경우에만 아래 로직 실행
+        _touchTarget = false;
+        AcquireBolt(detectedBolt, other.gameObject);
+    }
+
+    private void AcquireBolt(Bolt detectedBolt, GameObject boltGo)
+    {
         _targetBolt = detectedBolt;
-        _currentBoltGameObject = other.gameObject;
+        _currentBoltGameObject = boltGo;
         LocalTargetBolt = detectedBolt;
 
         if (_currentOutlinable != null) RestoreBoltOutline();
@@ -403,6 +415,48 @@ public class ImpactWrench : MonoBehaviour
         string actionName = _targetBolt.isAssembleMode ? "볼트 체결" : "볼트 분해";
         ShowProgress(actionName, GetPlatformInstruction(actionName, false));
         if (BoltHint.NeedsLube(_targetBolt)) BoltHint.NoticeSeized();
+    }
+
+    // ── (11/27 내부 시연) 모바일: 볼트를 터치하면 그 볼트를 대상으로 잡는다 ──
+    // 예전에는 렌치 끝을 볼트에 직접 대야 해서 '해제 버튼이 어디서 뜨는지·어디를 겨누는지' 알기 어려웠다.
+    // 렌치를 든 채 화면에서 볼트를 누르면(범위 안) 렌치 비트가 그 볼트로 붙고(UpdateBoltSnap) 작업 버튼('볼트 풀기')이 뜬다.
+    public static ImpactWrench LocalHeldWrench;
+    public const float MobileTouchRange = 2.2f;   // 눈에서 볼트까지(m) — 이보다 멀면 안내만
+    private bool _touchTarget;
+
+    /// <summary>FreeLockControllerMobile 이 탭 지점의 시선(ray)을 넘긴다. 볼트를 눌렀으면 true(다른 탭 처리 중단).</summary>
+    public static bool TryMobileTouchBolt(Ray ray, Vector3 eye)
+    {
+        var w = LocalHeldWrench;
+        if (w == null || !w.isActiveAndEnabled || !w.IsLocalHeld) return false;
+        var hits = Physics.RaycastAll(ray, 8f, ~0, QueryTriggerInteraction.Collide);
+        Bolt best = null; float bd = float.MaxValue;
+        foreach (var h in hits)
+        {
+            if (h.collider == null || !h.collider.CompareTag("Bolt") || h.distance >= bd) continue;
+            var b = h.collider.GetComponent<Bolt>();
+            if (b == null) continue;
+            best = b; bd = h.distance;
+        }
+        return best != null && w.MobileSelectBolt(best, eye);
+    }
+
+    private bool MobileSelectBolt(Bolt b, Vector3 eye)
+    {
+        if (b == null || !b.gameObject.activeInHierarchy || b.isloosened) return true;
+        if (_needRelease) return true;
+        if (_targetBolt == b) return true;
+        if (Vector3.Distance(eye, b.transform.position) > MobileTouchRange)
+        {
+            EquipFx.Notice("mobile_bolt_far", "볼트가 너무 멀어요", "가까이 다가가서 볼트를 눌러 주세요", EquipFx.Info, 2f, 2f);
+            return true;
+        }
+        if (!IsCorrectBoltTask(b)) { _blockedCandidate = b; BoltHint.ShowBlocked(b); return true; }   // 다른 단계 볼트면 지금 단계를 알려 준다
+        if (_targetBolt != null) ClearTarget();
+        _touchTarget = true;
+        AcquireBolt(b, b.gameObject);
+        Debug.Log($"<color=white>[ImpactWrench]</color> 모바일 터치로 볼트 선택: {b.name}");
+        return true;
     }
 
     // ── (11/20 내부 시연) 드릴을 잡고 바로 볼트에 대면 안 풀리고, 놓았다 다시 잡아야 되던 문제 ──
@@ -435,6 +489,13 @@ public class ImpactWrench : MonoBehaviour
 
         if (_targetBolt != null)
         {
+            // (11/27) 모바일 터치로 고른 볼트는 렌치가 닿아 있지 않아도 범위 안이면 유지한다(멀어지면 해제)
+            if (_touchTarget)
+            {
+                var cam = Camera.main;
+                if (!working && (cam == null || _currentBoltGameObject == null || Vector3.Distance(cam.transform.position, _currentBoltGameObject.transform.position) > MobileTouchRange + 0.6f)) ClearTarget();
+                return;
+            }
             // 대상에서 이미 벗어났는데 Exit 가 안 온 경우만 정리(작업 중엔 건드리지 않는다)
             if (working || _currentBoltGameObject == null) return;
             var bc = _currentBoltGameObject.GetComponent<Collider>();
@@ -583,7 +644,7 @@ public class ImpactWrench : MonoBehaviour
     {
         // PC·모바일도 정렬한다 — 렌치를 마음대로 기울일 수 없으므로 각도 제한 없이, 볼트를 잡은 거리(30cm) 안이면 비트를 볼트 축에 맞춘다
         bool vr = VrDevice.IsActive;
-        float maxDist = vr ? SnapMaxDist : 0.3f, maxAng = vr ? SnapMaxAngle : 179f;
+        float maxDist = vr ? SnapMaxDist : (_touchTarget ? MobileTouchRange + 1f : 0.3f), maxAng = vr ? SnapMaxAngle : 179f;
         InitBoltSnap();
         if (_snapBody == null) return;
 

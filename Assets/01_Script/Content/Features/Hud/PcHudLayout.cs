@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -141,6 +142,78 @@ public class PcHudLayout : MonoBehaviour
         AddMenuButton(rt, "HLD_PartList", "HLD_CheckList", "parts", "부위", CarPartListPanel.Toggle);
         AddMenuButton(rt, "HLD_Settings", "HLD_ExitBtnHolder", "settings", "설정", SettingsPanel.Toggle);
         rt.localScale = Vector3.one * MenuScale;
+        if (go.name == "CNV_Controller_Mobile") SetupMobileDropdown(rt);
+    }
+
+    // ── 모바일 메뉴: 평소엔 큰 '메뉴' 버튼 하나, 누르면 아래로 펼쳐지는 드롭다운 (11/27 내부 시연 피드백) ──
+    private const float MenuScaleMobile = 1.25f;          // 모바일 메뉴 버튼은 더 크게(손가락)
+    private const float ToggleSize = 124f;
+    private RectTransform _menuToggle;
+    private CanvasGroup _menuGroup;
+    private TMP_Text _menuToggleLabel;
+    private bool _menuOpen;
+
+    private void SetupMobileDropdown(RectTransform menu)
+    {
+        if (menu.parent == null) return;
+        if (s_disc == null) s_disc = HvStatusHud.MakeCircle(false);
+        if (s_ring == null) s_ring = HvStatusHud.MakeCircle(true);
+        var old = menu.parent.Find("Round_MenuToggle");
+        if (old != null) Destroy(old.gameObject);
+
+        // 토글 버튼(오른쪽 위 모서리)
+        var rt = NewRect("Round_MenuToggle", menu.parent);
+        rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-12f, -12f); rt.sizeDelta = new Vector2(ToggleSize, ToggleSize);
+        var disc = rt.gameObject.AddComponent<Image>();
+        disc.sprite = s_disc; disc.color = new Color(0.07f, 0.10f, 0.15f, 0.92f);
+        var pcv = menu.parent.GetComponentInParent<Canvas>();
+        if (pcv != null && pcv.GetComponent<GraphicRaycaster>() == null)
+        {
+            rt.gameObject.AddComponent<Canvas>();            // 부모 캔버스에 레이캐스터가 없으면 스스로 입력을 받는다
+            rt.gameObject.AddComponent<GraphicRaycaster>();
+        }
+        var btn = rt.gameObject.AddComponent<Button>();
+        btn.targetGraphic = disc;
+        var cb = btn.colors; cb.highlightedColor = new Color(1.3f, 1.3f, 1.3f, 1f); btn.colors = cb;
+        var ring = NewRect("Ring", rt);
+        ring.anchorMin = Vector2.zero; ring.anchorMax = Vector2.one; ring.offsetMin = ring.offsetMax = Vector2.zero;
+        var ringImg = ring.gameObject.AddComponent<Image>();
+        ringImg.sprite = s_ring; ringImg.raycastTarget = false; ringImg.color = OnColor;
+        _menuToggleLabel = NewText(rt, "메뉴", 32f);
+        ((RectTransform)_menuToggleLabel.transform).sizeDelta = new Vector2(ToggleSize, 50f);
+        _menuToggle = rt;
+
+        // 메뉴 줄: 토글 아래로, 처음엔 접어 둔다(세로로 0 → 펼침)
+        menu.localScale = new Vector3(MenuScaleMobile, 0.0001f, 1f);
+        menu.anchoredPosition = new Vector2(-12f, -(12f + ToggleSize + 8f));
+        _menuGroup = GroupOf(menu.gameObject);
+        _menuGroup.alpha = 0f; _menuGroup.interactable = false; _menuGroup.blocksRaycasts = false;
+        _menuOpen = false;
+        btn.onClick.AddListener(() => SetMenuOpen(!_menuOpen));
+        // 메뉴 안 버튼을 누르면 드롭다운을 닫는다(패널이 열려도 메뉴가 화면을 가리지 않게)
+        foreach (var b in menu.GetComponentsInChildren<Button>(true))
+            b.onClick.AddListener(() => { if (_menuOpen) SetMenuOpen(false); });
+    }
+
+    private void SetMenuOpen(bool open)
+    {
+        if (_menu == null || _menuGroup == null) return;
+        _menuOpen = open;
+        if (_menuToggleLabel != null) _menuToggleLabel.text = open ? "<b>닫기</b>" : "<b>메뉴</b>";
+        _menu.DOKill(); _menuGroup.DOKill();
+        if (open)
+        {
+            _menuGroup.interactable = true; _menuGroup.blocksRaycasts = true;
+            _menu.DOScale(new Vector3(MenuScaleMobile, MenuScaleMobile, 1f), 0.24f).SetEase(Ease.OutBack).SetUpdate(true);
+            _menuGroup.DOFade(1f, 0.16f).SetUpdate(true);
+        }
+        else
+        {
+            _menuGroup.interactable = false; _menuGroup.blocksRaycasts = false;
+            _menu.DOScale(new Vector3(MenuScaleMobile, 0.0001f, 1f), 0.16f).SetEase(Ease.InCubic).SetUpdate(true);
+            _menuGroup.DOFade(0f, 0.14f).SetUpdate(true);
+        }
     }
 
     /// <summary>

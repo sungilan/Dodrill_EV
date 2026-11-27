@@ -173,6 +173,11 @@ public class DodrillBuildProfiles : EditorWindow
         // Android 로 남아 Addressables(SBP) 빌드가 "Unable to build with the current configuration" 으로 실패한 적이 있다.
         if (IsServer(p))
         {
+            // Odin 은 ODIN_INSPECTOR 를 Standalone·Android 에만 넣는다. Dedicated Server 대상에는 없어 Common 의 OdinShim 이 켜지고
+            // Sirenix 와 같은 이름 속성이 겹친다(CS0433 'FolderPathAttribute' exists in both) → 서버 대상에도 심볼을 넣은 뒤 전환한다.
+            string curDef = PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Server);
+            if (!curDef.Contains("ODIN_INSPECTOR"))
+                PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, (string.IsNullOrEmpty(curDef) ? "" : curDef + ";") + "ODIN_INSPECTOR;ODIN_INSPECTOR_3;ODIN_INSPECTOR_3_1;ODIN_INSPECTOR_3_2;ODIN_INSPECTOR_3_3");
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneLinux64)
                 EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneLinux64);
             EditorUserBuildSettings.selectedBuildTargetGroup = BuildTargetGroup.Standalone;

@@ -895,9 +895,21 @@ public class SyncGrab : NetworkBehaviour
             else if(_grab != null)
             {
                 // VR: 계측기를 쥔 손 모델도 같이 앞에 그린다
+                // (11/27 내부 시연) 쥔 손만 앞에 그려서, 다른 손(프로브를 쥔 손 등)을 차에 가져다 대면 차에 가려지고 계측기만 보였다
+                //  → 내 플레이어의 두 손(과 장갑)을 모두 같이 앞에 그린다
+                var seenRoots = new System.Collections.Generic.List<Transform>();
                 foreach(var h in _grab.GetHeldBy())
-                    if(h != null)
-                        foreach(var smr in h.GetComponentsInChildren<SkinnedMeshRenderer>(true)) _onTopGloves.Add(smr);
+                {
+                    if(h == null) continue;
+                    foreach(var smr in h.GetComponentsInChildren<SkinnedMeshRenderer>(true)) if(!_onTopGloves.Contains(smr)) _onTopGloves.Add(smr);
+                    var rt = h.transform.root;
+                    if(seenRoots.Contains(rt)) continue;
+                    seenRoots.Add(rt);
+                    foreach(var other in rt.GetComponentsInChildren<Autohand.Hand>(true))
+                        foreach(var smr in other.GetComponentsInChildren<SkinnedMeshRenderer>(true)) if(!_onTopGloves.Contains(smr)) _onTopGloves.Add(smr);
+                    foreach(var smr in rt.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                        if(smr.name.Contains("Glove") && !_onTopGloves.Contains(smr)) _onTopGloves.Add(smr);
+                }
             }
         }
         foreach(var r in _onTopGloves) HeldItemOnTop.Set(r, on);

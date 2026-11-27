@@ -120,6 +120,7 @@ public class LobbyBuildProfiles : EditorWindow
         }
         if (!EditorUtility.DisplayDialog("로비 빌드", $"{Label(p)}을(를) 빌드합니다.\n플랫폼이 {target} 으로 바뀌며 처음에는 다시 임포트되어 시간이 걸릴 수 있습니다.\n출력: {OutputRoot}", "빌드", "취소")) return;
 
+        if (p != Profile.PcClient && !WindowsServer) EnsureServerOdinDefines();   // 전환 뒤 컴파일에서 Odin 속성이 겹치지 않게(아래 설명)
         // 플랫폼 전환은 도메인 리로드를 일으키므로, 바뀌어야 하면 예약해 두고 리로드 뒤에 이어서 한다
         if (EditorUserBuildSettings.activeBuildTarget != target)
         {
@@ -129,6 +130,23 @@ public class LobbyBuildProfiles : EditorWindow
             return;
         }
         Execute(p);
+    }
+
+    /// <summary>Odin 은 ODIN_INSPECTOR 를 Standalone·Android 에만 넣는다. Dedicated Server 대상에는 없어 Common 의 OdinShim 이 켜지고 Sirenix 와 같은 이름 속성이 겹친다(CS0433).</summary>
+    private static void EnsureServerOdinDefines()
+    {
+        try
+        {
+            bool odin = false;
+            foreach (var g in AssetDatabase.FindAssets("Sirenix.OdinInspector.Attributes"))
+                if (AssetDatabase.GUIDToAssetPath(g).EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) { odin = true; break; }
+            if (!odin) return;
+            string cur = PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Server);
+            if (cur.Contains("ODIN_INSPECTOR")) return;
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, (string.IsNullOrEmpty(cur) ? "" : cur + ";") + "ODIN_INSPECTOR;ODIN_INSPECTOR_3;ODIN_INSPECTOR_3_1;ODIN_INSPECTOR_3_2;ODIN_INSPECTOR_3_3");
+            Debug.Log("[LobbyBuild] Dedicated Server 대상에 ODIN_INSPECTOR 심볼 추가");
+        }
+        catch (Exception e) { Debug.Log("[LobbyBuild] Odin 심볼 건너뜀: " + e.Message); }
     }
 
     [InitializeOnLoadMethod]

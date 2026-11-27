@@ -513,6 +513,9 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
         }
 
         Ray ray = _mainCamera.ScreenPointToRay(screenPos);
+        // (11/27) 렌치를 들고 볼트를 누르면 그 볼트를 대상으로 잡는다(범위 안) — 작업 버튼이 뜬다
+        if(ImpactWrench.TryMobileTouchBolt(ray, _mainCamera.transform.position)) return;
+
         if(!ClickRay.Cast(ray, out RaycastHit hit, raycastMaxDistance, clickLayers))
         {
             if(!ClickRay.Cast(ray, out hit, raycastMaxDistance))
@@ -912,9 +915,12 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
     {
         EnsureLaserLine();
 
+        // (11/27 내부 시연) 화면 가운데에서 뜨는 레이저 대신, 잡을 수 있는 물건 위에 화살표가 둥실거리게 한다
+        laserLine.enabled = false;
+
         if(_heldObject != null)
         {
-            laserLine.enabled = false;
+            HideHoverArrow();
             SetOutline(null);
             return;
         }
@@ -929,7 +935,7 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
 
         if(!hit)
         {
-            laserLine.enabled = false;
+            HideHoverArrow();
             SetOutline(null);
             return;
         }
@@ -951,15 +957,103 @@ public class FreeLockControllerMobile : NetworkBehaviour, IPcLookController
 
         SetOutline(targetGO);
 
-        if(targetGO != null)
+        if(targetGO != null) ShowHoverArrow(targetGO);
+        else HideHoverArrow();
+    }
+
+    // ── 잡을 수 있는 물건 위에서 둥실거리는 화살표 (레이저 대체) ──
+    private Transform _hoverArrow;
+    private GameObject _hoverArrowTarget;
+    private Bounds _hoverArrowBounds;
+
+    private void ShowHoverArrow(GameObject target)
+    {
+        if(_hoverArrow == null) CreateHoverArrow();
+        if(_hoverArrow == null) return;
+        if(target != _hoverArrowTarget)
         {
-            laserLine.enabled = true;
-            DrawCurvedLaser(_mainCamera.transform, hitInfo.point);
+            _hoverArrowTarget = target;
+            bool any = false; Bounds b = default;
+            foreach(var r in target.GetComponentsInChildren<Renderer>())
+            {
+                if(r == null || !r.enabled || r is TrailRenderer || r is LineRenderer || r is ParticleSystemRenderer) continue;
+                if(!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
+            }
+            _hoverArrowBounds = any ? b : new Bounds(target.transform.position, Vector3.one * 0.2f);
         }
-        else
+        // 물건이 움직이면(이미 날아가는 중 등) 중심만 따라간다
+        var bounds = _hoverArrowBounds;
+        float size = Mathf.Clamp(bounds.size.magnitude * 0.22f, 0.05f, 0.16f);
+        float dist = Vector3.Distance(_mainCamera.transform.position, bounds.center);
+        float k = Mathf.Clamp(dist / 2f, 0.8f, 2.4f);       // 멀리 있어도 보이게
+        size *= k;
+        float bob = Mathf.Sin(Time.time * 5f) * 0.25f * size;
+        _hoverArrow.position = new Vector3(bounds.center.x, bounds.max.y + size * 0.9f + bob, bounds.center.z);
+        _hoverArrow.rotation = Quaternion.Euler(0f, Time.time * 120f, 0f);
+        _hoverArrow.localScale = new Vector3(size * 0.8f, size, size * 0.8f);
+        if(!_hoverArrow.gameObject.activeSelf) _hoverArrow.gameObject.SetActive(true);
+    }
+
+    private void HideHoverArrow()
+    {
+        _hoverArrowTarget = null;
+        if(_hoverArrow != null && _hoverArrow.gameObject.activeSelf) _hoverArrow.gameObject.SetActive(false);
+    }
+
+    private void CreateHoverArrow()
+    {
+        var go = new GameObject("Mobile_HoverArrow");
+        go.transform.SetParent(transform);
+        var mf = go.AddComponent<MeshFilter>();
+        var mr = go.AddComponent<MeshRenderer>();
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.receiveShadows = false;
+        mf.sharedMesh = MakeArrowMesh();
+        Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Universal Render Pipeline/Unlit");
+        var mat = new Material(shader);
+        mat.color = new Color(laserColorStart.r, laserColorStart.g, laserColorStart.b, 0.95f);   // PC 레이저와 같은 주황
+        mat.renderQueue = 3500;
+        mr.material = mat;
+        go.SetActive(false);
+        _hoverArrow = go.transform;
+    }
+
+    /// <summary>아래를 가리키는 화살표(원뿔 머리 + 짧은 기둥). 높이 1, 지름 약 0.8.</summary>
+    private static Mesh MakeArrowMesh()
+    {
+        const int N = 14;
+        var v = new System.Collections.Generic.List<Vector3>();
+        var tri = new System.Collections.Generic.List<int>();
+        // 원뿔: 꼭짓점이 아래(0), 밑면이 위(0.55)
+        v.Add(new Vector3(0f, 0f, 0f));                       // 0 꼭짓점
+        for(int i = 0; i < N; i++)
         {
-            laserLine.enabled = false;
+            float a = i / (float)N * Mathf.PI * 2f;
+            v.Add(new Vector3(Mathf.Cos(a) * 0.4f, 0.55f, Mathf.Sin(a) * 0.4f));   // 1..N 밑면 둘레
         }
+        for(int i = 0; i < N; i++) { int a = 1 + i, b = 1 + (i + 1) % N; tri.Add(0); tri.Add(b); tri.Add(a); }
+        // 밑면 뚜껑
+        int cap = v.Count; v.Add(new Vector3(0f, 0.55f, 0f));
+        for(int i = 0; i < N; i++) { int a = 1 + i, b = 1 + (i + 1) % N; tri.Add(cap); tri.Add(a); tri.Add(b); }
+        // 기둥(원통, 0.55~1.0)
+        int baseIdx = v.Count;
+        for(int i = 0; i < N; i++)
+        {
+            float a = i / (float)N * Mathf.PI * 2f;
+            v.Add(new Vector3(Mathf.Cos(a) * 0.15f, 0.55f, Mathf.Sin(a) * 0.15f));
+            v.Add(new Vector3(Mathf.Cos(a) * 0.15f, 1.0f, Mathf.Sin(a) * 0.15f));
+        }
+        for(int i = 0; i < N; i++)
+        {
+            int a = baseIdx + i * 2, b = baseIdx + ((i + 1) % N) * 2;
+            tri.Add(a); tri.Add(a + 1); tri.Add(b);
+            tri.Add(b); tri.Add(a + 1); tri.Add(b + 1);
+        }
+        int top = v.Count; v.Add(new Vector3(0f, 1.0f, 0f));
+        for(int i = 0; i < N; i++) { int a = baseIdx + i * 2 + 1, b = baseIdx + ((i + 1) % N) * 2 + 1; tri.Add(top); tri.Add(b); tri.Add(a); }
+        var m = new Mesh { name = "HoverArrow" };
+        m.SetVertices(v); m.SetTriangles(tri, 0); m.RecalculateNormals(); m.RecalculateBounds();
+        return m;
     }
 
     private void DrawCurvedLaser(Transform origin, Vector3 targetPoint)

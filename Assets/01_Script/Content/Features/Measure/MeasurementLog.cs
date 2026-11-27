@@ -153,6 +153,7 @@ public class MeasurementLog : MonoBehaviour
         Debug.Log($"[MeasureLog] {e.label} = {FormatValue(e)} → {(e.pass ? "합격" : "불합격")}");
         WarningPopup.Show("measure_log", $"기록됨 · {e.label}", $"{FormatValue(e)}  {(e.pass ? "합격" : "불합격")} (기준 {Criterion(e.kind)})",
             e.pass ? new Color(0.08f, 0.35f, 0.18f, 0.92f) : new Color(0.45f, 0.1f, 0.08f, 0.92f), 2.2f, 1);
+        MeasureAnnounceNet.Report(e.label, FormatValue(e), e.pass);   // (11/27) 다른 참가자에게도 측정값 공지
         OnRecorded?.Invoke(terminal, value, e.pass);
     }
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEditorInternal;
@@ -63,6 +64,7 @@ public static class DoDrillSetup
         changed |= EnsureFinalIkAsmdefs();
         changed |= EnsureDoTweenAsmdef();
         changed |= EnsureTags();
+        changed |= EnsureServerOdinDefines();
         if (changed) AssetDatabase.Refresh();
 
         if (interactive || !SessionState.GetBool(PromptedKey, false))
@@ -160,6 +162,29 @@ public static class DoDrillSetup
             changed = true;
         }
         return changed;
+    }
+
+    // ── 2-1) Odin 정의 심볼(Dedicated Server) ───────────────────
+    // Odin 은 ODIN_INSPECTOR 를 Standalone·Android 에만 넣는다. Dedicated Server(NamedBuildTarget.Server)에는 없어서, 이 대상으로 전환하면
+    // Common 의 OdinShim(Odin 이 없을 때만 쓰는 같은 이름 속성)이 켜져 'FolderPathAttribute 가 DoDrill.Common 과 Sirenix 양쪽에 있다'(CS0433)가 난다.
+    // Odin 이 설치돼 있으면 서버 대상에도 같은 심볼을 넣어 준다.
+    private const string OdinDefines = "ODIN_INSPECTOR;ODIN_INSPECTOR_3;ODIN_INSPECTOR_3_1;ODIN_INSPECTOR_3_2;ODIN_INSPECTOR_3_3";
+
+    private static bool EnsureServerOdinDefines()
+    {
+        try
+        {
+            bool odin = false;
+            foreach (var g in AssetDatabase.FindAssets("Sirenix.OdinInspector.Attributes"))
+                if (AssetDatabase.GUIDToAssetPath(g).EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) { odin = true; break; }
+            if (!odin) return false;
+            string cur = PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Server);
+            if (cur.Contains("ODIN_INSPECTOR")) return false;
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, string.IsNullOrEmpty(cur) ? OdinDefines : cur + ";" + OdinDefines);
+            Debug.Log("[DoDrillSetup] Dedicated Server 대상에 ODIN_INSPECTOR 심볼 추가(OdinShim 충돌 방지)");
+            return true;
+        }
+        catch (Exception e) { Debug.Log("[DoDrillSetup] Odin 심볼 건너뜀: " + e.Message); return false; }
     }
 
     // ── 3) 패키지 ───────────────────────────────────────────
